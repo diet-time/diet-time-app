@@ -4,6 +4,9 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write
+
 jobs:
   build-ios:
     name: iOS unsigned build
@@ -16,16 +19,10 @@ jobs:
         with:
           channel: stable
 
-      - name: Clean old Flutter/iOS build
+      - name: Install Flutter dependencies
         run: |
           flutter clean
           flutter pub get
-          cd ios
-          rm -rf Pods
-          rm -f Podfile.lock
-          pod repo update
-          pod install
-          cd ..
 
       - name: Build iOS unsigned
         run: flutter build ios --release --no-codesign
