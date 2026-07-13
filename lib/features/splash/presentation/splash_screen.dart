@@ -119,7 +119,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
     final isLoggedIn = await authCheck;
     if (!mounted) return;
-    context.go(isLoggedIn ? AppRoutes.home : AppRoutes.login);
+    context.go(isLoggedIn ? AppRoutes.home : AppRoutes.landing);
   }
 
   @override

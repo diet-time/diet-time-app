@@ -8,6 +8,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
+    await tester.pump(const Duration(milliseconds: 5700));
     await tester.pumpAndSettle();
 
     expect(find.text('Enjoy'), findsOneWidget);
@@ -26,6 +27,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
+    await tester.pump(const Duration(milliseconds: 5700));
     await tester.pumpAndSettle();
 
     expect(find.text('Enjoy'), findsOneWidget);
