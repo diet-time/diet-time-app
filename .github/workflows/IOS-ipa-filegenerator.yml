@@ -1,0 +1,47 @@
+name: iOS IPA Build
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-ios:
+    name: iOS unsigned build
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Clean old Flutter/iOS build
+        run: |
+          flutter clean
+          flutter pub get
+          cd ios
+          rm -rf Pods
+          rm -f Podfile.lock
+          pod repo update
+          pod install
+          cd ..
+
+      - name: Build iOS unsigned
+        run: flutter build ios --release --no-codesign
+
+      - name: Create IPA
+        run: |
+          cd build/ios/iphoneos
+          mkdir Payload
+          cp -R Runner.app Payload/
+          zip -qq -r -9 FlutterIpaExport.ipa Payload
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/ios/iphoneos/FlutterIpaExport.ipa
+          tag: v1.0.${{ github.run_number }}
+          overwrite: true
+          body: "iOS unsigned release"
