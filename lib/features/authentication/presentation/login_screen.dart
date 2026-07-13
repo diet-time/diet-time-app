@@ -285,7 +285,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               AppSpacing.md,
             ),
             decoration: BoxDecoration(
-              color: AppColors.darkGreen.withValues(alpha: 0.72),
+              color: AppColors.darkGreen.withValues(alpha: 0.88),
               borderRadius: BorderRadius.circular(AppRadius.xl),
               border: Border.all(
                 color: AppColors.white.withValues(alpha: 0.42),
@@ -307,7 +307,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: AppColors.white,
-                    fontSize: 28,
+                    fontSize: 30,
+                    height: 1.15,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
@@ -315,8 +316,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   l10n.landingSubtitle,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.white.withValues(alpha: 0.82),
-                    height: 1.45,
+                    color: AppColors.white.withValues(alpha: 0.94),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    height: 1.5,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -533,8 +536,8 @@ class _LoginBackground extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [
                       AppColors.emeraldGreen.withValues(alpha: 0.70),
-                      AppColors.emeraldGreen.withValues(alpha: 0.16),
-                      AppColors.darkGreen.withValues(alpha: 0.68),
+                      AppColors.emeraldGreen.withValues(alpha: 0.04),
+                      AppColors.darkGreen.withValues(alpha: 0.74),
                     ],
                     stops: const [0, 0.52, 1],
                   )
@@ -695,53 +698,92 @@ class _HeroContent extends StatelessWidget {
             alignment: isWide
                 ? const Alignment(-0.55, -0.48)
                 : Alignment(0, isLanding ? -0.35 : -0.72),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppLogo(
-                  width: isLanding ? 84 : (isWide ? 150 : 116),
-                  color: isLanding
-                      ? AppColors.darkGreen
-                      : (isWide ? AppColors.emeraldGreen : AppColors.white),
-                ),
-                SizedBox(height: isLanding ? AppSpacing.xxs : AppSpacing.xs),
-                Text(
-                  l10n.healthy,
-                  style: AppTypography.display.copyWith(
+            child: Container(
+              padding: isLanding
+                  ? const EdgeInsets.symmetric(horizontal: 34, vertical: 18)
+                  : EdgeInsets.zero,
+              decoration: BoxDecoration(
+                gradient: isLanding
+                    ? RadialGradient(
+                        radius: 0.78,
+                        colors: [
+                          AppColors.white.withValues(alpha: 0.92),
+                          AppColors.white.withValues(alpha: 0.62),
+                          AppColors.white.withValues(alpha: 0),
+                        ],
+                        stops: const [0, 0.58, 1],
+                      )
+                    : null,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppLogo(
+                    width: isLanding ? 84 : (isWide ? 150 : 116),
                     color: isLanding
                         ? AppColors.darkGreen
                         : (isWide ? AppColors.emeraldGreen : AppColors.white),
-                    fontSize: isLanding ? 40 : (isWide ? 48 : 38),
-                    fontStyle: isLanding ? FontStyle.normal : FontStyle.italic,
-                    fontWeight: isLanding ? FontWeight.w700 : FontWeight.w500,
-                    letterSpacing: -0.8,
-                    shadows: [
-                      Shadow(
-                        color: AppColors.black.withValues(alpha: 0.32),
-                        blurRadius: 12,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
                   ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  l10n.journeyStartsHere,
-                  style: AppTypography.body.copyWith(
-                    color: isLanding
-                        ? AppColors.darkGreen
-                        : (isWide ? AppColors.darkGreen : AppColors.white),
-                    fontSize: isWide ? 18 : 16,
-                    fontWeight: FontWeight.w600,
-                    shadows: [
-                      Shadow(
-                        color: AppColors.black.withValues(alpha: 0.40),
-                        blurRadius: 10,
-                      ),
-                    ],
+                  SizedBox(height: isLanding ? AppSpacing.xxs : AppSpacing.xs),
+                  Text(
+                    l10n.healthy,
+                    style: AppTypography.display.copyWith(
+                      color: isLanding
+                          ? AppColors.darkGreen
+                          : (isWide ? AppColors.emeraldGreen : AppColors.white),
+                      fontSize: isLanding ? 40 : (isWide ? 48 : 38),
+                      fontStyle: isLanding
+                          ? FontStyle.normal
+                          : FontStyle.italic,
+                      fontWeight: isLanding ? FontWeight.w700 : FontWeight.w500,
+                      letterSpacing: -0.8,
+                      shadows: isLanding
+                          ? [
+                              Shadow(
+                                color: AppColors.white.withValues(alpha: 0.95),
+                                blurRadius: 12,
+                              ),
+                              Shadow(
+                                color: AppColors.black.withValues(alpha: 0.22),
+                                blurRadius: 2,
+                                offset: const Offset(0, 1),
+                              ),
+                            ]
+                          : [
+                              Shadow(
+                                color: AppColors.black.withValues(alpha: 0.32),
+                                blurRadius: 12,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    l10n.journeyStartsHere,
+                    style: AppTypography.body.copyWith(
+                      color: isLanding
+                          ? AppColors.darkGreen
+                          : (isWide ? AppColors.darkGreen : AppColors.white),
+                      fontSize: isWide ? 18 : 16,
+                      fontWeight: FontWeight.w600,
+                      shadows: isLanding
+                          ? [
+                              Shadow(
+                                color: AppColors.white.withValues(alpha: 0.95),
+                                blurRadius: 8,
+                              ),
+                            ]
+                          : [
+                              Shadow(
+                                color: AppColors.black.withValues(alpha: 0.40),
+                                blurRadius: 10,
+                              ),
+                            ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -762,9 +804,9 @@ class _LanguageSwitch extends StatelessWidget {
       label: 'Language',
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppColors.white.withValues(alpha: 0.30),
+          color: AppColors.white.withValues(alpha: 0.78),
           borderRadius: BorderRadius.circular(AppRadius.pill),
-          border: Border.all(color: AppColors.white.withValues(alpha: 0.30)),
+          border: Border.all(color: AppColors.white.withValues(alpha: 0.70)),
           boxShadow: [
             BoxShadow(
               color: AppColors.black.withValues(alpha: 0.12),
@@ -960,9 +1002,9 @@ class _LandingOutlineButton extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.white.withValues(alpha: muted ? 0.68 : 1),
+          foregroundColor: AppColors.white.withValues(alpha: muted ? 0.90 : 1),
           side: BorderSide(
-            color: AppColors.white.withValues(alpha: muted ? 0.60 : 0.88),
+            color: AppColors.white.withValues(alpha: muted ? 0.72 : 0.92),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg),
