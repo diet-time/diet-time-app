@@ -21,11 +21,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get journeyStartsHere => 'Your journey starts here.';
 
   @override
-  String get landingTitle => 'Enjoy';
+  String get landingTitle => 'Eat Well, Feel Great';
 
   @override
   String get landingSubtitle =>
-      'Enjoy delicious, balanced meals every day and build lasting healthy habits.';
+      'Discover tailored meal plans designed for flavor and health. Build lasting habits, one delicious meal at a time.';
 
   @override
   String get viewPlans => 'The Plans';

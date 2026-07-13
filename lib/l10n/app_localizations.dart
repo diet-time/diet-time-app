@@ -125,13 +125,13 @@ abstract class AppLocalizations {
   /// No description provided for @landingTitle.
   ///
   /// In en, this message translates to:
-  /// **'Enjoy'**
+  /// **'Eat Well, Feel Great'**
   String get landingTitle;
 
   /// No description provided for @landingSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Enjoy delicious, balanced meals every day and build lasting healthy habits.'**
+  /// **'Discover tailored meal plans designed for flavor and health. Build lasting habits, one delicious meal at a time.'**
   String get landingSubtitle;
 
   /// No description provided for @viewPlans.

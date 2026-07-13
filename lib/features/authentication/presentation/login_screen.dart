@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:diet_time/app/localization/locale_controller.dart';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
@@ -127,14 +129,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  const _LoginBackground(
+                  _LoginBackground(
                     assetPath: _wideBackgroundAsset,
                     isWide: true,
+                    isLanding: !_showLoginPanel,
                   ),
                   _HeroContent(
                     locale: locale,
                     onLocaleChanged: onLocaleChanged,
                     isWide: true,
+                    isLanding: !_showLoginPanel,
                   ),
                   SafeArea(
                     child: Align(
@@ -177,8 +181,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             return Stack(
               fit: StackFit.expand,
               children: [
-                const _LoginBackground(assetPath: _backgroundAsset),
-                _HeroContent(locale: locale, onLocaleChanged: onLocaleChanged),
+                _LoginBackground(
+                  assetPath: _backgroundAsset,
+                  isLanding: !_showLoginPanel,
+                ),
+                _HeroContent(
+                  locale: locale,
+                  onLocaleChanged: onLocaleChanged,
+                  isLanding: !_showLoginPanel,
+                ),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 350),
                   reverseDuration: const Duration(milliseconds: 250),
@@ -195,9 +206,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         SizedBox(
                           height: _showLoginPanel
                               ? heroHeight
-                              : (constraints.maxHeight * 0.52).clamp(
-                                  330.0,
-                                  470.0,
+                              : (constraints.maxHeight - 292).clamp(
+                                  310.0,
+                                  560.0,
                                 ),
                         ),
                         Center(
@@ -235,56 +246,85 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Widget _buildLandingPanel(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.white.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.darkGreen.withValues(alpha: 0.20),
-            blurRadius: 30,
-            offset: const Offset(0, 12),
-          ),
-        ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.sm,
+        0,
+        AppSpacing.sm,
+        AppSpacing.md,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            l10n.landingTitle,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            l10n.landingSubtitle,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          AppButton(label: l10n.viewPlans, onPressed: _showComingSoon),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: _LandingOutlineButton(
-                  label: l10n.login,
-                  onPressed: _openLoginPanel,
-                ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.md,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.darkGreen.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              border: Border.all(
+                color: AppColors.white.withValues(alpha: 0.42),
+                width: 1.2,
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _LandingOutlineButton(
-                  label: l10n.register,
-                  onPressed: _showComingSoon,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.black.withValues(alpha: 0.24),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
                 ),
-              ),
-            ],
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  l10n.landingTitle,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: AppColors.white,
+                    fontSize: 28,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  l10n.landingSubtitle,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.white.withValues(alpha: 0.82),
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _PlansButton(label: l10n.viewPlans, onPressed: _showComingSoon),
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _LandingOutlineButton(
+                        label: l10n.login,
+                        onPressed: _openLoginPanel,
+                        muted: true,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: _LandingOutlineButton(
+                        label: l10n.register,
+                        onPressed: _showComingSoon,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -444,10 +484,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 }
 
 class _LoginBackground extends StatelessWidget {
-  const _LoginBackground({required this.assetPath, this.isWide = false});
+  const _LoginBackground({
+    required this.assetPath,
+    this.isWide = false,
+    this.isLanding = false,
+  });
 
   final String assetPath;
   final bool isWide;
+  final bool isLanding;
 
   @override
   Widget build(BuildContext context) {
@@ -463,7 +508,18 @@ class _LoginBackground extends StatelessWidget {
         ),
         DecoratedBox(
           decoration: BoxDecoration(
-            gradient: isWide
+            gradient: isLanding
+                ? LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppColors.emeraldGreen.withValues(alpha: 0.70),
+                      AppColors.emeraldGreen.withValues(alpha: 0.16),
+                      AppColors.darkGreen.withValues(alpha: 0.68),
+                    ],
+                    stops: const [0, 0.52, 1],
+                  )
+                : isWide
                 ? LinearGradient(
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
@@ -496,11 +552,13 @@ class _HeroContent extends StatelessWidget {
     required this.locale,
     required this.onLocaleChanged,
     this.isWide = false,
+    this.isLanding = false,
   });
 
   final Locale locale;
   final ValueChanged<Locale> onLocaleChanged;
   final bool isWide;
+  final bool isLanding;
 
   @override
   Widget build(BuildContext context) {
@@ -517,22 +575,26 @@ class _HeroContent extends StatelessWidget {
           Align(
             alignment: isWide
                 ? const Alignment(-0.55, -0.48)
-                : const Alignment(0, -0.72),
+                : Alignment(0, isLanding ? -0.35 : -0.72),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 AppLogo(
-                  width: isWide ? 150 : 116,
-                  color: isWide ? AppColors.emeraldGreen : AppColors.white,
+                  width: isLanding ? 84 : (isWide ? 150 : 116),
+                  color: isLanding
+                      ? AppColors.darkGreen
+                      : (isWide ? AppColors.emeraldGreen : AppColors.white),
                 ),
-                const SizedBox(height: AppSpacing.xs),
+                SizedBox(height: isLanding ? AppSpacing.xxs : AppSpacing.xs),
                 Text(
                   l10n.healthy,
                   style: AppTypography.display.copyWith(
-                    color: isWide ? AppColors.emeraldGreen : AppColors.white,
-                    fontSize: isWide ? 48 : 38,
-                    fontStyle: FontStyle.italic,
-                    fontWeight: FontWeight.w500,
+                    color: isLanding
+                        ? AppColors.darkGreen
+                        : (isWide ? AppColors.emeraldGreen : AppColors.white),
+                    fontSize: isLanding ? 40 : (isWide ? 48 : 38),
+                    fontStyle: isLanding ? FontStyle.normal : FontStyle.italic,
+                    fontWeight: isLanding ? FontWeight.w700 : FontWeight.w500,
                     letterSpacing: -0.8,
                     shadows: [
                       Shadow(
@@ -547,7 +609,9 @@ class _HeroContent extends StatelessWidget {
                 Text(
                   l10n.journeyStartsHere,
                   style: AppTypography.body.copyWith(
-                    color: isWide ? AppColors.darkGreen : AppColors.white,
+                    color: isLanding
+                        ? AppColors.darkGreen
+                        : (isWide ? AppColors.darkGreen : AppColors.white),
                     fontSize: isWide ? 18 : 16,
                     fontWeight: FontWeight.w600,
                     shadows: [
@@ -579,8 +643,9 @@ class _LanguageSwitch extends StatelessWidget {
       label: 'Language',
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppColors.white.withValues(alpha: 0.90),
+          color: AppColors.white.withValues(alpha: 0.30),
           borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: Border.all(color: AppColors.white.withValues(alpha: 0.30)),
           boxShadow: [
             BoxShadow(
               color: AppColors.black.withValues(alpha: 0.12),
@@ -628,9 +693,7 @@ class _LanguageOption extends StatelessWidget {
       onPressed: onTap,
       style: TextButton.styleFrom(
         foregroundColor: selected ? AppColors.white : AppColors.darkGreen,
-        backgroundColor: selected
-            ? AppColors.emeraldGreen
-            : AppColors.transparent,
+        backgroundColor: selected ? AppColors.darkGreen : AppColors.transparent,
         minimumSize: const Size(42, 42),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
         shape: RoundedRectangleBorder(
@@ -642,8 +705,8 @@ class _LanguageOption extends StatelessWidget {
   }
 }
 
-class _LandingOutlineButton extends StatelessWidget {
-  const _LandingOutlineButton({required this.label, required this.onPressed});
+class _PlansButton extends StatelessWidget {
+  const _PlansButton({required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback onPressed;
@@ -652,11 +715,57 @@ class _LandingOutlineButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: AppButton.height,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.limeGlow.withValues(alpha: 0.42),
+              blurRadius: 18,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: OutlinedButton(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.white,
+            backgroundColor: AppColors.emeraldGreen.withValues(alpha: 0.38),
+            side: const BorderSide(color: AppColors.teaGreen, width: 1.5),
+            textStyle: AppTypography.title.copyWith(fontSize: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
+          ),
+          child: Text(label),
+        ),
+      ),
+    );
+  }
+}
+
+class _LandingOutlineButton extends StatelessWidget {
+  const _LandingOutlineButton({
+    required this.label,
+    required this.onPressed,
+    this.muted = false,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: AppButton.height,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.darkGreen,
-          side: BorderSide(color: AppColors.darkGreen.withValues(alpha: 0.62)),
+          foregroundColor: AppColors.white.withValues(alpha: muted ? 0.68 : 1),
+          side: BorderSide(
+            color: AppColors.white.withValues(alpha: muted ? 0.60 : 0.88),
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg),
           ),

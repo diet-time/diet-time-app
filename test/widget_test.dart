@@ -11,7 +11,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 5700));
     await tester.pumpAndSettle();
 
-    expect(find.text('Enjoy'), findsOneWidget);
+    expect(find.text('Eat Well, Feel Great'), findsOneWidget);
     expect(find.text('The Plans'), findsOneWidget);
     expect(find.text('Welcome Back'), findsNothing);
 
@@ -30,7 +30,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 5700));
     await tester.pumpAndSettle();
 
-    expect(find.text('Enjoy'), findsOneWidget);
+    expect(find.text('Eat Well, Feel Great'), findsOneWidget);
     await tester.tap(find.text('Login'));
     await tester.pumpAndSettle();
 
