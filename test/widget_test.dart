@@ -9,7 +9,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
     await tester.pump(const Duration(milliseconds: 5700));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('Eat Well, Feel Great'), findsOneWidget);
     expect(find.text('The Plans'), findsOneWidget);
@@ -28,7 +28,7 @@ void main() {
 
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
     await tester.pump(const Duration(milliseconds: 5700));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('Eat Well, Feel Great'), findsOneWidget);
     await tester.tap(find.text('Login'));

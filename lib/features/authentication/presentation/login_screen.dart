@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:diet_time/app/localization/locale_controller.dart';
@@ -18,7 +19,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({this.showLoginInitially = false, super.key});
+
+  final bool showLoginInitially;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -35,16 +38,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _identityController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _showLoginPanel = false;
+  late bool _showLoginPanel;
+
+  @override
+  void initState() {
+    super.initState();
+    _showLoginPanel = widget.showLoginInitially;
+  }
 
   void _openLoginPanel() {
-    setState(() => _showLoginPanel = true);
+    context.push(AppRoutes.login);
   }
 
   void _closeLoginPanel() {
     FocusManager.instance.primaryFocus?.unfocus();
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
     setState(() => _showLoginPanel = false);
   }
+
+  void _openPlans() => context.push(AppRoutes.plans);
+
+  void _openRegister() => context.push(AppRoutes.register);
 
   @override
   void dispose() {
@@ -134,6 +151,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     isWide: true,
                     isLanding: !_showLoginPanel,
                   ),
+                  if (!_showLoginPanel) const _LandingAtmosphere(),
                   _HeroContent(
                     locale: locale,
                     onLocaleChanged: onLocaleChanged,
@@ -185,6 +203,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   assetPath: _backgroundAsset,
                   isLanding: !_showLoginPanel,
                 ),
+                if (!_showLoginPanel) const _LandingAtmosphere(),
                 _HeroContent(
                   locale: locale,
                   onLocaleChanged: onLocaleChanged,
@@ -301,7 +320,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                _PlansButton(label: l10n.viewPlans, onPressed: _showComingSoon),
+                _PlansButton(label: l10n.viewPlans, onPressed: _openPlans),
                 const SizedBox(height: AppSpacing.sm),
                 Row(
                   children: [
@@ -316,7 +335,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Expanded(
                       child: _LandingOutlineButton(
                         label: l10n.register,
-                        onPressed: _showComingSoon,
+                        onPressed: _openRegister,
                       ),
                     ),
                   ],
@@ -547,6 +566,106 @@ class _LoginBackground extends StatelessWidget {
   }
 }
 
+class _LandingAtmosphere extends StatefulWidget {
+  const _LandingAtmosphere();
+
+  @override
+  State<_LandingAtmosphere> createState() => _LandingAtmosphereState();
+}
+
+class _LandingAtmosphereState extends State<_LandingAtmosphere>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 8),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(0, -0.18),
+                radius: 0.72,
+                colors: [Color(0x26CEF17B), Color(0x0000674E)],
+              ),
+            ),
+          ),
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) => CustomPaint(
+              painter: _ParticlePainter(progress: _controller.value),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ParticlePainter extends CustomPainter {
+  const _ParticlePainter({required this.progress});
+
+  static const _particles = <Offset>[
+    Offset(0.08, 0.23),
+    Offset(0.17, 0.55),
+    Offset(0.88, 0.20),
+    Offset(0.79, 0.47),
+    Offset(0.92, 0.68),
+    Offset(0.11, 0.76),
+  ];
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var index = 0; index < _particles.length; index++) {
+      final particle = _particles[index];
+      final phase = (progress + (index * 0.17)) * math.pi * 2;
+      final center = Offset(
+        particle.dx * size.width + math.sin(phase) * 5,
+        particle.dy * size.height + math.cos(phase * 0.72) * 9,
+      );
+      final opacity = 0.06 + ((math.sin(phase) + 1) * 0.03);
+      final radius = 1.8 + (index % 3) * 0.8;
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()..color = AppColors.limeGlow.withValues(alpha: opacity),
+      );
+      canvas.drawCircle(
+        center,
+        radius * 3.2,
+        Paint()..color = AppColors.limeGlow.withValues(alpha: opacity * 0.16),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ParticlePainter oldDelegate) =>
+      oldDelegate.progress != progress;
+}
+
 class _HeroContent extends StatelessWidget {
   const _HeroContent({
     required this.locale,
@@ -705,40 +824,119 @@ class _LanguageOption extends StatelessWidget {
   }
 }
 
-class _PlansButton extends StatelessWidget {
+class _PlansButton extends StatefulWidget {
   const _PlansButton({required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback onPressed;
 
   @override
+  State<_PlansButton> createState() => _PlansButtonState();
+}
+
+class _PlansButtonState extends State<_PlansButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2500),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: AppButton.height,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.limeGlow.withValues(alpha: 0.42),
-              blurRadius: 18,
-              spreadRadius: 1,
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    return LayoutBuilder(
+      builder: (context, constraints) => AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          final progress = reduceMotion ? 0.0 : _controller.value;
+          final wave = math.sin(progress * math.pi * 2);
+          final glow = 0.32 + ((wave + 1) * 0.11);
+          final shimmerX = (constraints.maxWidth + 64) * progress - 64;
+          return Transform.translate(
+            offset: Offset(0, reduceMotion ? 0 : -1 - wave),
+            child: Transform.scale(
+              scale: reduceMotion ? 1 : 1 + (wave * 0.008),
+              child: SizedBox(
+                height: AppButton.height,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.limeGlow.withValues(alpha: glow),
+                        blurRadius: 16 + ((wave + 1) * 3),
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      OutlinedButton(
+                        onPressed: widget.onPressed,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.white,
+                          backgroundColor: AppColors.emeraldGreen.withValues(
+                            alpha: 0.38,
+                          ),
+                          side: const BorderSide(
+                            color: AppColors.teaGreen,
+                            width: 1.5,
+                          ),
+                          textStyle: AppTypography.title.copyWith(fontSize: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.pill),
+                          ),
+                        ),
+                        child: Text(widget.label),
+                      ),
+                      if (!reduceMotion)
+                        IgnorePointer(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(AppRadius.pill),
+                            child: Transform.translate(
+                              offset: Offset(shimmerX, 0),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Container(
+                                  width: 54,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        AppColors.transparent,
+                                        AppColors.white.withValues(alpha: 0.22),
+                                        AppColors.transparent,
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ],
-        ),
-        child: OutlinedButton(
-          onPressed: onPressed,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.white,
-            backgroundColor: AppColors.emeraldGreen.withValues(alpha: 0.38),
-            side: const BorderSide(color: AppColors.teaGreen, width: 1.5),
-            textStyle: AppTypography.title.copyWith(fontSize: 20),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-            ),
-          ),
-          child: Text(label),
-        ),
+          );
+        },
       ),
     );
   }
