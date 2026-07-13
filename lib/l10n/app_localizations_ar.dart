@@ -9,6 +9,22 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String get landingTitle => 'استمتع';
+
+  @override
+  String get landingSubtitle =>
+      'استمتع بوجبات شهية ومتوازنة كل يوم وابنِ عادات صحية تدوم.';
+
+  @override
+  String get viewPlans => 'الخطط';
+
+  @override
+  String get login => 'تسجيل الدخول';
+
+  @override
+  String get register => 'إنشاء حساب';
+
+  @override
   String get appName => 'دايت تايم';
 
   @override

@@ -1,23 +1,22 @@
 import 'package:diet_time/features/authentication/presentation/login_screen.dart';
 import 'package:diet_time/features/home/presentation/home_screen.dart';
-import 'package:diet_time/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 abstract final class AppRoutes {
-  static const splash = '/';
+  static const landing = '/';
   static const login = '/login';
   static const home = '/home';
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: AppRoutes.splash,
+    initialLocation: AppRoutes.landing,
     routes: [
       GoRoute(
-        path: AppRoutes.splash,
-        builder: (context, state) => const SplashScreen(),
+        path: AppRoutes.landing,
+        builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
         path: AppRoutes.login,

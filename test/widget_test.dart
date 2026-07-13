@@ -4,9 +4,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
-  testWidgets('unauthenticated launch reaches login', (tester) async {
+  testWidgets('launch opens landing page and login panel on demand', (
+    tester,
+  ) async {
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
-    await tester.pump(const Duration(milliseconds: 5700));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enjoy'), findsOneWidget);
+    expect(find.text('The Plans'), findsOneWidget);
+    expect(find.text('Welcome Back'), findsNothing);
+
+    await tester.tap(find.text('Login'));
     await tester.pumpAndSettle();
 
     expect(find.text('Welcome Back'), findsOneWidget);
@@ -18,7 +26,10 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
-    await tester.pump(const Duration(milliseconds: 5700));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enjoy'), findsOneWidget);
+    await tester.tap(find.text('Login'));
     await tester.pumpAndSettle();
 
     expect(find.text('Welcome Back'), findsOneWidget);

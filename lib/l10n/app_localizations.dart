@@ -122,6 +122,36 @@ abstract class AppLocalizations {
   /// **'Your journey starts here.'**
   String get journeyStartsHere;
 
+  /// No description provided for @landingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enjoy'**
+  String get landingTitle;
+
+  /// No description provided for @landingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enjoy delicious, balanced meals every day and build lasting healthy habits.'**
+  String get landingSubtitle;
+
+  /// No description provided for @viewPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'The Plans'**
+  String get viewPlans;
+
+  /// No description provided for @login.
+  ///
+  /// In en, this message translates to:
+  /// **'Login'**
+  String get login;
+
+  /// No description provided for @register.
+  ///
+  /// In en, this message translates to:
+  /// **'Register'**
+  String get register;
+
   /// No description provided for @welcomeBack.
   ///
   /// In en, this message translates to:

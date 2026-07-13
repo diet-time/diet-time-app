@@ -21,6 +21,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get journeyStartsHere => 'Your journey starts here.';
 
   @override
+  String get landingTitle => 'Enjoy';
+
+  @override
+  String get landingSubtitle =>
+      'Enjoy delicious, balanced meals every day and build lasting healthy habits.';
+
+  @override
+  String get viewPlans => 'The Plans';
+
+  @override
+  String get login => 'Login';
+
+  @override
+  String get register => 'Register';
+
+  @override
   String get welcomeBack => 'Welcome Back';
 
   @override

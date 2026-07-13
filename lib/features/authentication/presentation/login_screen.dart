@@ -33,6 +33,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _identityController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _showLoginPanel = false;
+
+  void _openLoginPanel() {
+    setState(() => _showLoginPanel = true);
+  }
+
+  void _closeLoginPanel() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _showLoginPanel = false);
+  }
 
   @override
   void dispose() {
@@ -137,13 +147,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         child: SizedBox(
                           width: panelWidth,
-                          child: SingleChildScrollView(
-                            keyboardDismissBehavior:
-                                ScrollViewKeyboardDismissBehavior.onDrag,
-                            padding: EdgeInsets.only(
-                              bottom: bottomInset + AppSpacing.md,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 350),
+                            reverseDuration: const Duration(milliseconds: 250),
+                            transitionBuilder: _panelTransition,
+                            child: SingleChildScrollView(
+                              key: ValueKey(_showLoginPanel),
+                              keyboardDismissBehavior:
+                                  ScrollViewKeyboardDismissBehavior.onDrag,
+                              padding: EdgeInsets.only(
+                                bottom: bottomInset + AppSpacing.md,
+                              ),
+                              child: _showLoginPanel
+                                  ? _buildLoginPanel(context)
+                                  : _buildLandingPanel(context),
                             ),
-                            child: _buildLoginPanel(context),
                           ),
                         ),
                       ),
@@ -161,28 +179,112 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               children: [
                 const _LoginBackground(assetPath: _backgroundAsset),
                 _HeroContent(locale: locale, onLocaleChanged: onLocaleChanged),
-                SingleChildScrollView(
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.only(bottom: bottomInset + AppSpacing.md),
-                  child: Column(
-                    children: [
-                      SizedBox(height: heroHeight),
-                      Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxWidth: _contentMaxWidth,
-                          ),
-                          child: _buildLoginPanel(context),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 350),
+                  reverseDuration: const Duration(milliseconds: 250),
+                  transitionBuilder: _panelTransition,
+                  child: SingleChildScrollView(
+                    key: ValueKey(_showLoginPanel),
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.only(
+                      bottom: bottomInset + AppSpacing.md,
+                    ),
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: _showLoginPanel
+                              ? heroHeight
+                              : (constraints.maxHeight * 0.52).clamp(
+                                  330.0,
+                                  470.0,
+                                ),
                         ),
-                      ),
-                    ],
+                        Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              maxWidth: _contentMaxWidth,
+                            ),
+                            child: _showLoginPanel
+                                ? _buildLoginPanel(context)
+                                : _buildLandingPanel(context),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _panelTransition(Widget child, Animation<double> animation) {
+    final slide = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+    return FadeTransition(
+      opacity: animation,
+      child: SlideTransition(position: slide, child: child),
+    );
+  }
+
+  Widget _buildLandingPanel(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.white.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.darkGreen.withValues(alpha: 0.20),
+            blurRadius: 30,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.landingTitle,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l10n.landingSubtitle,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          AppButton(label: l10n.viewPlans, onPressed: _showComingSoon),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: _LandingOutlineButton(
+                  label: l10n.login,
+                  onPressed: _openLoginPanel,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _LandingOutlineButton(
+                  label: l10n.register,
+                  onPressed: _showComingSoon,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -217,15 +319,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Center(
-                child: Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.darkGreen.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.darkGreen.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
                   ),
-                ),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: IconButton(
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).backButtonTooltip,
+                      onPressed: _closeLoginPanel,
+                      icon: const Icon(Icons.arrow_back_rounded),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
@@ -523,6 +638,31 @@ class _LanguageOption extends StatelessWidget {
         ),
       ),
       child: Text(label),
+    );
+  }
+}
+
+class _LandingOutlineButton extends StatelessWidget {
+  const _LandingOutlineButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: AppButton.height,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.darkGreen,
+          side: BorderSide(color: AppColors.darkGreen.withValues(alpha: 0.62)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+        ),
+        child: Text(label),
+      ),
     );
   }
 }
