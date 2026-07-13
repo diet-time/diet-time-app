@@ -9,11 +9,11 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get landingTitle => 'كُل جيداً، واشعر بالروعة';
+  String get landingTitle => 'كل جيد، اشعر رائع';
 
   @override
   String get landingSubtitle =>
-      'اكتشف خطط وجبات مصممة للمذاق والصحة، وابنِ عادات تدوم مع كل وجبة شهية.';
+      'اكتشف خطط وجبات مخصصة للمذاق والصحة. ابنِ عادات تدوم، وجبة لذيذة في كل مرة.';
 
   @override
   String get viewPlans => 'الخطط';
@@ -31,10 +31,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get tagline => 'غذاء أفضل. شعور أخف.';
 
   @override
-  String get healthy => 'صحة أفضل';
+  String get healthy => 'صحي';
 
   @override
-  String get journeyStartsHere => 'رحلتك تبدأ من هنا.';
+  String get journeyStartsHere => 'رحلتك تبدأ هنا.';
 
   @override
   String get welcomeBack => 'مرحباً بعودتك';

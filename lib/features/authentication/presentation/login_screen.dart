@@ -152,12 +152,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     isLanding: !_showLoginPanel,
                   ),
                   if (!_showLoginPanel) const _LandingAtmosphere(),
-                  _HeroContent(
-                    locale: locale,
-                    onLocaleChanged: onLocaleChanged,
-                    isWide: true,
-                    isLanding: !_showLoginPanel,
-                  ),
                   SafeArea(
                     child: Align(
                       alignment: AlignmentDirectional.centerEnd,
@@ -189,6 +183,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                   ),
+                  _HeroContent(
+                    locale: locale,
+                    onLocaleChanged: onLocaleChanged,
+                    isWide: true,
+                    isLanding: !_showLoginPanel,
+                  ),
                 ],
               );
             }
@@ -204,11 +204,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   isLanding: !_showLoginPanel,
                 ),
                 if (!_showLoginPanel) const _LandingAtmosphere(),
-                _HeroContent(
-                  locale: locale,
-                  onLocaleChanged: onLocaleChanged,
-                  isLanding: !_showLoginPanel,
-                ),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 350),
                   reverseDuration: const Duration(milliseconds: 250),
@@ -243,6 +238,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ],
                     ),
                   ),
+                ),
+                _HeroContent(
+                  locale: locale,
+                  onLocaleChanged: onLocaleChanged,
+                  isLanding: !_showLoginPanel,
                 ),
               ],
             );
@@ -535,9 +535,9 @@ class _LoginBackground extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      AppColors.emeraldGreen.withValues(alpha: 0.70),
-                      AppColors.emeraldGreen.withValues(alpha: 0.04),
-                      AppColors.darkGreen.withValues(alpha: 0.74),
+                      AppColors.emeraldGreen.withValues(alpha: 0.75),
+                      AppColors.emeraldGreen.withValues(alpha: 0.30),
+                      AppColors.darkGreen.withValues(alpha: 0.88),
                     ],
                     stops: const [0, 0.52, 1],
                   )
@@ -694,98 +694,104 @@ class _HeroContent extends StatelessWidget {
             end: AppSpacing.md,
             child: _LanguageSwitch(locale: locale, onChanged: onLocaleChanged),
           ),
-          Align(
-            alignment: isWide
-                ? const Alignment(-0.55, -0.48)
-                : Alignment(0, isLanding ? -0.35 : -0.72),
-            child: Container(
-              padding: isLanding
-                  ? const EdgeInsets.symmetric(horizontal: 34, vertical: 18)
-                  : EdgeInsets.zero,
-              decoration: BoxDecoration(
-                gradient: isLanding
-                    ? RadialGradient(
-                        radius: 0.78,
-                        colors: [
-                          AppColors.white.withValues(alpha: 0.92),
-                          AppColors.white.withValues(alpha: 0.62),
-                          AppColors.white.withValues(alpha: 0),
-                        ],
-                        stops: const [0, 0.58, 1],
-                      )
-                    : null,
+          if (isLanding) ...[
+            Align(
+              alignment: isWide
+                  ? const Alignment(-0.55, -0.62)
+                  : const Alignment(0, -0.72),
+              child: const AppLogo(width: 86, color: AppColors.white),
+            ),
+            Align(
+              alignment: isWide
+                  ? const Alignment(-0.55, -0.02)
+                  : const Alignment(0, -0.10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.healthy,
+                    style: AppTypography.display.copyWith(
+                      color: AppColors.white,
+                      fontSize: isWide ? 48 : 40,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.8,
+                      shadows: [
+                        Shadow(
+                          color: AppColors.black.withValues(alpha: 0.82),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    l10n.journeyStartsHere,
+                    textAlign: TextAlign.center,
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.white,
+                      fontSize: isWide ? 18 : 16,
+                      fontWeight: FontWeight.w600,
+                      shadows: [
+                        Shadow(
+                          color: AppColors.black.withValues(alpha: 0.90),
+                          blurRadius: 8,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
+            ),
+          ] else
+            Align(
+              alignment: isWide
+                  ? const Alignment(-0.55, -0.48)
+                  : const Alignment(0, -0.72),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   AppLogo(
-                    width: isLanding ? 84 : (isWide ? 150 : 116),
-                    color: isLanding
-                        ? AppColors.darkGreen
-                        : (isWide ? AppColors.emeraldGreen : AppColors.white),
+                    width: isWide ? 150 : 116,
+                    color: isWide ? AppColors.emeraldGreen : AppColors.white,
                   ),
-                  SizedBox(height: isLanding ? AppSpacing.xxs : AppSpacing.xs),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     l10n.healthy,
                     style: AppTypography.display.copyWith(
-                      color: isLanding
-                          ? AppColors.darkGreen
-                          : (isWide ? AppColors.emeraldGreen : AppColors.white),
-                      fontSize: isLanding ? 40 : (isWide ? 48 : 38),
-                      fontStyle: isLanding
-                          ? FontStyle.normal
-                          : FontStyle.italic,
-                      fontWeight: isLanding ? FontWeight.w700 : FontWeight.w500,
+                      color: isWide ? AppColors.emeraldGreen : AppColors.white,
+                      fontSize: isWide ? 48 : 38,
+                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.w500,
                       letterSpacing: -0.8,
-                      shadows: isLanding
-                          ? [
-                              Shadow(
-                                color: AppColors.white.withValues(alpha: 0.95),
-                                blurRadius: 12,
-                              ),
-                              Shadow(
-                                color: AppColors.black.withValues(alpha: 0.22),
-                                blurRadius: 2,
-                                offset: const Offset(0, 1),
-                              ),
-                            ]
-                          : [
-                              Shadow(
-                                color: AppColors.black.withValues(alpha: 0.32),
-                                blurRadius: 12,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                      shadows: [
+                        Shadow(
+                          color: AppColors.black.withValues(alpha: 0.32),
+                          blurRadius: 12,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     l10n.journeyStartsHere,
                     style: AppTypography.body.copyWith(
-                      color: isLanding
-                          ? AppColors.darkGreen
-                          : (isWide ? AppColors.darkGreen : AppColors.white),
+                      color: isWide ? AppColors.darkGreen : AppColors.white,
                       fontSize: isWide ? 18 : 16,
                       fontWeight: FontWeight.w600,
-                      shadows: isLanding
-                          ? [
-                              Shadow(
-                                color: AppColors.white.withValues(alpha: 0.95),
-                                blurRadius: 8,
-                              ),
-                            ]
-                          : [
-                              Shadow(
-                                color: AppColors.black.withValues(alpha: 0.40),
-                                blurRadius: 10,
-                              ),
-                            ],
+                      shadows: [
+                        Shadow(
+                          color: AppColors.black.withValues(alpha: 0.40),
+                          blurRadius: 10,
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ),
         ],
       ),
     );
@@ -816,20 +822,23 @@ class _LanguageSwitch extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xxs),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _LanguageOption(
-                label: 'EN',
-                selected: locale.languageCode == 'en',
-                onTap: () => onChanged(const Locale('en')),
-              ),
-              _LanguageOption(
-                label: 'ع',
-                selected: locale.languageCode == 'ar',
-                onTap: () => onChanged(const Locale('ar')),
-              ),
-            ],
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _LanguageOption(
+                  label: 'EN',
+                  selected: locale.languageCode == 'en',
+                  onTap: () => onChanged(const Locale('en')),
+                ),
+                _LanguageOption(
+                  label: 'العربية',
+                  selected: locale.languageCode == 'ar',
+                  onTap: () => onChanged(const Locale('ar')),
+                ),
+              ],
+            ),
           ),
         ),
       ),
