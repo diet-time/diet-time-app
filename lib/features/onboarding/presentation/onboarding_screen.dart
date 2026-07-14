@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
+import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,48 +17,42 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   static const _pageDuration = Duration(milliseconds: 2800);
-  static const _pages = <_OnboardingPageData>[
+  List<_OnboardingPageData> _pages(AppLocalizations l10n) => [
     _OnboardingPageData(
       image: 'assets/images/onboarding_1.png',
-      title: 'Healthy Meals,',
-      accent: 'Made Simple.',
-      description:
-          'Delicious, balanced meals delivered daily to support your healthy lifestyle.',
+      title: l10n.onboardingHealthyMealsTitle,
+      accent: l10n.onboardingHealthyMealsAccent,
+      description: l10n.onboardingHealthyMealsDescription,
     ),
     _OnboardingPageData(
       image: 'assets/images/onboarding_2.png',
-      title: 'Plans That Fit',
-      accent: 'You Perfectly',
-      description:
-          "Tell us your goals, we'll handle the rest with personalised plans just for you.",
+      title: l10n.onboardingPlansTitle,
+      accent: l10n.onboardingPlansAccent,
+      description: l10n.onboardingPlansDescription,
     ),
     _OnboardingPageData(
       image: 'assets/images/onboarding_3.png',
-      title: 'Fresh. Clean.',
-      accent: 'Always.',
-      description:
-          'We use real ingredients with no artificial colors, preservatives or unhealthy fillers.',
+      title: l10n.onboardingFreshTitle,
+      accent: l10n.onboardingFreshAccent,
+      description: l10n.onboardingFreshDescription,
     ),
     _OnboardingPageData(
       image: 'assets/images/onboarding_4.png',
-      title: 'Track. Improve.',
-      accent: 'Live Better.',
-      description:
-          'Simple tracking helps you stay consistent and achieve your health goals.',
+      title: l10n.onboardingTrackTitle,
+      accent: l10n.onboardingTrackAccent,
+      description: l10n.onboardingTrackDescription,
     ),
     _OnboardingPageData(
       image: 'assets/images/onboarding_bmi.png',
-      title: 'Know Your BMI,',
-      accent: 'Build a Better Plan',
-      description:
-          'Calculate your BMI and get a plan shaped around your body and goals.',
+      title: l10n.onboardingBmiTitle,
+      accent: l10n.onboardingBmiAccent,
+      description: l10n.onboardingBmiDescription,
     ),
     _OnboardingPageData(
       image: 'assets/images/onboarding_5.png',
-      title: 'Better Together,',
-      accent: 'Stronger Together',
-      description:
-          'Invite friends, share your journey and achieve more together.',
+      title: l10n.onboardingTogetherTitle,
+      accent: l10n.onboardingTogetherAccent,
+      description: l10n.onboardingTogetherDescription,
     ),
   ];
 
@@ -78,11 +73,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   void _onProgressStatusChanged(AnimationStatus status) {
     if (status != AnimationStatus.completed ||
-        _index == _pages.length - 1 ||
         !mounted ||
         !_controller.hasClients) {
       return;
     }
+    final pageCount = _pages(AppLocalizations.of(context)).length;
+    if (_index == pageCount - 1) return;
     _controller.nextPage(
       duration: const Duration(milliseconds: 650),
       curve: Curves.easeInOutCubic,
@@ -110,6 +106,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   @override
   Widget build(BuildContext context) {
+    final pages = _pages(AppLocalizations.of(context));
     return Scaffold(
       backgroundColor: const Color(0xFF0D0F0E),
       body: SafeArea(
@@ -129,11 +126,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               child: PageView.builder(
                 controller: _controller,
                 onPageChanged: _onPageChanged,
-                itemCount: _pages.length,
+                itemCount: pages.length,
                 itemBuilder: (context, index) => _OnboardingPage(
-                  data: _pages[index],
+                  data: pages[index],
                   index: index,
-                  pageCount: _pages.length,
+                  pageCount: pages.length,
                   isActive: index == _index,
                   onMenu: () => _finish(AppRoutes.landing),
                   onStart: () => _finish(AppRoutes.plans),
@@ -147,7 +144,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               child: AnimatedBuilder(
                 animation: _progressController,
                 builder: (context, child) => _SegmentedProgress(
-                  count: _pages.length,
+                  count: pages.length,
                   currentIndex: _index,
                   progress: _progressController.value,
                 ),
@@ -587,6 +584,7 @@ class _FinalActionsState extends State<_FinalActions> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AnimatedSlide(
       offset: _isVisible ? Offset.zero : const Offset(0, 1.35),
       duration: const Duration(milliseconds: 650),
@@ -625,7 +623,7 @@ class _FinalActionsState extends State<_FinalActions> {
                     borderRadius: BorderRadius.circular(28),
                   ),
                 ),
-                child: const Text('Menu'),
+                child: Text(l10n.onboardingMenu),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -639,9 +637,9 @@ class _FinalActionsState extends State<_FinalActions> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text(
-                    'Start your Plan',
-                    style: TextStyle(fontWeight: FontWeight.w800),
+                  child: Text(
+                    l10n.onboardingStartPlan,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
               ),

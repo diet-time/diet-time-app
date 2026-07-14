@@ -1,9 +1,33 @@
 import 'package:diet_time/app/app.dart';
+import 'package:diet_time/app/localization/locale_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
+  testWidgets('Arabic locale renders localized onboarding content', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          localeControllerProvider.overrideWith(_ArabicLocaleController.new),
+        ],
+        child: const DietTimeApp(),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 5700));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('وجبات صحية،'), findsOneWidget);
+    expect(find.text('بكل بساطة.'), findsOneWidget);
+    expect(
+      find.text('وجبات لذيذة ومتوازنة تُوصّل يومياً لدعم نمط حياتك الصحي.'),
+      findsOneWidget,
+    );
+    expect(find.text('Healthy Meals,'), findsNothing);
+  });
+
   testWidgets('first launch opens onboarding and Menu reaches landing', (
     tester,
   ) async {
@@ -78,4 +102,9 @@ void main() {
     expect(find.text('EN'), findsOneWidget);
     expect(find.text('العربية'), findsOneWidget);
   });
+}
+
+class _ArabicLocaleController extends LocaleController {
+  @override
+  Locale build() => const Locale('ar');
 }

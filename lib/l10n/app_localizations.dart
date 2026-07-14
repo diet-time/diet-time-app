@@ -271,6 +271,27 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Coming soon'**
   String get comingSoon;
+
+  String get onboardingHealthyMealsTitle;
+  String get onboardingHealthyMealsAccent;
+  String get onboardingHealthyMealsDescription;
+  String get onboardingPlansTitle;
+  String get onboardingPlansAccent;
+  String get onboardingPlansDescription;
+  String get onboardingFreshTitle;
+  String get onboardingFreshAccent;
+  String get onboardingFreshDescription;
+  String get onboardingTrackTitle;
+  String get onboardingTrackAccent;
+  String get onboardingTrackDescription;
+  String get onboardingBmiTitle;
+  String get onboardingBmiAccent;
+  String get onboardingBmiDescription;
+  String get onboardingTogetherTitle;
+  String get onboardingTogetherAccent;
+  String get onboardingTogetherDescription;
+  String get onboardingMenu;
+  String get onboardingStartPlan;
 }
 
 class _AppLocalizationsDelegate

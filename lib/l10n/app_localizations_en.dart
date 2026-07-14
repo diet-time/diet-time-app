@@ -96,4 +96,51 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get comingSoon => 'Coming soon';
+
+  @override
+  String get onboardingHealthyMealsTitle => 'Healthy Meals,';
+  @override
+  String get onboardingHealthyMealsAccent => 'Made Simple.';
+  @override
+  String get onboardingHealthyMealsDescription =>
+      'Delicious, balanced meals delivered daily to support your healthy lifestyle.';
+  @override
+  String get onboardingPlansTitle => 'Plans That Fit';
+  @override
+  String get onboardingPlansAccent => 'You Perfectly';
+  @override
+  String get onboardingPlansDescription =>
+      "Tell us your goals, we'll handle the rest with personalised plans just for you.";
+  @override
+  String get onboardingFreshTitle => 'Fresh. Clean.';
+  @override
+  String get onboardingFreshAccent => 'Always.';
+  @override
+  String get onboardingFreshDescription =>
+      'We use real ingredients with no artificial colors, preservatives or unhealthy fillers.';
+  @override
+  String get onboardingTrackTitle => 'Track. Improve.';
+  @override
+  String get onboardingTrackAccent => 'Live Better.';
+  @override
+  String get onboardingTrackDescription =>
+      'Simple tracking helps you stay consistent and achieve your health goals.';
+  @override
+  String get onboardingBmiTitle => 'Know Your BMI,';
+  @override
+  String get onboardingBmiAccent => 'Build a Better Plan';
+  @override
+  String get onboardingBmiDescription =>
+      'Calculate your BMI and get a plan shaped around your body and goals.';
+  @override
+  String get onboardingTogetherTitle => 'Better Together,';
+  @override
+  String get onboardingTogetherAccent => 'Stronger Together';
+  @override
+  String get onboardingTogetherDescription =>
+      'Invite friends, share your journey and achieve more together.';
+  @override
+  String get onboardingMenu => 'Menu';
+  @override
+  String get onboardingStartPlan => 'Start your Plan';
 }
