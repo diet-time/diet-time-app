@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
@@ -224,14 +225,6 @@ class _AnimatedArtwork extends StatefulWidget {
 
 class _AnimatedArtworkState extends State<_AnimatedArtwork>
     with SingleTickerProviderStateMixin {
-  static const _icons = <IconData>[
-    Icons.eco_rounded,
-    Icons.tune_rounded,
-    Icons.verified_rounded,
-    Icons.trending_up_rounded,
-    Icons.favorite_rounded,
-  ];
-
   late final AnimationController _controller;
   bool? _reducedMotion;
 
@@ -240,7 +233,7 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: 3800 + (widget.pageIndex * 220)),
+      duration: const Duration(seconds: 6),
     );
   }
 
@@ -255,7 +248,7 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork>
         ..stop()
         ..value = .45;
     } else {
-      _controller.repeat(reverse: true);
+      _controller.repeat();
     }
   }
 
@@ -272,23 +265,21 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork>
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
-          final eased = Curves.easeInOutSine.transform(_controller.value);
-          final drift = (eased - .5) * 2;
+          final phase = _controller.value * math.pi * 2;
+          final drift = math.sin(phase);
+          final breathe = (math.cos(phase) + 1) / 2;
           return Stack(
             fit: StackFit.expand,
             children: [
               Transform.translate(
-                offset: Offset(direction * drift * 18, drift * -11),
-                child: Transform.rotate(
-                  angle: direction * drift * .008,
-                  child: Transform.scale(
-                    scale: 1.05 + (eased * .10),
-                    child: Image.asset(widget.image, fit: BoxFit.cover),
-                  ),
+                offset: Offset(direction * drift * 4, drift * -3),
+                child: Transform.scale(
+                  scale: 1.015 + (breathe * .02),
+                  child: Image.asset(widget.image, fit: BoxFit.cover),
                 ),
               ),
               Transform.translate(
-                offset: Offset(direction * (drift * 90), 0),
+                offset: Offset(direction * (drift * 28), 0),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: RadialGradient(
@@ -296,7 +287,7 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork>
                       radius: .75,
                       colors: [
                         const Color(0xFF62CE55).withValues(
-                          alpha: .07 + (eased * .07),
+                          alpha: .045 + (breathe * .025),
                         ),
                         AppColors.transparent,
                       ],
@@ -304,18 +295,11 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork>
                   ),
                 ),
               ),
-              Positioned(
-                top: 82 + (widget.pageIndex.isEven ? 20 : 72),
-                right: widget.pageIndex.isEven ? 28 : null,
-                left: widget.pageIndex.isEven ? null : 28,
-                child: Transform.translate(
-                  offset: Offset(-direction * drift * 12, -drift * 18),
-                  child: Transform.rotate(
-                    angle: direction * drift * .12,
-                    child: _FloatingImageBadge(
-                      icon: _icons[widget.pageIndex],
-                      pulse: eased,
-                    ),
+              IgnorePointer(
+                child: CustomPaint(
+                  painter: _ParticlePainter(
+                    progress: _controller.value,
+                    pageIndex: widget.pageIndex,
                   ),
                 ),
               ),
@@ -341,39 +325,41 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork>
   }
 }
 
-class _FloatingImageBadge extends StatelessWidget {
-  const _FloatingImageBadge({required this.icon, required this.pulse});
+class _ParticlePainter extends CustomPainter {
+  const _ParticlePainter({required this.progress, required this.pageIndex});
 
-  final IconData icon;
-  final double pulse;
+  final double progress;
+  final int pageIndex;
 
   @override
-  Widget build(BuildContext context) {
-    return Transform.scale(
-      scale: .92 + (pulse * .14),
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: const Color(0xFF142318).withValues(alpha: .88),
-          border: Border.all(
-            color: const Color(0xFF62CE55).withValues(alpha: .72),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF62CE55).withValues(
-                alpha: .18 + (pulse * .18),
-              ),
-              blurRadius: 18 + (pulse * 12),
-              spreadRadius: pulse * 2,
-            ),
-          ],
-        ),
-        child: Icon(icon, color: const Color(0xFF7BE36D), size: 27),
-      ),
-    );
+  void paint(Canvas canvas, Size size) {
+    for (var index = 0; index < 12; index++) {
+      final phase = ((index * .71) + (pageIndex * .37)) * math.pi;
+      final angle = (progress * math.pi * 2) + phase;
+      final xBase = ((index * 83 + pageIndex * 37) % 100) / 100;
+      final yBase = ((index * 47 + pageIndex * 61) % 78) / 100;
+      final center = Offset(
+        (xBase * size.width) + (math.sin(angle) * 4),
+        (yBase * size.height) + (math.cos(angle * .83) * 5),
+      );
+      final pulse = (math.sin(angle) + 1) / 2;
+      final radius = .65 + ((index % 3) * .32);
+      final glowPaint = Paint()
+        ..color = const Color(0xFF62CE55).withValues(
+          alpha: .025 + (pulse * .035),
+        );
+      final particlePaint = Paint()
+        ..color = const Color(0xFF8BEA78).withValues(
+          alpha: .09 + (pulse * .08),
+        );
+      canvas.drawCircle(center, radius * 4, glowPaint);
+      canvas.drawCircle(center, radius, particlePaint);
+    }
   }
+
+  @override
+  bool shouldRepaint(_ParticlePainter oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.pageIndex != pageIndex;
 }
 
 class _SegmentedProgress extends StatelessWidget {
