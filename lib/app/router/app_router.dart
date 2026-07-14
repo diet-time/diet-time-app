@@ -1,6 +1,7 @@
 import 'package:diet_time/features/authentication/presentation/login_screen.dart';
 import 'package:diet_time/features/home/presentation/home_screen.dart';
 import 'package:diet_time/features/home/presentation/route_placeholder_screen.dart';
+import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:diet_time/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import 'package:go_router/go_router.dart';
 abstract final class AppRoutes {
   static const splash = '/';
   static const landing = '/landing';
+  static const onboarding = '/onboarding';
   static const login = '/login';
   static const plans = '/plans';
   static const register = '/register';
@@ -22,6 +24,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.splash,
         builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.onboarding,
+        builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
         path: AppRoutes.landing,

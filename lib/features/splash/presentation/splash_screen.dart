@@ -6,6 +6,7 @@ import 'package:diet_time/app/theme/app_spacing.dart';
 import 'package:diet_time/app/theme/app_typography.dart';
 import 'package:diet_time/core/widgets/app_logo.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
+import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -114,12 +115,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Future<void> _finish(bool reducedMotion) async {
     final authCheck = ref.read(authenticationServiceProvider).isLoggedIn();
+    final onboardingCheck = ref.read(onboardingSeenProvider.future);
     await Future<void>.delayed(
       reducedMotion ? _reducedMotionDuration : _visualDuration,
     );
     final isLoggedIn = await authCheck;
+    final hasSeenOnboarding = await onboardingCheck;
     if (!mounted) return;
-    context.go(isLoggedIn ? AppRoutes.home : AppRoutes.landing);
+    context.go(
+      isLoggedIn
+          ? AppRoutes.home
+          : hasSeenOnboarding
+          ? AppRoutes.landing
+          : AppRoutes.onboarding,
+    );
   }
 
   @override
