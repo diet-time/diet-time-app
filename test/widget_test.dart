@@ -14,7 +14,7 @@ void main() {
     expect(find.text('Healthy Meals,'), findsOneWidget);
     expect(find.text('Made Simple.'), findsOneWidget);
 
-    for (var index = 0; index < 4; index++) {
+    for (var index = 0; index < 5; index++) {
       await tester.drag(find.byType(PageView), const Offset(-500, 0));
       await tester.pump(const Duration(milliseconds: 700));
     }
@@ -37,7 +37,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 5700));
     await tester.pump(const Duration(milliseconds: 400));
 
-    for (var index = 0; index < 4; index++) {
+    for (var index = 0; index < 5; index++) {
       await tester.drag(find.byType(PageView), const Offset(-500, 0));
       await tester.pump(const Duration(milliseconds: 700));
     }
@@ -60,7 +60,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 5700));
     await tester.pump(const Duration(milliseconds: 400));
 
-    for (var index = 0; index < 4; index++) {
+    for (var index = 0; index < 5; index++) {
       await tester.drag(find.byType(PageView), const Offset(-500, 0));
       await tester.pump(const Duration(milliseconds: 700));
     }

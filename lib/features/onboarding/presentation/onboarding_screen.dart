@@ -13,7 +13,8 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends State<OnboardingScreen>
+    with SingleTickerProviderStateMixin {
   static const _pageDuration = Duration(milliseconds: 2800);
   static const _pages = <_OnboardingPageData>[
     _OnboardingPageData(
@@ -45,6 +46,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           'Simple tracking helps you stay consistent and achieve your health goals.',
     ),
     _OnboardingPageData(
+      image: 'assets/images/onboarding_bmi.png',
+      title: 'Know Your BMI,',
+      accent: 'Build a Better Plan',
+      description:
+          'Calculate your BMI and get a plan shaped around your body and goals.',
+    ),
+    _OnboardingPageData(
       image: 'assets/images/onboarding_5.png',
       title: 'Better Together,',
       accent: 'Stronger Together',
@@ -54,41 +62,48 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   ];
 
   late final PageController _controller;
-  Timer? _timer;
+  late final AnimationController _progressController;
   int _index = 0;
 
   @override
   void initState() {
     super.initState();
     _controller = PageController();
-    _scheduleAdvance();
+    _progressController = AnimationController(
+      vsync: this,
+      duration: _pageDuration,
+    )..addStatusListener(_onProgressStatusChanged);
+    _progressController.forward();
   }
 
-  void _scheduleAdvance() {
-    _timer?.cancel();
-    if (_index == _pages.length - 1) return;
-    _timer = Timer(_pageDuration, () {
-      if (!mounted || !_controller.hasClients) return;
-      _controller.nextPage(
-        duration: const Duration(milliseconds: 650),
-        curve: Curves.easeInOutCubic,
-      );
-    });
+  void _onProgressStatusChanged(AnimationStatus status) {
+    if (status != AnimationStatus.completed ||
+        _index == _pages.length - 1 ||
+        !mounted ||
+        !_controller.hasClients) {
+      return;
+    }
+    _controller.nextPage(
+      duration: const Duration(milliseconds: 650),
+      curve: Curves.easeInOutCubic,
+    );
   }
 
   void _onPageChanged(int index) {
     setState(() => _index = index);
-    _scheduleAdvance();
+    _progressController.forward(from: 0);
   }
 
   void _finish(String route) {
-    _timer?.cancel();
+    _progressController.stop();
     context.go(route);
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _progressController
+      ..removeStatusListener(_onProgressStatusChanged)
+      ..dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -100,24 +115,43 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            PageView.builder(
-              controller: _controller,
-              onPageChanged: _onPageChanged,
-              itemCount: _pages.length,
-              itemBuilder: (context, index) => _OnboardingPage(
-                data: _pages[index],
-                index: index,
-                pageCount: _pages.length,
-                isActive: index == _index,
-                onMenu: () => _finish(AppRoutes.landing),
-                onStart: () => _finish(AppRoutes.plans),
+            NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification is ScrollStartNotification &&
+                    notification.dragDetails != null) {
+                  _progressController.stop();
+                } else if (notification is ScrollEndNotification &&
+                    !_progressController.isCompleted) {
+                  _progressController.forward();
+                }
+                return false;
+              },
+              child: PageView.builder(
+                controller: _controller,
+                onPageChanged: _onPageChanged,
+                itemCount: _pages.length,
+                itemBuilder: (context, index) => _OnboardingPage(
+                  data: _pages[index],
+                  index: index,
+                  pageCount: _pages.length,
+                  isActive: index == _index,
+                  onMenu: () => _finish(AppRoutes.landing),
+                  onStart: () => _finish(AppRoutes.plans),
+                ),
               ),
             ),
             Positioned(
               top: 16,
               left: 16,
               right: 16,
-              child: _SegmentedProgress(currentIndex: _index),
+              child: AnimatedBuilder(
+                animation: _progressController,
+                builder: (context, child) => _SegmentedProgress(
+                  count: _pages.length,
+                  currentIndex: _index,
+                  progress: _progressController.value,
+                ),
+              ),
             ),
           ],
         ),
@@ -158,6 +192,7 @@ class _OnboardingPage extends StatelessWidget {
                 image: data.image,
                 pageIndex: index,
                 isActive: isActive,
+                isCommunityArtwork: isLast,
               ),
             ),
             Expanded(
@@ -230,11 +265,13 @@ class _AnimatedArtwork extends StatefulWidget {
     required this.image,
     required this.pageIndex,
     required this.isActive,
+    required this.isCommunityArtwork,
   });
 
   final String image;
   final int pageIndex;
   final bool isActive;
+  final bool isCommunityArtwork;
 
   @override
   State<_AnimatedArtwork> createState() => _AnimatedArtworkState();
@@ -295,29 +332,36 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork>
           final drift = math.sin(phase);
           final breathe = (math.cos(phase) + 1) / 2;
           final direction = widget.pageIndex.isEven ? 1.0 : -1.0;
-          final isCommunityArtwork = widget.pageIndex == 4;
+          final isCommunityArtwork = widget.isCommunityArtwork;
+          final isBmiArtwork = widget.pageIndex == 4;
+          final usesPortraitFit = isCommunityArtwork || isBmiArtwork;
+          var artworkScale = 1.015 + (breathe * .02);
+          var artworkAlignment = Alignment.center;
+          if (isCommunityArtwork) {
+            artworkScale = 1.0;
+            artworkAlignment = const Alignment(0, -.20);
+          } else if (isBmiArtwork) {
+            artworkScale = 1.0 + (breathe * .005);
+            artworkAlignment = const Alignment(0, .10);
+          }
           return Stack(
             fit: StackFit.expand,
             children: [
               Transform.translate(
                 offset: Offset(
-                  direction * drift * (isCommunityArtwork ? 2 : 4),
-                  drift * (isCommunityArtwork ? -1.5 : -3),
+                  direction * drift * (usesPortraitFit ? 2 : 4),
+                  isCommunityArtwork ? 0 : drift * -3,
                 ),
                 child: Transform.scale(
-                  scale: isCommunityArtwork
-                      ? 1 + (breathe * .005)
-                      : 1.015 + (breathe * .02),
+                  scale: artworkScale,
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: isCommunityArtwork ? 22 : 0,
+                      horizontal: usesPortraitFit ? 22 : 0,
                     ),
                     child: Image.asset(
                       widget.image,
                       fit: BoxFit.cover,
-                      alignment: isCommunityArtwork
-                          ? const Alignment(0, -.12)
-                          : Alignment.center,
+                      alignment: artworkAlignment,
                     ),
                   ),
                 ),
@@ -412,24 +456,45 @@ class _ParticlePainter extends CustomPainter {
 }
 
 class _SegmentedProgress extends StatelessWidget {
-  const _SegmentedProgress({required this.currentIndex});
+  const _SegmentedProgress({
+    required this.count,
+    required this.currentIndex,
+    required this.progress,
+  });
 
+  final int count;
   final int currentIndex;
+  final double progress;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: List.generate(5, (index) {
+      children: List.generate(count, (index) {
         return Expanded(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
+          child: Container(
             height: 4,
-            margin: EdgeInsets.only(right: index == 4 ? 0 : 5),
-            decoration: BoxDecoration(
+            margin: EdgeInsets.only(right: index == count - 1 ? 0 : 5),
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(99),
-              color: index == currentIndex
-                  ? const Color(0xFF62CE55)
-                  : AppColors.white.withValues(alpha: .20),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ColoredBox(
+                    color: index < currentIndex
+                        ? const Color(0xFF62CE55)
+                        : AppColors.white.withValues(alpha: .20),
+                  ),
+                  if (index == currentIndex)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: FractionallySizedBox(
+                        widthFactor: progress.clamp(0.0, 1.0).toDouble(),
+                        heightFactor: 1,
+                        child: const ColoredBox(color: Color(0xFF62CE55)),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         );
