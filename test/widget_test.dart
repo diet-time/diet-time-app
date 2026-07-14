@@ -18,6 +18,7 @@ void main() {
       await tester.drag(find.byType(PageView), const Offset(-500, 0));
       await tester.pump(const Duration(milliseconds: 700));
     }
+    await tester.pump(const Duration(milliseconds: 2200));
 
     expect(find.text('Better Together,'), findsOneWidget);
     expect(find.text('Start your Plan'), findsOneWidget);
@@ -40,6 +41,7 @@ void main() {
       await tester.drag(find.byType(PageView), const Offset(-500, 0));
       await tester.pump(const Duration(milliseconds: 700));
     }
+    await tester.pump(const Duration(milliseconds: 2200));
     await tester.tap(find.text('Menu'));
     await tester.pumpAndSettle();
 
@@ -62,6 +64,7 @@ void main() {
       await tester.drag(find.byType(PageView), const Offset(-500, 0));
       await tester.pump(const Duration(milliseconds: 700));
     }
+    await tester.pump(const Duration(milliseconds: 2200));
     await tester.tap(find.text('Menu'));
     await tester.pumpAndSettle();
 

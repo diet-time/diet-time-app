@@ -148,7 +148,7 @@ class _OnboardingPage extends StatelessWidget {
     final isLast = index == pageCount - 1;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final artworkHeight = constraints.maxHeight * (isLast ? .60 : .61);
+        final artworkHeight = constraints.maxHeight * (isLast ? .60 : .66);
         return Column(
           children: [
             SizedBox(
@@ -201,11 +201,19 @@ class _OnboardingPage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Spacer(),
                     if (isLast)
-                      _FinalActions(onMenu: onMenu, onStart: onStart)
+                      const Spacer()
+                    else
+                      const SizedBox(height: 28),
+                    if (isLast)
+                      _FinalActions(
+                        isActive: isActive,
+                        onMenu: onMenu,
+                        onStart: onStart,
+                      )
                     else
                       _PageDots(count: pageCount, current: index),
+                    if (!isLast) const Spacer(),
                   ],
                 ),
               ),
@@ -387,61 +395,121 @@ class _PageDots extends StatelessWidget {
   }
 }
 
-class _FinalActions extends StatelessWidget {
-  const _FinalActions({required this.onMenu, required this.onStart});
+class _FinalActions extends StatefulWidget {
+  const _FinalActions({
+    required this.isActive,
+    required this.onMenu,
+    required this.onStart,
+  });
 
+  final bool isActive;
   final VoidCallback onMenu;
   final VoidCallback onStart;
 
   @override
+  State<_FinalActions> createState() => _FinalActionsState();
+}
+
+class _FinalActionsState extends State<_FinalActions> {
+  static const _revealDelay = Duration(milliseconds: 1800);
+  Timer? _revealTimer;
+  bool _isVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncVisibility();
+  }
+
+  @override
+  void didUpdateWidget(covariant _FinalActions oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActive != widget.isActive) {
+      _syncVisibility();
+    }
+  }
+
+  void _syncVisibility() {
+    _revealTimer?.cancel();
+    if (!widget.isActive) {
+      _isVisible = false;
+      return;
+    }
+    _revealTimer = Timer(_revealDelay, () {
+      if (mounted) setState(() => _isVisible = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _revealTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        OutlinedButton(
-          onPressed: onMenu,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.white,
-            side: BorderSide(color: AppColors.white.withValues(alpha: .20)),
-            minimumSize: const Size(74, 54),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
+    return AnimatedSlide(
+      offset: _isVisible ? Offset.zero : const Offset(0, 1.35),
+      duration: const Duration(milliseconds: 650),
+      curve: Curves.easeOutCubic,
+      child: AnimatedOpacity(
+        opacity: _isVisible ? 1 : 0,
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOut,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF151816),
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(
+              color: AppColors.white.withValues(alpha: .08),
             ),
-          ),
-          child: const Text('Menu'),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: FilledButton(
-            onPressed: onStart,
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF62CE55),
-              foregroundColor: const Color(0xFF10210E),
-              minimumSize: const Size.fromHeight(54),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withValues(alpha: .34),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
               ),
-            ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Start your Plan',
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
-                SizedBox(width: 14),
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: AppColors.white,
-                  child: Icon(
-                    Icons.arrow_forward_rounded,
-                    color: Color(0xFF10210E),
+            ],
+          ),
+          child: Row(
+            children: [
+              OutlinedButton(
+                onPressed: widget.onMenu,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.white,
+                  side: BorderSide(
+                    color: AppColors.white.withValues(alpha: .20),
+                  ),
+                  minimumSize: const Size(74, 54),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
                   ),
                 ),
-              ],
-            ),
+                child: const Text('Menu'),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  onPressed: widget.onStart,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF62CE55),
+                    foregroundColor: const Color(0xFF10210E),
+                    minimumSize: const Size.fromHeight(54),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                  ),
+                  child: const Text(
+                    'Start your Plan',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
