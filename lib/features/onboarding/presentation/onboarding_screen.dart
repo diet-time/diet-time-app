@@ -1,10 +1,10 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:video_player/video_player.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -240,32 +240,18 @@ class _AnimatedArtwork extends StatefulWidget {
   State<_AnimatedArtwork> createState() => _AnimatedArtworkState();
 }
 
-class _AnimatedArtworkState extends State<_AnimatedArtwork> {
-  late final VideoPlayerController _controller;
-  bool _isReady = false;
+class _AnimatedArtworkState extends State<_AnimatedArtwork>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
   bool? _reducedMotion;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.asset(
-      'assets/videos/onboarding_${widget.pageIndex + 1}.mp4',
-      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
     );
-    _initializeVideo();
-  }
-
-  Future<void> _initializeVideo() async {
-    try {
-      await _controller.initialize();
-      await _controller.setLooping(true);
-      await _controller.setVolume(0);
-      if (!mounted) return;
-      setState(() => _isReady = true);
-      _syncPlayback();
-    } catch (_) {
-      // The original PNG remains visible if video playback is unavailable.
-    }
   }
 
   @override
@@ -274,23 +260,22 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork> {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     if (_reducedMotion == reduceMotion) return;
     _reducedMotion = reduceMotion;
-    _syncPlayback();
+    _syncAnimation();
   }
 
   @override
   void didUpdateWidget(covariant _AnimatedArtwork oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isActive != widget.isActive) {
-      _syncPlayback();
+      _syncAnimation();
     }
   }
 
-  void _syncPlayback() {
-    if (!_isReady) return;
+  void _syncAnimation() {
     if ((_reducedMotion ?? false) || !widget.isActive) {
-      _controller.pause();
+      _controller.stop();
     } else {
-      _controller.play();
+      _controller.repeat();
     }
   }
 
@@ -303,38 +288,110 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork> {
   @override
   Widget build(BuildContext context) {
     return ClipRect(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(widget.image, fit: BoxFit.cover),
-          if (_isReady)
-            FittedBox(
-              fit: BoxFit.cover,
-              clipBehavior: Clip.hardEdge,
-              child: SizedBox(
-                width: _controller.value.size.width,
-                height: _controller.value.size.height,
-                child: VideoPlayer(_controller),
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          final phase = _controller.value * math.pi * 2;
+          final drift = math.sin(phase);
+          final breathe = (math.cos(phase) + 1) / 2;
+          final direction = widget.pageIndex.isEven ? 1.0 : -1.0;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Transform.translate(
+                offset: Offset(direction * drift * 4, drift * -3),
+                child: Transform.scale(
+                  scale: 1.015 + (breathe * .02),
+                  child: Image.asset(widget.image, fit: BoxFit.cover),
+                ),
               ),
-            ),
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0x330D0F0E),
-                  Color(0x000D0F0E),
-                  Color(0xFF0D0F0E),
-                ],
-                stops: [0, .63, 1],
+              Transform.translate(
+                offset: Offset(direction * drift * 24, 0),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment(direction * -.35, -.05),
+                      radius: .78,
+                      colors: [
+                        const Color(0xFF62CE55).withValues(
+                          alpha: .04 + (breathe * .025),
+                        ),
+                        AppColors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ],
+              IgnorePointer(
+                child: CustomPaint(
+                  painter: _ParticlePainter(
+                    progress: _controller.value,
+                    pageIndex: widget.pageIndex,
+                  ),
+                ),
+              ),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0x330D0F0E),
+                      Color(0x000D0F0E),
+                      Color(0xFF0D0F0E),
+                    ],
+                    stops: [0, .63, 1],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
+}
+
+class _ParticlePainter extends CustomPainter {
+  const _ParticlePainter({required this.progress, required this.pageIndex});
+
+  final double progress;
+  final int pageIndex;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var index = 0; index < 14; index++) {
+      final phase = ((index * .71) + (pageIndex * .37)) * math.pi;
+      final angle = (progress * math.pi * 2) + phase;
+      final xBase = ((index * 83 + pageIndex * 37) % 100) / 100;
+      final yBase = ((index * 47 + pageIndex * 61) % 80) / 100;
+      final center = Offset(
+        (xBase * size.width) + (math.sin(angle) * 4),
+        (yBase * size.height) + (math.cos(angle * .83) * 5),
+      );
+      final pulse = (math.sin(angle) + 1) / 2;
+      final radius = .65 + ((index % 3) * .3);
+      final isWhite = index % 4 == 0;
+      canvas.drawCircle(
+        center,
+        radius * 4,
+        Paint()
+          ..color = (isWhite ? AppColors.white : const Color(0xFF62CE55))
+              .withValues(alpha: .02 + (pulse * .03)),
+      );
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..color = (isWhite ? AppColors.white : const Color(0xFF8BEA78))
+              .withValues(alpha: .08 + (pulse * .07)),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ParticlePainter oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.pageIndex != pageIndex;
 }
 
 class _SegmentedProgress extends StatelessWidget {
