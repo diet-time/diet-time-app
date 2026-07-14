@@ -26,7 +26,7 @@ for ($screen = 1; $screen -le 5; $screen++) {
   $filters.Add("[scene][ambient]overlay=x='190+55*sin(2*PI*t/6+$screen)':y='390+45*cos(2*PI*t/6+$screen)':shortest=1[with_ambient]")
 
   $filters.Add("color=c=white@0.028:s=130x2200:r=30:d=6,format=rgba,rotate=0.28:ow=rotw(iw):oh=roth(ih):c=none,gblur=sigma=48[sweep]")
-  $filters.Add("[with_ambient][sweep]overlay=x='-520+(1740*t/6)':y=-190:shortest=1[with_sweep]")
+  $filters.Add("[with_ambient][sweep]overlay=x='-800+(2000*t/6)':y=-190:shortest=1[with_sweep]")
 
   $current = 'with_sweep'
   for ($particle = 0; $particle -lt 16; $particle++) {
@@ -61,7 +61,7 @@ for ($screen = 1; $screen -le 5; $screen++) {
     -frames:v 180 `
     -an `
     -c:v libx264 `
-    -preset slow `
+    -preset medium `
     -crf 20 `
     -profile:v high `
     -level 4.1 `
