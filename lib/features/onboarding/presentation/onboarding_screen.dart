@@ -295,14 +295,31 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork>
           final drift = math.sin(phase);
           final breathe = (math.cos(phase) + 1) / 2;
           final direction = widget.pageIndex.isEven ? 1.0 : -1.0;
+          final isCommunityArtwork = widget.pageIndex == 4;
           return Stack(
             fit: StackFit.expand,
             children: [
               Transform.translate(
-                offset: Offset(direction * drift * 4, drift * -3),
+                offset: Offset(
+                  direction * drift * (isCommunityArtwork ? 2 : 4),
+                  drift * (isCommunityArtwork ? -1.5 : -3),
+                ),
                 child: Transform.scale(
-                  scale: 1.015 + (breathe * .02),
-                  child: Image.asset(widget.image, fit: BoxFit.cover),
+                  scale: isCommunityArtwork
+                      ? 1 + (breathe * .005)
+                      : 1.015 + (breathe * .02),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isCommunityArtwork ? 22 : 0,
+                    ),
+                    child: Image.asset(
+                      widget.image,
+                      fit: BoxFit.cover,
+                      alignment: isCommunityArtwork
+                          ? const Alignment(0, -.12)
+                          : Alignment.center,
+                    ),
+                  ),
                 ),
               ),
               Transform.translate(
