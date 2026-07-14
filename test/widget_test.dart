@@ -1,5 +1,4 @@
 import 'package:diet_time/app/app.dart';
-import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,16 +32,16 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1440, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          onboardingSeenProvider.overrideWith((ref) async => true),
-        ],
-        child: const DietTimeApp(),
-      ),
-    );
+    await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
     await tester.pump(const Duration(milliseconds: 5700));
     await tester.pump(const Duration(milliseconds: 400));
+
+    for (var index = 0; index < 4; index++) {
+      await tester.drag(find.byType(PageView), const Offset(-500, 0));
+      await tester.pump(const Duration(milliseconds: 700));
+    }
+    await tester.tap(find.text('Menu'));
+    await tester.pumpAndSettle();
 
     expect(find.text('Eat Well, Feel Great'), findsOneWidget);
     await tester.tap(find.text('Login'));
@@ -55,16 +54,16 @@ void main() {
   testWidgets('language toggle updates all landing content immediately', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          onboardingSeenProvider.overrideWith((ref) async => true),
-        ],
-        child: const DietTimeApp(),
-      ),
-    );
+    await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
     await tester.pump(const Duration(milliseconds: 5700));
     await tester.pump(const Duration(milliseconds: 400));
+
+    for (var index = 0; index < 4; index++) {
+      await tester.drag(find.byType(PageView), const Offset(-500, 0));
+      await tester.pump(const Duration(milliseconds: 700));
+    }
+    await tester.tap(find.text('Menu'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('العربية'));
     await tester.pump();

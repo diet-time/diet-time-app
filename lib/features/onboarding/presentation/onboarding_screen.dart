@@ -2,32 +2,17 @@ import 'dart:async';
 
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
-import 'package:diet_time/core/storage/secure_storage_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-const _onboardingSeenKey = 'onboarding_seen';
-
-final onboardingSeenProvider = FutureProvider<bool>((ref) async {
-  try {
-    return await ref
-            .watch(secureStorageServiceProvider)
-            .read(_onboardingSeenKey) ==
-        'true';
-  } catch (_) {
-    return false;
-  }
-});
-
-class OnboardingScreen extends ConsumerStatefulWidget {
+class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
+class _OnboardingScreenState extends State<OnboardingScreen> {
   static const _pageDuration = Duration(milliseconds: 2800);
   static const _pages = <_OnboardingPageData>[
     _OnboardingPageData(
@@ -95,16 +80,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _scheduleAdvance();
   }
 
-  Future<void> _finish(String route) async {
+  void _finish(String route) {
     _timer?.cancel();
-    try {
-      await ref
-          .read(secureStorageServiceProvider)
-          .write(_onboardingSeenKey, 'true');
-    } catch (_) {
-      // Navigation should remain available if secure storage is unavailable.
-    }
-    if (mounted) context.go(route);
+    context.go(route);
   }
 
   @override
@@ -246,6 +224,14 @@ class _AnimatedArtwork extends StatefulWidget {
 
 class _AnimatedArtworkState extends State<_AnimatedArtwork>
     with SingleTickerProviderStateMixin {
+  static const _icons = <IconData>[
+    Icons.eco_rounded,
+    Icons.tune_rounded,
+    Icons.verified_rounded,
+    Icons.trending_up_rounded,
+    Icons.favorite_rounded,
+  ];
+
   late final AnimationController _controller;
   bool? _reducedMotion;
 
@@ -254,7 +240,7 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: 6800 + (widget.pageIndex * 450)),
+      duration: Duration(milliseconds: 3800 + (widget.pageIndex * 220)),
     );
   }
 
@@ -292,14 +278,17 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork>
             fit: StackFit.expand,
             children: [
               Transform.translate(
-                offset: Offset(direction * drift * 7, drift * -5),
-                child: Transform.scale(
-                  scale: 1.045 + (eased * .045),
-                  child: Image.asset(widget.image, fit: BoxFit.cover),
+                offset: Offset(direction * drift * 18, drift * -11),
+                child: Transform.rotate(
+                  angle: direction * drift * .008,
+                  child: Transform.scale(
+                    scale: 1.05 + (eased * .10),
+                    child: Image.asset(widget.image, fit: BoxFit.cover),
+                  ),
                 ),
               ),
               Transform.translate(
-                offset: Offset(direction * (drift * 42), 0),
+                offset: Offset(direction * (drift * 90), 0),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: RadialGradient(
@@ -307,10 +296,25 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork>
                       radius: .75,
                       colors: [
                         const Color(0xFF62CE55).withValues(
-                          alpha: .055 + (eased * .025),
+                          alpha: .07 + (eased * .07),
                         ),
                         AppColors.transparent,
                       ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 82 + (widget.pageIndex.isEven ? 20 : 72),
+                right: widget.pageIndex.isEven ? 28 : null,
+                left: widget.pageIndex.isEven ? null : 28,
+                child: Transform.translate(
+                  offset: Offset(-direction * drift * 12, -drift * 18),
+                  child: Transform.rotate(
+                    angle: direction * drift * .12,
+                    child: _FloatingImageBadge(
+                      icon: _icons[widget.pageIndex],
+                      pulse: eased,
                     ),
                   ),
                 ),
@@ -332,6 +336,41 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork>
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _FloatingImageBadge extends StatelessWidget {
+  const _FloatingImageBadge({required this.icon, required this.pulse});
+
+  final IconData icon;
+  final double pulse;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.scale(
+      scale: .92 + (pulse * .14),
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xFF142318).withValues(alpha: .88),
+          border: Border.all(
+            color: const Color(0xFF62CE55).withValues(alpha: .72),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF62CE55).withValues(
+                alpha: .18 + (pulse * .18),
+              ),
+              blurRadius: 18 + (pulse * 12),
+              spreadRadius: pulse * 2,
+            ),
+          ],
+        ),
+        child: Icon(icon, color: const Color(0xFF7BE36D), size: 27),
       ),
     );
   }
