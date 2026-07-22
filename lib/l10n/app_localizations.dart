@@ -272,26 +272,134 @@ abstract class AppLocalizations {
   /// **'Coming soon'**
   String get comingSoon;
 
+  /// No description provided for @onboardingHealthyMealsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Healthy Meals,'**
   String get onboardingHealthyMealsTitle;
+
+  /// No description provided for @onboardingHealthyMealsAccent.
+  ///
+  /// In en, this message translates to:
+  /// **'Made Simple.'**
   String get onboardingHealthyMealsAccent;
+
+  /// No description provided for @onboardingHealthyMealsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Delicious, balanced meals delivered daily to support your healthy lifestyle.'**
   String get onboardingHealthyMealsDescription;
+
+  /// No description provided for @onboardingPlansTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Plans That Fit'**
   String get onboardingPlansTitle;
+
+  /// No description provided for @onboardingPlansAccent.
+  ///
+  /// In en, this message translates to:
+  /// **'You Perfectly'**
   String get onboardingPlansAccent;
+
+  /// No description provided for @onboardingPlansDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us your goals, we\'ll handle the rest with personalised plans just for you.'**
   String get onboardingPlansDescription;
+
+  /// No description provided for @onboardingFreshTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Fresh. Clean.'**
   String get onboardingFreshTitle;
+
+  /// No description provided for @onboardingFreshAccent.
+  ///
+  /// In en, this message translates to:
+  /// **'Always.'**
   String get onboardingFreshAccent;
+
+  /// No description provided for @onboardingFreshDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'We use real ingredients with no artificial colors, preservatives or unhealthy fillers.'**
   String get onboardingFreshDescription;
+
+  /// No description provided for @onboardingTrackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Track. Improve.'**
   String get onboardingTrackTitle;
+
+  /// No description provided for @onboardingTrackAccent.
+  ///
+  /// In en, this message translates to:
+  /// **'Live Better.'**
   String get onboardingTrackAccent;
+
+  /// No description provided for @onboardingTrackDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Simple tracking helps you stay consistent and achieve your health goals.'**
   String get onboardingTrackDescription;
+
+  /// No description provided for @onboardingBmiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Know Your BMI,'**
   String get onboardingBmiTitle;
+
+  /// No description provided for @onboardingBmiAccent.
+  ///
+  /// In en, this message translates to:
+  /// **'Build a Better Plan'**
   String get onboardingBmiAccent;
+
+  /// No description provided for @onboardingBmiDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculate your BMI and get a plan shaped around your body and goals.'**
   String get onboardingBmiDescription;
+
+  /// No description provided for @onboardingTogetherTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Better Together,'**
   String get onboardingTogetherTitle;
+
+  /// No description provided for @onboardingTogetherAccent.
+  ///
+  /// In en, this message translates to:
+  /// **'Stronger Together'**
   String get onboardingTogetherAccent;
+
+  /// No description provided for @onboardingTogetherDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite friends, share your journey and achieve more together.'**
   String get onboardingTogetherDescription;
+
+  /// No description provided for @onboardingMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Menu'**
   String get onboardingMenu;
+
+  /// No description provided for @onboardingStartPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Start your Plan'**
   String get onboardingStartPlan;
+
+  /// The heading shown above the language choices.
+  String get chooseLanguage;
+
+  /// Explains why the user is choosing a language.
+  String get languageSelectionSubtitle;
+
+  /// Label for the language choice card.
+  String get languageLabel;
 }
 
 class _AppLocalizationsDelegate

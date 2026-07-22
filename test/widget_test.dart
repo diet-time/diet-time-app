@@ -1,110 +1,120 @@
 import 'package:diet_time/app/app.dart';
-import 'package:diet_time/app/localization/locale_controller.dart';
+import 'package:diet_time/features/authentication/presentation/login_screen.dart';
+import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('Arabic locale renders localized onboarding content', (
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets('tap and swipe update the same onboarding page index', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          localeControllerProvider.overrideWith(_ArabicLocaleController.new),
-        ],
-        child: const DietTimeApp(),
-      ),
-    );
-    await tester.pump(const Duration(milliseconds: 5700));
-    await tester.pump(const Duration(milliseconds: 400));
-
-    expect(find.text('وجبات صحية،'), findsOneWidget);
-    expect(find.text('بكل بساطة.'), findsOneWidget);
-    expect(
-      find.text('وجبات لذيذة ومتوازنة تُوصّل يومياً لدعم نمط حياتك الصحي.'),
-      findsOneWidget,
-    );
-    expect(find.text('Healthy Meals,'), findsNothing);
-  });
-
-  testWidgets('first launch opens onboarding and Menu reaches landing', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
-    await tester.pump(const Duration(milliseconds: 5700));
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpWidget(_onboardingApp());
 
     expect(find.text('Healthy Meals,'), findsOneWidget);
-    expect(find.text('Made Simple.'), findsOneWidget);
+    expect(find.text('Skip'), findsNothing);
+    expect(find.text('Next'), findsNothing);
 
-    for (var index = 0; index < 5; index++) {
-      await tester.drag(find.byType(PageView), const Offset(-500, 0));
-      await tester.pump(const Duration(milliseconds: 700));
-    }
-    await tester.pump(const Duration(milliseconds: 2200));
-
-    expect(find.text('Better Together,'), findsOneWidget);
-    expect(find.text('Start your Plan'), findsOneWidget);
-
-    await tester.tap(find.text('Menu'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Eat Well, Feel Great'), findsOneWidget);
-  });
-
-  testWidgets('wide login layout renders without overflow', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(1440, 900));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-
-    await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
-    await tester.pump(const Duration(milliseconds: 5700));
+    await tester.tap(find.byKey(const ValueKey('onboardingTapArea-0')));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Plans That Fit'), findsOneWidget);
 
-    for (var index = 0; index < 5; index++) {
-      await tester.drag(find.byType(PageView), const Offset(-500, 0));
-      await tester.pump(const Duration(milliseconds: 700));
-    }
-    await tester.pump(const Duration(milliseconds: 2200));
-    await tester.tap(find.text('Menu'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Eat Well, Feel Great'), findsOneWidget);
-    await tester.tap(find.text('Login'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Welcome Back'), findsOneWidget);
+    await tester.drag(find.byType(PageView), const Offset(-500, 0));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Fresh. Clean.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('language toggle updates all landing content immediately', (
+  testWidgets('final onboarding tap opens language selection', (tester) async {
+    await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
+    await tester.pump(const Duration(milliseconds: 5700));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    for (var index = 0; index < 6; index++) {
+      await tester.tap(find.byKey(ValueKey('onboardingTapArea-$index')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('Choose your Language'), findsOneWidget);
+    expect(find.text('Language'), findsOneWidget);
+    expect(find.text('English'), findsOneWidget);
+    expect(find.text('العربية'), findsOneWidget);
+  });
+
+  testWidgets('language preference is saved before login opens', (
     tester,
   ) async {
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
     await tester.pump(const Duration(milliseconds: 5700));
     await tester.pump(const Duration(milliseconds: 400));
 
-    for (var index = 0; index < 5; index++) {
-      await tester.drag(find.byType(PageView), const Offset(-500, 0));
-      await tester.pump(const Duration(milliseconds: 700));
+    for (var index = 0; index < 6; index++) {
+      await tester.tap(find.byKey(ValueKey('onboardingTapArea-$index')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
     }
-    await tester.pump(const Duration(milliseconds: 2200));
-    await tester.tap(find.text('Menu'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('English'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getString('preferredLanguage'), 'en');
+    expect(find.text('Welcome Back'), findsOneWidget);
+  });
+
+  testWidgets('compact onboarding has no overflow', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_onboardingApp());
+
+    expect(find.text('Healthy Meals,'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Arabic selection persists and makes login RTL', (tester) async {
+    await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
+    await tester.pump(const Duration(milliseconds: 5700));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    for (var index = 0; index < 6; index++) {
+      await tester.tap(find.byKey(ValueKey('onboardingTapArea-$index')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+    await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.text('العربية'));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('صحي'), findsOneWidget);
-    expect(find.text('رحلتك تبدأ هنا.'), findsOneWidget);
-    expect(find.text('كل جيد، اشعر رائع'), findsOneWidget);
-    expect(find.text('الخطط'), findsOneWidget);
-    expect(find.text('EN'), findsOneWidget);
-    expect(find.text('العربية'), findsOneWidget);
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getString('preferredLanguage'), 'ar');
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(
+      Directionality.of(tester.element(find.byType(LoginScreen))),
+      TextDirection.rtl,
+    );
   });
 }
 
-class _ArabicLocaleController extends LocaleController {
-  @override
-  Locale build() => const Locale('ar');
+Widget _onboardingApp() {
+  return const MaterialApp(
+    localizationsDelegates: [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: OnboardingScreen(),
+  );
 }

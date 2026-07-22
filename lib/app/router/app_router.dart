@@ -1,6 +1,7 @@
 import 'package:diet_time/features/authentication/presentation/login_screen.dart';
 import 'package:diet_time/features/home/presentation/home_screen.dart';
 import 'package:diet_time/features/home/presentation/route_placeholder_screen.dart';
+import 'package:diet_time/features/language/presentation/language_selection_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:diet_time/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ abstract final class AppRoutes {
   static const splash = '/';
   static const landing = '/landing';
   static const onboarding = '/onboarding';
+  static const language = '/language';
   static const login = '/login';
   static const plans = '/plans';
   static const register = '/register';
@@ -28,6 +30,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.onboarding,
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.language,
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          transitionDuration: const Duration(milliseconds: 300),
+          child: const LanguageSelectionScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
       ),
       GoRoute(
         path: AppRoutes.landing,

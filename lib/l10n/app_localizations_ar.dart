@@ -9,6 +9,18 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String get appName => 'دايت تايم';
+
+  @override
+  String get tagline => 'غذاء أفضل. شعور أخف.';
+
+  @override
+  String get healthy => 'صحي';
+
+  @override
+  String get journeyStartsHere => 'رحلتك تبدأ هنا.';
+
+  @override
   String get landingTitle => 'كل جيد، اشعر رائع';
 
   @override
@@ -23,18 +35,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get register => 'إنشاء حساب';
-
-  @override
-  String get appName => 'دايت تايم';
-
-  @override
-  String get tagline => 'غذاء أفضل. شعور أخف.';
-
-  @override
-  String get healthy => 'صحي';
-
-  @override
-  String get journeyStartsHere => 'رحلتك تبدأ هنا.';
 
   @override
   String get welcomeBack => 'مرحباً بعودتك';
@@ -99,48 +99,76 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get onboardingHealthyMealsTitle => 'وجبات صحية،';
+
   @override
   String get onboardingHealthyMealsAccent => 'بكل بساطة.';
+
   @override
   String get onboardingHealthyMealsDescription =>
       'وجبات لذيذة ومتوازنة تُوصّل يومياً لدعم نمط حياتك الصحي.';
+
   @override
   String get onboardingPlansTitle => 'خطط تناسبك';
+
   @override
   String get onboardingPlansAccent => 'تماماً';
+
   @override
   String get onboardingPlansDescription =>
       'أخبرنا بأهدافك، وسنتولى الباقي بخطط مخصصة لك.';
+
   @override
   String get onboardingFreshTitle => 'طازج. نقي.';
+
   @override
   String get onboardingFreshAccent => 'دائماً.';
+
   @override
   String get onboardingFreshDescription =>
       'نستخدم مكونات طبيعية دون ألوان صناعية أو مواد حافظة أو إضافات غير صحية.';
+
   @override
   String get onboardingTrackTitle => 'تابع. تطوّر.';
+
   @override
   String get onboardingTrackAccent => 'عش أفضل.';
+
   @override
   String get onboardingTrackDescription =>
       'تساعدك المتابعة البسيطة على الاستمرار وتحقيق أهدافك الصحية.';
+
   @override
   String get onboardingBmiTitle => 'اعرف مؤشر كتلة جسمك،';
+
   @override
   String get onboardingBmiAccent => 'وابنِ خطة أفضل';
+
   @override
   String get onboardingBmiDescription =>
       'احسب مؤشر كتلة جسمك واحصل على خطة مصممة وفقاً لجسمك وأهدافك.';
+
   @override
   String get onboardingTogetherTitle => 'معاً أفضل،';
+
   @override
   String get onboardingTogetherAccent => 'معاً أقوى';
+
   @override
   String get onboardingTogetherDescription =>
       'ادعُ أصدقاءك، وشارك رحلتك، وحققوا المزيد معاً.';
+
   @override
   String get onboardingMenu => 'القائمة';
+
   @override
   String get onboardingStartPlan => 'ابدأ خطتك';
+
+  @override
+  String get chooseLanguage => 'اختر لغتك';
+
+  @override
+  String get languageSelectionSubtitle => 'اختر لغتك المفضلة لتخصيص تجربتك.';
+
+  @override
+  String get languageLabel => 'اللغة';
 }

@@ -48,5 +48,8 @@
   "onboardingTogetherAccent": "Stronger Together",
   "onboardingTogetherDescription": "Invite friends, share your journey and achieve more together.",
   "onboardingMenu": "Menu",
-  "onboardingStartPlan": "Start your Plan"
+  "onboardingStartPlan": "Start your Plan",
+  "chooseLanguage": "Choose your Language",
+  "languageSelectionSubtitle": "Select your preferred language to personalize your experience.",
+  "languageLabel": "Language"
 }

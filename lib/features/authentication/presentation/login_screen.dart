@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'package:diet_time/app/localization/locale_controller.dart';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
@@ -13,6 +12,7 @@ import 'package:diet_time/core/widgets/app_textfield.dart';
 import 'package:diet_time/core/widgets/social_button.dart';
 import 'package:diet_time/features/authentication/domain/login_credentials.dart';
 import 'package:diet_time/features/authentication/presentation/login_controller.dart';
+import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -120,7 +120,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final locale = ref.watch(localeControllerProvider);
+    final locale = ref.watch(languageControllerProvider);
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return Scaffold(
@@ -131,7 +131,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             void onLocaleChanged(Locale value) {
-              ref.read(localeControllerProvider.notifier).setLocale(value);
+              ref.read(languageControllerProvider.notifier).setLocale(value);
             }
 
             if (constraints.maxWidth >= _wideBreakpoint) {

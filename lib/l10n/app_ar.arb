@@ -48,5 +48,8 @@
   "onboardingTogetherAccent": "معاً أقوى",
   "onboardingTogetherDescription": "ادعُ أصدقاءك، وشارك رحلتك، وحققوا المزيد معاً.",
   "onboardingMenu": "القائمة",
-  "onboardingStartPlan": "ابدأ خطتك"
+  "onboardingStartPlan": "ابدأ خطتك",
+  "chooseLanguage": "اختر لغتك",
+  "languageSelectionSubtitle": "اختر لغتك المفضلة لتخصيص تجربتك.",
+  "languageLabel": "اللغة"
 }

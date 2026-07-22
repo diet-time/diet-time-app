@@ -1,6 +1,6 @@
-import 'package:diet_time/app/localization/locale_controller.dart';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_theme.dart';
+import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -11,7 +11,7 @@ class DietTimeApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final locale = ref.watch(localeControllerProvider);
+    final locale = ref.watch(languageControllerProvider);
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(

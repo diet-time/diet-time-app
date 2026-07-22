@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:diet_time/app/router/app_router.dart';
@@ -14,9 +13,8 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen>
-    with SingleTickerProviderStateMixin {
-  static const _pageDuration = Duration(milliseconds: 2800);
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  static const _pageTransitionDuration = Duration(milliseconds: 350);
   List<_OnboardingPageData> _pages(AppLocalizations l10n) => [
     _OnboardingPageData(
       image: 'assets/images/onboarding_1.png',
@@ -57,49 +55,34 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   ];
 
   late final PageController _controller;
-  late final AnimationController _progressController;
   int _index = 0;
+  bool _isNavigating = false;
 
   @override
   void initState() {
     super.initState();
     _controller = PageController();
-    _progressController = AnimationController(
-      vsync: this,
-      duration: _pageDuration,
-    )..addStatusListener(_onProgressStatusChanged);
-    _progressController.forward();
-  }
-
-  void _onProgressStatusChanged(AnimationStatus status) {
-    if (status != AnimationStatus.completed ||
-        !mounted ||
-        !_controller.hasClients) {
-      return;
-    }
-    final pageCount = _pages(AppLocalizations.of(context)).length;
-    if (_index == pageCount - 1) return;
-    _controller.nextPage(
-      duration: const Duration(milliseconds: 650),
-      curve: Curves.easeInOutCubic,
-    );
   }
 
   void _onPageChanged(int index) {
     setState(() => _index = index);
-    _progressController.forward(from: 0);
   }
 
-  void _finish(String route) {
-    _progressController.stop();
-    context.go(route);
+  Future<void> _handleTap(int pageCount) async {
+    if (_isNavigating || !_controller.hasClients) return;
+    if (_index < pageCount - 1) {
+      await _controller.nextPage(
+        duration: _pageTransitionDuration,
+        curve: Curves.easeInOut,
+      );
+      return;
+    }
+    _isNavigating = true;
+    if (mounted) context.go(AppRoutes.language);
   }
 
   @override
   void dispose() {
-    _progressController
-      ..removeStatusListener(_onProgressStatusChanged)
-      ..dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -110,43 +93,35 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return Scaffold(
       backgroundColor: const Color(0xFF0D0F0E),
       body: SafeArea(
-        child: Stack(
+        child: Column(
           children: [
-            NotificationListener<ScrollNotification>(
-              onNotification: (notification) {
-                if (notification is ScrollStartNotification &&
-                    notification.dragDetails != null) {
-                  _progressController.stop();
-                } else if (notification is ScrollEndNotification &&
-                    !_progressController.isCompleted) {
-                  _progressController.forward();
-                }
-                return false;
-              },
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _handleTap(pages.length),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: _SegmentedProgress(
+                  count: pages.length,
+                  currentIndex: _index,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
               child: PageView.builder(
                 controller: _controller,
                 onPageChanged: _onPageChanged,
                 itemCount: pages.length,
-                itemBuilder: (context, index) => _OnboardingPage(
-                  data: pages[index],
-                  index: index,
-                  pageCount: pages.length,
-                  isActive: index == _index,
-                  onMenu: () => _finish(AppRoutes.landing),
-                  onStart: () => _finish(AppRoutes.plans),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 16,
-              left: 16,
-              right: 16,
-              child: AnimatedBuilder(
-                animation: _progressController,
-                builder: (context, child) => _SegmentedProgress(
-                  count: pages.length,
-                  currentIndex: _index,
-                  progress: _progressController.value,
+                itemBuilder: (context, index) => GestureDetector(
+                  key: ValueKey('onboardingTapArea-$index'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _handleTap(pages.length),
+                  child: _OnboardingPage(
+                    data: pages[index],
+                    index: index,
+                    pageCount: pages.length,
+                    isActive: index == _index,
+                  ),
                 ),
               ),
             ),
@@ -163,46 +138,53 @@ class _OnboardingPage extends StatelessWidget {
     required this.index,
     required this.pageCount,
     required this.isActive,
-    required this.onMenu,
-    required this.onStart,
   });
 
   final _OnboardingPageData data;
   final int index;
   final int pageCount;
   final bool isActive;
-  final VoidCallback onMenu;
-  final VoidCallback onStart;
 
   @override
   Widget build(BuildContext context) {
     final isLast = index == pageCount - 1;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final artworkHeight = constraints.maxHeight * (isLast ? .60 : .66);
-        return Column(
-          children: [
-            SizedBox(
-              height: artworkHeight,
-              width: double.infinity,
-              child: _AnimatedArtwork(
-                image: data.image,
-                pageIndex: index,
-                isActive: isActive,
-                isCommunityArtwork: isLast,
+        final compact = constraints.maxHeight < 600;
+        final horizontalPadding = constraints.maxWidth < 500 ? 24.0 : 48.0;
+        final titleSize = compact ? 23.0 : 28.0;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            0,
+            horizontalPadding,
+            16,
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 760),
+                  child: _AnimatedArtwork(
+                    image: data.image,
+                    pageIndex: index,
+                    isActive: isActive,
+                    isCommunityArtwork: isLast,
+                  ),
+                ),
               ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(28, 0, 28, 18),
+              SizedBox(height: compact ? 12 : 24),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 620),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       data.title,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.white,
-                        fontSize: 28,
+                        fontSize: titleSize,
                         height: 1.12,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -.55,
@@ -211,15 +193,15 @@ class _OnboardingPage extends StatelessWidget {
                     Text(
                       data.accent,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Color(0xFF62CE55),
-                        fontSize: 28,
+                        fontSize: titleSize,
                         height: 1.12,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -.55,
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    SizedBox(height: compact ? 8 : 14),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 330),
                       child: Text(
@@ -227,30 +209,19 @@ class _OnboardingPage extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppColors.white.withValues(alpha: .66),
-                          fontSize: 14,
-                          height: 1.55,
+                          fontSize: compact ? 13 : 14,
+                          height: compact ? 1.35 : 1.5,
                           fontWeight: FontWeight.w400,
                         ),
                       ),
                     ),
-                    if (isLast)
-                      const Spacer()
-                    else
-                      const SizedBox(height: 28),
-                    if (isLast)
-                      _FinalActions(
-                        isActive: isActive,
-                        onMenu: onMenu,
-                        onStart: onStart,
-                      )
-                    else
-                      _PageDots(count: pageCount, current: index),
-                    if (!isLast) const Spacer(),
+                    SizedBox(height: compact ? 12 : 20),
+                    _PageDots(count: pageCount, current: index),
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -371,9 +342,9 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork>
                       center: Alignment(direction * -.35, -.05),
                       radius: .78,
                       colors: [
-                        const Color(0xFF62CE55).withValues(
-                          alpha: .04 + (breathe * .025),
-                        ),
+                        const Color(
+                          0xFF62CE55,
+                        ).withValues(alpha: .04 + (breathe * .025)),
                         AppColors.transparent,
                       ],
                     ),
@@ -453,15 +424,10 @@ class _ParticlePainter extends CustomPainter {
 }
 
 class _SegmentedProgress extends StatelessWidget {
-  const _SegmentedProgress({
-    required this.count,
-    required this.currentIndex,
-    required this.progress,
-  });
+  const _SegmentedProgress({required this.count, required this.currentIndex});
 
   final int count;
   final int currentIndex;
-  final double progress;
 
   @override
   Widget build(BuildContext context) {
@@ -473,24 +439,12 @@ class _SegmentedProgress extends StatelessWidget {
             margin: EdgeInsets.only(right: index == count - 1 ? 0 : 5),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(99),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ColoredBox(
-                    color: index < currentIndex
-                        ? const Color(0xFF62CE55)
-                        : AppColors.white.withValues(alpha: .20),
-                  ),
-                  if (index == currentIndex)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: FractionallySizedBox(
-                        widthFactor: progress.clamp(0.0, 1.0).toDouble(),
-                        heightFactor: 1,
-                        child: const ColoredBox(color: Color(0xFF62CE55)),
-                      ),
-                    ),
-                ],
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                color: index <= currentIndex
+                    ? const Color(0xFF62CE55)
+                    : AppColors.white.withValues(alpha: .20),
               ),
             ),
           ),
@@ -526,126 +480,6 @@ class _PageDots extends StatelessWidget {
             ),
           );
         }),
-      ),
-    );
-  }
-}
-
-class _FinalActions extends StatefulWidget {
-  const _FinalActions({
-    required this.isActive,
-    required this.onMenu,
-    required this.onStart,
-  });
-
-  final bool isActive;
-  final VoidCallback onMenu;
-  final VoidCallback onStart;
-
-  @override
-  State<_FinalActions> createState() => _FinalActionsState();
-}
-
-class _FinalActionsState extends State<_FinalActions> {
-  static const _revealDelay = Duration(milliseconds: 1800);
-  Timer? _revealTimer;
-  bool _isVisible = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _syncVisibility();
-  }
-
-  @override
-  void didUpdateWidget(covariant _FinalActions oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.isActive != widget.isActive) {
-      _syncVisibility();
-    }
-  }
-
-  void _syncVisibility() {
-    _revealTimer?.cancel();
-    if (!widget.isActive) {
-      _isVisible = false;
-      return;
-    }
-    _revealTimer = Timer(_revealDelay, () {
-      if (mounted) setState(() => _isVisible = true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _revealTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return AnimatedSlide(
-      offset: _isVisible ? Offset.zero : const Offset(0, 1.35),
-      duration: const Duration(milliseconds: 650),
-      curve: Curves.easeOutCubic,
-      child: AnimatedOpacity(
-        opacity: _isVisible ? 1 : 0,
-        duration: const Duration(milliseconds: 420),
-        curve: Curves.easeOut,
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFF151816),
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(
-              color: AppColors.white.withValues(alpha: .08),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.black.withValues(alpha: .34),
-                blurRadius: 24,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              OutlinedButton(
-                onPressed: widget.onMenu,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.white,
-                  side: BorderSide(
-                    color: AppColors.white.withValues(alpha: .20),
-                  ),
-                  minimumSize: const Size(74, 54),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                ),
-                child: Text(l10n.onboardingMenu),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton(
-                  onPressed: widget.onStart,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF62CE55),
-                    foregroundColor: const Color(0xFF10210E),
-                    minimumSize: const Size.fromHeight(54),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                  ),
-                  child: Text(
-                    l10n.onboardingStartPlan,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
