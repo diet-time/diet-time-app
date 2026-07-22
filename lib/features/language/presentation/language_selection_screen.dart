@@ -60,7 +60,7 @@ class _LanguageSelectionScreenState
       await ref
           .read(languageControllerProvider.notifier)
           .selectLanguage(languageCode);
-      if (mounted) context.go(AppRoutes.login);
+      if (mounted) context.go(AppRoutes.onboarding);
     } catch (_) {
       if (!mounted) return;
       setState(() => _isSaving = false);

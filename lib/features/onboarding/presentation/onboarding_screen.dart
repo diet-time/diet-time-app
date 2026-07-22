@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:diet_time/app/router/app_router.dart';
@@ -13,7 +14,9 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends State<OnboardingScreen>
+    with SingleTickerProviderStateMixin {
+  static const _pageDuration = Duration(milliseconds: 2800);
   static const _pageTransitionDuration = Duration(milliseconds: 350);
   List<_OnboardingPageData> _pages(AppLocalizations l10n) => [
     _OnboardingPageData(
@@ -55,6 +58,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   ];
 
   late final PageController _controller;
+  late final AnimationController _progressController;
   int _index = 0;
   bool _isNavigating = false;
 
@@ -62,27 +66,58 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void initState() {
     super.initState();
     _controller = PageController();
+    _progressController = AnimationController(
+      vsync: this,
+      duration: _pageDuration,
+    )..addStatusListener(_onProgressStatusChanged);
+    _progressController.forward();
   }
 
   void _onPageChanged(int index) {
     setState(() => _index = index);
+    _progressController.forward(from: 0);
+  }
+
+  void _onProgressStatusChanged(AnimationStatus status) {
+    if (status != AnimationStatus.completed ||
+        !mounted ||
+        !_controller.hasClients ||
+        _isNavigating) {
+      return;
+    }
+    final pageCount = _pages(AppLocalizations.of(context)).length;
+    if (_index >= pageCount - 1) return;
+    unawaited(_advanceToNextPage());
+  }
+
+  Future<void> _advanceToNextPage() async {
+    _isNavigating = true;
+    try {
+      await _controller.nextPage(
+        duration: _pageTransitionDuration,
+        curve: Curves.easeInOut,
+      );
+    } finally {
+      _isNavigating = false;
+    }
   }
 
   Future<void> _handleTap(int pageCount) async {
     if (_isNavigating || !_controller.hasClients) return;
     if (_index < pageCount - 1) {
-      await _controller.nextPage(
-        duration: _pageTransitionDuration,
-        curve: Curves.easeInOut,
-      );
+      await _advanceToNextPage();
       return;
     }
     _isNavigating = true;
-    if (mounted) context.go(AppRoutes.language);
+    _progressController.stop();
+    if (mounted) context.go(AppRoutes.login);
   }
 
   @override
   void dispose() {
+    _progressController
+      ..removeStatusListener(_onProgressStatusChanged)
+      ..dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -95,32 +130,48 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => _handleTap(pages.length),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: _SegmentedProgress(
-                  count: pages.length,
-                  currentIndex: _index,
+            AnimatedBuilder(
+              animation: _progressController,
+              builder: (context, child) => GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _handleTap(pages.length),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: _SegmentedProgress(
+                    count: pages.length,
+                    currentIndex: _index,
+                    progress: _progressController.value,
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: PageView.builder(
-                controller: _controller,
-                onPageChanged: _onPageChanged,
-                itemCount: pages.length,
-                itemBuilder: (context, index) => GestureDetector(
-                  key: ValueKey('onboardingTapArea-$index'),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _handleTap(pages.length),
-                  child: _OnboardingPage(
-                    data: pages[index],
-                    index: index,
-                    pageCount: pages.length,
-                    isActive: index == _index,
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  if (notification is ScrollStartNotification &&
+                      notification.dragDetails != null) {
+                    _progressController.stop();
+                  } else if (notification is ScrollEndNotification &&
+                      !_progressController.isCompleted) {
+                    _progressController.forward();
+                  }
+                  return false;
+                },
+                child: PageView.builder(
+                  controller: _controller,
+                  onPageChanged: _onPageChanged,
+                  itemCount: pages.length,
+                  itemBuilder: (context, index) => GestureDetector(
+                    key: ValueKey('onboardingTapArea-$index'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _handleTap(pages.length),
+                    child: _OnboardingPage(
+                      data: pages[index],
+                      index: index,
+                      pageCount: pages.length,
+                      isActive: index == _index,
+                    ),
                   ),
                 ),
               ),
@@ -424,10 +475,15 @@ class _ParticlePainter extends CustomPainter {
 }
 
 class _SegmentedProgress extends StatelessWidget {
-  const _SegmentedProgress({required this.count, required this.currentIndex});
+  const _SegmentedProgress({
+    required this.count,
+    required this.currentIndex,
+    required this.progress,
+  });
 
   final int count;
   final int currentIndex;
+  final double progress;
 
   @override
   Widget build(BuildContext context) {
@@ -439,12 +495,24 @@ class _SegmentedProgress extends StatelessWidget {
             margin: EdgeInsets.only(right: index == count - 1 ? 0 : 5),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(99),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                color: index <= currentIndex
-                    ? const Color(0xFF62CE55)
-                    : AppColors.white.withValues(alpha: .20),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ColoredBox(
+                    color: index < currentIndex
+                        ? const Color(0xFF62CE55)
+                        : AppColors.white.withValues(alpha: .20),
+                  ),
+                  if (index == currentIndex)
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: FractionallySizedBox(
+                        widthFactor: progress.clamp(0.0, 1.0).toDouble(),
+                        heightFactor: 1,
+                        child: const ColoredBox(color: Color(0xFF62CE55)),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
