@@ -171,10 +171,17 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   void _selectPlan(GuestMealPlan plan) {
     final data = _originalData;
     if (data == null || plan.code == _selectedPlanCode) return;
+    final date = _resolveDate(data, plan.code, _selectedDate);
     setState(() {
       _selectedPlanCode = plan.code;
+      _selectedDate = date;
+      _visibleMeals = _filterMeals(
+        data,
+        planCode: plan.code,
+        date: date,
+        mealTimeCode: _selectedMealTimeCode,
+      );
     });
-    _load(force: true, preserveSelections: true);
   }
 
   void _selectDate(GuestCalendarDate date) {
@@ -187,8 +194,13 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     }
     setState(() {
       _selectedDate = date.date;
+      _visibleMeals = _filterMeals(
+        data,
+        planCode: _selectedPlanCode,
+        date: date.date,
+        mealTimeCode: _selectedMealTimeCode,
+      );
     });
-    _load(force: true, preserveSelections: true);
   }
 
   void _selectMealTime(GuestMealTimeFilter filter) {
@@ -200,8 +212,13 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     }
     setState(() {
       _selectedMealTimeCode = filter.code;
+      _visibleMeals = _filterMeals(
+        data,
+        planCode: _selectedPlanCode,
+        date: _selectedDate,
+        mealTimeCode: filter.code,
+      );
     });
-    _load(force: true, preserveSelections: true);
   }
 
   void _keepFilterVisible(int index) {
