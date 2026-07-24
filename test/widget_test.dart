@@ -87,6 +87,14 @@ void main() {
     expect(find.byType(OnboardingScreen), findsOneWidget);
     expect(find.byKey(const ValueKey('onboardingMenuChoice')), findsOneWidget);
     expect(find.byKey(const ValueKey('onboardingPlanChoice')), findsOneWidget);
+    final menuCenter = tester.getCenter(
+      find.byKey(const ValueKey('onboardingMenuChoice')),
+    );
+    final planCenter = tester.getCenter(
+      find.byKey(const ValueKey('onboardingPlanChoice')),
+    );
+    expect(menuCenter.dy, planCenter.dy);
+    expect(menuCenter.dx, lessThan(planCenter.dx));
 
     await tester.tap(find.byKey(const ValueKey('onboardingMenuChoice')));
     await tester.pump();
@@ -149,6 +157,25 @@ void main() {
     await tester.pumpWidget(_onboardingApp());
 
     expect(find.text('Healthy Meals,'), findsOneWidget);
+    expect(
+      tester.getSize(find.byType(Image).first).width,
+      greaterThanOrEqualTo(280),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('final choices wrap without overflow on a very narrow phone', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(280, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_onboardingApp());
+    await _reachFinalChoice(tester);
+    await tester.pump(const Duration(milliseconds: 3000));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byKey(const ValueKey('onboardingMenuChoice')), findsOneWidget);
+    expect(find.byKey(const ValueKey('onboardingPlanChoice')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

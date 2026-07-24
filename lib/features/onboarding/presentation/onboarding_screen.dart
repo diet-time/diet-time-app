@@ -144,7 +144,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       behavior: HitTestBehavior.opaque,
                       onTap: () => _handleTap(pages.length),
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                         child: _SegmentedProgress(
                           count: pages.length,
                           currentIndex: _index,
@@ -199,11 +199,24 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 }
 
-class _FinalChoiceSheet extends StatelessWidget {
+class _FinalChoiceSheet extends StatefulWidget {
   const _FinalChoiceSheet({required this.onMenu, required this.onStartPlan});
 
   final VoidCallback onMenu;
   final VoidCallback onStartPlan;
+
+  @override
+  State<_FinalChoiceSheet> createState() => _FinalChoiceSheetState();
+}
+
+class _FinalChoiceSheetState extends State<_FinalChoiceSheet> {
+  bool _hasNavigated = false;
+
+  void _navigate(VoidCallback action) {
+    if (_hasNavigated) return;
+    setState(() => _hasNavigated = true);
+    action();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -220,11 +233,11 @@ class _FinalChoiceSheet extends StatelessWidget {
               opacity: value.clamp(0, 1),
               child: BackdropFilter(
                 filter: ImageFilter.blur(
-                  sigmaX: 4.5 * value,
-                  sigmaY: 4.5 * value,
+                  sigmaX: 2.5 * value,
+                  sigmaY: 2.5 * value,
                 ),
                 child: ColoredBox(
-                  color: AppColors.black.withValues(alpha: .38 * value),
+                  color: AppColors.black.withValues(alpha: .32 * value),
                 ),
               ),
             ),
@@ -245,15 +258,17 @@ class _FinalChoiceSheet extends StatelessWidget {
         width: double.infinity,
         constraints: const BoxConstraints(maxWidth: 680),
         margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
         decoration: BoxDecoration(
-          color: const Color(0xFFFCFBF6),
+          color: const Color(0xFF0B140F),
           borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: const Color(0x3D62CE55)),
           boxShadow: [
             BoxShadow(
-              color: AppColors.black.withValues(alpha: .28),
+              color: const Color(0xFF62CE55).withValues(alpha: .12),
               blurRadius: 36,
-              offset: const Offset(0, 14),
+              spreadRadius: 1,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
@@ -262,25 +277,52 @@ class _FinalChoiceSheet extends StatelessWidget {
           children: [
             Container(
               width: 44,
-              height: 5,
+              height: 4,
               decoration: BoxDecoration(
-                color: AppColors.darkGreen.withValues(alpha: .14),
+                color: AppColors.white.withValues(alpha: .22),
                 borderRadius: BorderRadius.circular(99),
               ),
             ),
-            const SizedBox(height: 18),
-            _FinalChoiceButton(
-              key: const ValueKey('onboardingMenuChoice'),
-              icon: Icons.restaurant_menu_rounded,
-              label: l10n.onboardingMenu,
-              onTap: onMenu,
-            ),
-            const SizedBox(height: 12),
-            _FinalChoiceButton(
-              key: const ValueKey('onboardingPlanChoice'),
-              icon: Icons.auto_awesome_rounded,
-              label: l10n.onboardingStartPlan,
-              onTap: onStartPlan,
+            const SizedBox(height: 14),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final textScale = MediaQuery.textScalerOf(context).scale(14);
+                final sideBySide =
+                    constraints.maxWidth >= 300 && textScale <= 18;
+                final buttonWidth = sideBySide
+                    ? (constraints.maxWidth - 12) / 2
+                    : constraints.maxWidth;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 10,
+                  children: [
+                    SizedBox(
+                      width: buttonWidth,
+                      child: _FinalChoiceButton(
+                        key: const ValueKey('onboardingMenuChoice'),
+                        icon: Icons.restaurant_menu_rounded,
+                        label: l10n.onboardingMenu,
+                        primary: false,
+                        onTap: _hasNavigated
+                            ? null
+                            : () => _navigate(widget.onMenu),
+                      ),
+                    ),
+                    SizedBox(
+                      width: buttonWidth,
+                      child: _FinalChoiceButton(
+                        key: const ValueKey('onboardingPlanChoice'),
+                        icon: Icons.auto_awesome_rounded,
+                        label: l10n.onboardingStartPlan,
+                        primary: true,
+                        onTap: _hasNavigated
+                            ? null
+                            : () => _navigate(widget.onStartPlan),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -293,34 +335,51 @@ class _FinalChoiceButton extends StatelessWidget {
   const _FinalChoiceButton({
     required this.icon,
     required this.label,
+    required this.primary,
     required this.onTap,
     super.key,
   });
 
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final bool primary;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 62,
-      child: FilledButton.tonalIcon(
-        onPressed: onTap,
-        icon: Icon(icon),
-        label: Text(label),
-        style: FilledButton.styleFrom(
-          backgroundColor: AppColors.teaGreen.withValues(alpha: .28),
-          foregroundColor: AppColors.emeraldGreen,
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(
-              color: AppColors.emeraldGreen.withValues(alpha: .35),
-            ),
-          ),
+    final foreground = primary ? AppColors.white : const Color(0xFF8BEA78);
+    final style = FilledButton.styleFrom(
+      minimumSize: const Size(double.infinity, 54),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      backgroundColor: primary
+          ? const Color(0xFF278A42)
+          : const Color(0xFF102219),
+      disabledBackgroundColor: primary
+          ? const Color(0xFF278A42).withValues(alpha: .55)
+          : const Color(0xFF102219),
+      foregroundColor: foreground,
+      disabledForegroundColor: foreground.withValues(alpha: .55),
+      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(
+          color: primary ? const Color(0xFF62CE55) : const Color(0x9962CE55),
         ),
+      ),
+    );
+    return Semantics(
+      button: true,
+      label: label,
+      child: FilledButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon, size: 18),
+        label: Text(
+          label,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+        ),
+        style: style,
       ),
     );
   }
@@ -345,7 +404,7 @@ class _OnboardingPage extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxHeight < 600;
-        final horizontalPadding = constraints.maxWidth < 500 ? 24.0 : 48.0;
+        final horizontalPadding = constraints.maxWidth < 500 ? 20.0 : 24.0;
         final titleSize = compact ? 23.0 : 28.0;
         return Padding(
           padding: EdgeInsets.fromLTRB(
@@ -367,7 +426,7 @@ class _OnboardingPage extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: compact ? 12 : 24),
+              SizedBox(height: compact ? 10 : 16),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 620),
                 child: Column(
@@ -516,15 +575,10 @@ class _AnimatedArtworkState extends State<_AnimatedArtwork>
                 ),
                 child: Transform.scale(
                   scale: artworkScale,
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: usesPortraitFit ? 22 : 0,
-                    ),
-                    child: Image.asset(
-                      widget.image,
-                      fit: BoxFit.cover,
-                      alignment: artworkAlignment,
-                    ),
+                  child: Image.asset(
+                    widget.image,
+                    fit: BoxFit.cover,
+                    alignment: artworkAlignment,
                   ),
                 ),
               ),
