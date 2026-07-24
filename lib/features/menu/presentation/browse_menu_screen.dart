@@ -77,7 +77,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
           .read(guestMenuRepositoryProvider)
           .getGuestHome(
             language: _language ?? 'en',
-            date: _selectedDate ?? DateTime.now(),
+            date: _selectedDate,
             includeAll: true,
           );
       if (!mounted || requestId != _requestId) return;

@@ -15,7 +15,7 @@ final guestMenuRepositoryProvider = Provider<GuestMenuRepository>(
 abstract interface class GuestMenuRepository {
   Future<GuestHomeResponse> getGuestHome({
     required String language,
-    required DateTime date,
+    DateTime? date,
     String? planCode,
     String mealTimeCode = 'ALL',
     int page = 1,
@@ -33,7 +33,7 @@ class HttpGuestMenuRepository implements GuestMenuRepository {
   @override
   Future<GuestHomeResponse> getGuestHome({
     required String language,
-    required DateTime date,
+    DateTime? date,
     String? planCode,
     String mealTimeCode = 'ALL',
     int page = 1,
@@ -46,7 +46,7 @@ class HttpGuestMenuRepository implements GuestMenuRepository {
         .replace(
           queryParameters: {
             'language': language,
-            'date': _date(date),
+            if (date != null) 'date': _date(date),
             if (planCode != null && planCode.trim().isNotEmpty)
               'planCode': planCode,
             'mealTimeCode': mealTimeCode,
@@ -71,11 +71,18 @@ class HttpGuestMenuRepository implements GuestMenuRepository {
         const Duration(seconds: 30),
       );
       final body = await utf8.decoder.bind(response).join();
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw const GuestMenuException();
-      }
       final decoded = jsonDecode(body);
       if (decoded is! Map<String, dynamic>) {
+        throw const GuestMenuException();
+      }
+      if (response.statusCode == 404) {
+        final title = decoded['title'] is String ? decoded['title'] as String : null;
+        if (title == 'Menu not found') {
+          return const GuestHomeResponse.empty();
+        }
+        throw const GuestMenuException();
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
         throw const GuestMenuException();
       }
       return GuestHomeResponse.fromJson(decoded);

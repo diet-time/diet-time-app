@@ -1,6 +1,10 @@
 class GuestHomeResponse {
   const GuestHomeResponse({required this.data, required this.errors});
 
+  const GuestHomeResponse.empty()
+      : data = const GuestHomeData.empty(),
+        errors = const [];
+
   factory GuestHomeResponse.fromJson(Map<String, dynamic> json) {
     return GuestHomeResponse(
       data: GuestHomeData.fromJson(_map(json['data'])),
@@ -24,6 +28,22 @@ class GuestHomeData {
     required this.meals,
     required this.pagination,
   });
+
+  const GuestHomeData.empty()
+      : hero = const GuestHero(),
+        mealPlans = const <GuestMealPlan>[],
+        menus = const <GuestMenuDay>[],
+        weeklyCalendar = const <GuestCalendarDate>[],
+        mealTimeFilters = const <GuestMealTimeFilter>[],
+        meals = const <GuestMeal>[],
+        pagination = const GuestPagination(
+          page: 0,
+          pageSize: 0,
+          totalRecords: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        );
 
   factory GuestHomeData.fromJson(Map<String, dynamic> json) {
     final rawMealPlans = _list(json['mealPlans']);
