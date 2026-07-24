@@ -599,7 +599,7 @@ abstract class AppLocalizations {
   /// No description provided for @noMealsAvailable.
   ///
   /// In en, this message translates to:
-  /// **'No meals available.'**
+  /// **'No meals available for this selection.'**
   String get noMealsAvailable;
 
   /// No description provided for @tryAnotherMealFilter.
@@ -631,6 +631,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Fat'**
   String get fatLabel;
+
+  /// No description provided for @mealIngredientsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ingredients'**
+  String get mealIngredientsTitle;
+
+  /// No description provided for @mealAllergensTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allergens'**
+  String get mealAllergensTitle;
+
+  /// No description provided for @mealMicronutrientsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Micronutrients'**
+  String get mealMicronutrientsTitle;
+
+  /// No description provided for @fiberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Fiber'**
+  String get fiberLabel;
+
+  /// No description provided for @sodiumLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sodium'**
+  String get sodiumLabel;
 
   /// No description provided for @gramsValue.
   ///

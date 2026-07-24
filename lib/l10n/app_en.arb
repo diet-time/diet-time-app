@@ -110,6 +110,11 @@
   "proteinLabel": "Protein",
   "carbsLabel": "Carbs",
   "fatLabel": "Fat",
+  "mealIngredientsTitle": "Ingredients",
+  "mealAllergensTitle": "Allergens",
+  "mealMicronutrientsTitle": "Micronutrients",
+  "fiberLabel": "Fiber",
+  "sodiumLabel": "Sodium",
   "gramsValue": "{value}g",
   "@gramsValue": {
     "placeholders": {

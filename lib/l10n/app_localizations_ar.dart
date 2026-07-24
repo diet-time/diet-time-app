@@ -298,6 +298,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get fatLabel => 'الدهون';
 
   @override
+  String get mealIngredientsTitle => 'المكونات';
+
+  @override
+  String get mealAllergensTitle => 'مسببات الحساسية';
+
+  @override
+  String get mealMicronutrientsTitle => 'العناصر الغذائية الدقيقة';
+
+  @override
+  String get fiberLabel => 'الألياف';
+
+  @override
+  String get sodiumLabel => 'الصوديوم';
+
+  @override
   String gramsValue(String value) {
     return '$valueغ';
   }

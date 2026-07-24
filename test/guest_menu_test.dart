@@ -1,7 +1,9 @@
 import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/features/menu/data/guest_menu_repository.dart';
+import 'package:diet_time/features/menu/data/meal_detail_repository.dart';
 import 'package:diet_time/features/menu/domain/guest_home_models.dart';
 import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
+import 'package:diet_time/features/menu/presentation/meal_detail_viewer.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -30,6 +32,25 @@ void main() {
     expect(data.meals.single.name, 'Oatmeal Banana');
     expect(data.meals.single.mealTime.name, 'Breakfast');
     expect(data.meals.single.nutrition.calories, 522);
+  });
+
+  test('meal details parse optional ingredients and micronutrients', () {
+    final detail = MealDetailData.fromJson({
+      'fullDescription': 'Complete meal description.',
+      'primaryImageUrl': 'https://cdn.example.com/detail.jpg',
+      'nutrition': {'fiberGrams': 4, 'sodiumMg': 343},
+      'ingredients': [
+        {'name': 'Olive oil', 'quantity': 10, 'unit': 'ml'},
+      ],
+      'allergens': [
+        {'code': 'EGG', 'name': 'Egg'},
+      ],
+    });
+
+    expect(detail.ingredients.single.name, 'Olive oil');
+    expect(detail.fiberGrams, 4);
+    expect(detail.sodiumMg, 343);
+    expect(detail.allergens, ['Egg']);
   });
 
   test('absolute media URLs are not prefixed', () {
@@ -93,6 +114,254 @@ void main() {
       lessThan(tester.getTopLeft(secondCard).dx),
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tapping a meal opens details at the tapped meal', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    await tester.tap(find.byKey(const ValueKey('guest-meal-meal-2')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MealDetailViewer), findsOneWidget);
+    expect(find.byKey(const ValueKey('meal-detail-meal-2')), findsOneWidget);
+    expect(find.text('SNACK / DESSERT'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(const ValueKey('mealDetailPageIndicator')))
+          .label,
+      '2 / 2',
+    );
+    expect(
+      find.byKey(const ValueKey('mealDetailImagePlaceholder')),
+      findsWidgets,
+    );
+    expect(find.text('ALLERGENS'), findsOneWidget);
+    expect(find.text('Egg'), findsOneWidget);
+    expect(find.text('MICRONUTRIENTS'), findsOneWidget);
+    expect(repository.calls, hasLength(1));
+  });
+
+  testWidgets('meal detail swipes locally and closes without losing menu', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    await tester.tap(find.byKey(const ValueKey('guest-meal-meal-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('BREAKFAST'), findsOneWidget);
+
+    await tester.drag(
+      find.byKey(const ValueKey('mealDetailPageView')),
+      const Offset(-650, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('SNACK / DESSERT'), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(const ValueKey('mealDetailPageIndicator')))
+          .label,
+      '2 / 2',
+    );
+    expect(repository.calls, hasLength(1));
+
+    await tester.tap(find.byKey(const ValueKey('mealDetailClose')));
+    await tester.pumpAndSettle();
+    expect(find.byType(MealDetailViewer), findsNothing);
+    expect(find.byKey(const ValueKey('guest-filter-ALL')), findsOneWidget);
+    expect(repository.calls, hasLength(1));
+  });
+
+  testWidgets('system back closes meal details and preserves menu state', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    await tester.tap(find.byKey(const ValueKey('guest-meal-meal-1')));
+    await tester.pumpAndSettle();
+    expect(find.byType(MealDetailViewer), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MealDetailViewer), findsNothing);
+    expect(find.byType(BrowseMenuScreen), findsOneWidget);
+    expect(repository.calls, hasLength(1));
+  });
+
+  testWidgets('tapped meal opens at its index and close preserves menu state', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    final card = find.byKey(const ValueKey('guest-meal-meal-2'));
+    await tester.ensureVisible(card);
+    final scrollController = tester
+        .widget<CustomScrollView>(find.byType(CustomScrollView))
+        .controller!;
+    final offsetBeforeOpen = scrollController.offset;
+    await tester.tap(card);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MealDetailViewer), findsOneWidget);
+    final viewer = tester.widget<MealDetailViewer>(
+      find.byType(MealDetailViewer),
+    );
+    expect(viewer.initialIndex, 1);
+    expect(viewer.meals, hasLength(2));
+    expect(find.bySemanticsLabel('2 / 2'), findsOneWidget);
+    expect(repository.calls, hasLength(1));
+
+    await tester.tap(find.byKey(const ValueKey('mealDetailClose')));
+    await tester.pumpAndSettle();
+    expect(find.byType(MealDetailViewer), findsNothing);
+    expect(scrollController.offset, closeTo(offsetBeforeOpen, .1));
+    expect(repository.calls, hasLength(1));
+  });
+
+  testWidgets('meal detail swipe updates the page without an API request', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    final card = find.byKey(const ValueKey('guest-meal-meal-1'));
+    await tester.ensureVisible(card);
+    await tester.tap(card);
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('1 / 2'), findsOneWidget);
+
+    await tester.drag(find.byType(PageView), const Offset(-600, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.bySemanticsLabel('2 / 2'), findsOneWidget);
+    expect(find.text('Protein Bite'), findsWidgets);
+    expect(repository.calls, hasLength(1));
+  });
+
+  testWidgets('meal detail hides missing sections and back closes it', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    final card = find.byKey(const ValueKey('guest-meal-meal-1'));
+    await tester.ensureVisible(card);
+    await tester.tap(card);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('mealDetailImagePlaceholder')),
+      findsWidgets,
+    );
+    final firstDetail = find.byKey(const ValueKey('meal-detail-meal-1'));
+    expect(
+      find.descendant(of: firstDetail, matching: find.text('Ingredients')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: firstDetail, matching: find.text('MICRONUTRIENTS')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: firstDetail, matching: find.text('ALLERGENS')),
+      findsNothing,
+    );
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(MealDetailViewer), findsNothing);
+    expect(repository.calls, hasLength(1));
+  });
+
+  testWidgets('meal detail follows Arabic RTL direction', (tester) async {
+    await _useTallSurface(tester);
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(
+      _app(repository: repository, locale: const Locale('ar')),
+    );
+    await _load(tester);
+
+    final card = find.byKey(const ValueKey('guest-meal-meal-1'));
+    await tester.ensureVisible(card);
+    await tester.tap(card);
+    await tester.pumpAndSettle();
+
+    expect(
+      Directionality.of(tester.element(find.byType(MealDetailViewer))),
+      TextDirection.rtl,
+    );
+    expect(repository.calls, hasLength(1));
+  });
+
+  testWidgets('optional meal detail request is cached once per meal', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final detailRepository = _FakeMealDetailRepository();
+    final meals = [
+      _detailMeal(
+        id: '11111111-1111-4111-8111-111111111111',
+        name: 'First Meal',
+        mealTime: 'Breakfast',
+      ),
+      _detailMeal(
+        id: '22222222-2222-4222-8222-222222222222',
+        name: 'Second Meal',
+        mealTime: 'Lunch',
+      ),
+    ];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mealDetailRepositoryProvider.overrideWithValue(detailRepository),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MealDetailViewer(meals: meals, initialIndex: 0),
+        ),
+      ),
+    );
+    await _load(tester);
+    expect(detailRepository.calls, [meals.first.id]);
+    expect(find.text('INGREDIENTS'), findsOneWidget);
+
+    await tester.drag(
+      find.byKey(const ValueKey('mealDetailPageView')),
+      const Offset(-650, 0),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const ValueKey('mealDetailPageView')),
+      const Offset(650, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(detailRepository.calls, [meals.first.id, meals.last.id]);
   });
 
   testWidgets('calendar and filters remain pinned while meals scroll', (
@@ -346,6 +615,13 @@ void main() {
       Directionality.of(tester.element(find.byType(BrowseMenuScreen))),
       TextDirection.rtl,
     );
+    await tester.tap(find.byKey(const ValueKey('guest-meal-meal-1')));
+    await tester.pumpAndSettle();
+    expect(
+      Directionality.of(tester.element(find.byType(MealDetailViewer))),
+      TextDirection.rtl,
+    );
+    expect(repository.calls, hasLength(1));
   });
 }
 
@@ -405,6 +681,46 @@ class _LanguageAwareTestApp extends ConsumerWidget {
       home: const BrowseMenuScreen(),
     );
   }
+}
+
+class _FakeMealDetailRepository implements MealDetailRepository {
+  final calls = <String>[];
+
+  @override
+  Future<MealDetailData?> getMealDetail({
+    required String mealId,
+    required String language,
+  }) async {
+    calls.add(mealId);
+    return const MealDetailData(
+      fullDescription: 'Loaded detail description.',
+      fiberGrams: 4,
+      sodiumMg: 343,
+      ingredients: [
+        MealDetailIngredient(name: 'Olive oil', quantity: 10, unit: 'ml'),
+      ],
+      allergens: ['Egg'],
+    );
+  }
+}
+
+GuestMeal _detailMeal({
+  required String id,
+  required String name,
+  required String mealTime,
+}) {
+  return GuestMeal.fromJson({
+    'id': id,
+    'code': id,
+    'name': name,
+    'description': '$name description.',
+    'mealTime': {'code': mealTime.toUpperCase(), 'name': mealTime},
+    'nutrition': {'calories': 400, 'protein': 25, 'carbs': 30, 'fat': 12},
+    'tags': <dynamic>[],
+    'allergens': <dynamic>[],
+    'isAvailable': true,
+    'displayOrder': 0,
+  });
 }
 
 class _FakeGuestMenuRepository implements GuestMenuRepository {
@@ -605,9 +921,12 @@ Map<String, dynamic> _fixtureJson() {
                     'protein': 12.0,
                     'carbs': 16.0,
                     'fat': 7.0,
+                    'fiber': 4.0,
                   },
                   'tags': <dynamic>[],
-                  'allergens': <dynamic>[],
+                  'allergens': [
+                    {'code': 'EGG', 'name': 'Egg'},
+                  ],
                   'isAvailable': true,
                   'displayOrder': 0,
                 },

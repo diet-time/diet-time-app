@@ -300,6 +300,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fatLabel => 'Fat';
 
   @override
+  String get mealIngredientsTitle => 'Ingredients';
+
+  @override
+  String get mealAllergensTitle => 'Allergens';
+
+  @override
+  String get mealMicronutrientsTitle => 'Micronutrients';
+
+  @override
+  String get fiberLabel => 'Fiber';
+
+  @override
+  String get sodiumLabel => 'Sodium';
+
+  @override
   String gramsValue(String value) {
     return '${value}g';
   }

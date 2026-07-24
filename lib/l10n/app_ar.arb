@@ -110,6 +110,11 @@
   "proteinLabel": "البروتين",
   "carbsLabel": "الكربوهيدرات",
   "fatLabel": "الدهون",
+  "mealIngredientsTitle": "المكونات",
+  "mealAllergensTitle": "مسببات الحساسية",
+  "mealMicronutrientsTitle": "العناصر الغذائية الدقيقة",
+  "fiberLabel": "الألياف",
+  "sodiumLabel": "الصوديوم",
   "gramsValue": "{value}غ",
   "@gramsValue": {
     "placeholders": {

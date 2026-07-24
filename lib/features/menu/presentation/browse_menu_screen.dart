@@ -5,6 +5,7 @@ import 'package:diet_time/core/widgets/app_logo.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/features/menu/data/guest_menu_repository.dart';
 import 'package:diet_time/features/menu/domain/guest_home_models.dart';
+import 'package:diet_time/features/menu/presentation/meal_detail_viewer.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -475,6 +476,13 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                         meal: meals[index],
                         l10n: l10n,
                         compact: compactMealCards,
+                        onTap: () => unawaited(
+                          showMealDetailViewer(
+                            context: context,
+                            meals: meals,
+                            initialIndex: index,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -985,141 +993,153 @@ class _GuestMealCard extends StatelessWidget {
     required this.meal,
     required this.l10n,
     required this.compact,
+    required this.onTap,
     super.key,
   });
 
   final GuestMeal meal;
   final AppLocalizations l10n;
   final bool compact;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final imageUrl = resolveMediaUrl(
       (meal.thumbnailUrl ?? '').isNotEmpty ? meal.thumbnailUrl : meal.imageUrl,
     );
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(compact ? 20 : 26),
-        boxShadow: _softShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Stack(
+    return Semantics(
+      button: true,
+      label: meal.name,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(compact ? 20 : 26),
+            boxShadow: _softShadow,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _NetworkMealImage(url: imageUrl, height: compact ? 130 : 165),
-              PositionedDirectional(
-                start: 12,
-                top: 12,
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 7 : 10,
-                    vertical: compact ? 5 : 6,
-                  ),
-                  constraints: BoxConstraints(maxWidth: compact ? 92 : 160),
-                  decoration: BoxDecoration(
-                    color: AppColors.white.withValues(alpha: .92),
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                  child: Text(
-                    meal.mealTime.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.emeraldGreen,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
+              Stack(
+                children: [
+                  _NetworkMealImage(url: imageUrl, height: compact ? 130 : 165),
+                  PositionedDirectional(
+                    start: 12,
+                    top: 12,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: compact ? 7 : 10,
+                        vertical: compact ? 5 : 6,
+                      ),
+                      constraints: BoxConstraints(maxWidth: compact ? 92 : 160),
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withValues(alpha: .92),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        meal.mealTime.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.emeraldGreen,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  PositionedDirectional(
+                    end: 12,
+                    bottom: 12,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: compact ? 7 : 10,
+                        vertical: compact ? 5 : 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.emeraldGreen,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        l10n.kcal(meal.nutrition.calories.round()),
+                        style: const TextStyle(
+                          color: AppColors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              PositionedDirectional(
-                end: 12,
-                bottom: 12,
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 7 : 10,
-                    vertical: compact ? 5 : 6,
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    compact ? 11 : 16,
+                    compact ? 10 : 14,
+                    compact ? 11 : 16,
+                    compact ? 10 : 14,
                   ),
-                  decoration: BoxDecoration(
-                    color: AppColors.emeraldGreen,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                  child: Text(
-                    l10n.kcal(meal.nutrition.calories.round()),
-                    style: const TextStyle(
-                      color: AppColors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        meal.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.darkGreen,
+                          fontSize: compact ? 14 : 16.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      SizedBox(height: compact ? 4 : 6),
+                      Text(
+                        meal.description ?? '',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.darkGreen.withValues(alpha: .60),
+                          fontSize: compact ? 10.5 : 12,
+                          height: 1.35,
+                        ),
+                      ),
+                      const Spacer(),
+                      Row(
+                        children: [
+                          _NutritionValue(
+                            value: l10n.gramsValue(
+                              _nutrition(meal.nutrition.protein),
+                            ),
+                            label: l10n.proteinLabel,
+                            compact: compact,
+                          ),
+                          _NutritionValue(
+                            value: l10n.gramsValue(
+                              _nutrition(meal.nutrition.carbs),
+                            ),
+                            label: l10n.carbsLabel,
+                            compact: compact,
+                          ),
+                          _NutritionValue(
+                            value: l10n.gramsValue(
+                              _nutrition(meal.nutrition.fat),
+                            ),
+                            label: l10n.fatLabel,
+                            compact: compact,
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
             ],
           ),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                compact ? 11 : 16,
-                compact ? 10 : 14,
-                compact ? 11 : 16,
-                compact ? 10 : 14,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    meal.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkGreen,
-                      fontSize: compact ? 14 : 16.5,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  SizedBox(height: compact ? 4 : 6),
-                  Text(
-                    meal.description ?? '',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkGreen.withValues(alpha: .60),
-                      fontSize: compact ? 10.5 : 12,
-                      height: 1.35,
-                    ),
-                  ),
-                  const Spacer(),
-                  Row(
-                    children: [
-                      _NutritionValue(
-                        value: l10n.gramsValue(
-                          _nutrition(meal.nutrition.protein),
-                        ),
-                        label: l10n.proteinLabel,
-                        compact: compact,
-                      ),
-                      _NutritionValue(
-                        value: l10n.gramsValue(
-                          _nutrition(meal.nutrition.carbs),
-                        ),
-                        label: l10n.carbsLabel,
-                        compact: compact,
-                      ),
-                      _NutritionValue(
-                        value: l10n.gramsValue(_nutrition(meal.nutrition.fat)),
-                        label: l10n.fatLabel,
-                        compact: compact,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
