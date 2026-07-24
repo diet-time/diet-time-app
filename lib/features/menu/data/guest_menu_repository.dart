@@ -15,12 +15,12 @@ final guestMenuRepositoryProvider = Provider<GuestMenuRepository>(
 abstract interface class GuestMenuRepository {
   Future<GuestHomeResponse> getGuestHome({
     required String language,
-    DateTime? date,
+    required DateTime date,
     String? planCode,
     String mealTimeCode = 'ALL',
     int page = 1,
     int pageSize = 20,
-    bool includeAll = true,
+    bool includeAll = false,
   });
 }
 
@@ -33,12 +33,12 @@ class HttpGuestMenuRepository implements GuestMenuRepository {
   @override
   Future<GuestHomeResponse> getGuestHome({
     required String language,
-    DateTime? date,
+    required DateTime date,
     String? planCode,
     String mealTimeCode = 'ALL',
     int page = 1,
     int pageSize = 20,
-    bool includeAll = true,
+    bool includeAll = false,
   }) async {
     final base = Uri.parse(AppEnvironment.apiBaseUrl);
     final uri = base
@@ -46,7 +46,7 @@ class HttpGuestMenuRepository implements GuestMenuRepository {
         .replace(
           queryParameters: {
             'language': language,
-            if (date != null) 'date': _date(date),
+            'date': _date(date),
             if (planCode != null && planCode.trim().isNotEmpty)
               'planCode': planCode,
             'mealTimeCode': mealTimeCode,
