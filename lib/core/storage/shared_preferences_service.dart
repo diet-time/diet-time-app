@@ -21,6 +21,16 @@ class SharedPreferencesService {
     await preferences.setString(key, value);
   }
 
+  Future<bool?> getBool(String key) async {
+    final preferences = await _factory();
+    return preferences.getBool(key);
+  }
+
+  Future<void> setBool(String key, bool value) async {
+    final preferences = await _factory();
+    await preferences.setBool(key, value);
+  }
+
   Future<void> remove(String key) async {
     final preferences = await _factory();
     await preferences.remove(key);

@@ -37,6 +37,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       accent: l10n.onboardingFreshAccent,
       description: l10n.onboardingFreshDescription,
     ),
+    _OnboardingPageData(
+      image: 'assets/images/onboarding_4.png',
+      title: l10n.onboardingTrackTitle,
+      accent: l10n.onboardingTrackAccent,
+      description: l10n.onboardingTrackDescription,
+    ),
+    _OnboardingPageData(
+      image: 'assets/images/onboarding_5.png',
+      title: l10n.onboardingTogetherTitle,
+      accent: l10n.onboardingTogetherAccent,
+      description: l10n.onboardingTogetherDescription,
+    ),
   ];
 
   late final PageController _controller;
@@ -68,7 +80,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       return;
     }
     final pageCount = _pages(AppLocalizations.of(context)).length;
-    if (_index >= pageCount - 1) return;
+    if (_index >= pageCount - 1) {
+      _isNavigating = true;
+      context.go(AppRoutes.menu);
+      return;
+    }
     unawaited(_advanceToNextPage());
   }
 

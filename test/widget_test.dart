@@ -67,6 +67,7 @@ void main() {
 
     final preferences = await SharedPreferences.getInstance();
     expect(preferences.getString('preferredLanguage'), 'en');
+    expect(preferences.getBool('languageSelectionCompletedV2'), isTrue);
     expect(find.text('Healthy Meals,'), findsOneWidget);
   });
 
@@ -77,11 +78,14 @@ void main() {
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
 
-    for (var index = 0; index < 3; index++) {
+    for (var index = 0; index < 4; index++) {
       await tester.tap(find.byKey(ValueKey('onboardingTapArea-$index')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
     }
+    expect(find.text('Better Together,'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 3000));
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(BrowseMenuScreen), findsOneWidget);
 
     await tester.tap(find.text('Browse Menu'));
@@ -99,13 +103,27 @@ void main() {
   testWidgets('saved language skips language selection on later launches', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({'preferredLanguage': 'en'});
+    SharedPreferences.setMockInitialValues({
+      'preferredLanguage': 'en',
+      'languageSelectionCompletedV2': true,
+    });
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
     await _finishSplash(tester);
 
     expect(find.byType(LanguageSelectionScreen), findsNothing);
     expect(find.byType(OnboardingScreen), findsOneWidget);
     expect(find.text('Healthy Meals,'), findsOneWidget);
+  });
+
+  testWidgets('older saved language still shows the newer language sheet', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'preferredLanguage': 'en'});
+    await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
+    await _finishSplash(tester);
+
+    expect(find.byType(LanguageSelectionScreen), findsOneWidget);
+    expect(find.text('Choose your Language'), findsOneWidget);
   });
 
   testWidgets('compact onboarding has no overflow', (tester) async {
@@ -128,6 +146,7 @@ void main() {
 
     final preferences = await SharedPreferences.getInstance();
     expect(preferences.getString('preferredLanguage'), 'ar');
+    expect(preferences.getBool('languageSelectionCompletedV2'), isTrue);
     expect(find.byType(OnboardingScreen), findsOneWidget);
     expect(
       Directionality.of(tester.element(find.byType(OnboardingScreen))),

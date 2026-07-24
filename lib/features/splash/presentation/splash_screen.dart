@@ -120,17 +120,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final languageCheck = ref
         .read(languageRepositoryProvider)
         .loadPreferredLanguage();
+    final languageSelectionCheck = ref
+        .read(languageRepositoryProvider)
+        .hasCompletedLanguageSelection();
     await Future<void>.delayed(
       reducedMotion ? _reducedMotionDuration : _visualDuration,
     );
     final isLoggedIn = await authCheck;
     final preferredLanguage = await languageCheck;
+    final hasCompletedLanguageSelection = await languageSelectionCheck;
     if (!mounted) return;
     if (isLoggedIn) {
       context.go(AppRoutes.home);
       return;
     }
-    if (preferredLanguage != null &&
+    if (hasCompletedLanguageSelection &&
+        preferredLanguage != null &&
         LocalizationService.isSupported(preferredLanguage)) {
       await ref
           .read(languageControllerProvider.notifier)

@@ -9,12 +9,18 @@ class LanguageRepository {
   LanguageRepository(this._preferences);
 
   static const preferenceKey = 'preferredLanguage';
+  static const selectionCompletedKey = 'languageSelectionCompletedV2';
 
   final SharedPreferencesService _preferences;
 
   Future<String?> loadPreferredLanguage() =>
       _preferences.getString(preferenceKey);
 
-  Future<void> savePreferredLanguage(String languageCode) =>
-      _preferences.setString(preferenceKey, languageCode);
+  Future<bool> hasCompletedLanguageSelection() async =>
+      await _preferences.getBool(selectionCompletedKey) ?? false;
+
+  Future<void> savePreferredLanguage(String languageCode) async {
+    await _preferences.setString(preferenceKey, languageCode);
+    await _preferences.setBool(selectionCompletedKey, true);
+  }
 }
