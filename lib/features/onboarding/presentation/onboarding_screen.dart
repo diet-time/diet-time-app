@@ -56,6 +56,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late final AnimationController _progressController;
   int _index = 0;
   bool _isNavigating = false;
+  bool _showFinalChoice = false;
 
   @override
   void initState() {
@@ -69,7 +70,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   void _onPageChanged(int index) {
-    setState(() => _index = index);
+    setState(() {
+      _index = index;
+      _showFinalChoice = false;
+    });
     _progressController.forward(from: 0);
   }
 
@@ -81,7 +85,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       return;
     }
     final pageCount = _pages(AppLocalizations.of(context)).length;
-    if (_index >= pageCount - 1) return;
+    if (_index >= pageCount - 1) {
+      if (!_showFinalChoice) {
+        setState(() => _showFinalChoice = true);
+      }
+      return;
+    }
     unawaited(_advanceToNextPage());
   }
 
@@ -103,7 +112,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       await _advanceToNextPage();
       return;
     }
-    _progressController.stop();
+    // The final image remains fully visible for the complete page duration.
+    // Tapping it must not reveal the action panel early.
   }
 
   @override
@@ -177,7 +187,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 ],
               ),
             ),
-            if (_index == pages.length - 1)
+            if (_index == pages.length - 1 && _showFinalChoice)
               _FinalChoiceSheet(
                 onMenu: () => context.go(AppRoutes.menu),
                 onStartPlan: () => context.go(AppRoutes.plans),

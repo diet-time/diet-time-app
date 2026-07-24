@@ -80,7 +80,10 @@ void main() {
     await _reachFinalChoice(tester);
 
     expect(find.text('Better Together,'), findsOneWidget);
+    expect(find.byKey(const ValueKey('onboardingMenuChoice')), findsNothing);
+    expect(find.byKey(const ValueKey('onboardingPlanChoice')), findsNothing);
     await tester.pump(const Duration(milliseconds: 3000));
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.byType(OnboardingScreen), findsOneWidget);
     expect(find.byKey(const ValueKey('onboardingMenuChoice')), findsOneWidget);
     expect(find.byKey(const ValueKey('onboardingPlanChoice')), findsOneWidget);
@@ -99,6 +102,8 @@ void main() {
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
     await _reachFinalChoice(tester);
+    await tester.pump(const Duration(milliseconds: 3000));
+    await tester.pump(const Duration(milliseconds: 400));
 
     await tester.tap(find.byKey(const ValueKey('onboardingPlanChoice')));
     await tester.pump();

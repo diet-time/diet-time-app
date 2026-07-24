@@ -25,20 +25,37 @@ class GuestHomeData {
   });
 
   factory GuestHomeData.fromJson(Map<String, dynamic> json) {
+    final mealPlans = _list(
+      json['mealPlans'],
+    ).map((item) => GuestMealPlan.fromJson(_map(item))).toList(growable: false);
+    final selectedPlan =
+        mealPlans.where((plan) => plan.isSelected).firstOrNull ??
+        mealPlans.firstOrNull;
+    final heroJson = _map(json['hero']);
+    final topLevelMeals = _list(
+      json['meals'],
+    ).map((item) => GuestMeal.fromJson(_map(item))).toList(growable: false);
     return GuestHomeData(
-      hero: GuestHero.fromJson(_map(json['hero'])),
-      mealPlans: _list(json['mealPlans'])
-          .map((item) => GuestMealPlan.fromJson(_map(item)))
-          .toList(growable: false),
+      hero: heroJson.isNotEmpty
+          ? GuestHero.fromJson(heroJson)
+          : GuestHero(
+              title: selectedPlan?.name,
+              subtitle: selectedPlan?.description,
+              bannerImageUrl: selectedPlan?.imageUrl,
+            ),
+      mealPlans: mealPlans,
       weeklyCalendar: _list(json['weeklyCalendar'])
           .map((item) => GuestCalendarDate.fromJson(_map(item)))
           .toList(growable: false),
       mealTimeFilters: _list(json['mealTimeFilters'])
           .map((item) => GuestMealTimeFilter.fromJson(_map(item)))
           .toList(growable: false),
-      meals: _list(
-        json['meals'],
-      ).map((item) => GuestMeal.fromJson(_map(item))).toList(growable: false),
+      meals: json.containsKey('meals')
+          ? topLevelMeals
+          : selectedPlan?.slots
+                    .expand((slot) => slot.meals)
+                    .toList(growable: false) ??
+                const [],
       pagination: GuestPagination.fromJson(_map(json['pagination'])),
     );
   }
@@ -72,6 +89,7 @@ class GuestMealPlan {
     required this.name,
     required this.displayOrder,
     required this.isSelected,
+    required this.slots,
     this.description,
     this.imageUrl,
   });
@@ -84,6 +102,9 @@ class GuestMealPlan {
     imageUrl: _string(json['imageUrl']),
     displayOrder: _integer(json['displayOrder']),
     isSelected: json['isSelected'] == true,
+    slots: _list(json['slots'])
+        .map((item) => GuestMealPlanSlot.fromJson(_map(item)))
+        .toList(growable: false),
   );
 
   final String id;
@@ -93,6 +114,45 @@ class GuestMealPlan {
   final String? imageUrl;
   final int displayOrder;
   final bool isSelected;
+  final List<GuestMealPlanSlot> slots;
+}
+
+class GuestMealPlanSlot {
+  const GuestMealPlanSlot({
+    required this.id,
+    required this.mealTime,
+    required this.displayOrder,
+    required this.minimumSelection,
+    required this.maximumSelection,
+    required this.isRequired,
+    required this.meals,
+  });
+
+  factory GuestMealPlanSlot.fromJson(Map<String, dynamic> json) {
+    final mealTime = GuestMealTime.fromJson(_map(json['mealTime']));
+    return GuestMealPlanSlot(
+      id: _string(json['id']) ?? '',
+      mealTime: mealTime,
+      displayOrder: _integer(json['displayOrder']),
+      minimumSelection: _integer(json['minimumSelection']),
+      maximumSelection: _integer(json['maximumSelection']),
+      isRequired: json['isRequired'] == true,
+      meals: _list(json['meals'])
+          .map(
+            (item) =>
+                GuestMeal.fromJson(_map(item), fallbackMealTime: mealTime),
+          )
+          .toList(growable: false),
+    );
+  }
+
+  final String id;
+  final GuestMealTime mealTime;
+  final int displayOrder;
+  final int minimumSelection;
+  final int maximumSelection;
+  final bool isRequired;
+  final List<GuestMeal> meals;
 }
 
 class GuestCalendarDate {
@@ -169,14 +229,19 @@ class GuestMeal {
     this.thumbnailUrl,
   });
 
-  factory GuestMeal.fromJson(Map<String, dynamic> json) => GuestMeal(
+  factory GuestMeal.fromJson(
+    Map<String, dynamic> json, {
+    GuestMealTime? fallbackMealTime,
+  }) => GuestMeal(
     id: _string(json['id']) ?? '',
     code: _string(json['code']) ?? '',
     name: _string(json['name']) ?? '',
     description: _string(json['description']),
     imageUrl: _string(json['imageUrl']),
     thumbnailUrl: _string(json['thumbnailUrl']),
-    mealTime: GuestMealTime.fromJson(_map(json['mealTime'])),
+    mealTime: _map(json['mealTime']).isNotEmpty
+        ? GuestMealTime.fromJson(_map(json['mealTime']))
+        : fallbackMealTime ?? const GuestMealTime(code: '', name: ''),
     nutrition: GuestMealNutrition.fromJson(_map(json['nutrition'])),
     tags: _list(
       json['tags'],
@@ -203,15 +268,24 @@ class GuestMeal {
 }
 
 class GuestMealTime {
-  const GuestMealTime({required this.code, required this.name});
+  const GuestMealTime({
+    required this.code,
+    required this.name,
+    this.id,
+    this.displayOrder = 0,
+  });
 
   factory GuestMealTime.fromJson(Map<String, dynamic> json) => GuestMealTime(
+    id: _string(json['id']),
     code: _string(json['code']) ?? '',
     name: _string(json['name']) ?? '',
+    displayOrder: _integer(json['displayOrder']),
   );
 
+  final String? id;
   final String code;
   final String name;
+  final int displayOrder;
 }
 
 class GuestMealNutrition {
@@ -320,3 +394,10 @@ String? _string(Object? value) => value is String ? value : null;
 int _integer(Object? value) => value is num ? value.toInt() : 0;
 
 double _decimal(Object? value) => value is num ? value.toDouble() : 0;
+
+extension _FirstOrNull<T> on Iterable<T> {
+  T? get firstOrNull {
+    final iterator = this.iterator;
+    return iterator.moveNext() ? iterator.current : null;
+  }
+}
