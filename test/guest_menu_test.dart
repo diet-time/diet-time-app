@@ -1,3 +1,4 @@
+import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/features/menu/data/guest_menu_repository.dart';
 import 'package:diet_time/features/menu/domain/guest_home_models.dart';
 import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
@@ -6,8 +7,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   test('models safely parse optional filter id and nutrition fiber', () {
     final response = GuestHomeResponse.fromJson(_fixtureJson());
 
@@ -70,6 +74,27 @@ void main() {
     expect(find.text('PLN_CLASSIC'), findsOneWidget);
   });
 
+  testWidgets('phone layout displays two meal cards in each row', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    final firstCard = find.byKey(const ValueKey('guest-meal-meal-1'));
+    final secondCard = find.byKey(const ValueKey('guest-meal-meal-2'));
+    expect(firstCard, findsOneWidget);
+    expect(secondCard, findsOneWidget);
+    expect(tester.getTopLeft(firstCard).dy, tester.getTopLeft(secondCard).dy);
+    expect(
+      tester.getTopLeft(firstCard).dx,
+      lessThan(tester.getTopLeft(secondCard).dx),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('calendar and filters remain pinned while meals scroll', (
     tester,
   ) async {
@@ -80,8 +105,7 @@ void main() {
     await _load(tester);
 
     final allFilter = find.byKey(const ValueKey('guest-filter-ALL'));
-    expect(allFilter, findsOneWidget);
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -650));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -800));
     await tester.pumpAndSettle();
 
     expect(allFilter, findsOneWidget);
@@ -94,7 +118,7 @@ void main() {
   ) async {
     await _useTallSurface(tester);
     final repository = _FakeGuestMenuRepository(
-      GuestHomeResponse.fromJson(_nestedFixtureJson()),
+      GuestHomeResponse.fromJson(_nestedFixtureJson(includeImages: false)),
     );
     await tester.pumpWidget(_app(repository: repository));
     await _load(tester);
@@ -230,6 +254,33 @@ void main() {
     );
   });
 
+  testWidgets('top language selector changes locale and reloads API once', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_languageAwareApp(repository: repository));
+    await _load(tester);
+
+    expect(find.byKey(const ValueKey('guestLanguageSelector')), findsOneWidget);
+    expect(repository.calls, hasLength(1));
+    expect(repository.calls.single.language, 'en');
+
+    await tester.tap(find.byKey(const ValueKey('guestLanguageSelector')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('guest-language-ar')));
+    await _load(tester);
+
+    expect(repository.calls, hasLength(2));
+    expect(repository.calls.last.language, 'ar');
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getString('preferredLanguage'), 'ar');
+    expect(
+      Directionality.of(tester.element(find.byType(BrowseMenuScreen))),
+      TextDirection.rtl,
+    );
+  });
+
   testWidgets('local filtering preserves source data and stable meal element', (
     tester,
   ) async {
@@ -327,6 +378,33 @@ Widget _app({
       home: const BrowseMenuScreen(),
     ),
   );
+}
+
+Widget _languageAwareApp({required GuestMenuRepository repository}) {
+  return ProviderScope(
+    overrides: [guestMenuRepositoryProvider.overrideWithValue(repository)],
+    child: const _LanguageAwareTestApp(),
+  );
+}
+
+class _LanguageAwareTestApp extends ConsumerWidget {
+  const _LanguageAwareTestApp();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(languageControllerProvider);
+    return MaterialApp(
+      locale: locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const BrowseMenuScreen(),
+    );
+  }
 }
 
 class _FakeGuestMenuRepository implements GuestMenuRepository {
@@ -619,7 +697,7 @@ Map<String, dynamic> _fixtureJson() {
   };
 }
 
-Map<String, dynamic> _nestedFixtureJson() {
+Map<String, dynamic> _nestedFixtureJson({bool includeImages = true}) {
   return {
     'data': {
       'mealPlans': [
@@ -628,7 +706,7 @@ Map<String, dynamic> _nestedFixtureJson() {
           'code': 'PLN_CLASSIC',
           'name': 'Balanced Living',
           'description': 'Fresh balanced meals for a healthy lifestyle.',
-          'imageUrl': 'https://cdn.example.com/plan.png',
+          'imageUrl': includeImages ? 'https://cdn.example.com/plan.png' : '',
           'displayOrder': 1,
           'isSelected': true,
           'slots': [
@@ -650,8 +728,12 @@ Map<String, dynamic> _nestedFixtureJson() {
                   'code': 'DT-IMP-0001',
                   'name': 'Oatmeal Banana',
                   'description': 'Creamy oatmeal with banana.',
-                  'imageUrl': 'https://cdn.example.com/meal.jpg',
-                  'thumbnailUrl': 'https://cdn.example.com/meal-thumb.jpg',
+                  'imageUrl': includeImages
+                      ? 'https://cdn.example.com/meal.jpg'
+                      : '',
+                  'thumbnailUrl': includeImages
+                      ? 'https://cdn.example.com/meal-thumb.jpg'
+                      : '',
                   'nutrition': {
                     'calories': 522.0,
                     'protein': 22.5,

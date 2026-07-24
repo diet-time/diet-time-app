@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_logo.dart';
+import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/features/menu/data/guest_menu_repository.dart';
 import 'package:diet_time/features/menu/domain/guest_home_models.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
@@ -87,21 +90,23 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
         data,
         preserveSelections ? _selectedMealTimeCode : null,
       );
+      final visibleMeals = _filterMeals(
+        data,
+        planCode: planCode,
+        date: selectedDate,
+        mealTimeCode: mealTimeCode,
+      );
       setState(() {
         _originalData = data;
         _selectedPlanCode = planCode;
         _selectedDate = selectedDate;
         _selectedMealTimeCode = mealTimeCode;
-        _visibleMeals = _filterMeals(
-          data,
-          planCode: planCode,
-          date: selectedDate,
-          mealTimeCode: mealTimeCode,
-        );
+        _visibleMeals = visibleMeals;
         _isLoading = false;
         _isRefreshing = false;
         _hasLoaded = true;
       });
+      _precacheMenuImages(data, planCode, visibleMeals);
     } on Object {
       if (!mounted || requestId != _requestId) return;
       setState(() {
@@ -227,6 +232,53 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     });
   }
 
+  void _changeLanguage(String languageCode) {
+    if (languageCode == _language) return;
+    ref
+        .read(languageControllerProvider.notifier)
+        .setLocale(Locale(languageCode));
+  }
+
+  void _precacheMenuImages(
+    GuestHomeData data,
+    String? selectedPlanCode,
+    List<GuestMeal> meals,
+  ) {
+    final selectedPlan = data.mealPlans
+        .where((plan) => plan.code == selectedPlanCode)
+        .firstOrNull;
+    final heroUrl = resolveMediaUrl(
+      selectedPlan?.imageUrl ?? data.hero.bannerImageUrl,
+    );
+    final urls = <String>{
+      heroUrl,
+      for (final meal in meals.take(6))
+        resolveMediaUrl(
+          (meal.thumbnailUrl ?? '').isNotEmpty
+              ? meal.thumbnailUrl
+              : meal.imageUrl,
+        ),
+      for (final plan in data.mealPlans) resolveMediaUrl(plan.imageUrl),
+    }..removeWhere((url) => url.isEmpty);
+    for (final url in urls) {
+      unawaited(_precacheImage(url));
+    }
+  }
+
+  Future<void> _precacheImage(String url) async {
+    try {
+      await precacheImage(
+        NetworkImage(url),
+        context,
+        onError: (_, _) {
+          // The normal image placeholder remains available.
+        },
+      );
+    } on Object {
+      // The normal image placeholder remains available if preloading fails.
+    }
+  }
+
   bool _isDateAvailable(GuestHomeData data, String? planCode, DateTime? date) {
     if (planCode == null || date == null) return false;
     return data.menus.any(
@@ -298,7 +350,8 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
             bannerImageUrl: selectedPlan.imageUrl,
           );
     final width = MediaQuery.sizeOf(context).width;
-    final columns = width >= 980 ? 3 : (width >= 680 ? 2 : 1);
+    const columns = 2;
+    final compactMealCards = width < 680;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8F3),
@@ -317,6 +370,14 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                 padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
                 sliver: SliverList.list(
                   children: [
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: _GuestLanguageSelector(
+                        languageCode: _language ?? 'en',
+                        onSelected: _changeLanguage,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     _GuestMenuHeader(hero: hero),
                     if (_isRefreshing) ...[
                       const SizedBox(height: 12),
@@ -403,9 +464,9 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                   sliver: SliverGrid(
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: columns,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      mainAxisExtent: 365,
+                      mainAxisSpacing: compactMealCards ? 12 : 16,
+                      crossAxisSpacing: compactMealCards ? 12 : 16,
+                      mainAxisExtent: compactMealCards ? 315 : 365,
                     ),
                     delegate: SliverChildBuilderDelegate(
                       childCount: meals.length,
@@ -413,10 +474,89 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                         key: ValueKey('guest-meal-${meals[index].id}'),
                         meal: meals[index],
                         l10n: l10n,
+                        compact: compactMealCards,
                       ),
                     ),
                   ),
                 ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GuestLanguageSelector extends StatelessWidget {
+  const _GuestLanguageSelector({
+    required this.languageCode,
+    required this.onSelected,
+  });
+
+  final String languageCode;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final isArabic = languageCode == 'ar';
+    return Semantics(
+      label: 'Language',
+      button: true,
+      child: PopupMenuButton<String>(
+        key: const ValueKey('guestLanguageSelector'),
+        tooltip: 'Language',
+        onSelected: onSelected,
+        position: PopupMenuPosition.under,
+        color: AppColors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        itemBuilder: (context) => [
+          CheckedPopupMenuItem(
+            key: const ValueKey('guest-language-en'),
+            value: 'en',
+            checked: !isArabic,
+            child: const Text('English'),
+          ),
+          CheckedPopupMenuItem(
+            key: const ValueKey('guest-language-ar'),
+            value: 'ar',
+            checked: isArabic,
+            child: const Text('العربية'),
+          ),
+        ],
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 10, 8),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(99),
+            border: Border.all(
+              color: AppColors.emeraldGreen.withValues(alpha: .18),
+            ),
+            boxShadow: _softShadow,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.language_rounded,
+                size: 18,
+                color: AppColors.emeraldGreen,
+              ),
+              const SizedBox(width: 7),
+              Text(
+                isArabic ? 'العربية' : 'English',
+                style: const TextStyle(
+                  color: AppColors.darkGreen,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: AppColors.emeraldGreen,
+              ),
             ],
           ),
         ),
@@ -841,10 +981,16 @@ class _GuestFilterChip extends StatelessWidget {
 }
 
 class _GuestMealCard extends StatelessWidget {
-  const _GuestMealCard({required this.meal, required this.l10n, super.key});
+  const _GuestMealCard({
+    required this.meal,
+    required this.l10n,
+    required this.compact,
+    super.key,
+  });
 
   final GuestMeal meal;
   final AppLocalizations l10n;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -855,7 +1001,7 @@ class _GuestMealCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(compact ? 20 : 26),
         boxShadow: _softShadow,
       ),
       child: Column(
@@ -863,21 +1009,24 @@ class _GuestMealCard extends StatelessWidget {
         children: [
           Stack(
             children: [
-              _NetworkMealImage(url: imageUrl, height: 165),
+              _NetworkMealImage(url: imageUrl, height: compact ? 130 : 165),
               PositionedDirectional(
                 start: 12,
                 top: 12,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? 7 : 10,
+                    vertical: compact ? 5 : 6,
                   ),
+                  constraints: BoxConstraints(maxWidth: compact ? 92 : 160),
                   decoration: BoxDecoration(
                     color: AppColors.white.withValues(alpha: .92),
                     borderRadius: BorderRadius.circular(99),
                   ),
                   child: Text(
                     meal.mealTime.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: AppColors.emeraldGreen,
                       fontSize: 11,
@@ -890,9 +1039,9 @@ class _GuestMealCard extends StatelessWidget {
                 end: 12,
                 bottom: 12,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? 7 : 10,
+                    vertical: compact ? 5 : 6,
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.emeraldGreen,
@@ -912,7 +1061,12 @@ class _GuestMealCard extends StatelessWidget {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              padding: EdgeInsets.fromLTRB(
+                compact ? 11 : 16,
+                compact ? 10 : 14,
+                compact ? 11 : 16,
+                compact ? 10 : 14,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -920,20 +1074,20 @@ class _GuestMealCard extends StatelessWidget {
                     meal.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.darkGreen,
-                      fontSize: 16.5,
+                      fontSize: compact ? 14 : 16.5,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  SizedBox(height: compact ? 4 : 6),
                   Text(
                     meal.description ?? '',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: AppColors.darkGreen.withValues(alpha: .60),
-                      fontSize: 12,
+                      fontSize: compact ? 10.5 : 12,
                       height: 1.35,
                     ),
                   ),
@@ -945,16 +1099,19 @@ class _GuestMealCard extends StatelessWidget {
                           _nutrition(meal.nutrition.protein),
                         ),
                         label: l10n.proteinLabel,
+                        compact: compact,
                       ),
                       _NutritionValue(
                         value: l10n.gramsValue(
                           _nutrition(meal.nutrition.carbs),
                         ),
                         label: l10n.carbsLabel,
+                        compact: compact,
                       ),
                       _NutritionValue(
                         value: l10n.gramsValue(_nutrition(meal.nutrition.fat)),
                         label: l10n.fatLabel,
+                        compact: compact,
                       ),
                     ],
                   ),
@@ -969,10 +1126,15 @@ class _GuestMealCard extends StatelessWidget {
 }
 
 class _NutritionValue extends StatelessWidget {
-  const _NutritionValue({required this.value, required this.label});
+  const _NutritionValue({
+    required this.value,
+    required this.label,
+    required this.compact,
+  });
 
   final String value;
   final String label;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -981,9 +1143,9 @@ class _NutritionValue extends StatelessWidget {
         children: [
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.emeraldGreen,
-              fontSize: 14,
+              fontSize: compact ? 11.5 : 14,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -994,7 +1156,7 @@ class _NutritionValue extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: AppColors.darkGreen.withValues(alpha: .52),
-              fontSize: 10,
+              fontSize: compact ? 8.5 : 10,
             ),
           ),
         ],
@@ -1028,14 +1190,28 @@ class _NetworkMealImage extends StatelessWidget {
         child: placeholder,
       );
     }
-    return Image.network(
-      url,
+    return SizedBox(
       width: double.infinity,
       height: height,
-      fit: BoxFit.cover,
-      frameBuilder: (context, child, frame, _) =>
-          frame == null ? placeholder : child,
-      errorBuilder: (_, _, _) => placeholder,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          placeholder,
+          Image.network(
+            url,
+            fit: BoxFit.cover,
+            gaplessPlayback: true,
+            filterQuality: FilterQuality.medium,
+            frameBuilder: (context, child, frame, _) => AnimatedOpacity(
+              opacity: frame == null ? 0 : 1,
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              child: child,
+            ),
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          ),
+        ],
+      ),
     );
   }
 }
