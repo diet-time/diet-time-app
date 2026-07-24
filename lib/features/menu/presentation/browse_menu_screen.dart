@@ -1,9 +1,6 @@
-import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
-import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 class BrowseMenuScreen extends StatelessWidget {
   const BrowseMenuScreen({super.key});
@@ -38,86 +35,62 @@ class BrowseMenuScreen extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final horizontal = constraints.maxWidth < 600 ? 20.0 : 48.0;
-            return Column(
-              children: [
-                Expanded(
-                  child: CustomScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    slivers: [
-                      SliverPadding(
-                        padding: EdgeInsets.fromLTRB(
-                          horizontal,
-                          28,
-                          horizontal,
-                          0,
+            return CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(horizontal, 28, horizontal, 24),
+                  sliver: SliverList.list(
+                    children: [
+                      _Entrance(
+                        delay: 0,
+                        child: Text(
+                          l10n.browseMenuTitle,
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -.6,
+                              ),
                         ),
-                        sliver: SliverList.list(
-                          children: [
-                            _Entrance(
-                              delay: 0,
-                              child: Text(
-                                l10n.browseMenuTitle,
-                                style: Theme.of(context).textTheme.headlineSmall
-                                    ?.copyWith(
-                                      fontSize: 30,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -.6,
-                                    ),
-                              ),
+                      ),
+                      const SizedBox(height: 10),
+                      _Entrance(
+                        delay: 70,
+                        child: Text(
+                          l10n.browseMenuSubtitle,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyLarge?.copyWith(height: 1.45),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      _Entrance(
+                        delay: 110,
+                        child: Text(
+                          l10n.popularMeals,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        height: constraints.maxHeight < 650 ? 270 : 330,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: meals.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 14),
+                          itemBuilder: (context, index) => _Entrance(
+                            delay: 150 + (index * 70),
+                            child: _MealCard(
+                              meal: meals[index],
+                              calorieLabel: l10n.kcal(meals[index].calories),
                             ),
-                            const SizedBox(height: 10),
-                            _Entrance(
-                              delay: 70,
-                              child: Text(
-                                l10n.browseMenuSubtitle,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.bodyLarge?.copyWith(height: 1.45),
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-                            _Entrance(
-                              delay: 110,
-                              child: Text(
-                                l10n.popularMeals,
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w800),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            SizedBox(
-                              height: constraints.maxHeight < 650 ? 270 : 330,
-                              child: ListView.separated(
-                                scrollDirection: Axis.horizontal,
-                                physics: const BouncingScrollPhysics(),
-                                itemCount: meals.length,
-                                separatorBuilder: (_, _) =>
-                                    const SizedBox(width: 14),
-                                itemBuilder: (context, index) => _Entrance(
-                                  delay: 150 + (index * 70),
-                                  child: _MealCard(
-                                    meal: meals[index],
-                                    calorieLabel: l10n.kcal(
-                                      meals[index].calories,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ],
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(horizontal, 12, horizontal, 20),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 560),
-                    child: AppButton(
-                      label: l10n.browseMenu,
-                      onPressed: () => context.go(AppRoutes.plans),
-                    ),
                   ),
                 ),
               ],

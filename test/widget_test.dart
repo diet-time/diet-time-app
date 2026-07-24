@@ -71,28 +71,39 @@ void main() {
     expect(find.text('Healthy Meals,'), findsOneWidget);
   });
 
-  testWidgets('complete first-run flow opens menu, plans, then login', (
+  testWidgets('final onboarding panel waits for and opens menu choice', (
     tester,
   ) async {
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
+    await _reachFinalChoice(tester);
 
-    for (var index = 0; index < 4; index++) {
-      await tester.tap(find.byKey(ValueKey('onboardingTapArea-$index')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-    }
     expect(find.text('Better Together,'), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 3000));
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('onboardingMenuChoice')), findsOneWidget);
+    expect(find.byKey(const ValueKey('onboardingPlanChoice')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('onboardingMenuChoice')));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(BrowseMenuScreen), findsOneWidget);
+    expect(find.byType(MealPlanScreen), findsNothing);
+  });
 
-    await tester.tap(find.text('Browse Menu'));
+  testWidgets('start plan choice opens plans and can continue to login', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
+    await _finishSplash(tester);
+    await _chooseLanguage(tester, 'English');
+    await _reachFinalChoice(tester);
+
+    await tester.tap(find.byKey(const ValueKey('onboardingPlanChoice')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(MealPlanScreen), findsOneWidget);
-
     await tester.tap(find.text('Continue'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
@@ -165,6 +176,15 @@ Future<void> _chooseLanguage(WidgetTester tester, String label) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
   await tester.pump(const Duration(milliseconds: 400));
+  await tester.pump(const Duration(milliseconds: 400));
+}
+
+Future<void> _reachFinalChoice(WidgetTester tester) async {
+  for (var index = 0; index < 4; index++) {
+    await tester.tap(find.byKey(ValueKey('onboardingTapArea-$index')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+  }
   await tester.pump(const Duration(milliseconds: 400));
 }
 

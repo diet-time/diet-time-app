@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
@@ -80,11 +81,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       return;
     }
     final pageCount = _pages(AppLocalizations.of(context)).length;
-    if (_index >= pageCount - 1) {
-      _isNavigating = true;
-      context.go(AppRoutes.menu);
-      return;
-    }
+    if (_index >= pageCount - 1) return;
     unawaited(_advanceToNextPage());
   }
 
@@ -106,9 +103,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       await _advanceToNextPage();
       return;
     }
-    _isNavigating = true;
     _progressController.stop();
-    if (mounted) context.go(AppRoutes.menu);
   }
 
   @override
@@ -123,58 +118,198 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final pages = _pages(AppLocalizations.of(context));
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D0F0E),
-      body: SafeArea(
-        child: Column(
+    return PopScope(
+      canPop: _index != pages.length - 1,
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0D0F0E),
+        body: Stack(
+          fit: StackFit.expand,
           children: [
-            AnimatedBuilder(
-              animation: _progressController,
-              builder: (context, child) => GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => _handleTap(pages.length),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: _SegmentedProgress(
-                    count: pages.length,
-                    currentIndex: _index,
-                    progress: _progressController.value,
+            SafeArea(
+              child: Column(
+                children: [
+                  AnimatedBuilder(
+                    animation: _progressController,
+                    builder: (context, child) => GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _handleTap(pages.length),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: _SegmentedProgress(
+                          count: pages.length,
+                          currentIndex: _index,
+                          progress: _progressController.value,
+                        ),
+                      ),
+                    ),
                   ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: NotificationListener<ScrollNotification>(
+                      onNotification: (notification) {
+                        if (notification is ScrollStartNotification &&
+                            notification.dragDetails != null) {
+                          _progressController.stop();
+                        } else if (notification is ScrollEndNotification &&
+                            !_progressController.isCompleted) {
+                          _progressController.forward();
+                        }
+                        return false;
+                      },
+                      child: PageView.builder(
+                        controller: _controller,
+                        onPageChanged: _onPageChanged,
+                        itemCount: pages.length,
+                        itemBuilder: (context, index) => GestureDetector(
+                          key: ValueKey('onboardingTapArea-$index'),
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _handleTap(pages.length),
+                          child: _OnboardingPage(
+                            data: pages[index],
+                            index: index,
+                            pageCount: pages.length,
+                            isActive: index == _index,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (_index == pages.length - 1)
+              _FinalChoiceSheet(
+                onMenu: () => context.go(AppRoutes.menu),
+                onStartPlan: () => context.go(AppRoutes.plans),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FinalChoiceSheet extends StatelessWidget {
+  const _FinalChoiceSheet({required this.onMenu, required this.onStartPlan});
+
+  final VoidCallback onMenu;
+  final VoidCallback onStartPlan;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            Opacity(
+              opacity: value.clamp(0, 1),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: 4.5 * value,
+                  sigmaY: 4.5 * value,
+                ),
+                child: ColoredBox(
+                  color: AppColors.black.withValues(alpha: .38 * value),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: NotificationListener<ScrollNotification>(
-                onNotification: (notification) {
-                  if (notification is ScrollStartNotification &&
-                      notification.dragDetails != null) {
-                    _progressController.stop();
-                  } else if (notification is ScrollEndNotification &&
-                      !_progressController.isCompleted) {
-                    _progressController.forward();
-                  }
-                  return false;
-                },
-                child: PageView.builder(
-                  controller: _controller,
-                  onPageChanged: _onPageChanged,
-                  itemCount: pages.length,
-                  itemBuilder: (context, index) => GestureDetector(
-                    key: ValueKey('onboardingTapArea-$index'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => _handleTap(pages.length),
-                    child: _OnboardingPage(
-                      data: pages[index],
-                      index: index,
-                      pageCount: pages.length,
-                      isActive: index == _index,
-                    ),
-                  ),
+            SafeArea(
+              top: false,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Transform.translate(
+                  offset: Offset(0, 320 * (1 - value)),
+                  child: child,
                 ),
               ),
             ),
           ],
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        constraints: const BoxConstraints(maxWidth: 680),
+        margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFCFBF6),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withValues(alpha: .28),
+              blurRadius: 36,
+              offset: const Offset(0, 14),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 5,
+              decoration: BoxDecoration(
+                color: AppColors.darkGreen.withValues(alpha: .14),
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+            const SizedBox(height: 18),
+            _FinalChoiceButton(
+              key: const ValueKey('onboardingMenuChoice'),
+              icon: Icons.restaurant_menu_rounded,
+              label: l10n.onboardingMenu,
+              onTap: onMenu,
+            ),
+            const SizedBox(height: 12),
+            _FinalChoiceButton(
+              key: const ValueKey('onboardingPlanChoice'),
+              icon: Icons.auto_awesome_rounded,
+              label: l10n.onboardingStartPlan,
+              onTap: onStartPlan,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FinalChoiceButton extends StatelessWidget {
+  const _FinalChoiceButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 62,
+      child: FilledButton.tonalIcon(
+        onPressed: onTap,
+        icon: Icon(icon),
+        label: Text(label),
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.teaGreen.withValues(alpha: .28),
+          foregroundColor: AppColors.emeraldGreen,
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: AppColors.emeraldGreen.withValues(alpha: .35),
+            ),
+          ),
         ),
       ),
     );
