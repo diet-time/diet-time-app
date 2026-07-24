@@ -99,5 +99,21 @@
       "value": {"type": "int"}
     }
   },
-  "continueLabel": "متابعة"
+  "continueLabel": "متابعة",
+  "guestMealPlansTitle": "اختر خطة نمط حياتك",
+  "guestWeeklyMenuTitle": "قائمة هذا الأسبوع",
+  "guestMenuLoadError": "تعذر تحميل قائمة الوجبات.",
+  "retry": "إعادة المحاولة",
+  "noMealsAvailable": "لا توجد وجبات متاحة.",
+  "tryAnotherMealFilter": "جرّب تاريخاً أو فئة وجبات مختلفة.",
+  "caloriesLabel": "السعرات",
+  "proteinLabel": "البروتين",
+  "carbsLabel": "الكربوهيدرات",
+  "fatLabel": "الدهون",
+  "gramsValue": "{value}غ",
+  "@gramsValue": {
+    "placeholders": {
+      "value": {"type": "String"}
+    }
+  }
 }

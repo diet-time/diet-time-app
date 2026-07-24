@@ -392,42 +392,251 @@ abstract class AppLocalizations {
   /// **'Start your Plan'**
   String get onboardingStartPlan;
 
-  /// The heading shown above the language choices.
+  /// No description provided for @chooseLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your Language'**
   String get chooseLanguage;
 
-  /// Explains why the user is choosing a language.
+  /// No description provided for @languageSelectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your preferred language to personalize your experience.'**
   String get languageSelectionSubtitle;
 
-  /// Label for the language choice card.
+  /// No description provided for @languageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
   String get languageLabel;
 
+  /// No description provided for @languageSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to save language preference. Please try again.'**
   String get languageSaveError;
+
+  /// No description provided for @loading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading'**
   String get loading;
+
+  /// No description provided for @pageProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {current} of {total}'**
   String pageProgress(int current, int total);
+
+  /// No description provided for @browseMenuTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Fresh choices, made for you'**
   String get browseMenuTitle;
+
+  /// No description provided for @browseMenuSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore chef-crafted meals prepared with wholesome ingredients.'**
   String get browseMenuSubtitle;
+
+  /// No description provided for @browseMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Menu'**
   String get browseMenu;
+
+  /// No description provided for @popularMeals.
+  ///
+  /// In en, this message translates to:
+  /// **'Popular meals'**
   String get popularMeals;
+
+  /// No description provided for @mealGrilledChicken.
+  ///
+  /// In en, this message translates to:
+  /// **'Herb Grilled Chicken'**
   String get mealGrilledChicken;
+
+  /// No description provided for @mealGrilledChickenDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Brown rice, greens & tahini'**
   String get mealGrilledChickenDetail;
+
+  /// No description provided for @mealSalmon.
+  ///
+  /// In en, this message translates to:
+  /// **'Citrus Salmon Bowl'**
   String get mealSalmon;
+
+  /// No description provided for @mealSalmonDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Quinoa, avocado & edamame'**
   String get mealSalmonDetail;
+
+  /// No description provided for @mealKeto.
+  ///
+  /// In en, this message translates to:
+  /// **'Keto Beef Garden'**
   String get mealKeto;
+
+  /// No description provided for @mealKetoDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Roasted vegetables & herbs'**
   String get mealKetoDetail;
+
+  /// No description provided for @kcal.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} kcal'**
   String kcal(int value);
+
+  /// No description provided for @choosePlanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Your Meal Plan'**
   String get choosePlanTitle;
+
+  /// No description provided for @choosePlanSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the plan that matches your goals. You can change it anytime.'**
   String get choosePlanSubtitle;
+
+  /// No description provided for @weightLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight Loss'**
   String get weightLoss;
+
+  /// No description provided for @weightLossDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced portions designed for steady, sustainable progress.'**
   String get weightLossDescription;
+
+  /// No description provided for @keto.
+  ///
+  /// In en, this message translates to:
+  /// **'Keto'**
   String get keto;
+
+  /// No description provided for @ketoDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Low-carb favorites rich in healthy fats and fresh produce.'**
   String get ketoDescription;
+
+  /// No description provided for @highProtein.
+  ///
+  /// In en, this message translates to:
+  /// **'High Protein'**
   String get highProtein;
+
+  /// No description provided for @highProteinDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Protein-forward meals to support strength and recovery.'**
   String get highProteinDescription;
+
+  /// No description provided for @balancedDiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced Diet'**
   String get balancedDiet;
+
+  /// No description provided for @balancedDietDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyday nutrition with a delicious mix of all food groups.'**
   String get balancedDietDescription;
+
+  /// No description provided for @dailyCalories.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} kcal / day'**
   String dailyCalories(int value);
+
+  /// No description provided for @weeklyPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'QAR {value} / week'**
   String weeklyPrice(int value);
+
+  /// No description provided for @continueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
   String get continueLabel;
+
+  /// No description provided for @guestMealPlansTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your lifestyle plan'**
+  String get guestMealPlansTitle;
+
+  /// No description provided for @guestWeeklyMenuTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This week\'s menu'**
+  String get guestWeeklyMenuTitle;
+
+  /// No description provided for @guestMenuLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load the menu.'**
+  String get guestMenuLoadError;
+
+  /// No description provided for @retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
+
+  /// No description provided for @noMealsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No meals available.'**
+  String get noMealsAvailable;
+
+  /// No description provided for @tryAnotherMealFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Try another date or meal category.'**
+  String get tryAnotherMealFilter;
+
+  /// No description provided for @caloriesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories'**
+  String get caloriesLabel;
+
+  /// No description provided for @proteinLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Protein'**
+  String get proteinLabel;
+
+  /// No description provided for @carbsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Carbs'**
+  String get carbsLabel;
+
+  /// No description provided for @fatLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Fat'**
+  String get fatLabel;
+
+  /// No description provided for @gramsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{value}g'**
+  String gramsValue(String value);
 }
 
 class _AppLocalizationsDelegate

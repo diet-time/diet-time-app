@@ -181,7 +181,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loading => 'Loading';
 
   @override
-  String pageProgress(int current, int total) => 'Page $current of $total';
+  String pageProgress(int current, int total) {
+    return 'Page $current of $total';
+  }
 
   @override
   String get browseMenuTitle => 'Fresh choices, made for you';
@@ -215,7 +217,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mealKetoDetail => 'Roasted vegetables & herbs';
 
   @override
-  String kcal(int value) => '$value kcal';
+  String kcal(int value) {
+    return '$value kcal';
+  }
 
   @override
   String get choosePlanTitle => 'Choose Your Meal Plan';
@@ -253,11 +257,50 @@ class AppLocalizationsEn extends AppLocalizations {
       'Everyday nutrition with a delicious mix of all food groups.';
 
   @override
-  String dailyCalories(int value) => '$value kcal / day';
+  String dailyCalories(int value) {
+    return '$value kcal / day';
+  }
 
   @override
-  String weeklyPrice(int value) => 'QAR $value / week';
+  String weeklyPrice(int value) {
+    return 'QAR $value / week';
+  }
 
   @override
   String get continueLabel => 'Continue';
+
+  @override
+  String get guestMealPlansTitle => 'Choose your lifestyle plan';
+
+  @override
+  String get guestWeeklyMenuTitle => 'This week\'s menu';
+
+  @override
+  String get guestMenuLoadError => 'Unable to load the menu.';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get noMealsAvailable => 'No meals available.';
+
+  @override
+  String get tryAnotherMealFilter => 'Try another date or meal category.';
+
+  @override
+  String get caloriesLabel => 'Calories';
+
+  @override
+  String get proteinLabel => 'Protein';
+
+  @override
+  String get carbsLabel => 'Carbs';
+
+  @override
+  String get fatLabel => 'Fat';
+
+  @override
+  String gramsValue(String value) {
+    return '${value}g';
+  }
 }

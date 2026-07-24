@@ -180,7 +180,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get loading => 'جارٍ التحميل';
 
   @override
-  String pageProgress(int current, int total) => 'الصفحة $current من $total';
+  String pageProgress(int current, int total) {
+    return 'الصفحة $current من $total';
+  }
 
   @override
   String get browseMenuTitle => 'خيارات طازجة، صُنعت من أجلك';
@@ -214,7 +216,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mealKetoDetail => 'خضروات مشوية وأعشاب';
 
   @override
-  String kcal(int value) => '$value سعرة';
+  String kcal(int value) {
+    return '$value سعرة';
+  }
 
   @override
   String get choosePlanTitle => 'اختر خطة وجباتك';
@@ -251,11 +255,50 @@ class AppLocalizationsAr extends AppLocalizations {
       'تغذية يومية شهية تجمع كل المجموعات الغذائية.';
 
   @override
-  String dailyCalories(int value) => '$value سعرة / يوم';
+  String dailyCalories(int value) {
+    return '$value سعرة / يوم';
+  }
 
   @override
-  String weeklyPrice(int value) => '$value ر.ق / أسبوع';
+  String weeklyPrice(int value) {
+    return '$value ر.ق / أسبوع';
+  }
 
   @override
   String get continueLabel => 'متابعة';
+
+  @override
+  String get guestMealPlansTitle => 'اختر خطة نمط حياتك';
+
+  @override
+  String get guestWeeklyMenuTitle => 'قائمة هذا الأسبوع';
+
+  @override
+  String get guestMenuLoadError => 'تعذر تحميل قائمة الوجبات.';
+
+  @override
+  String get retry => 'إعادة المحاولة';
+
+  @override
+  String get noMealsAvailable => 'لا توجد وجبات متاحة.';
+
+  @override
+  String get tryAnotherMealFilter => 'جرّب تاريخاً أو فئة وجبات مختلفة.';
+
+  @override
+  String get caloriesLabel => 'السعرات';
+
+  @override
+  String get proteinLabel => 'البروتين';
+
+  @override
+  String get carbsLabel => 'الكربوهيدرات';
+
+  @override
+  String get fatLabel => 'الدهون';
+
+  @override
+  String gramsValue(String value) {
+    return '$valueغ';
+  }
 }

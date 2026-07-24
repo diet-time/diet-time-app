@@ -99,5 +99,21 @@
       "value": {"type": "int"}
     }
   },
-  "continueLabel": "Continue"
+  "continueLabel": "Continue",
+  "guestMealPlansTitle": "Choose your lifestyle plan",
+  "guestWeeklyMenuTitle": "This week's menu",
+  "guestMenuLoadError": "Unable to load the menu.",
+  "retry": "Retry",
+  "noMealsAvailable": "No meals available.",
+  "tryAnotherMealFilter": "Try another date or meal category.",
+  "caloriesLabel": "Calories",
+  "proteinLabel": "Protein",
+  "carbsLabel": "Carbs",
+  "fatLabel": "Fat",
+  "gramsValue": "{value}g",
+  "@gramsValue": {
+    "placeholders": {
+      "value": {"type": "String"}
+    }
+  }
 }
