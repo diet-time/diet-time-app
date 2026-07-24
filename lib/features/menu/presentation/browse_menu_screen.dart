@@ -14,13 +14,16 @@ class BrowseMenuScreen extends ConsumerStatefulWidget {
 }
 
 class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
-  GuestHomeData? _data;
+  final ScrollController _scrollController = ScrollController();
+  GuestHomeData? _originalData;
+  List<GuestMeal> _visibleMeals = const [];
   String? _language;
   String? _selectedPlanCode;
   DateTime? _selectedDate;
   String _selectedMealTimeCode = 'ALL';
-  bool _isLoading = true;
+  bool _isLoading = false;
   bool _isRefreshing = false;
+  bool _hasLoaded = false;
   bool _hasError = false;
   int _requestId = 0;
 
@@ -29,17 +32,31 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     super.didChangeDependencies();
     final language = Localizations.localeOf(context).languageCode;
     if (_language == language) return;
+    final isLanguageChange = _language != null;
     _language = language;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _load(resetSelections: _data == null);
+      if (mounted) {
+        _load(force: isLanguageChange, preserveSelections: isLanguageChange);
+      }
     });
   }
 
-  Future<void> _load({bool resetSelections = false}) async {
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load({
+    bool force = false,
+    bool preserveSelections = true,
+  }) async {
+    if (!force && (_hasLoaded || _isLoading || _isRefreshing)) return;
     final requestId = ++_requestId;
+    final hadData = _originalData != null;
     setState(() {
       _hasError = false;
-      if (_data == null) {
+      if (!hadData) {
         _isLoading = true;
       } else {
         _isRefreshing = true;
@@ -48,21 +65,36 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     try {
       final response = await ref
           .read(guestMenuRepositoryProvider)
-          .getGuestHome(
-            language: _language ?? 'en',
-            date: resetSelections ? null : _selectedDate,
-            planCode: resetSelections ? null : _selectedPlanCode,
-            mealTimeCode: resetSelections ? 'ALL' : _selectedMealTimeCode,
-          );
+          .getGuestHome(language: _language ?? 'en', includeAll: true);
       if (!mounted || requestId != _requestId) return;
       final data = response.data;
+      final planCode = _resolvePlan(
+        data,
+        preserveSelections ? _selectedPlanCode : null,
+      );
+      final selectedDate = _resolveDate(
+        data,
+        planCode,
+        preserveSelections ? _selectedDate : null,
+      );
+      final mealTimeCode = _resolveMealTime(
+        data,
+        preserveSelections ? _selectedMealTimeCode : null,
+      );
       setState(() {
-        _data = data;
-        _selectedPlanCode = _resolvePlan(data);
-        _selectedDate = _resolveDate(data);
-        _selectedMealTimeCode = _resolveMealTime(data);
+        _originalData = data;
+        _selectedPlanCode = planCode;
+        _selectedDate = selectedDate;
+        _selectedMealTimeCode = mealTimeCode;
+        _visibleMeals = _filterMeals(
+          data,
+          planCode: planCode,
+          date: selectedDate,
+          mealTimeCode: mealTimeCode,
+        );
         _isLoading = false;
         _isRefreshing = false;
+        _hasLoaded = true;
       });
     } on Object {
       if (!mounted || requestId != _requestId) return;
@@ -74,34 +106,43 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     }
   }
 
-  String? _resolvePlan(GuestHomeData data) {
-    if (_selectedPlanCode != null &&
-        data.mealPlans.any((plan) => plan.code == _selectedPlanCode)) {
-      return _selectedPlanCode;
+  String? _resolvePlan(GuestHomeData data, String? preferredCode) {
+    if (preferredCode != null &&
+        data.mealPlans.any((plan) => plan.code == preferredCode)) {
+      return preferredCode;
     }
     return _firstSelected(data.mealPlans, (plan) => plan.isSelected)?.code ??
         data.mealPlans.firstOrNull?.code;
   }
 
-  DateTime? _resolveDate(GuestHomeData data) {
-    if (_selectedDate != null &&
-        data.weeklyCalendar.any(
-          (item) => _sameDate(item.date, _selectedDate),
-        )) {
-      return _selectedDate;
+  DateTime? _resolveDate(
+    GuestHomeData data,
+    String? planCode,
+    DateTime? preferredDate,
+  ) {
+    if (preferredDate != null &&
+        _isDateAvailable(data, planCode, preferredDate)) {
+      return preferredDate;
     }
-    return _firstSelected(
-          data.weeklyCalendar,
-          (item) => item.isSelected && item.isAvailable,
-        )?.date ??
-        data.weeklyCalendar.where((item) => item.isAvailable).firstOrNull?.date;
+    final initiallySelected = _firstSelected(
+      data.weeklyCalendar,
+      (item) => item.isSelected && _isDateAvailable(data, planCode, item.date),
+    )?.date;
+    if (initiallySelected != null) return initiallySelected;
+    return data.weeklyCalendar
+        .where((item) => _isDateAvailable(data, planCode, item.date))
+        .firstOrNull
+        ?.date;
   }
 
-  String _resolveMealTime(GuestHomeData data) {
-    if (data.mealTimeFilters.any(
-      (filter) => filter.code == _selectedMealTimeCode,
-    )) {
-      return _selectedMealTimeCode;
+  String _resolveMealTime(GuestHomeData data, String? preferredCode) {
+    if (preferredCode != null &&
+        data.mealTimeFilters.any(
+          (filter) =>
+              _normalizeMealTimeCode(filter.code) ==
+              _normalizeMealTimeCode(preferredCode),
+        )) {
+      return preferredCode;
     }
     return _firstSelected(
           data.mealTimeFilters,
@@ -112,31 +153,94 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   }
 
   void _selectPlan(GuestMealPlan plan) {
-    if (plan.code == _selectedPlanCode || _isRefreshing) return;
-    setState(() => _selectedPlanCode = plan.code);
-    _load();
+    final data = _originalData;
+    if (data == null || plan.code == _selectedPlanCode) return;
+    final date = _resolveDate(data, plan.code, _selectedDate);
+    setState(() {
+      _selectedPlanCode = plan.code;
+      _selectedDate = date;
+      _visibleMeals = _filterMeals(
+        data,
+        planCode: plan.code,
+        date: date,
+        mealTimeCode: _selectedMealTimeCode,
+      );
+    });
   }
 
   void _selectDate(GuestCalendarDate date) {
-    if (!date.isAvailable ||
+    final data = _originalData;
+    if (data == null ||
+        !_isDateAvailable(data, _selectedPlanCode, date.date) ||
         _sameDate(date.date, _selectedDate) ||
-        _isRefreshing) {
+        date.date == null) {
       return;
     }
-    setState(() => _selectedDate = date.date);
-    _load();
+    setState(() {
+      _selectedDate = date.date;
+      _visibleMeals = _filterMeals(
+        data,
+        planCode: _selectedPlanCode,
+        date: date.date,
+        mealTimeCode: _selectedMealTimeCode,
+      );
+    });
   }
 
   void _selectMealTime(GuestMealTimeFilter filter) {
-    if (filter.code == _selectedMealTimeCode || _isRefreshing) return;
-    setState(() => _selectedMealTimeCode = filter.code);
-    _load();
+    final data = _originalData;
+    if (data == null ||
+        _normalizeMealTimeCode(filter.code) ==
+            _normalizeMealTimeCode(_selectedMealTimeCode)) {
+      return;
+    }
+    setState(() {
+      _selectedMealTimeCode = filter.code;
+      _visibleMeals = _filterMeals(
+        data,
+        planCode: _selectedPlanCode,
+        date: _selectedDate,
+        mealTimeCode: filter.code,
+      );
+    });
+  }
+
+  bool _isDateAvailable(GuestHomeData data, String? planCode, DateTime? date) {
+    if (planCode == null || date == null) return false;
+    return data.menus.any(
+      (menu) => menu.planCode == planCode && _sameDate(menu.date, date),
+    );
+  }
+
+  List<GuestMeal> _filterMeals(
+    GuestHomeData data, {
+    required String? planCode,
+    required DateTime? date,
+    required String mealTimeCode,
+  }) {
+    final selectedMenus = data.menus.where(
+      (menu) =>
+          menu.planCode == planCode &&
+          (date == null || _sameDate(menu.date, date)),
+    );
+    final meals = selectedMenus
+        .expand((menu) => menu.slots)
+        .expand((slot) => slot.meals);
+    final normalizedFilter = _normalizeMealTimeCode(mealTimeCode);
+    final filtered = normalizedFilter == 'ALL'
+        ? meals
+        : meals.where(
+            (meal) =>
+                _normalizeMealTimeCode(meal.mealTime.code) == normalizedFilter,
+          );
+    return filtered.toList(growable: false)
+      ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    if (_isLoading) {
+    if (_isLoading || (_originalData == null && !_hasError)) {
       return const Scaffold(
         backgroundColor: Color(0xFFF8F8F3),
         body: Center(
@@ -144,7 +248,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
         ),
       );
     }
-    if (_data == null) {
+    if (_originalData == null) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F8F3),
         body: _GuestMenuError(
@@ -155,13 +259,22 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       );
     }
 
-    final data = _data!;
+    final data = _originalData!;
     final plans = [...data.mealPlans]
       ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
     final filters = [...data.mealTimeFilters]
       ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-    final meals = [...data.meals]
-      ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+    final meals = _visibleMeals;
+    final selectedPlan = plans
+        .where((plan) => plan.code == _selectedPlanCode)
+        .firstOrNull;
+    final hero = selectedPlan == null
+        ? data.hero
+        : GuestHero(
+            title: selectedPlan.name,
+            subtitle: selectedPlan.description,
+            bannerImageUrl: selectedPlan.imageUrl,
+          );
     final width = MediaQuery.sizeOf(context).width;
     final columns = width >= 980 ? 3 : (width >= 680 ? 2 : 1);
 
@@ -170,8 +283,9 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           color: AppColors.emeraldGreen,
-          onRefresh: _load,
+          onRefresh: () => _load(force: true),
           child: CustomScrollView(
+            controller: _scrollController,
             key: const PageStorageKey('guestMenuScroll'),
             physics: const AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics(),
@@ -181,7 +295,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                 padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
                 sliver: SliverList.list(
                   children: [
-                    _GuestMenuHeader(hero: data.hero),
+                    _GuestMenuHeader(hero: hero),
                     if (_isRefreshing) ...[
                       const SizedBox(height: 12),
                       const LinearProgressIndicator(
@@ -190,33 +304,46 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                         backgroundColor: Color(0x1A00674E),
                       ),
                     ],
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 22),
                     _SectionTitle(label: l10n.guestMealPlansTitle),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     SizedBox(
-                      height: 142,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: plans.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 12),
-                        itemBuilder: (context, index) {
-                          final plan = plans[index];
-                          return _GuestPlanCard(
-                            key: ValueKey('guest-plan-${plan.code}'),
-                            plan: plan,
-                            selected: plan.code == _selectedPlanCode,
-                            onTap: () => _selectPlan(plan),
+                      height: 124,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final cardWidth = plans.length == 1
+                              ? constraints.maxWidth
+                              : (constraints.maxWidth * .76)
+                                    .clamp(210.0, 236.0)
+                                    .toDouble();
+                          return ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsetsDirectional.only(end: 8),
+                            itemCount: plans.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(width: 12),
+                            itemBuilder: (context, index) {
+                              final plan = plans[index];
+                              return _GuestPlanCard(
+                                key: ValueKey('guest-plan-${plan.code}'),
+                                plan: plan,
+                                width: cardWidth,
+                                selected: plan.code == _selectedPlanCode,
+                                onTap: () => _selectPlan(plan),
+                              );
+                            },
                           );
                         },
                       ),
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 22),
                     _SectionTitle(label: l10n.guestWeeklyMenuTitle),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     SizedBox(
-                      height: 78,
+                      height: 72,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsetsDirectional.only(end: 8),
                         itemCount: data.weeklyCalendar.length,
                         separatorBuilder: (_, _) => const SizedBox(width: 10),
                         itemBuilder: (context, index) {
@@ -227,16 +354,22 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                             ),
                             date: date,
                             selected: _sameDate(date.date, _selectedDate),
+                            available: _isDateAvailable(
+                              data,
+                              _selectedPlanCode,
+                              date.date,
+                            ),
                             onTap: () => _selectDate(date),
                           );
                         },
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     SizedBox(
-                      height: 46,
+                      height: 42,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsetsDirectional.only(end: 12),
                         itemCount: filters.length,
                         separatorBuilder: (_, _) => const SizedBox(width: 9),
                         itemBuilder: (context, index) {
@@ -258,7 +391,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                         onRetry: _load,
                       ),
                     ],
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
@@ -278,7 +411,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                       crossAxisCount: columns,
                       mainAxisSpacing: 16,
                       crossAxisSpacing: 16,
-                      mainAxisExtent: 390,
+                      mainAxisExtent: 365,
                     ),
                     delegate: SliverChildBuilderDelegate(
                       childCount: meals.length,
@@ -307,7 +440,7 @@ class _GuestMenuHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final imageUrl = resolveMediaUrl(hero.bannerImageUrl);
     return Container(
-      height: 220,
+      height: 200,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -345,11 +478,11 @@ class _GuestMenuHeader extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const AppLogo(width: 92),
+                const AppLogo(width: 76),
                 const Spacer(),
                 if ((hero.title ?? '').isNotEmpty)
                   Text(
@@ -407,12 +540,14 @@ class _SectionTitle extends StatelessWidget {
 class _GuestPlanCard extends StatelessWidget {
   const _GuestPlanCard({
     required this.plan,
+    required this.width,
     required this.selected,
     required this.onTap,
     super.key,
   });
 
   final GuestMealPlan plan;
+  final double width;
   final bool selected;
   final VoidCallback onTap;
 
@@ -427,7 +562,7 @@ class _GuestPlanCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
-          width: 156,
+          width: width,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: selected ? const Color(0xFFF0F8EB) : AppColors.white,
@@ -442,27 +577,28 @@ class _GuestPlanCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              ClipOval(
-                child: _NetworkMealImage(url: imageUrl, width: 52, height: 52),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: _NetworkMealImage(url: imageUrl, width: 82, height: 96),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       plan.name,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: AppColors.darkGreen,
-                        fontSize: 15,
+                        fontSize: 15.5,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     if ((plan.description ?? '').isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 5),
                       Text(
                         plan.description!,
                         maxLines: 2,
@@ -473,14 +609,16 @@ class _GuestPlanCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (selected) ...[
-                      const SizedBox(height: 7),
-                      const Icon(
-                        Icons.check_circle_rounded,
-                        size: 20,
-                        color: AppColors.emeraldGreen,
+                    const Spacer(),
+                    if (selected)
+                      const Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: Icon(
+                          Icons.check_circle_rounded,
+                          size: 18,
+                          color: AppColors.emeraldGreen,
+                        ),
                       ),
-                    ],
                   ],
                 ),
               ),
@@ -496,28 +634,30 @@ class _GuestDateCard extends StatelessWidget {
   const _GuestDateCard({
     required this.date,
     required this.selected,
+    required this.available,
     required this.onTap,
     super.key,
   });
 
   final GuestCalendarDate date;
   final bool selected;
+  final bool available;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final foreground = selected ? AppColors.white : AppColors.darkGreen;
     return Opacity(
-      opacity: date.isAvailable ? 1 : .38,
+      opacity: available ? 1 : .38,
       child: InkWell(
-        onTap: date.isAvailable ? onTap : null,
-        borderRadius: BorderRadius.circular(20),
+        onTap: available ? onTap : null,
+        borderRadius: BorderRadius.circular(18),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          width: 68,
+          width: 62,
           decoration: BoxDecoration(
             color: selected ? AppColors.emeraldGreen : AppColors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: date.isToday && !selected
                   ? AppColors.emeraldGreen
@@ -573,7 +713,7 @@ class _GuestFilterChip extends StatelessWidget {
       showCheckmark: false,
       avatar: Icon(
         _filterIcon(filter.code),
-        size: 18,
+        size: 16,
         color: selected ? AppColors.white : AppColors.emeraldGreen,
       ),
       label: Text(filter.name),
@@ -616,7 +756,7 @@ class _GuestMealCard extends StatelessWidget {
         children: [
           Stack(
             children: [
-              _NetworkMealImage(url: imageUrl, height: 190),
+              _NetworkMealImage(url: imageUrl, height: 165),
               PositionedDirectional(
                 start: 12,
                 top: 12,
@@ -671,11 +811,11 @@ class _GuestMealCard extends StatelessWidget {
                 children: [
                   Text(
                     meal.name,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: AppColors.darkGreen,
-                      fontSize: 17,
+                      fontSize: 16.5,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -906,8 +1046,13 @@ bool _sameDate(DateTime? a, DateTime? b) =>
     a.month == b.month &&
     a.day == b.day;
 
+String _normalizeMealTimeCode(String? value) {
+  final code = value?.trim().toUpperCase() ?? '';
+  return code == 'SNACK_DESSERT' ? 'SNACK' : code;
+}
+
 IconData _filterIcon(String code) {
-  return switch (code) {
+  return switch (_normalizeMealTimeCode(code)) {
     'BREAKFAST' => Icons.wb_sunny_outlined,
     'LUNCH' => Icons.lunch_dining_outlined,
     'DINNER' => Icons.nightlight_outlined,

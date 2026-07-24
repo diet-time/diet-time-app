@@ -280,7 +280,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get retry => 'إعادة المحاولة';
 
   @override
-  String get noMealsAvailable => 'لا توجد وجبات متاحة.';
+  String get noMealsAvailable => 'لا توجد وجبات متاحة لهذا الاختيار.';
 
   @override
   String get tryAnotherMealFilter => 'جرّب تاريخاً أو فئة وجبات مختلفة.';

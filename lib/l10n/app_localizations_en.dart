@@ -282,7 +282,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get retry => 'Retry';
 
   @override
-  String get noMealsAvailable => 'No meals available.';
+  String get noMealsAvailable => 'No meals available for this selection.';
 
   @override
   String get tryAnotherMealFilter => 'Try another date or meal category.';

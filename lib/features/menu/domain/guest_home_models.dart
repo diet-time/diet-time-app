@@ -18,6 +18,7 @@ class GuestHomeData {
   const GuestHomeData({
     required this.hero,
     required this.mealPlans,
+    required this.menus,
     required this.weeklyCalendar,
     required this.mealTimeFilters,
     required this.meals,
@@ -31,6 +32,27 @@ class GuestHomeData {
     final selectedPlan =
         mealPlans.where((plan) => plan.isSelected).firstOrNull ??
         mealPlans.firstOrNull;
+    final weeklyCalendar = _list(json['weeklyCalendar'])
+        .map((item) => GuestCalendarDate.fromJson(_map(item)))
+        .toList(growable: false);
+    final parsedMenus = _list(
+      json['menus'],
+    ).map((item) => GuestMenuDay.fromJson(_map(item))).toList(growable: false);
+    final selectedDate = weeklyCalendar
+        .where((date) => date.isSelected)
+        .firstOrNull
+        ?.date;
+    final menus = parsedMenus.isNotEmpty
+        ? parsedMenus
+        : selectedPlan != null && selectedDate != null
+        ? [
+            GuestMenuDay(
+              planCode: selectedPlan.code,
+              date: selectedDate,
+              slots: selectedPlan.slots,
+            ),
+          ]
+        : const <GuestMenuDay>[];
     final heroJson = _map(json['hero']);
     final topLevelMeals = _list(
       json['meals'],
@@ -44,9 +66,8 @@ class GuestHomeData {
               bannerImageUrl: selectedPlan?.imageUrl,
             ),
       mealPlans: mealPlans,
-      weeklyCalendar: _list(json['weeklyCalendar'])
-          .map((item) => GuestCalendarDate.fromJson(_map(item)))
-          .toList(growable: false),
+      menus: menus,
+      weeklyCalendar: weeklyCalendar,
       mealTimeFilters: _list(json['mealTimeFilters'])
           .map((item) => GuestMealTimeFilter.fromJson(_map(item)))
           .toList(growable: false),
@@ -62,10 +83,31 @@ class GuestHomeData {
 
   final GuestHero hero;
   final List<GuestMealPlan> mealPlans;
+  final List<GuestMenuDay> menus;
   final List<GuestCalendarDate> weeklyCalendar;
   final List<GuestMealTimeFilter> mealTimeFilters;
   final List<GuestMeal> meals;
   final GuestPagination pagination;
+}
+
+class GuestMenuDay {
+  const GuestMenuDay({
+    required this.planCode,
+    required this.date,
+    required this.slots,
+  });
+
+  factory GuestMenuDay.fromJson(Map<String, dynamic> json) => GuestMenuDay(
+    planCode: _string(json['planCode']) ?? '',
+    date: DateTime.tryParse(_string(json['date']) ?? ''),
+    slots: _list(json['slots'])
+        .map((item) => GuestMealPlanSlot.fromJson(_map(item)))
+        .toList(growable: false),
+  );
+
+  final String planCode;
+  final DateTime? date;
+  final List<GuestMealPlanSlot> slots;
 }
 
 class GuestHero {

@@ -51,6 +51,7 @@ void main() {
       findsOneWidget,
     );
     expect(repository.calls.single.language, 'en');
+    expect(repository.calls.single.includeAll, isTrue);
   });
 
   testWidgets('guest menu renders the new nested meal-plan response', (
@@ -69,7 +70,7 @@ void main() {
     expect(find.byKey(const ValueKey('guest-meal-meal-1')), findsOneWidget);
   });
 
-  testWidgets('plan, date, and meal-time selections reload with query values', (
+  testWidgets('plan, date, and meal-time selections filter without API calls', (
     tester,
   ) async {
     await _useTallSurface(tester);
@@ -82,7 +83,9 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('guest-plan-PLN_KETO')));
     await _load(tester);
-    expect(repository.calls.last.planCode, 'PLN_KETO');
+    expect(repository.calls, hasLength(1));
+    expect(find.text('Keto Omelette'), findsOneWidget);
+    expect(find.text('Oatmeal Banana'), findsNothing);
 
     await tester.ensureVisible(
       find.byKey(const ValueKey('guest-date-2026-07-26T00:00:00.000')),
@@ -91,25 +94,139 @@ void main() {
       find.byKey(const ValueKey('guest-date-2026-07-26T00:00:00.000')),
     );
     await _load(tester);
-    expect(repository.calls.last.date, DateTime(2026, 7, 26));
+    expect(repository.calls, hasLength(1));
+    expect(find.text('Keto Chicken'), findsOneWidget);
+    expect(find.text('Keto Omelette'), findsNothing);
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('guest-filter-LUNCH')),
+    );
+    await tester.tap(find.byKey(const ValueKey('guest-filter-LUNCH')));
+    await _load(tester);
+    expect(repository.calls, hasLength(1));
+    expect(find.text('Keto Chicken'), findsOneWidget);
+  });
+
+  testWidgets('snack filter includes SNACK_DESSERT meals locally', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('guest-filter-SNACK')),
+    );
+    await tester.tap(find.byKey(const ValueKey('guest-filter-SNACK')));
+    await _load(tester);
+
+    expect(repository.calls, hasLength(1));
+    expect(find.text('Protein Bite'), findsOneWidget);
+    expect(find.text('Oatmeal Banana'), findsNothing);
+  });
+
+  testWidgets('empty local selection displays localized empty state', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('guest-filter-LUNCH')),
+    );
+    await tester.tap(find.byKey(const ValueKey('guest-filter-LUNCH')));
+    await _load(tester);
+
+    expect(repository.calls, hasLength(1));
+    expect(find.text('No meals available for this selection.'), findsOneWidget);
+    expect(find.text('Try another date or meal category.'), findsOneWidget);
+  });
+
+  testWidgets('widget rebuild does not repeat the initial request', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(repository.calls, hasLength(1));
+  });
+
+  testWidgets('manual pull-to-refresh makes exactly one additional request', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, 500));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(repository.calls, hasLength(2));
+  });
+
+  testWidgets('language change makes one request and preserves page state', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    await tester.pumpWidget(
+      _app(repository: repository, locale: const Locale('ar')),
+    );
+    await _load(tester);
+
+    expect(repository.calls, hasLength(2));
+    expect(repository.calls.last.language, 'ar');
+    expect(
+      Directionality.of(tester.element(find.byType(BrowseMenuScreen))),
+      TextDirection.rtl,
+    );
+  });
+
+  testWidgets('local filtering preserves source data and stable meal element', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final response = _response();
+    final originalMenuCount = response.data.menus.length;
+    final originalMealCount = response.data.menus.first.slots
+        .expand((slot) => slot.meals)
+        .length;
+    final repository = _FakeGuestMenuRepository(response);
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+    final originalElement = tester.element(
+      find.byKey(const ValueKey('guest-meal-meal-1')),
+    );
 
     await tester.ensureVisible(
       find.byKey(const ValueKey('guest-filter-BREAKFAST')),
     );
     await tester.tap(find.byKey(const ValueKey('guest-filter-BREAKFAST')));
     await _load(tester);
-    expect(repository.calls.last.mealTimeCode, 'BREAKFAST');
-  });
 
-  testWidgets('empty API meal list displays localized empty state', (
-    tester,
-  ) async {
-    await _useTallSurface(tester);
-    final repository = _FakeGuestMenuRepository(_response(meals: const []));
-    await tester.pumpWidget(_app(repository: repository));
-    await _load(tester);
-    expect(find.text('No meals available.'), findsOneWidget);
-    expect(find.text('Try another date or meal category.'), findsOneWidget);
+    expect(repository.calls, hasLength(1));
+    expect(
+      tester.element(find.byKey(const ValueKey('guest-meal-meal-1'))),
+      same(originalElement),
+    );
+    expect(response.data.menus, hasLength(originalMenuCount));
+    expect(
+      response.data.menus.first.slots.expand((slot) => slot.meals),
+      hasLength(originalMealCount),
+    );
   });
 
   testWidgets('API failure displays retry and retry repeats the request', (
@@ -192,6 +309,7 @@ class _FakeGuestMenuRepository implements GuestMenuRepository {
     String mealTimeCode = 'ALL',
     int page = 1,
     int pageSize = 20,
+    bool includeAll = true,
   }) async {
     calls.add(
       _Request(
@@ -199,6 +317,7 @@ class _FakeGuestMenuRepository implements GuestMenuRepository {
         date: date,
         planCode: planCode,
         mealTimeCode: mealTimeCode,
+        includeAll: includeAll,
       ),
     );
     if (failuresRemaining > 0) {
@@ -215,50 +334,17 @@ class _Request {
     required this.date,
     required this.planCode,
     required this.mealTimeCode,
+    required this.includeAll,
   });
 
   final String language;
   final DateTime? date;
   final String? planCode;
   final String mealTimeCode;
+  final bool includeAll;
 }
 
-GuestHomeResponse _response({List<GuestMeal>? meals}) {
-  final json = _fixtureJson();
-  if (meals != null) {
-    final data = Map<String, dynamic>.from(
-      json['data']! as Map<String, dynamic>,
-    );
-    data['meals'] = meals
-        .map(
-          (meal) => {
-            'id': meal.id,
-            'code': meal.code,
-            'name': meal.name,
-            'description': meal.description,
-            'imageUrl': meal.imageUrl,
-            'thumbnailUrl': meal.thumbnailUrl,
-            'mealTime': {
-              'code': meal.mealTime.code,
-              'name': meal.mealTime.name,
-            },
-            'nutrition': {
-              'calories': meal.nutrition.calories,
-              'protein': meal.nutrition.protein,
-              'carbs': meal.nutrition.carbs,
-              'fat': meal.nutrition.fat,
-            },
-            'tags': <dynamic>[],
-            'allergens': <dynamic>[],
-            'isAvailable': meal.isAvailable,
-            'displayOrder': meal.displayOrder,
-          },
-        )
-        .toList();
-    json['data'] = data;
-  }
-  return GuestHomeResponse.fromJson(json);
-}
+GuestHomeResponse _response() => GuestHomeResponse.fromJson(_fixtureJson());
 
 Map<String, dynamic> _fixtureJson() {
   return {
@@ -317,6 +403,20 @@ Map<String, dynamic> _fixtureJson() {
           'displayOrder': 1,
           'isSelected': false,
         },
+        {
+          'id': 'filter-2',
+          'code': 'LUNCH',
+          'name': 'Lunch',
+          'displayOrder': 2,
+          'isSelected': false,
+        },
+        {
+          'id': 'filter-3',
+          'code': 'SNACK',
+          'name': 'Snacks',
+          'displayOrder': 3,
+          'isSelected': false,
+        },
       ],
       'meals': [
         {
@@ -337,6 +437,138 @@ Map<String, dynamic> _fixtureJson() {
           'allergens': <dynamic>[],
           'isAvailable': true,
           'displayOrder': 0,
+        },
+      ],
+      'menus': [
+        {
+          'planCode': 'PLN_CLASSIC',
+          'date': '2026-07-25',
+          'slots': [
+            {
+              'id': 'classic-breakfast',
+              'mealTime': {'code': 'BREAKFAST', 'name': 'Breakfast'},
+              'displayOrder': 1,
+              'minimumSelection': 1,
+              'maximumSelection': 1,
+              'isRequired': true,
+              'meals': [
+                {
+                  'id': 'meal-1',
+                  'code': 'DT-001',
+                  'name': 'Oatmeal Banana',
+                  'description': 'Creamy oatmeal with banana.',
+                  'imageUrl': '',
+                  'thumbnailUrl': '',
+                  'nutrition': {
+                    'calories': 522.0,
+                    'protein': 22.5,
+                    'carbs': 82.2,
+                    'fat': 12.4,
+                  },
+                  'tags': <dynamic>[],
+                  'allergens': <dynamic>[],
+                  'isAvailable': true,
+                  'displayOrder': 0,
+                },
+              ],
+            },
+            {
+              'id': 'classic-snack',
+              'mealTime': {'code': 'SNACK_DESSERT', 'name': 'Snack / Dessert'},
+              'displayOrder': 2,
+              'minimumSelection': 1,
+              'maximumSelection': 1,
+              'isRequired': true,
+              'meals': [
+                {
+                  'id': 'meal-2',
+                  'code': 'DT-002',
+                  'name': 'Protein Bite',
+                  'description': 'A compact protein snack.',
+                  'imageUrl': '',
+                  'thumbnailUrl': '',
+                  'nutrition': {
+                    'calories': 180.0,
+                    'protein': 12.0,
+                    'carbs': 16.0,
+                    'fat': 7.0,
+                  },
+                  'tags': <dynamic>[],
+                  'allergens': <dynamic>[],
+                  'isAvailable': true,
+                  'displayOrder': 0,
+                },
+              ],
+            },
+          ],
+        },
+        {
+          'planCode': 'PLN_KETO',
+          'date': '2026-07-25',
+          'slots': [
+            {
+              'id': 'keto-breakfast',
+              'mealTime': {'code': 'BREAKFAST', 'name': 'Breakfast'},
+              'displayOrder': 1,
+              'minimumSelection': 1,
+              'maximumSelection': 1,
+              'isRequired': true,
+              'meals': [
+                {
+                  'id': 'meal-3',
+                  'code': 'DT-003',
+                  'name': 'Keto Omelette',
+                  'description': 'Eggs, cheese, and greens.',
+                  'imageUrl': '',
+                  'thumbnailUrl': '',
+                  'nutrition': {
+                    'calories': 410.0,
+                    'protein': 30.0,
+                    'carbs': 8.0,
+                    'fat': 28.0,
+                  },
+                  'tags': <dynamic>[],
+                  'allergens': <dynamic>[],
+                  'isAvailable': true,
+                  'displayOrder': 0,
+                },
+              ],
+            },
+          ],
+        },
+        {
+          'planCode': 'PLN_KETO',
+          'date': '2026-07-26',
+          'slots': [
+            {
+              'id': 'keto-lunch',
+              'mealTime': {'code': 'LUNCH', 'name': 'Lunch'},
+              'displayOrder': 1,
+              'minimumSelection': 1,
+              'maximumSelection': 1,
+              'isRequired': true,
+              'meals': [
+                {
+                  'id': 'meal-4',
+                  'code': 'DT-004',
+                  'name': 'Keto Chicken',
+                  'description': 'Chicken with low-carb vegetables.',
+                  'imageUrl': '',
+                  'thumbnailUrl': '',
+                  'nutrition': {
+                    'calories': 560.0,
+                    'protein': 42.0,
+                    'carbs': 12.0,
+                    'fat': 34.0,
+                  },
+                  'tags': <dynamic>[],
+                  'allergens': <dynamic>[],
+                  'isAvailable': true,
+                  'displayOrder': 0,
+                },
+              ],
+            },
+          ],
         },
       ],
       'pagination': {

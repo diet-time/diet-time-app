@@ -104,7 +104,7 @@
   "guestWeeklyMenuTitle": "This week's menu",
   "guestMenuLoadError": "Unable to load the menu.",
   "retry": "Retry",
-  "noMealsAvailable": "No meals available.",
+  "noMealsAvailable": "No meals available for this selection.",
   "tryAnotherMealFilter": "Try another date or meal category.",
   "caloriesLabel": "Calories",
   "proteinLabel": "Protein",

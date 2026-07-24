@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/core/network/api_endpoints.dart';
 import 'package:diet_time/features/menu/domain/guest_home_models.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final guestMenuRepositoryProvider = Provider<GuestMenuRepository>(
@@ -19,6 +20,7 @@ abstract interface class GuestMenuRepository {
     String mealTimeCode = 'ALL',
     int page = 1,
     int pageSize = 20,
+    bool includeAll = true,
   });
 }
 
@@ -36,6 +38,7 @@ class HttpGuestMenuRepository implements GuestMenuRepository {
     String mealTimeCode = 'ALL',
     int page = 1,
     int pageSize = 20,
+    bool includeAll = true,
   }) async {
     final base = Uri.parse(AppEnvironment.apiBaseUrl);
     final uri = base
@@ -49,8 +52,12 @@ class HttpGuestMenuRepository implements GuestMenuRepository {
             'mealTimeCode': mealTimeCode,
             'page': '$page',
             'pageSize': '$pageSize',
+            'includeAll': '$includeAll',
           },
         );
+    if (kDebugMode) {
+      debugPrint('[GuestMenu] GET ${uri.path}?${uri.query}');
+    }
     final client = _clientFactory()
       ..connectionTimeout = const Duration(seconds: 20);
     try {

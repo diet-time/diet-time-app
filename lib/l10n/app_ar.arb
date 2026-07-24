@@ -104,7 +104,7 @@
   "guestWeeklyMenuTitle": "قائمة هذا الأسبوع",
   "guestMenuLoadError": "تعذر تحميل قائمة الوجبات.",
   "retry": "إعادة المحاولة",
-  "noMealsAvailable": "لا توجد وجبات متاحة.",
+  "noMealsAvailable": "لا توجد وجبات متاحة لهذا الاختيار.",
   "tryAnotherMealFilter": "جرّب تاريخاً أو فئة وجبات مختلفة.",
   "caloriesLabel": "السعرات",
   "proteinLabel": "البروتين",
