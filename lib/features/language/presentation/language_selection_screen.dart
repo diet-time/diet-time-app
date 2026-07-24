@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_typography.dart';
@@ -19,35 +21,33 @@ class LanguageSelectionScreen extends ConsumerStatefulWidget {
 class _LanguageSelectionScreenState
     extends ConsumerState<LanguageSelectionScreen>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _entranceController;
-  late final Animation<double> _logoOpacity;
-  late final Animation<double> _logoScale;
-  late final Animation<Offset> _cardOffset;
+  late final AnimationController _sheetController;
+  late final Animation<Offset> _sheetOffset;
+  late final Animation<double> _backdropOpacity;
   String? _selectedLanguage;
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _entranceController = AnimationController(
+    _sheetController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 320),
+      duration: const Duration(milliseconds: 380),
+      reverseDuration: const Duration(milliseconds: 320),
     );
-    _logoOpacity = CurvedAnimation(
-      parent: _entranceController,
-      curve: Curves.easeOut,
-    );
-    _logoScale = Tween<double>(begin: .88, end: 1).animate(
-      CurvedAnimation(parent: _entranceController, curve: Curves.easeOutBack),
-    );
-    _cardOffset = Tween<Offset>(begin: const Offset(0, .16), end: Offset.zero)
+    _sheetOffset = Tween<Offset>(begin: const Offset(0, 1.04), end: Offset.zero)
         .animate(
           CurvedAnimation(
-            parent: _entranceController,
-            curve: Curves.easeOutCubic,
+            parent: _sheetController,
+            curve: Curves.easeOutBack,
+            reverseCurve: Curves.easeInCubic,
           ),
         );
-    _entranceController.forward();
+    _backdropOpacity = CurvedAnimation(
+      parent: _sheetController,
+      curve: Curves.easeOut,
+    );
+    _sheetController.forward();
   }
 
   Future<void> _selectLanguage(String languageCode) async {
@@ -57,126 +57,70 @@ class _LanguageSelectionScreenState
       _isSaving = true;
     });
     try {
-      await ref
-          .read(languageControllerProvider.notifier)
-          .selectLanguage(languageCode);
+      // Leave enough time for the check and scale animations to be perceived.
+      await Future.wait([
+        ref
+            .read(languageControllerProvider.notifier)
+            .selectLanguage(languageCode),
+        Future<void>.delayed(const Duration(milliseconds: 260)),
+      ]);
+      if (!mounted) return;
+      await _sheetController.reverse();
       if (mounted) context.go(AppRoutes.onboarding);
     } catch (_) {
       if (!mounted) return;
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to save language preference.')),
+        SnackBar(content: Text(AppLocalizations.of(context).languageSaveError)),
       );
     }
   }
 
   @override
   void dispose() {
-    _entranceController.dispose();
+    _sheetController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final mediaQuery = MediaQuery.of(context);
-    return Scaffold(
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF004C3A),
-              AppColors.emeraldGreen,
-              Color(0xFF16815E),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxHeight < 650;
-              final horizontalInset = constraints.maxWidth < 500 ? 20.0 : 40.0;
-              return Padding(
-                padding: EdgeInsets.fromLTRB(
-                  horizontalInset,
-                  compact ? 12 : 24,
-                  horizontalInset,
-                  mediaQuery.padding.bottom > 0 ? 12 : 20,
-                ),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: FadeTransition(
-                        opacity: _logoOpacity,
-                        child: ScaleTransition(
-                          scale: _logoScale,
-                          child: _LanguageHeader(compact: compact, l10n: l10n),
-                        ),
-                      ),
-                    ),
-                    SlideTransition(
-                      position: _cardOffset,
-                      child: FadeTransition(
-                        opacity: _logoOpacity,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 600),
-                          child: _LanguageCard(
-                            englishLabel: l10n.english,
-                            arabicLabel: l10n.arabic,
-                            languageLabel: l10n.languageLabel,
-                            selectedLanguage: _selectedLanguage,
-                            enabled: !_isSaving,
-                            onSelected: _selectLanguage,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LanguageHeader extends StatelessWidget {
-  const _LanguageHeader({required this.compact, required this.l10n});
-
-  final bool compact;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: SingleChildScrollView(
-        physics: const NeverScrollableScrollPhysics(),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: AppColors.emeraldGreen,
+        body: Stack(
+          fit: StackFit.expand,
           children: [
-            AppLogo(width: compact ? 150 : 210, color: AppColors.limeGlow),
-            SizedBox(height: compact ? 16 : 28),
-            Text(
-              l10n.chooseLanguage,
-              textAlign: TextAlign.center,
-              style: AppTypography.title.copyWith(
-                color: AppColors.white,
-                fontSize: compact ? 23 : 28,
+            Image.asset(
+              'assets/images/onboarding_1.png',
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+            ),
+            FadeTransition(
+              opacity: _backdropOpacity,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 5.5, sigmaY: 5.5),
+                child: ColoredBox(
+                  color: AppColors.darkGreen.withValues(alpha: .62),
+                ),
               ),
             ),
-            const SizedBox(height: 10),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Text(
-                l10n.languageSelectionSubtitle,
-                textAlign: TextAlign.center,
-                style: AppTypography.body.copyWith(
-                  color: AppColors.white.withValues(alpha: .75),
-                  fontSize: compact ? 13 : 15,
+            SafeArea(
+              top: false,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: SlideTransition(
+                  position: _sheetOffset,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 680),
+                    child: _LanguageSheet(
+                      l10n: l10n,
+                      selectedLanguage: _selectedLanguage,
+                      enabled: !_isSaving,
+                      onSelected: _selectLanguage,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -187,68 +131,86 @@ class _LanguageHeader extends StatelessWidget {
   }
 }
 
-class _LanguageCard extends StatelessWidget {
-  const _LanguageCard({
-    required this.englishLabel,
-    required this.arabicLabel,
-    required this.languageLabel,
+class _LanguageSheet extends StatelessWidget {
+  const _LanguageSheet({
+    required this.l10n,
     required this.selectedLanguage,
     required this.enabled,
     required this.onSelected,
   });
 
-  final String englishLabel;
-  final String arabicLabel;
-  final String languageLabel;
+  final AppLocalizations l10n;
   final String? selectedLanguage;
   final bool enabled;
   final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).height < 650;
     return Container(
-      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+      padding: EdgeInsets.fromLTRB(22, compact ? 12 : 16, 22, 22),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: const Color(0xFFFCFBF6),
         borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: AppColors.white.withValues(alpha: .75)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.black.withValues(alpha: .20),
-            blurRadius: 32,
+            color: AppColors.black.withValues(alpha: .28),
+            blurRadius: 38,
             spreadRadius: 2,
-            offset: const Offset(0, 14),
+            offset: const Offset(0, 16),
           ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.language_rounded, color: AppColors.emeraldGreen),
-              const SizedBox(width: 10),
-              Text(
-                languageLabel,
-                style: AppTypography.label.copyWith(
-                  color: AppColors.darkGreen,
-                  fontSize: 17,
-                ),
-              ),
-            ],
+          Container(
+            width: 44,
+            height: 5,
+            decoration: BoxDecoration(
+              color: AppColors.darkGreen.withValues(alpha: .14),
+              borderRadius: BorderRadius.circular(99),
+            ),
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: compact ? 11 : 16),
+          AppLogo(width: compact ? 112 : 140),
+          SizedBox(height: compact ? 10 : 16),
+          Text(
+            l10n.chooseLanguage,
+            textAlign: TextAlign.center,
+            style: AppTypography.title.copyWith(
+              color: AppColors.darkGreen,
+              fontSize: compact ? 23 : 27,
+            ),
+          ),
+          const SizedBox(height: 7),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 450),
+            child: Text(
+              l10n.languageSelectionSubtitle,
+              textAlign: TextAlign.center,
+              style: AppTypography.body.copyWith(
+                color: AppColors.darkGreen.withValues(alpha: .62),
+                fontSize: compact ? 12 : 14,
+                height: 1.4,
+              ),
+            ),
+          ),
+          SizedBox(height: compact ? 14 : 20),
           _LanguageButton(
             flag: '🇬🇧',
-            label: englishLabel,
+            label: l10n.english,
             selected: selectedLanguage == 'en',
             enabled: enabled,
             onTap: () => onSelected('en'),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 11),
           _LanguageButton(
             flag: '🇶🇦',
-            label: arabicLabel,
+            label: l10n.arabic,
             selected: selectedLanguage == 'ar',
             enabled: enabled,
             onTap: () => onSelected('ar'),
@@ -283,15 +245,15 @@ class _LanguageButtonState extends State<_LanguageButton> {
 
   @override
   Widget build(BuildContext context) {
-    final selected = widget.selected;
     return AnimatedScale(
-      scale: _pressed ? .97 : 1,
-      duration: const Duration(milliseconds: 120),
-      curve: Curves.easeOut,
+      scale: _pressed ? .97 : (widget.selected ? 1.015 : 1),
+      duration: const Duration(milliseconds: 170),
+      curve: Curves.easeOutBack,
       child: Semantics(
         button: true,
-        selected: selected,
+        selected: widget.selected,
         child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTapDown: widget.enabled
               ? (_) => setState(() => _pressed = true)
               : null,
@@ -303,40 +265,61 @@ class _LanguageButtonState extends State<_LanguageButton> {
               : null,
           onTap: widget.enabled ? widget.onTap : null,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeInOut,
-            constraints: const BoxConstraints(minHeight: 58),
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOut,
+            constraints: const BoxConstraints(minHeight: 64),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
             decoration: BoxDecoration(
-              color: selected ? AppColors.emeraldGreen : AppColors.white,
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: AppColors.emeraldGreen, width: 1.4),
-              boxShadow: selected
-                  ? [
-                      BoxShadow(
-                        color: AppColors.emeraldGreen.withValues(alpha: .18),
-                        blurRadius: 14,
-                        offset: const Offset(0, 6),
-                      ),
-                    ]
-                  : null,
+              color: widget.selected
+                  ? AppColors.teaGreen.withValues(alpha: .30)
+                  : AppColors.white,
+              borderRadius: BorderRadius.circular(21),
+              border: Border.all(
+                color: widget.selected
+                    ? AppColors.emeraldGreen
+                    : AppColors.darkGreen.withValues(alpha: .11),
+                width: widget.selected ? 1.7 : 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.darkGreen.withValues(
+                    alpha: widget.selected ? .10 : .04,
+                  ),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(widget.flag, style: const TextStyle(fontSize: 22)),
-                const SizedBox(width: 12),
-                Flexible(
+                Text(widget.flag, style: const TextStyle(fontSize: 27)),
+                const SizedBox(width: 14),
+                Expanded(
                   child: Text(
                     widget.label,
-                    textAlign: TextAlign.center,
                     style: AppTypography.label.copyWith(
-                      color: selected
-                          ? AppColors.white
-                          : AppColors.emeraldGreen,
+                      color: AppColors.darkGreen,
                       fontSize: 16,
                     ),
                   ),
+                ),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 230),
+                  transitionBuilder: (child, animation) => ScaleTransition(
+                    scale: CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutBack,
+                    ),
+                    child: FadeTransition(opacity: animation, child: child),
+                  ),
+                  child: widget.selected
+                      ? const Icon(
+                          Icons.check_circle_rounded,
+                          key: ValueKey('checked'),
+                          color: AppColors.emeraldGreen,
+                          size: 26,
+                        )
+                      : const SizedBox(key: ValueKey('unchecked'), width: 26),
                 ),
               ],
             ),

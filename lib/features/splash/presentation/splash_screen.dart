@@ -1,11 +1,14 @@
 import 'dart:math' as math;
 
 import 'package:diet_time/app/router/app_router.dart';
+import 'package:diet_time/app/localization/localization_service.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_spacing.dart';
 import 'package:diet_time/app/theme/app_typography.dart';
 import 'package:diet_time/core/widgets/app_logo.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
+import 'package:diet_time/features/language/data/language_repository.dart';
+import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -114,12 +117,29 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Future<void> _finish(bool reducedMotion) async {
     final authCheck = ref.read(authenticationServiceProvider).isLoggedIn();
+    final languageCheck = ref
+        .read(languageRepositoryProvider)
+        .loadPreferredLanguage();
     await Future<void>.delayed(
       reducedMotion ? _reducedMotionDuration : _visualDuration,
     );
     final isLoggedIn = await authCheck;
+    final preferredLanguage = await languageCheck;
     if (!mounted) return;
-    context.go(isLoggedIn ? AppRoutes.home : AppRoutes.language);
+    if (isLoggedIn) {
+      context.go(AppRoutes.home);
+      return;
+    }
+    if (preferredLanguage != null &&
+        LocalizationService.isSupported(preferredLanguage)) {
+      await ref
+          .read(languageControllerProvider.notifier)
+          .selectLanguage(preferredLanguage);
+      if (!mounted) return;
+      context.go(AppRoutes.onboarding);
+      return;
+    }
+    context.go(AppRoutes.language);
   }
 
   @override
@@ -322,7 +342,7 @@ class _ProgressPulse extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: 'Loading',
+      label: AppLocalizations.of(context).loading,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: List.generate(3, (index) {

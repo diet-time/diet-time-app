@@ -171,4 +171,91 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get languageLabel => 'اللغة';
+
+  @override
+  String get languageSaveError =>
+      'تعذر حفظ تفضيل اللغة. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get loading => 'جارٍ التحميل';
+
+  @override
+  String pageProgress(int current, int total) => 'الصفحة $current من $total';
+
+  @override
+  String get browseMenuTitle => 'خيارات طازجة، صُنعت من أجلك';
+
+  @override
+  String get browseMenuSubtitle =>
+      'اكتشف وجبات أعدها الطهاة بمكونات صحية وطازجة.';
+
+  @override
+  String get browseMenu => 'تصفح القائمة';
+
+  @override
+  String get popularMeals => 'الوجبات الأكثر طلباً';
+
+  @override
+  String get mealGrilledChicken => 'دجاج مشوي بالأعشاب';
+
+  @override
+  String get mealGrilledChickenDetail => 'أرز بني، خضروات وطحينة';
+
+  @override
+  String get mealSalmon => 'طبق السلمون بالحمضيات';
+
+  @override
+  String get mealSalmonDetail => 'كينوا، أفوكادو وإدامامي';
+
+  @override
+  String get mealKeto => 'لحم كيتو بالخضروات';
+
+  @override
+  String get mealKetoDetail => 'خضروات مشوية وأعشاب';
+
+  @override
+  String kcal(int value) => '$value سعرة';
+
+  @override
+  String get choosePlanTitle => 'اختر خطة وجباتك';
+
+  @override
+  String get choosePlanSubtitle =>
+      'اختر الخطة التي تناسب أهدافك. يمكنك تغييرها في أي وقت.';
+
+  @override
+  String get weightLoss => 'خسارة الوزن';
+
+  @override
+  String get weightLossDescription => 'حصص متوازنة مصممة لتقدم ثابت ومستدام.';
+
+  @override
+  String get keto => 'كيتو';
+
+  @override
+  String get ketoDescription =>
+      'وجبات منخفضة الكربوهيدرات غنية بالدهون الصحية والخضروات.';
+
+  @override
+  String get highProtein => 'عالي البروتين';
+
+  @override
+  String get highProteinDescription =>
+      'وجبات غنية بالبروتين لدعم القوة والتعافي.';
+
+  @override
+  String get balancedDiet => 'نظام متوازن';
+
+  @override
+  String get balancedDietDescription =>
+      'تغذية يومية شهية تجمع كل المجموعات الغذائية.';
+
+  @override
+  String dailyCalories(int value) => '$value سعرة / يوم';
+
+  @override
+  String weeklyPrice(int value) => '$value ر.ق / أسبوع';
+
+  @override
+  String get continueLabel => 'متابعة';
 }

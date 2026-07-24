@@ -172,4 +172,92 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get languageLabel => 'Language';
+
+  @override
+  String get languageSaveError =>
+      'Unable to save language preference. Please try again.';
+
+  @override
+  String get loading => 'Loading';
+
+  @override
+  String pageProgress(int current, int total) => 'Page $current of $total';
+
+  @override
+  String get browseMenuTitle => 'Fresh choices, made for you';
+
+  @override
+  String get browseMenuSubtitle =>
+      'Explore chef-crafted meals prepared with wholesome ingredients.';
+
+  @override
+  String get browseMenu => 'Browse Menu';
+
+  @override
+  String get popularMeals => 'Popular meals';
+
+  @override
+  String get mealGrilledChicken => 'Herb Grilled Chicken';
+
+  @override
+  String get mealGrilledChickenDetail => 'Brown rice, greens & tahini';
+
+  @override
+  String get mealSalmon => 'Citrus Salmon Bowl';
+
+  @override
+  String get mealSalmonDetail => 'Quinoa, avocado & edamame';
+
+  @override
+  String get mealKeto => 'Keto Beef Garden';
+
+  @override
+  String get mealKetoDetail => 'Roasted vegetables & herbs';
+
+  @override
+  String kcal(int value) => '$value kcal';
+
+  @override
+  String get choosePlanTitle => 'Choose Your Meal Plan';
+
+  @override
+  String get choosePlanSubtitle =>
+      'Pick the plan that matches your goals. You can change it anytime.';
+
+  @override
+  String get weightLoss => 'Weight Loss';
+
+  @override
+  String get weightLossDescription =>
+      'Balanced portions designed for steady, sustainable progress.';
+
+  @override
+  String get keto => 'Keto';
+
+  @override
+  String get ketoDescription =>
+      'Low-carb favorites rich in healthy fats and fresh produce.';
+
+  @override
+  String get highProtein => 'High Protein';
+
+  @override
+  String get highProteinDescription =>
+      'Protein-forward meals to support strength and recovery.';
+
+  @override
+  String get balancedDiet => 'Balanced Diet';
+
+  @override
+  String get balancedDietDescription =>
+      'Everyday nutrition with a delicious mix of all food groups.';
+
+  @override
+  String dailyCalories(int value) => '$value kcal / day';
+
+  @override
+  String weeklyPrice(int value) => 'QAR $value / week';
+
+  @override
+  String get continueLabel => 'Continue';
 }

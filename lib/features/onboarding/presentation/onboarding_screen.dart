@@ -37,24 +37,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       accent: l10n.onboardingFreshAccent,
       description: l10n.onboardingFreshDescription,
     ),
-    _OnboardingPageData(
-      image: 'assets/images/onboarding_4.png',
-      title: l10n.onboardingTrackTitle,
-      accent: l10n.onboardingTrackAccent,
-      description: l10n.onboardingTrackDescription,
-    ),
-    _OnboardingPageData(
-      image: 'assets/images/onboarding_bmi.png',
-      title: l10n.onboardingBmiTitle,
-      accent: l10n.onboardingBmiAccent,
-      description: l10n.onboardingBmiDescription,
-    ),
-    _OnboardingPageData(
-      image: 'assets/images/onboarding_5.png',
-      title: l10n.onboardingTogetherTitle,
-      accent: l10n.onboardingTogetherAccent,
-      description: l10n.onboardingTogetherDescription,
-    ),
   ];
 
   late final PageController _controller;
@@ -110,7 +92,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
     _isNavigating = true;
     _progressController.stop();
-    if (mounted) context.go(AppRoutes.login);
+    if (mounted) context.go(AppRoutes.menu);
   }
 
   @override
@@ -531,7 +513,7 @@ class _PageDots extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: 'Page ${current + 1} of $count',
+      label: AppLocalizations.of(context).pageProgress(current + 1, count),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(count, (index) {

@@ -400,6 +400,34 @@ abstract class AppLocalizations {
 
   /// Label for the language choice card.
   String get languageLabel;
+
+  String get languageSaveError;
+  String get loading;
+  String pageProgress(int current, int total);
+  String get browseMenuTitle;
+  String get browseMenuSubtitle;
+  String get browseMenu;
+  String get popularMeals;
+  String get mealGrilledChicken;
+  String get mealGrilledChickenDetail;
+  String get mealSalmon;
+  String get mealSalmonDetail;
+  String get mealKeto;
+  String get mealKetoDetail;
+  String kcal(int value);
+  String get choosePlanTitle;
+  String get choosePlanSubtitle;
+  String get weightLoss;
+  String get weightLossDescription;
+  String get keto;
+  String get ketoDescription;
+  String get highProtein;
+  String get highProteinDescription;
+  String get balancedDiet;
+  String get balancedDietDescription;
+  String dailyCalories(int value);
+  String weeklyPrice(int value);
+  String get continueLabel;
 }
 
 class _AppLocalizationsDelegate

@@ -1,5 +1,8 @@
 import 'package:diet_time/app/app.dart';
+import 'package:diet_time/features/language/presentation/language_selection_screen.dart';
+import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -48,7 +51,7 @@ void main() {
     await _finishSplash(tester);
 
     expect(find.text('Choose your Language'), findsOneWidget);
-    expect(find.text('Language'), findsOneWidget);
+    expect(find.byType(LanguageSelectionScreen), findsOneWidget);
     expect(find.text('English'), findsOneWidget);
     expect(find.text('العربية'), findsOneWidget);
     expect(find.text('Healthy Meals,'), findsNothing);
@@ -60,30 +63,49 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
     await _finishSplash(tester);
 
-    await tester.tap(find.text('English'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await _chooseLanguage(tester, 'English');
 
     final preferences = await SharedPreferences.getInstance();
     expect(preferences.getString('preferredLanguage'), 'en');
     expect(find.text('Healthy Meals,'), findsOneWidget);
   });
 
-  testWidgets('final onboarding tap opens login', (tester) async {
+  testWidgets('complete first-run flow opens menu, plans, then login', (
+    tester,
+  ) async {
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
     await _finishSplash(tester);
-    await tester.tap(find.text('English'));
+    await _chooseLanguage(tester, 'English');
+
+    for (var index = 0; index < 3; index++) {
+      await tester.tap(find.byKey(ValueKey('onboardingTapArea-$index')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+    expect(find.byType(BrowseMenuScreen), findsOneWidget);
+
+    await tester.tap(find.text('Browse Menu'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(MealPlanScreen), findsOneWidget);
+
+    await tester.tap(find.text('Continue'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    for (var index = 0; index < 6; index++) {
-      await tester.tap(find.byKey(ValueKey('onboardingTapArea-$index')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-    }
-    await tester.pump(const Duration(milliseconds: 400));
-
     expect(find.text('Welcome Back'), findsOneWidget);
+  });
+
+  testWidgets('saved language skips language selection on later launches', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'preferredLanguage': 'en'});
+    await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
+    await _finishSplash(tester);
+
+    expect(find.byType(LanguageSelectionScreen), findsNothing);
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+    expect(find.text('Healthy Meals,'), findsOneWidget);
   });
 
   testWidgets('compact onboarding has no overflow', (tester) async {
@@ -102,9 +124,7 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
     await _finishSplash(tester);
 
-    await tester.tap(find.text('العربية'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await _chooseLanguage(tester, 'العربية');
 
     final preferences = await SharedPreferences.getInstance();
     expect(preferences.getString('preferredLanguage'), 'ar');
@@ -118,6 +138,14 @@ void main() {
 
 Future<void> _finishSplash(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 5700));
+  await tester.pump(const Duration(milliseconds: 400));
+}
+
+Future<void> _chooseLanguage(WidgetTester tester, String label) async {
+  await tester.tap(find.text(label));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+  await tester.pump(const Duration(milliseconds: 400));
   await tester.pump(const Duration(milliseconds: 400));
 }
 

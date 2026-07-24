@@ -51,5 +51,53 @@
   "onboardingStartPlan": "ابدأ خطتك",
   "chooseLanguage": "اختر لغتك",
   "languageSelectionSubtitle": "اختر لغتك المفضلة لتخصيص تجربتك.",
-  "languageLabel": "اللغة"
+  "languageLabel": "اللغة",
+  "languageSaveError": "تعذر حفظ تفضيل اللغة. يرجى المحاولة مرة أخرى.",
+  "loading": "جارٍ التحميل",
+  "pageProgress": "الصفحة {current} من {total}",
+  "@pageProgress": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "browseMenuTitle": "خيارات طازجة، صُنعت من أجلك",
+  "browseMenuSubtitle": "اكتشف وجبات أعدها الطهاة بمكونات صحية وطازجة.",
+  "browseMenu": "تصفح القائمة",
+  "popularMeals": "الوجبات الأكثر طلباً",
+  "mealGrilledChicken": "دجاج مشوي بالأعشاب",
+  "mealGrilledChickenDetail": "أرز بني، خضروات وطحينة",
+  "mealSalmon": "طبق السلمون بالحمضيات",
+  "mealSalmonDetail": "كينوا، أفوكادو وإدامامي",
+  "mealKeto": "لحم كيتو بالخضروات",
+  "mealKetoDetail": "خضروات مشوية وأعشاب",
+  "kcal": "{value} سعرة",
+  "@kcal": {
+    "placeholders": {
+      "value": {"type": "int"}
+    }
+  },
+  "choosePlanTitle": "اختر خطة وجباتك",
+  "choosePlanSubtitle": "اختر الخطة التي تناسب أهدافك. يمكنك تغييرها في أي وقت.",
+  "weightLoss": "خسارة الوزن",
+  "weightLossDescription": "حصص متوازنة مصممة لتقدم ثابت ومستدام.",
+  "keto": "كيتو",
+  "ketoDescription": "وجبات منخفضة الكربوهيدرات غنية بالدهون الصحية والخضروات.",
+  "highProtein": "عالي البروتين",
+  "highProteinDescription": "وجبات غنية بالبروتين لدعم القوة والتعافي.",
+  "balancedDiet": "نظام متوازن",
+  "balancedDietDescription": "تغذية يومية شهية تجمع كل المجموعات الغذائية.",
+  "dailyCalories": "{value} سعرة / يوم",
+  "@dailyCalories": {
+    "placeholders": {
+      "value": {"type": "int"}
+    }
+  },
+  "weeklyPrice": "{value} ر.ق / أسبوع",
+  "@weeklyPrice": {
+    "placeholders": {
+      "value": {"type": "int"}
+    }
+  },
+  "continueLabel": "متابعة"
 }
