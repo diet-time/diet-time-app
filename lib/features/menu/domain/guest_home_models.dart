@@ -26,9 +26,10 @@ class GuestHomeData {
   });
 
   factory GuestHomeData.fromJson(Map<String, dynamic> json) {
-    final mealPlans = _list(
-      json['mealPlans'],
-    ).map((item) => GuestMealPlan.fromJson(_map(item))).toList(growable: false);
+    final rawMealPlans = _list(json['mealPlans']);
+    final mealPlans = rawMealPlans
+        .map((item) => GuestMealPlan.fromJson(_map(item)))
+        .toList(growable: false);
     final selectedPlan =
         mealPlans.where((plan) => plan.isSelected).firstOrNull ??
         mealPlans.firstOrNull;
@@ -38,12 +39,21 @@ class GuestHomeData {
     final parsedMenus = _list(
       json['menus'],
     ).map((item) => GuestMenuDay.fromJson(_map(item))).toList(growable: false);
+    final nestedMenus = rawMealPlans
+        .expand<Map<String, dynamic>>((item) {
+          final planJson = _map(item);
+          return _list(planJson['menus']).map((menu) => _map(menu));
+        })
+        .map((item) => GuestMenuDay.fromJson(item))
+        .toList(growable: false);
     final selectedDate = weeklyCalendar
         .where((date) => date.isSelected)
         .firstOrNull
         ?.date;
     final menus = parsedMenus.isNotEmpty
         ? parsedMenus
+        : nestedMenus.isNotEmpty
+        ? nestedMenus
         : selectedPlan != null && selectedDate != null
         ? [
             GuestMenuDay(
