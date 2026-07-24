@@ -54,6 +54,41 @@ void main() {
     expect(repository.calls.single.includeAll, isTrue);
   });
 
+  testWidgets('plan cards stay compact and omit their descriptions', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    final size = tester.getSize(
+      find.byKey(const ValueKey('guest-plan-PLN_CLASSIC')),
+    );
+    expect(size.width, inInclusiveRange(120, 145));
+    expect(size.height, inInclusiveRange(95, 110));
+    expect(find.text('PLN_CLASSIC'), findsOneWidget);
+  });
+
+  testWidgets('calendar and filters remain pinned while meals scroll', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 450));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    final allFilter = find.byKey(const ValueKey('guest-filter-ALL'));
+    expect(allFilter, findsOneWidget);
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -650));
+    await tester.pumpAndSettle();
+
+    expect(allFilter, findsOneWidget);
+    expect(tester.getTopLeft(allFilter).dy, lessThan(150));
+    expect(repository.calls, hasLength(1));
+  });
+
   testWidgets('guest menu renders the new nested meal-plan response', (
     tester,
   ) async {

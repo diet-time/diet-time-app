@@ -15,6 +15,9 @@ class BrowseMenuScreen extends ConsumerStatefulWidget {
 
 class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _planScrollController = ScrollController();
+  final ScrollController _dateScrollController = ScrollController();
+  final ScrollController _filterScrollController = ScrollController();
   GuestHomeData? _originalData;
   List<GuestMeal> _visibleMeals = const [];
   String? _language;
@@ -44,6 +47,9 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _planScrollController.dispose();
+    _dateScrollController.dispose();
+    _filterScrollController.dispose();
     super.dispose();
   }
 
@@ -205,6 +211,22 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     });
   }
 
+  void _keepFilterVisible(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_filterScrollController.hasClients) return;
+      final position = _filterScrollController.position;
+      final target = (index * 104.0).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      _filterScrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
   bool _isDateAvailable(GuestHomeData data, String? planCode, DateTime? date) {
     if (planCode == null || date == null) return false;
     return data.menus.any(
@@ -308,15 +330,14 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                     _SectionTitle(label: l10n.guestMealPlansTitle),
                     const SizedBox(height: 12),
                     SizedBox(
-                      height: 124,
+                      height: 108,
                       child: LayoutBuilder(
                         builder: (context, constraints) {
-                          final cardWidth = plans.length == 1
-                              ? constraints.maxWidth
-                              : (constraints.maxWidth * .76)
-                                    .clamp(210.0, 236.0)
-                                    .toDouble();
+                          final cardWidth = (constraints.maxWidth * .36)
+                              .clamp(120.0, 145.0)
+                              .toDouble();
                           return ListView.separated(
+                            controller: _planScrollController,
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsetsDirectional.only(end: 8),
                             itemCount: plans.length,
@@ -336,53 +357,6 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                         },
                       ),
                     ),
-                    const SizedBox(height: 22),
-                    _SectionTitle(label: l10n.guestWeeklyMenuTitle),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 72,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsetsDirectional.only(end: 8),
-                        itemCount: data.weeklyCalendar.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 10),
-                        itemBuilder: (context, index) {
-                          final date = data.weeklyCalendar[index];
-                          return _GuestDateCard(
-                            key: ValueKey(
-                              'guest-date-${date.date?.toIso8601String()}',
-                            ),
-                            date: date,
-                            selected: _sameDate(date.date, _selectedDate),
-                            available: _isDateAvailable(
-                              data,
-                              _selectedPlanCode,
-                              date.date,
-                            ),
-                            onTap: () => _selectDate(date),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 42,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsetsDirectional.only(end: 12),
-                        itemCount: filters.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 9),
-                        itemBuilder: (context, index) {
-                          final filter = filters[index];
-                          return _GuestFilterChip(
-                            key: ValueKey('guest-filter-${filter.code}'),
-                            filter: filter,
-                            selected: filter.code == _selectedMealTimeCode,
-                            onTap: () => _selectMealTime(filter),
-                          );
-                        },
-                      ),
-                    ),
                     if (_hasError) ...[
                       const SizedBox(height: 16),
                       _InlineError(
@@ -391,8 +365,28 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                         onRetry: _load,
                       ),
                     ],
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                   ],
+                ),
+              ),
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _GuestMenuFiltersHeader(
+                  title: l10n.guestWeeklyMenuTitle,
+                  data: data,
+                  filters: filters,
+                  selectedPlanCode: _selectedPlanCode,
+                  selectedDate: _selectedDate,
+                  selectedMealTimeCode: _selectedMealTimeCode,
+                  dateScrollController: _dateScrollController,
+                  filterScrollController: _filterScrollController,
+                  isDateAvailable: (date) =>
+                      _isDateAvailable(data, _selectedPlanCode, date),
+                  onDateSelected: _selectDate,
+                  onFilterSelected: (filter, index) {
+                    _selectMealTime(filter);
+                    _keepFilterVisible(index);
+                  },
                 ),
               ),
               if (meals.isEmpty)
@@ -405,7 +399,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                 )
               else
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 28),
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
                   sliver: SliverGrid(
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: columns,
@@ -537,6 +531,129 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+class _GuestMenuFiltersHeader extends SliverPersistentHeaderDelegate {
+  _GuestMenuFiltersHeader({
+    required this.title,
+    required this.data,
+    required this.filters,
+    required this.selectedPlanCode,
+    required this.selectedDate,
+    required this.selectedMealTimeCode,
+    required this.dateScrollController,
+    required this.filterScrollController,
+    required this.isDateAvailable,
+    required this.onDateSelected,
+    required this.onFilterSelected,
+  });
+
+  final String title;
+  final GuestHomeData data;
+  final List<GuestMealTimeFilter> filters;
+  final String? selectedPlanCode;
+  final DateTime? selectedDate;
+  final String selectedMealTimeCode;
+  final ScrollController dateScrollController;
+  final ScrollController filterScrollController;
+  final bool Function(DateTime? date) isDateAvailable;
+  final ValueChanged<GuestCalendarDate> onDateSelected;
+  final void Function(GuestMealTimeFilter filter, int index) onFilterSelected;
+
+  @override
+  double get minExtent => 138;
+
+  @override
+  double get maxExtent => 172;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final titleHeight = (maxExtent - shrinkOffset - minExtent).clamp(0.0, 34.0);
+    return Material(
+      color: const Color(0xFFF8F8F3),
+      elevation: overlapsContent ? 3 : 0,
+      shadowColor: const Color(0x240B3226),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 6),
+          ClipRect(
+            child: SizedBox(
+              height: titleHeight,
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 18,
+                  ),
+                  child: Opacity(
+                    opacity: (titleHeight / 34).clamp(0.0, 1.0),
+                    child: _SectionTitle(label: title),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 72,
+            child: ListView.separated(
+              controller: dateScrollController,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsetsDirectional.fromSTEB(18, 0, 18, 0),
+              itemCount: data.weeklyCalendar.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                final date = data.weeklyCalendar[index];
+                return _GuestDateCard(
+                  key: ValueKey('guest-date-${date.date?.toIso8601String()}'),
+                  date: date,
+                  selected: _sameDate(date.date, selectedDate),
+                  available: isDateAvailable(date.date),
+                  onTap: () => onDateSelected(date),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 42,
+            child: ListView.separated(
+              controller: filterScrollController,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsetsDirectional.fromSTEB(18, 0, 18, 0),
+              itemCount: filters.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 9),
+              itemBuilder: (context, index) {
+                final filter = filters[index];
+                return _GuestFilterChip(
+                  key: ValueKey('guest-filter-${filter.code}'),
+                  filter: filter,
+                  selected:
+                      _normalizeMealTimeCode(filter.code) ==
+                      _normalizeMealTimeCode(selectedMealTimeCode),
+                  onTap: () => onFilterSelected(filter, index),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _GuestMenuFiltersHeader oldDelegate) =>
+      oldDelegate.data != data ||
+      oldDelegate.filters != filters ||
+      oldDelegate.selectedPlanCode != selectedPlanCode ||
+      !_sameDate(oldDelegate.selectedDate, selectedDate) ||
+      oldDelegate.selectedMealTimeCode != selectedMealTimeCode ||
+      oldDelegate.title != title;
+}
+
 class _GuestPlanCard extends StatelessWidget {
   const _GuestPlanCard({
     required this.plan,
@@ -563,10 +680,10 @@ class _GuestPlanCard extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           width: width,
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: selected ? const Color(0xFFF0F8EB) : AppColors.white,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: selected
                   ? AppColors.emeraldGreen
@@ -575,47 +692,37 @@ class _GuestPlanCard extends StatelessWidget {
             ),
             boxShadow: _softShadow,
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: _NetworkMealImage(url: imageUrl, width: 82, height: 96),
+                borderRadius: BorderRadius.circular(12),
+                child: _NetworkMealImage(url: imageUrl, height: 50),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(height: 5),
               Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      plan.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.darkGreen,
-                        fontSize: 15.5,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    if ((plan.description ?? '').isNotEmpty) ...[
-                      const SizedBox(height: 5),
-                      Text(
-                        plan.description!,
+                    Expanded(
+                      child: Text(
+                        plan.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppColors.darkGreen.withValues(alpha: .55),
-                          fontSize: 11,
+                        style: const TextStyle(
+                          color: AppColors.darkGreen,
+                          fontSize: 12.5,
+                          height: 1.1,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                    ],
-                    const Spacer(),
+                    ),
                     if (selected)
-                      const Align(
-                        alignment: AlignmentDirectional.centerEnd,
+                      const Padding(
+                        padding: EdgeInsetsDirectional.only(start: 3),
                         child: Icon(
                           Icons.check_circle_rounded,
-                          size: 18,
+                          size: 16,
                           color: AppColors.emeraldGreen,
                         ),
                       ),
@@ -897,14 +1004,9 @@ class _NutritionValue extends StatelessWidget {
 }
 
 class _NetworkMealImage extends StatelessWidget {
-  const _NetworkMealImage({
-    required this.url,
-    this.width,
-    required this.height,
-  });
+  const _NetworkMealImage({required this.url, required this.height});
 
   final String url;
-  final double? width;
   final double height;
 
   @override
@@ -920,11 +1022,15 @@ class _NetworkMealImage extends StatelessWidget {
       ),
     );
     if (url.isEmpty) {
-      return SizedBox(width: width, height: height, child: placeholder);
+      return SizedBox(
+        width: double.infinity,
+        height: height,
+        child: placeholder,
+      );
     }
     return Image.network(
       url,
-      width: width ?? double.infinity,
+      width: double.infinity,
       height: height,
       fit: BoxFit.cover,
       frameBuilder: (context, child, frame, _) =>
