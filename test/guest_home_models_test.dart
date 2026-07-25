@@ -2,94 +2,118 @@ import 'package:diet_time/features/menu/domain/guest_home_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('parses day-specific menu entries from meal plan menus when top-level menus are absent', () {
-    final data = GuestHomeData.fromJson({
-      'hero': <String, dynamic>{},
-      'mealPlans': [
-        {
-          'id': 'plan-1',
-          'code': 'PLN_CLASSIC',
-          'name': 'Balanced Living',
-          'description': 'Balanced meals',
-          'imageUrl': 'https://example.com/plan.png',
-          'displayOrder': 1,
-          'isSelected': true,
-          'slots': <Map<String, dynamic>>[],
-          'menus': [
-            {
-              'planCode': 'PLN_CLASSIC',
-              'date': '2026-07-25',
-              'slots': [
-                {
-                  'id': 'slot-1',
-                  'mealTime': {
-                    'id': 'meal-time-1',
-                    'code': 'BREAKFAST',
-                    'name': 'Breakfast',
-                    'displayOrder': 5,
-                  },
-                  'displayOrder': 0,
-                  'minimumSelection': 1,
-                  'maximumSelection': 1,
-                  'isRequired': true,
-                  'meals': [
-                    {
-                      'id': 'meal-1',
-                      'code': 'DT-IMP-0001',
-                      'name': 'Oatmeal Banana',
-                      'description': 'A wholesome breakfast',
-                      'imageUrl': 'https://example.com/meal.png',
-                      'thumbnailUrl': 'https://example.com/meal-thumb.png',
-                      'nutrition': {
-                        'calories': 522,
-                        'protein': 22.5,
-                        'carbs': 82.2,
-                        'fat': 12.4,
-                      },
-                      'tags': [],
-                      'allergens': [],
-                      'isAvailable': true,
-                      'displayOrder': 0,
-                    },
-                  ],
+  test('home parses metadata-only plans without meals', () {
+    final response = GuestHomeResponse.fromJson({
+      'data': {
+        'mealPlans': [
+          {
+            'id': 'plan-1',
+            'code': 'CLASSIC',
+            'name': 'Classic',
+            'description': 'Balanced meals.',
+            'imageUrl': 'https://cdn.example.com/plan.jpg',
+            'iconUrl': null,
+            'displayOrder': 2,
+            'isSelected': true,
+            'slots': [
+              {
+                'id': 'slot-1',
+                'mealTime': {
+                  'id': 'time-1',
+                  'code': 'BREAKFAST',
+                  'name': 'Breakfast',
+                  'displayOrder': 1,
                 },
-              ],
-            },
-          ],
-        },
-      ],
-      'weeklyCalendar': [
-        {
-          'date': '2026-07-25',
-          'dayNumber': 25,
-          'dayName': 'Saturday',
-          'shortDayName': 'Sat',
-          'isToday': false,
-          'isSelected': true,
-          'isAvailable': true,
-        },
-      ],
-      'mealTimeFilters': [
-        {
-          'code': 'ALL',
-          'name': 'All',
-          'displayOrder': 0,
-          'isSelected': true,
-        },
-      ],
-      'menus': null,
-      'pagination': {
-        'page': 1,
-        'pageSize': 20,
-        'totalRecords': 1,
-        'totalPages': 1,
-        'hasNextPage': false,
-        'hasPreviousPage': false,
+                'displayOrder': 1,
+                'minimumSelection': 1,
+                'maximumSelection': 1,
+                'isRequired': true,
+              },
+            ],
+          },
+        ],
+        'weeklyCalendar': [
+          {
+            'date': '2026-07-23',
+            'dayNumber': 23,
+            'dayName': 'Thursday',
+            'shortDayName': 'Thu',
+            'isToday': false,
+            'isSelected': true,
+            'isAvailable': true,
+          },
+        ],
       },
+      'errors': <dynamic>[],
     });
 
-    expect(data.menus, hasLength(1));
-    expect(data.menus.single.date, DateTime(2026, 7, 25));
-    expect(data.menus.single.slots.single.meals.single.name, 'Oatmeal Banana');
+    expect(response.data.mealPlans.single.code, 'CLASSIC');
+    expect(
+      response.data.mealPlans.single.slots.single.mealTime.code,
+      'BREAKFAST',
+    );
+    expect(response.data.weeklyCalendar.single.date, DateTime(2026, 7, 23));
+  });
+
+  test('menu parses and sorts slots and meals', () {
+    final response = GuestMenuResponse.fromJson({
+      'data': {
+        'planId': 'plan-1',
+        'planCode': 'CLASSIC',
+        'date': '2026-07-23',
+        'slots': [
+          {
+            'id': 'slot-2',
+            'mealTime': {'code': 'LUNCH', 'name': 'Lunch', 'displayOrder': 2},
+            'displayOrder': 2,
+            'minimumSelection': 1,
+            'maximumSelection': 1,
+            'isRequired': true,
+            'meals': [
+              {
+                'id': 'meal-2',
+                'code': 'DT-2',
+                'name': 'Second',
+                'nutrition': {
+                  'calories': 420,
+                  'protein': 35,
+                  'carbs': 40,
+                  'fat': 12,
+                  'fiber': null,
+                },
+                'tags': <dynamic>[],
+                'allergens': <dynamic>[],
+                'isAvailable': true,
+                'displayOrder': 2,
+              },
+              {
+                'id': 'meal-1',
+                'code': 'DT-1',
+                'name': 'First',
+                'nutrition': {
+                  'calories': 400,
+                  'protein': 30,
+                  'carbs': 38,
+                  'fat': 10,
+                },
+                'tags': <dynamic>[],
+                'allergens': [
+                  {'code': 'MILK', 'name': 'Milk'},
+                ],
+                'isAvailable': true,
+                'displayOrder': 1,
+              },
+            ],
+          },
+        ],
+      },
+      'errors': <dynamic>[],
+    });
+
+    expect(response.data.planCode, 'CLASSIC');
+    expect(response.data.date, DateTime(2026, 7, 23));
+    expect(response.data.meals.map((meal) => meal.name), ['First', 'Second']);
+    expect(response.data.meals.first.mealTime.name, 'Lunch');
+    expect(response.data.meals.first.allergens.single.name, 'Milk');
   });
 }

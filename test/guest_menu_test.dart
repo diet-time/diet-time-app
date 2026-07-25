@@ -16,24 +16,24 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  test('models safely parse optional filter id and nutrition fiber', () {
-    final response = GuestHomeResponse.fromJson(_fixtureJson());
+  test('home and menu models parse their separate payloads', () {
+    final home = GuestHomeResponse.fromJson(_fixtureJson());
+    final menu = _menuResponse('PLN_CLASSIC', DateTime(2026, 7, 25));
 
-    expect(response.data.mealTimeFilters.first.id, isNull);
-    expect(response.data.meals.first.nutrition.fiber, isNull);
-    expect(response.data.weeklyCalendar.first.date, DateTime(2026, 7, 25));
+    expect(home.data.weeklyCalendar.first.date, DateTime(2026, 7, 25));
+    expect(home.data.mealPlans.first.slots, isEmpty);
+    expect(menu.data.meals.first.nutrition.fiber, isNull);
   });
 
-  test('models parse meals nested inside the selected plan slots', () {
-    final response = GuestHomeResponse.fromJson(_nestedFixtureJson());
-    final data = response.data;
+  test('home slots remain metadata while menu slots contain meals', () {
+    final home = GuestHomeResponse.fromJson(_nestedFixtureJson());
+    final menu = _menuResponse('PLN_CLASSIC', DateTime(2026, 7, 25));
 
-    expect(data.hero.title, 'Balanced Living');
-    expect(data.hero.bannerImageUrl, 'https://cdn.example.com/plan.png');
-    expect(data.mealPlans.single.slots.single.mealTime.code, 'BREAKFAST');
-    expect(data.meals.single.name, 'Oatmeal Banana');
-    expect(data.meals.single.mealTime.name, 'Breakfast');
-    expect(data.meals.single.nutrition.calories, 522);
+    expect(home.data.mealPlans.single.name, 'Balanced Living');
+    expect(home.data.mealPlans.single.slots.single.mealTime.code, 'BREAKFAST');
+    expect(menu.data.meals.first.name, 'Oatmeal Banana');
+    expect(menu.data.meals.first.mealTime.name, 'Breakfast');
+    expect(menu.data.meals.first.nutrition.calories, 522);
   });
 
   test('meal details parse optional ingredients and micronutrients', () {
@@ -78,7 +78,9 @@ void main() {
       findsOneWidget,
     );
     expect(repository.calls.single.language, 'en');
-    expect(repository.calls.single.includeAll, isTrue);
+    expect(repository.menuCalls, hasLength(1));
+    expect(repository.menuCalls.single.planCode, 'PLN_CLASSIC');
+    expect(repository.events, ['home', 'menu']);
   });
 
   testWidgets('plan cards stay compact and omit their descriptions', (
@@ -384,6 +386,29 @@ void main() {
     expect(repository.calls, hasLength(1));
   });
 
+  testWidgets('unavailable calendar dates are disabled', (tester) async {
+    await _useTallSurface(tester);
+    final json = _fixtureJson();
+    final data = json['data']! as Map<String, dynamic>;
+    final calendar = data['weeklyCalendar']! as List<dynamic>;
+    (calendar[1] as Map<String, dynamic>)['isAvailable'] = false;
+    final repository = _FakeGuestMenuRepository(
+      GuestHomeResponse.fromJson(json),
+    );
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    final dateCard = find.byKey(
+      const ValueKey('guest-date-2026-07-26T00:00:00.000'),
+    );
+    final inkWell = tester.widget<InkWell>(
+      find.descendant(of: dateCard, matching: find.byType(InkWell)),
+    );
+    expect(inkWell.onTap, isNull);
+    expect(repository.calls, hasLength(1));
+    expect(repository.menuCalls, hasLength(1));
+  });
+
   testWidgets('guest menu renders the new nested meal-plan response', (
     tester,
   ) async {
@@ -417,10 +442,9 @@ void main() {
     expect(repository.calls.last.planCode, 'PLN_KETO');
     expect(repository.calls.last.language, 'en');
     expect(repository.calls.last.date, DateTime(2026, 7, 25));
-    expect(repository.calls.last.mealTimeCode, 'ALL');
-    expect(repository.calls.last.page, 1);
-    expect(repository.calls.last.pageSize, 20);
-    expect(repository.calls.last.includeAll, isFalse);
+    expect(repository.menuCalls.last.planCode, 'PLN_KETO');
+    expect(repository.menuCalls.last.language, 'en');
+    expect(repository.menuCalls.last.date, DateTime(2026, 7, 25));
     expect(find.text('Keto Omelette'), findsOneWidget);
     expect(find.text('Oatmeal Banana'), findsNothing);
 
@@ -431,7 +455,7 @@ void main() {
       find.byKey(const ValueKey('guest-date-2026-07-26T00:00:00.000')),
     );
     await _load(tester);
-    expect(repository.calls, hasLength(2));
+    expect(repository.calls, hasLength(3));
     expect(find.text('Keto Chicken'), findsOneWidget);
     expect(find.text('Keto Omelette'), findsNothing);
 
@@ -440,7 +464,7 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('guest-filter-LUNCH')));
     await _load(tester);
-    expect(repository.calls, hasLength(2));
+    expect(repository.calls, hasLength(3));
     expect(find.text('Keto Chicken'), findsOneWidget);
   });
 
@@ -470,7 +494,7 @@ void main() {
         ),
       );
       await _load(tester);
-      expect(find.text('Keto API Meal'), findsOneWidget);
+      expect(find.text('Keto Omelette'), findsOneWidget);
     },
   );
 
@@ -505,9 +529,40 @@ void main() {
     );
     await _load(tester);
 
-    expect(find.text('Latest Classic Hero'), findsOneWidget);
-    expect(find.text('Latest Classic Meal'), findsOneWidget);
-    expect(find.text('Stale Keto Meal'), findsNothing);
+    expect(find.text('Latest Classic Hero'), findsWidgets);
+    expect(find.text('Oatmeal Banana'), findsOneWidget);
+    expect(find.text('Keto Omelette'), findsNothing);
+  });
+
+  testWidgets('slower previous menu cannot replace latest date', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _DeferredMenuGuestRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    await tester.tap(find.byKey(const ValueKey('guest-plan-PLN_KETO')));
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const ValueKey('guest-date-2026-07-26T00:00:00.000')),
+    );
+    await tester.pump();
+    expect(repository.menuCalls, hasLength(3));
+
+    repository.completeMenuRequest(
+      1,
+      _menuResponse('PLN_KETO', DateTime(2026, 7, 26)),
+    );
+    await _load(tester);
+    repository.completeMenuRequest(
+      0,
+      _menuResponse('PLN_KETO', DateTime(2026, 7, 25)),
+    );
+    await _load(tester);
+
+    expect(find.text('Keto Chicken'), findsOneWidget);
+    expect(find.text('Keto Omelette'), findsNothing);
   });
 
   testWidgets('failed plan request shows compact retry for the same code', (
@@ -564,7 +619,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final json = _fixtureJson();
     final data = json['data']! as Map<String, dynamic>;
-    final menus = data['menus']! as List<dynamic>;
+    final menus = data['menuFixtures']! as List<dynamic>;
     final firstMenu = menus.first as Map<String, dynamic>;
     final slots = firstMenu['slots']! as List<dynamic>;
     final snackSlot = slots[1] as Map<String, dynamic>;
@@ -572,6 +627,8 @@ void main() {
         'وجبة خفيفة / حلوى';
     final repository = _FakeGuestMenuRepository(
       GuestHomeResponse.fromJson(json),
+      menuBuilder: (planCode, date) =>
+          _menuResponseFromJson(json, planCode, date),
     );
     await tester.pumpWidget(
       _app(repository: repository, locale: const Locale('ar')),
@@ -603,22 +660,20 @@ void main() {
     expect(find.text('Oatmeal Banana'), findsNothing);
   });
 
-  testWidgets('empty local selection displays localized empty state', (
+  testWidgets('404-style empty menu displays localized empty state', (
     tester,
   ) async {
     await _useTallSurface(tester);
-    final repository = _FakeGuestMenuRepository(_response());
+    final repository = _FakeGuestMenuRepository(
+      _response(),
+      menuBuilder: (planCode, date) =>
+          GuestMenuResponse.empty(planCode: planCode, date: date),
+    );
     await tester.pumpWidget(_app(repository: repository));
     await _load(tester);
 
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('guest-filter-LUNCH')),
-    );
-    await tester.tap(find.byKey(const ValueKey('guest-filter-LUNCH')));
-    await _load(tester);
-
     expect(repository.calls, hasLength(1));
-    expect(find.text('No meals available for this selection.'), findsOneWidget);
+    expect(find.text('No meals available for this plan.'), findsOneWidget);
     expect(find.text('Try another date or meal category.'), findsOneWidget);
   });
 
@@ -704,10 +759,6 @@ void main() {
   ) async {
     await _useTallSurface(tester);
     final response = _response();
-    final originalMenuCount = response.data.menus.length;
-    final originalMealCount = response.data.menus.first.slots
-        .expand((slot) => slot.meals)
-        .length;
     final repository = _FakeGuestMenuRepository(response);
     await tester.pumpWidget(_app(repository: repository));
     await _load(tester);
@@ -726,11 +777,7 @@ void main() {
       tester.element(find.byKey(const ValueKey('guest-meal-meal-1'))),
       same(originalElement),
     );
-    expect(response.data.menus, hasLength(originalMenuCount));
-    expect(
-      response.data.menus.first.slots.expand((slot) => slot.meals),
-      hasLength(originalMealCount),
-    );
+    expect(repository.menuCalls, hasLength(1));
   });
 
   testWidgets('API failure displays retry and retry repeats the request', (
@@ -760,6 +807,7 @@ void main() {
     await _load(tester);
 
     expect(repository.calls.single.language, 'ar');
+    expect(repository.menuCalls.single.language, 'ar');
     expect(
       Directionality.of(tester.element(find.byType(BrowseMenuScreen))),
       TextDirection.rtl,
@@ -873,38 +921,45 @@ GuestMeal _detailMeal({
 }
 
 class _FakeGuestMenuRepository implements GuestMenuRepository {
-  _FakeGuestMenuRepository(this.response, {this.failuresRemaining = 0});
+  _FakeGuestMenuRepository(
+    this.response, {
+    this.failuresRemaining = 0,
+    this.menuBuilder,
+  });
 
   final GuestHomeResponse response;
+  final GuestMenuResponse Function(String planCode, DateTime date)? menuBuilder;
   int failuresRemaining;
   final calls = <_Request>[];
+  final menuCalls = <_MenuRequest>[];
+  final events = <String>[];
 
   @override
   Future<GuestHomeResponse> getGuestHome({
     required String language,
     DateTime? date,
     String? planCode,
-    String mealTimeCode = 'ALL',
-    int page = 1,
-    int pageSize = 20,
-    bool includeAll = false,
   }) async {
-    calls.add(
-      _Request(
-        language: language,
-        date: date,
-        planCode: planCode,
-        mealTimeCode: mealTimeCode,
-        page: page,
-        pageSize: pageSize,
-        includeAll: includeAll,
-      ),
-    );
+    events.add('home');
+    calls.add(_Request(language: language, date: date, planCode: planCode));
     if (failuresRemaining > 0) {
       failuresRemaining--;
       throw const GuestMenuException();
     }
-    return response;
+    return _selectHome(response, planCode: planCode, date: date);
+  }
+
+  @override
+  Future<GuestMenuResponse> getGuestMenu({
+    required String planCode,
+    required DateTime date,
+    required String language,
+  }) async {
+    events.add('menu');
+    menuCalls.add(
+      _MenuRequest(planCode: planCode, date: date, language: language),
+    );
+    return menuBuilder?.call(planCode, date) ?? _menuResponse(planCode, date);
   }
 }
 
@@ -913,19 +968,23 @@ class _Request {
     required this.language,
     required this.date,
     required this.planCode,
-    required this.mealTimeCode,
-    required this.page,
-    required this.pageSize,
-    required this.includeAll,
   });
 
   final String language;
   final DateTime? date;
   final String? planCode;
-  final String mealTimeCode;
-  final int page;
-  final int pageSize;
-  final bool includeAll;
+}
+
+class _MenuRequest {
+  const _MenuRequest({
+    required this.planCode,
+    required this.date,
+    required this.language,
+  });
+
+  final String planCode;
+  final DateTime date;
+  final String language;
 }
 
 class _DeferredGuestMenuRepository implements GuestMenuRepository {
@@ -933,6 +992,7 @@ class _DeferredGuestMenuRepository implements GuestMenuRepository {
 
   final GuestHomeResponse initialResponse;
   final calls = <_Request>[];
+  final menuCalls = <_MenuRequest>[];
   final _planRequests = <Completer<GuestHomeResponse>>[];
 
   void completePlanRequest(int index, GuestHomeResponse response) {
@@ -948,25 +1008,65 @@ class _DeferredGuestMenuRepository implements GuestMenuRepository {
     required String language,
     DateTime? date,
     String? planCode,
-    String mealTimeCode = 'ALL',
-    int page = 1,
-    int pageSize = 20,
-    bool includeAll = false,
   }) {
-    calls.add(
-      _Request(
-        language: language,
-        date: date,
-        planCode: planCode,
-        mealTimeCode: mealTimeCode,
-        page: page,
-        pageSize: pageSize,
-        includeAll: includeAll,
-      ),
-    );
+    calls.add(_Request(language: language, date: date, planCode: planCode));
     if (planCode == null) return Future.value(initialResponse);
     final completer = Completer<GuestHomeResponse>();
     _planRequests.add(completer);
+    return completer.future;
+  }
+
+  @override
+  Future<GuestMenuResponse> getGuestMenu({
+    required String planCode,
+    required DateTime date,
+    required String language,
+  }) {
+    menuCalls.add(
+      _MenuRequest(planCode: planCode, date: date, language: language),
+    );
+    return Future.value(_menuResponse(planCode, date));
+  }
+}
+
+class _DeferredMenuGuestRepository implements GuestMenuRepository {
+  _DeferredMenuGuestRepository(this.initialResponse);
+
+  final GuestHomeResponse initialResponse;
+  final calls = <_Request>[];
+  final menuCalls = <_MenuRequest>[];
+  final _menuRequests = <Completer<GuestMenuResponse>>[];
+
+  void completeMenuRequest(int index, GuestMenuResponse response) {
+    _menuRequests[index].complete(response);
+  }
+
+  @override
+  Future<GuestHomeResponse> getGuestHome({
+    required String language,
+    DateTime? date,
+    String? planCode,
+  }) {
+    calls.add(_Request(language: language, date: date, planCode: planCode));
+    return Future.value(
+      _selectHome(initialResponse, planCode: planCode, date: date),
+    );
+  }
+
+  @override
+  Future<GuestMenuResponse> getGuestMenu({
+    required String planCode,
+    required DateTime date,
+    required String language,
+  }) {
+    menuCalls.add(
+      _MenuRequest(planCode: planCode, date: date, language: language),
+    );
+    if (menuCalls.length == 1) {
+      return Future.value(_menuResponse(planCode, date));
+    }
+    final completer = Completer<GuestMenuResponse>();
+    _menuRequests.add(completer);
     return completer.future;
   }
 }
@@ -980,48 +1080,105 @@ GuestHomeResponse _planResponse({
 }) {
   final json = _fixtureJson();
   final data = json['data']! as Map<String, dynamic>;
-  data['hero'] = {
-    'title': heroTitle,
-    'subtitle': '$heroTitle subtitle',
-    'bannerImageUrl': '',
-  };
   final plans = data['mealPlans']! as List<dynamic>;
   for (final item in plans) {
     final plan = item as Map<String, dynamic>;
     plan['isSelected'] = plan['code'] == planCode;
+    if (plan['code'] == planCode) {
+      plan['name'] = heroTitle;
+    }
   }
-  final menus = data['menus']! as List<dynamic>;
-  final menu =
-      menus.cast<Map<String, dynamic>>().firstWhere(
-          (item) =>
-              item['planCode'] == planCode && item['date'] == '2026-07-25',
-        )
-        ..['slots'] =
-            ((menus.cast<Map<String, dynamic>>().firstWhere(
-                      (item) =>
-                          item['planCode'] == planCode &&
-                          item['date'] == '2026-07-25',
-                    )['slots'])
-                    as List<dynamic>)
-                .take(1)
-                .toList();
-  final slot = (menu['slots']! as List<dynamic>).first as Map<String, dynamic>;
-  final meal = (slot['meals']! as List<dynamic>).first as Map<String, dynamic>;
-  meal['id'] = 'api-$planCode';
-  meal['name'] = mealName;
-  data['menus'] = [menu];
-  data['meals'] = <dynamic>[];
+  final calendar = data['weeklyCalendar']! as List<dynamic>;
+  for (final item in calendar) {
+    final day = item as Map<String, dynamic>;
+    day['isSelected'] = day['date'] == '2026-07-25';
+  }
+  // Menu payloads are returned separately; this argument keeps older test
+  // call sites descriptive while the home response only changes metadata.
+  expect(mealName, isNotEmpty);
   return GuestHomeResponse.fromJson(json);
 }
+
+GuestHomeResponse _selectHome(
+  GuestHomeResponse response, {
+  String? planCode,
+  DateTime? date,
+}) {
+  final plans = [
+    for (final plan in response.data.mealPlans)
+      GuestMealPlan(
+        id: plan.id,
+        code: plan.code,
+        name: plan.name,
+        description: plan.description,
+        imageUrl: plan.imageUrl,
+        iconUrl: plan.iconUrl,
+        displayOrder: plan.displayOrder,
+        isSelected: planCode == null ? plan.isSelected : plan.code == planCode,
+        slots: plan.slots,
+      ),
+  ];
+  final calendar = [
+    for (final item in response.data.weeklyCalendar)
+      GuestCalendarDate(
+        date: item.date,
+        dayNumber: item.dayNumber,
+        dayName: item.dayName,
+        shortDayName: item.shortDayName,
+        isToday: item.isToday,
+        isSelected: date == null
+            ? item.isSelected
+            : _sameTestDate(item.date, date),
+        isAvailable: item.isAvailable,
+      ),
+  ];
+  return GuestHomeResponse(
+    data: GuestHomeData(mealPlans: plans, weeklyCalendar: calendar),
+    errors: response.errors,
+  );
+}
+
+GuestMenuResponse _menuResponse(String planCode, DateTime date) {
+  return _menuResponseFromJson(_fixtureJson(), planCode, date);
+}
+
+GuestMenuResponse _menuResponseFromJson(
+  Map<String, dynamic> json,
+  String planCode,
+  DateTime date,
+) {
+  final data = json['data']! as Map<String, dynamic>;
+  final menus = (data['menuFixtures']! as List<dynamic>)
+      .cast<Map<String, dynamic>>();
+  final matching = menus.where(
+    (menu) => menu['planCode'] == planCode && menu['date'] == _testDate(date),
+  );
+  if (matching.isEmpty) {
+    return GuestMenuResponse.empty(planCode: planCode, date: date);
+  }
+  final menu = matching.first;
+  return GuestMenuResponse.fromJson({
+    'data': {
+      'planId': 'id-$planCode',
+      'planCode': planCode,
+      'date': _testDate(date),
+      'slots': menu['slots'],
+    },
+    'errors': <dynamic>[],
+  });
+}
+
+String _testDate(DateTime date) =>
+    '${date.year.toString().padLeft(4, '0')}-'
+    '${date.month.toString().padLeft(2, '0')}-'
+    '${date.day.toString().padLeft(2, '0')}';
+
+bool _sameTestDate(DateTime? a, DateTime b) =>
+    a != null && a.year == b.year && a.month == b.month && a.day == b.day;
 
 Map<String, dynamic> _fixtureJson() {
   return {
     'data': {
-      'hero': {
-        'title': 'Classic',
-        'subtitle': 'PLN_CLASSIC',
-        'bannerImageUrl': '',
-      },
       'mealPlans': [
         {
           'id': 'plan-1',
@@ -1062,52 +1219,7 @@ Map<String, dynamic> _fixtureJson() {
           'isAvailable': true,
         },
       ],
-      'mealTimeFilters': [
-        {'code': 'ALL', 'name': 'All', 'displayOrder': 0, 'isSelected': true},
-        {
-          'id': 'filter-1',
-          'code': 'BREAKFAST',
-          'name': 'Breakfast',
-          'displayOrder': 1,
-          'isSelected': false,
-        },
-        {
-          'id': 'filter-2',
-          'code': 'LUNCH',
-          'name': 'Lunch',
-          'displayOrder': 2,
-          'isSelected': false,
-        },
-        {
-          'id': 'filter-3',
-          'code': 'SNACK',
-          'name': 'Snack / Dessert',
-          'displayOrder': 3,
-          'isSelected': false,
-        },
-      ],
-      'meals': [
-        {
-          'id': 'meal-1',
-          'code': 'DT-001',
-          'name': 'Oatmeal Banana',
-          'description': 'Creamy oatmeal with banana.',
-          'imageUrl': '',
-          'thumbnailUrl': '',
-          'mealTime': {'code': 'BREAKFAST', 'name': 'Breakfast'},
-          'nutrition': {
-            'calories': 522.0,
-            'protein': 22.5,
-            'carbs': 82.2,
-            'fat': 12.4,
-          },
-          'tags': <dynamic>[],
-          'allergens': <dynamic>[],
-          'isAvailable': true,
-          'displayOrder': 0,
-        },
-      ],
-      'menus': [
+      'menuFixtures': [
         {
           'planCode': 'PLN_CLASSIC',
           'date': '2026-07-25',
@@ -1242,14 +1354,6 @@ Map<String, dynamic> _fixtureJson() {
           ],
         },
       ],
-      'pagination': {
-        'page': 1,
-        'pageSize': 20,
-        'totalRecords': 1,
-        'totalPages': 1,
-        'hasNextPage': false,
-        'hasPreviousPage': false,
-      },
     },
     'errors': <dynamic>[],
   };
@@ -1280,31 +1384,6 @@ Map<String, dynamic> _nestedFixtureJson({bool includeImages = true}) {
               'minimumSelection': 1,
               'maximumSelection': 1,
               'isRequired': true,
-              'meals': [
-                {
-                  'id': 'meal-1',
-                  'code': 'DT-IMP-0001',
-                  'name': 'Oatmeal Banana',
-                  'description': 'Creamy oatmeal with banana.',
-                  'imageUrl': includeImages
-                      ? 'https://cdn.example.com/meal.jpg'
-                      : '',
-                  'thumbnailUrl': includeImages
-                      ? 'https://cdn.example.com/meal-thumb.jpg'
-                      : '',
-                  'nutrition': {
-                    'calories': 522.0,
-                    'protein': 22.5,
-                    'carbs': 82.2,
-                    'fat': 12.4,
-                    'fiber': 0.0,
-                  },
-                  'tags': <dynamic>[],
-                  'allergens': <dynamic>[],
-                  'isAvailable': true,
-                  'displayOrder': 0,
-                },
-              ],
             },
           ],
         },
@@ -1320,24 +1399,6 @@ Map<String, dynamic> _nestedFixtureJson({bool includeImages = true}) {
           'isAvailable': true,
         },
       ],
-      'mealTimeFilters': [
-        {'code': 'ALL', 'name': 'All', 'displayOrder': 0, 'isSelected': true},
-        {
-          'id': 'meal-time-1',
-          'code': 'BREAKFAST',
-          'name': 'Breakfast',
-          'displayOrder': 5,
-          'isSelected': false,
-        },
-      ],
-      'pagination': {
-        'page': 1,
-        'pageSize': 20,
-        'totalRecords': 1,
-        'totalPages': 1,
-        'hasNextPage': false,
-        'hasPreviousPage': false,
-      },
     },
     'errors': <dynamic>[],
   };

@@ -17,10 +17,12 @@ abstract interface class GuestMenuRepository {
     required String language,
     DateTime? date,
     String? planCode,
-    String mealTimeCode = 'ALL',
-    int page = 1,
-    int pageSize = 20,
-    bool includeAll = false,
+  });
+
+  Future<GuestMenuResponse> getGuestMenu({
+    required String planCode,
+    required DateTime date,
+    required String language,
   });
 }
 
@@ -35,26 +37,49 @@ class HttpGuestMenuRepository implements GuestMenuRepository {
     required String language,
     DateTime? date,
     String? planCode,
-    String mealTimeCode = 'ALL',
-    int page = 1,
-    int pageSize = 20,
-    bool includeAll = false,
   }) async {
-    final base = Uri.parse(AppEnvironment.apiBaseUrl);
-    final uri = base
-        .resolve(ApiEndpoints.guestHome)
-        .replace(
-          queryParameters: {
-            'language': language,
-            if (date != null) 'date': _date(date),
-            if (planCode != null && planCode.trim().isNotEmpty)
-              'planCode': planCode,
-            'mealTimeCode': mealTimeCode,
-            'page': '$page',
-            'pageSize': '$pageSize',
-            'includeAll': '$includeAll',
-          },
-        );
+    final uri = buildGuestHomeUri(
+      baseUrl: AppEnvironment.apiBaseUrl,
+      language: language,
+      date: date,
+      planCode: planCode,
+    );
+    final result = await _get(uri);
+    if (result.statusCode == HttpStatus.badRequest) {
+      throw const GuestMenuException(GuestMenuFailure.invalidRequest);
+    }
+    if (result.statusCode < 200 || result.statusCode >= 300) {
+      throw const GuestMenuException();
+    }
+    return GuestHomeResponse.fromJson(result.body);
+  }
+
+  @override
+  Future<GuestMenuResponse> getGuestMenu({
+    required String planCode,
+    required DateTime date,
+    required String language,
+  }) async {
+    final uri = buildGuestMenuUri(
+      baseUrl: AppEnvironment.apiBaseUrl,
+      planCode: planCode,
+      date: date,
+      language: language,
+    );
+    final result = await _get(uri);
+    if (result.statusCode == HttpStatus.notFound) {
+      return GuestMenuResponse.empty(planCode: planCode, date: date);
+    }
+    if (result.statusCode == HttpStatus.badRequest) {
+      throw const GuestMenuException(GuestMenuFailure.invalidRequest);
+    }
+    if (result.statusCode < 200 || result.statusCode >= 300) {
+      throw const GuestMenuException();
+    }
+    return GuestMenuResponse.fromJson(result.body);
+  }
+
+  Future<_HttpResult> _get(Uri uri) async {
     if (kDebugMode) {
       debugPrint('[GuestMenu] GET ${uri.path}?${uri.query}');
     }
@@ -70,22 +95,19 @@ class HttpGuestMenuRepository implements GuestMenuRepository {
       final response = await request.close().timeout(
         const Duration(seconds: 30),
       );
-      final body = await utf8.decoder.bind(response).join();
-      final decoded = jsonDecode(body);
-      if (decoded is! Map<String, dynamic>) {
-        throw const GuestMenuException();
-      }
-      if (response.statusCode == 404) {
-        final title = decoded['title'] is String ? decoded['title'] as String : null;
-        if (title == 'Menu not found') {
-          return const GuestHomeResponse.empty();
-        }
-        throw const GuestMenuException();
-      }
+      final bodyText = await utf8.decoder.bind(response).join();
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw const GuestMenuException();
+        return _HttpResult(statusCode: response.statusCode, body: const {});
       }
-      return GuestHomeResponse.fromJson(decoded);
+      Map<String, dynamic> body = const {};
+      if (bodyText.trim().isNotEmpty) {
+        final decoded = jsonDecode(bodyText);
+        if (decoded is! Map<String, dynamic>) {
+          throw const GuestMenuException();
+        }
+        body = decoded;
+      }
+      return _HttpResult(statusCode: response.statusCode, body: body);
     } on GuestMenuException {
       rethrow;
     } on Object {
@@ -96,8 +118,43 @@ class HttpGuestMenuRepository implements GuestMenuRepository {
   }
 }
 
+Uri buildGuestHomeUri({
+  required String baseUrl,
+  required String language,
+  DateTime? date,
+  String? planCode,
+}) {
+  return Uri.parse(baseUrl)
+      .resolve(ApiEndpoints.guestHome)
+      .replace(
+        queryParameters: {
+          'language': language,
+          if (date != null) 'date': formatGuestDate(date),
+          if (planCode != null && planCode.trim().isNotEmpty)
+            'planCode': planCode,
+        },
+      );
+}
+
+Uri buildGuestMenuUri({
+  required String baseUrl,
+  required String planCode,
+  required DateTime date,
+  required String language,
+}) {
+  return Uri.parse(baseUrl)
+      .resolve(ApiEndpoints.guestMealPlanMenu(planCode))
+      .replace(
+        queryParameters: {'date': formatGuestDate(date), 'language': language},
+      );
+}
+
+enum GuestMenuFailure { network, invalidRequest }
+
 class GuestMenuException implements Exception {
-  const GuestMenuException();
+  const GuestMenuException([this.failure = GuestMenuFailure.network]);
+
+  final GuestMenuFailure failure;
 }
 
 String resolveMediaUrl(String? value) {
@@ -108,9 +165,16 @@ String resolveMediaUrl(String? value) {
   return Uri.parse(AppEnvironment.apiBaseUrl).resolve(candidate).toString();
 }
 
-String _date(DateTime value) {
+String formatGuestDate(DateTime value) {
   final year = value.year.toString().padLeft(4, '0');
   final month = value.month.toString().padLeft(2, '0');
   final day = value.day.toString().padLeft(2, '0');
   return '$year-$month-$day';
+}
+
+class _HttpResult {
+  const _HttpResult({required this.statusCode, required this.body});
+
+  final int statusCode;
+  final Map<String, dynamic> body;
 }

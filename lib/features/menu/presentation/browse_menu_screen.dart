@@ -22,20 +22,23 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   final ScrollController _planScrollController = ScrollController();
   final ScrollController _dateScrollController = ScrollController();
   final ScrollController _filterScrollController = ScrollController();
-  GuestHomeData? _originalData;
+  GuestHomeData? _homeData;
+  GuestMenuData? _menuData;
+  final Map<String, GuestMenuData> _menuCache = {};
   List<GuestMeal> _visibleMeals = const [];
   String? _language;
   String? _selectedPlanCode;
   DateTime? _selectedDate;
   String _selectedMealTimeCode = 'ALL';
-  bool _isLoading = false;
-  bool _isRefreshing = false;
-  bool _isPlanLoading = false;
+  bool _isHomeLoading = false;
+  bool _isHomeRefreshing = false;
+  bool _isMenuLoading = false;
   bool _hasLoaded = false;
-  bool _hasError = false;
-  bool _hasPlanError = false;
-  bool _hasPlanSpecificData = false;
-  int _requestId = 0;
+  bool _hasHomeError = false;
+  bool _hasMenuError = false;
+  int _homeRequestId = 0;
+  int _menuRequestId = 0;
+  int _selectionRequestId = 0;
 
   @override
   void didChangeDependencies() {
@@ -46,7 +49,10 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     _language = language;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _load(force: isLanguageChange, preserveSelections: isLanguageChange);
+        _loadHome(
+          force: isLanguageChange,
+          preserveSelections: isLanguageChange,
+        );
       }
     });
   }
@@ -60,20 +66,25 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     super.dispose();
   }
 
-  Future<void> _load({
+  Future<void> _loadHome({
     bool force = false,
     bool preserveSelections = true,
   }) async {
-    if (!force && (_hasLoaded || _isLoading || _isRefreshing)) return;
-    final requestId = ++_requestId;
-    final hadData = _originalData != null;
+    if (!force && (_hasLoaded || _isHomeLoading || _isHomeRefreshing)) {
+      return;
+    }
+    final selectionRequestId = ++_selectionRequestId;
+    final homeRequestId = ++_homeRequestId;
+    ++_menuRequestId;
+    final hadData = _homeData != null;
     setState(() {
-      _hasError = false;
-      _hasPlanError = false;
+      _hasHomeError = false;
+      _hasMenuError = false;
       if (!hadData) {
-        _isLoading = true;
+        _isHomeLoading = true;
       } else {
-        _isRefreshing = true;
+        _isHomeRefreshing = true;
+        _isMenuLoading = true;
       }
     });
     try {
@@ -81,10 +92,14 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
           .read(guestMenuRepositoryProvider)
           .getGuestHome(
             language: _language ?? 'en',
-            date: _selectedDate,
-            includeAll: true,
+            date: preserveSelections ? _selectedDate : null,
+            planCode: preserveSelections ? _selectedPlanCode : null,
           );
-      if (!mounted || requestId != _requestId) return;
+      if (!mounted ||
+          homeRequestId != _homeRequestId ||
+          selectionRequestId != _selectionRequestId) {
+        return;
+      }
       final data = response.data;
       final planCode = _resolvePlan(
         data,
@@ -92,39 +107,41 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       );
       final selectedDate = _resolveDate(
         data,
-        planCode,
         preserveSelections ? _selectedDate : null,
       );
-      final mealTimeCode = _resolveMealTime(
-        data,
-        preserveSelections ? _selectedMealTimeCode : null,
-      );
-      final visibleMeals = _filterMeals(
-        data,
-        planCode: planCode,
-        date: selectedDate,
-        mealTimeCode: mealTimeCode,
-      );
       setState(() {
-        _originalData = data;
+        _homeData = data;
         _selectedPlanCode = planCode;
         _selectedDate = selectedDate;
-        _selectedMealTimeCode = mealTimeCode;
-        _visibleMeals = visibleMeals;
-        _isLoading = false;
-        _isRefreshing = false;
-        _isPlanLoading = false;
+        _isHomeLoading = false;
+        _isHomeRefreshing = false;
         _hasLoaded = true;
-        _hasPlanSpecificData = false;
       });
-      _precacheMenuImages(data, planCode, visibleMeals);
+      if (planCode != null && selectedDate != null) {
+        await _loadMenu(
+          planCode: planCode,
+          date: selectedDate,
+          selectionRequestId: selectionRequestId,
+          force: force,
+        );
+      } else {
+        setState(() {
+          _menuData = null;
+          _visibleMeals = const [];
+          _isMenuLoading = false;
+        });
+      }
     } on Object {
-      if (!mounted || requestId != _requestId) return;
+      if (!mounted ||
+          homeRequestId != _homeRequestId ||
+          selectionRequestId != _selectionRequestId) {
+        return;
+      }
       setState(() {
-        _isLoading = false;
-        _isRefreshing = false;
-        _isPlanLoading = false;
-        _hasError = true;
+        _isHomeLoading = false;
+        _isHomeRefreshing = false;
+        _isMenuLoading = false;
+        _hasHomeError = true;
       });
     }
   }
@@ -138,162 +155,206 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
         data.mealPlans.firstOrNull?.code;
   }
 
-  DateTime? _resolveDate(
-    GuestHomeData data,
-    String? planCode,
-    DateTime? preferredDate,
-  ) {
-    if (preferredDate != null &&
-        _isDateAvailable(data, planCode, preferredDate)) {
+  DateTime? _resolveDate(GuestHomeData data, DateTime? preferredDate) {
+    if (preferredDate != null && _isDateAvailable(data, preferredDate)) {
       return preferredDate;
     }
     final initiallySelected = _firstSelected(
       data.weeklyCalendar,
-      (item) => item.isSelected && _isDateAvailable(data, planCode, item.date),
+      (item) => item.isSelected && item.isAvailable && item.date != null,
     )?.date;
     if (initiallySelected != null) return initiallySelected;
     return data.weeklyCalendar
-        .where((item) => _isDateAvailable(data, planCode, item.date))
+        .where((item) => item.isAvailable && item.date != null)
         .firstOrNull
         ?.date;
   }
 
-  String _resolveMealTime(
-    GuestHomeData data,
-    String? preferredCode, {
-    bool fallbackToAll = false,
-  }) {
-    if (preferredCode != null &&
-        data.mealTimeFilters.any(
-          (filter) =>
-              normalizeMealTimeCode(filter.code) ==
-              normalizeMealTimeCode(preferredCode),
-        )) {
-      return preferredCode;
-    }
-    if (fallbackToAll) {
-      return data.mealTimeFilters
-              .where((filter) => normalizeMealTimeCode(filter.code) == 'ALL')
-              .firstOrNull
-              ?.code ??
-          'ALL';
-    }
-    return _firstSelected(
-          data.mealTimeFilters,
-          (filter) => filter.isSelected,
-        )?.code ??
-        data.mealTimeFilters.firstOrNull?.code ??
-        'ALL';
-  }
-
   Future<void> _selectPlan(GuestMealPlan plan) async {
     final planCode = plan.code;
-    if (_originalData == null ||
+    if (_homeData == null ||
         planCode.trim().isEmpty ||
         planCode == _selectedPlanCode) {
       return;
     }
-    await _loadPlan(planCode);
+    await _refreshSelection(planCode: planCode, date: _selectedDate);
   }
 
-  Future<void> _loadPlan(String planCode) async {
-    if (planCode.isEmpty || (_isPlanLoading && planCode == _selectedPlanCode)) {
+  Future<void> _refreshSelection({
+    required String planCode,
+    required DateTime? date,
+  }) async {
+    if (planCode.trim().isEmpty || date == null) {
       return;
     }
-    final requestId = ++_requestId;
-    final requestedDate = _selectedDate;
-    final requestedMealTimeCode = _selectedMealTimeCode;
+    final selectionRequestId = ++_selectionRequestId;
+    final homeRequestId = ++_homeRequestId;
+    ++_menuRequestId;
     setState(() {
       _selectedPlanCode = planCode;
-      _isPlanLoading = true;
-      _hasPlanError = false;
+      _selectedDate = date;
+      _isHomeRefreshing = true;
+      _isMenuLoading = true;
+      _hasHomeError = false;
+      _hasMenuError = false;
     });
     try {
       final response = await ref
           .read(guestMenuRepositoryProvider)
           .getGuestHome(
             language: _language ?? 'en',
-            date: requestedDate,
+            date: date,
             planCode: planCode,
-            mealTimeCode: requestedMealTimeCode,
-            page: 1,
-            pageSize: 20,
           );
-      if (!mounted || requestId != _requestId) return;
+      if (!mounted ||
+          selectionRequestId != _selectionRequestId ||
+          homeRequestId != _homeRequestId) {
+        return;
+      }
       final data = response.data;
       final selectedPlanCode =
           _firstSelected(data.mealPlans, (plan) => plan.isSelected)?.code ??
           _resolvePlan(data, planCode);
-      final selectedDate = _resolveDate(data, selectedPlanCode, requestedDate);
-      final mealTimeCode = _resolveMealTime(
-        data,
-        requestedMealTimeCode,
-        fallbackToAll: true,
-      );
-      final visibleMeals = _filterMeals(
-        data,
-        planCode: selectedPlanCode,
-        date: selectedDate,
-        mealTimeCode: mealTimeCode,
-      );
+      final selectedDate = _resolveDate(data, date);
       setState(() {
-        _originalData = data;
+        _homeData = data;
         _selectedPlanCode = selectedPlanCode;
         _selectedDate = selectedDate;
-        _selectedMealTimeCode = mealTimeCode;
-        _visibleMeals = visibleMeals;
-        _isPlanLoading = false;
-        _hasPlanError = false;
-        _hasError = false;
+        _isHomeRefreshing = false;
         _hasLoaded = true;
-        _hasPlanSpecificData = true;
       });
-      _precacheMenuImages(data, selectedPlanCode, visibleMeals);
+      if (selectedPlanCode != null && selectedDate != null) {
+        await _loadMenu(
+          planCode: selectedPlanCode,
+          date: selectedDate,
+          selectionRequestId: selectionRequestId,
+        );
+      } else {
+        setState(() {
+          _menuData = null;
+          _visibleMeals = const [];
+          _isMenuLoading = false;
+        });
+      }
     } on Object {
-      if (!mounted || requestId != _requestId) return;
+      if (!mounted ||
+          selectionRequestId != _selectionRequestId ||
+          homeRequestId != _homeRequestId) {
+        return;
+      }
       setState(() {
-        _isPlanLoading = false;
-        _hasPlanError = true;
-        _visibleMeals = const [];
+        _isHomeRefreshing = false;
+        _isMenuLoading = false;
+        _hasHomeError = true;
       });
     }
   }
 
-  void _selectDate(GuestCalendarDate date) {
-    final data = _originalData;
+  Future<void> _selectDate(GuestCalendarDate date) async {
+    final data = _homeData;
     if (data == null ||
-        !_isDateAvailable(data, _selectedPlanCode, date.date) ||
+        !date.isAvailable ||
         _sameDate(date.date, _selectedDate) ||
-        date.date == null) {
+        date.date == null ||
+        _selectedPlanCode == null) {
       return;
     }
-    setState(() {
-      _selectedDate = date.date;
-      _visibleMeals = _filterMeals(
-        data,
-        planCode: _selectedPlanCode,
-        date: date.date,
-        mealTimeCode: _selectedMealTimeCode,
-      );
-    });
+    await _refreshSelection(planCode: _selectedPlanCode!, date: date.date);
   }
 
-  void _selectMealTime(GuestMealTimeFilter filter) {
-    final data = _originalData;
-    if (data == null ||
+  void _selectMealTime(GuestMealTime filter) {
+    if (_menuData == null ||
         normalizeMealTimeCode(filter.code) ==
             normalizeMealTimeCode(_selectedMealTimeCode)) {
       return;
     }
     setState(() {
       _selectedMealTimeCode = filter.code;
-      _visibleMeals = _filterMeals(
-        data,
-        planCode: _selectedPlanCode,
-        date: _selectedDate,
-        mealTimeCode: filter.code,
-      );
+      _visibleMeals = _filterMeals(_menuData!, filter.code);
     });
+  }
+
+  Future<void> _loadMenu({
+    required String planCode,
+    required DateTime date,
+    required int selectionRequestId,
+    bool force = false,
+  }) async {
+    final language = _language ?? 'en';
+    final cacheKey = _menuCacheKey(language, planCode, date);
+    final cached = _menuCache[cacheKey];
+    if (!force && cached != null) {
+      if (!mounted || selectionRequestId != _selectionRequestId) return;
+      _applyMenu(cached);
+      return;
+    }
+    final menuRequestId = ++_menuRequestId;
+    setState(() {
+      _isMenuLoading = true;
+      _hasMenuError = false;
+    });
+    try {
+      final response = await ref
+          .read(guestMenuRepositoryProvider)
+          .getGuestMenu(planCode: planCode, date: date, language: language);
+      if (!mounted ||
+          selectionRequestId != _selectionRequestId ||
+          menuRequestId != _menuRequestId) {
+        return;
+      }
+      _menuCache[cacheKey] = response.data;
+      _applyMenu(response.data);
+    } on Object {
+      if (!mounted ||
+          selectionRequestId != _selectionRequestId ||
+          menuRequestId != _menuRequestId) {
+        return;
+      }
+      setState(() {
+        _isMenuLoading = false;
+        _hasMenuError = true;
+        _menuData = null;
+        _visibleMeals = const [];
+      });
+    }
+  }
+
+  void _applyMenu(GuestMenuData data) {
+    final filters = _filtersFor(data);
+    final hasSelectedFilter = filters.any(
+      (filter) =>
+          normalizeMealTimeCode(filter.code) ==
+          normalizeMealTimeCode(_selectedMealTimeCode),
+    );
+    final selectedMealTimeCode = hasSelectedFilter
+        ? _selectedMealTimeCode
+        : 'ALL';
+    final visibleMeals = _filterMeals(data, selectedMealTimeCode);
+    setState(() {
+      _menuData = data;
+      _selectedMealTimeCode = selectedMealTimeCode;
+      _visibleMeals = visibleMeals;
+      _isMenuLoading = false;
+      _hasMenuError = false;
+    });
+    final home = _homeData;
+    if (home != null) {
+      _precacheMenuImages(home, _selectedPlanCode, visibleMeals);
+    }
+  }
+
+  List<GuestMealTime> _filtersFor(GuestMenuData? data) {
+    final filters = <GuestMealTime>[
+      GuestMealTime(code: 'ALL', name: _language == 'ar' ? 'الكل' : 'All'),
+    ];
+    final seen = <String>{'ALL'};
+    for (final slot in data?.slots ?? const <GuestMenuSlot>[]) {
+      final normalized = normalizeMealTimeCode(slot.mealTime.code);
+      if (normalized.isNotEmpty && seen.add(normalized)) {
+        filters.add(slot.mealTime);
+      }
+    }
+    return filters;
   }
 
   void _keepFilterVisible(int index) {
@@ -327,9 +388,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     final selectedPlan = data.mealPlans
         .where((plan) => plan.code == selectedPlanCode)
         .firstOrNull;
-    final heroUrl = resolveMediaUrl(
-      selectedPlan?.imageUrl ?? data.hero.bannerImageUrl,
-    );
+    final heroUrl = resolveMediaUrl(selectedPlan?.imageUrl);
     final urls = <String>{
       heroUrl,
       for (final meal in meals.take(6))
@@ -359,31 +418,16 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     }
   }
 
-  bool _isDateAvailable(GuestHomeData data, String? planCode, DateTime? date) {
-    if (planCode == null || date == null) return false;
-    return data.menus.any(
-      (menu) => menu.planCode == planCode && _sameDate(menu.date, date),
+  bool _isDateAvailable(GuestHomeData data, DateTime? date) {
+    if (date == null) return false;
+    return data.weeklyCalendar.any(
+      (item) => item.isAvailable && _sameDate(item.date, date),
     );
   }
 
-  List<GuestMeal> _filterMeals(
-    GuestHomeData data, {
-    required String? planCode,
-    required DateTime? date,
-    required String mealTimeCode,
-  }) {
-    final selectedMenus = data.menus.where(
-      (menu) =>
-          menu.planCode == planCode &&
-          (date == null || _sameDate(menu.date, date)),
-    );
-    final selectedMenuList = selectedMenus.toList(growable: false);
-    final Iterable<GuestMeal> meals = selectedMenuList.isNotEmpty
-        ? selectedMenuList
-              .expand((menu) => menu.slots)
-              .expand((slot) => slot.meals)
-        : data.meals;
-    final normalizedFilter = normalizeMealTimeCode(mealTimeCode);
+  List<GuestMeal> _filterMeals(GuestMenuData data, String filterCode) {
+    final meals = data.meals;
+    final normalizedFilter = normalizeMealTimeCode(filterCode);
     final filtered = normalizedFilter == 'ALL'
         ? meals
         : meals.where(
@@ -397,7 +441,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    if (_isLoading || (_originalData == null && !_hasError)) {
+    if (_isHomeLoading || (_homeData == null && !_hasHomeError)) {
       return const Scaffold(
         backgroundColor: Color(0xFFF8F8F3),
         body: Center(
@@ -405,24 +449,25 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
         ),
       );
     }
-    if (_originalData == null) {
+    if (_homeData == null) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F8F3),
         body: _GuestMenuError(
           message: l10n.guestMenuLoadError,
           retryLabel: l10n.retry,
-          onRetry: _load,
+          onRetry: () => _loadHome(force: true),
         ),
       );
     }
 
-    final data = _originalData!;
+    final data = _homeData!;
     final plans = [...data.mealPlans]
       ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-    final filters = [...data.mealTimeFilters]
-      ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+    final filters = _filtersFor(_menuData);
     final meals = _visibleMeals;
-    final hero = data.hero;
+    final selectedPlan = plans
+        .where((plan) => plan.code == _selectedPlanCode)
+        .firstOrNull;
     final width = MediaQuery.sizeOf(context).width;
     const columns = 2;
     final compactMealCards = width < 680;
@@ -432,7 +477,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           color: AppColors.emeraldGreen,
-          onRefresh: () => _load(force: true),
+          onRefresh: () => _loadHome(force: true),
           child: CustomScrollView(
             controller: _scrollController,
             key: const PageStorageKey('guestMenuScroll'),
@@ -452,8 +497,8 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _GuestMenuHeader(hero: hero),
-                    if (_isRefreshing) ...[
+                    _GuestMenuHeader(plan: selectedPlan),
+                    if (_isHomeRefreshing) ...[
                       const SizedBox(height: 12),
                       const LinearProgressIndicator(
                         minHeight: 3,
@@ -492,12 +537,22 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                         },
                       ),
                     ),
-                    if (_hasError) ...[
+                    if (_hasHomeError) ...[
                       const SizedBox(height: 16),
                       _InlineError(
-                        message: l10n.guestMenuLoadError,
+                        message: l10n.guestPlanLoadError,
                         retryLabel: l10n.retry,
-                        onRetry: _load,
+                        onRetry: () {
+                          final planCode = _selectedPlanCode;
+                          final date = _selectedDate;
+                          if (planCode == null || date == null) {
+                            unawaited(_loadHome(force: true));
+                            return;
+                          }
+                          unawaited(
+                            _refreshSelection(planCode: planCode, date: date),
+                          );
+                        },
                       ),
                     ],
                     const SizedBox(height: 12),
@@ -515,16 +570,15 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                   selectedMealTimeCode: _selectedMealTimeCode,
                   dateScrollController: _dateScrollController,
                   filterScrollController: _filterScrollController,
-                  isDateAvailable: (date) =>
-                      _isDateAvailable(data, _selectedPlanCode, date),
-                  onDateSelected: _selectDate,
+                  isDateAvailable: (date) => _isDateAvailable(data, date),
+                  onDateSelected: (date) => unawaited(_selectDate(date)),
                   onFilterSelected: (filter, index) {
                     _selectMealTime(filter);
                     _keepFilterVisible(index);
                   },
                 ),
               ),
-              if (_isPlanLoading)
+              if (_isMenuLoading)
                 const SliverFillRemaining(
                   hasScrollBody: false,
                   child: Center(
@@ -537,22 +591,32 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                     ),
                   ),
                 )
-              else if (_hasPlanError)
+              else if (_hasMenuError)
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: _GuestMenuError(
                     message: l10n.guestPlanLoadError,
                     retryLabel: l10n.retry,
-                    onRetry: () => _loadPlan(_selectedPlanCode ?? ''),
+                    onRetry: () {
+                      final planCode = _selectedPlanCode;
+                      final date = _selectedDate;
+                      if (planCode == null || date == null) return;
+                      unawaited(
+                        _loadMenu(
+                          planCode: planCode,
+                          date: date,
+                          selectionRequestId: _selectionRequestId,
+                          force: true,
+                        ),
+                      );
+                    },
                   ),
                 )
               else if (meals.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: _GuestMenuEmpty(
-                    title: _hasPlanSpecificData
-                        ? l10n.noMealsAvailableForPlan
-                        : l10n.noMealsAvailable,
+                    title: l10n.noMealsAvailableForPlan,
                     subtitle: l10n.tryAnotherMealFilter,
                   ),
                 )
@@ -671,13 +735,13 @@ class _GuestLanguageSelector extends StatelessWidget {
 }
 
 class _GuestMenuHeader extends StatelessWidget {
-  const _GuestMenuHeader({required this.hero});
+  const _GuestMenuHeader({required this.plan});
 
-  final GuestHero hero;
+  final GuestMealPlan? plan;
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = resolveMediaUrl(hero.bannerImageUrl);
+    final imageUrl = resolveMediaUrl(plan?.imageUrl);
     return Container(
       height: 200,
       clipBehavior: Clip.antiAlias,
@@ -723,9 +787,9 @@ class _GuestMenuHeader extends StatelessWidget {
               children: [
                 const AppLogo(width: 76),
                 const Spacer(),
-                if ((hero.title ?? '').isNotEmpty)
+                if ((plan?.name ?? '').isNotEmpty)
                   Text(
-                    hero.title!,
+                    plan!.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -735,10 +799,10 @@ class _GuestMenuHeader extends StatelessWidget {
                       letterSpacing: -.7,
                     ),
                   ),
-                if ((hero.subtitle ?? '').isNotEmpty) ...[
+                if ((plan?.description ?? '').isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
-                    hero.subtitle!,
+                    plan!.description!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -793,7 +857,7 @@ class _GuestMenuFiltersHeader extends SliverPersistentHeaderDelegate {
 
   final String title;
   final GuestHomeData data;
-  final List<GuestMealTimeFilter> filters;
+  final List<GuestMealTime> filters;
   final String? selectedPlanCode;
   final DateTime? selectedDate;
   final String selectedMealTimeCode;
@@ -801,7 +865,7 @@ class _GuestMenuFiltersHeader extends SliverPersistentHeaderDelegate {
   final ScrollController filterScrollController;
   final bool Function(DateTime? date) isDateAvailable;
   final ValueChanged<GuestCalendarDate> onDateSelected;
-  final void Function(GuestMealTimeFilter filter, int index) onFilterSelected;
+  final void Function(GuestMealTime filter, int index) onFilterSelected;
 
   @override
   double get minExtent => 138;
@@ -873,7 +937,9 @@ class _GuestMenuFiltersHeader extends SliverPersistentHeaderDelegate {
               itemBuilder: (context, index) {
                 final filter = filters[index];
                 return _GuestFilterChip(
-                  key: ValueKey('guest-filter-${filter.code}'),
+                  key: ValueKey(
+                    'guest-filter-${normalizeMealTimeCode(filter.code)}',
+                  ),
                   filter: filter,
                   selected:
                       normalizeMealTimeCode(filter.code) ==
@@ -1053,7 +1119,7 @@ class _GuestFilterChip extends StatelessWidget {
     super.key,
   });
 
-  final GuestMealTimeFilter filter;
+  final GuestMealTime filter;
   final bool selected;
   final VoidCallback onTap;
 
@@ -1460,6 +1526,9 @@ String normalizeMealTimeCode(String? value) {
   final code = value?.trim().toUpperCase() ?? '';
   return code == 'SNACK_DESSERT' ? 'SNACK' : code;
 }
+
+String _menuCacheKey(String language, String planCode, DateTime date) =>
+    '$language|$planCode|${formatGuestDate(date)}';
 
 IconData _filterIcon(String code) {
   return switch (normalizeMealTimeCode(code)) {
