@@ -590,6 +590,12 @@ abstract class AppLocalizations {
   /// **'Unable to load the menu.'**
   String get guestMenuLoadError;
 
+  /// No description provided for @guestPlanLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load this meal plan.'**
+  String get guestPlanLoadError;
+
   /// No description provided for @retry.
   ///
   /// In en, this message translates to:
@@ -601,6 +607,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No meals available for this selection.'**
   String get noMealsAvailable;
+
+  /// No description provided for @noMealsAvailableForPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'No meals available for this plan.'**
+  String get noMealsAvailableForPlan;
 
   /// No description provided for @tryAnotherMealFilter.
   ///

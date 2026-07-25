@@ -279,10 +279,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get guestMenuLoadError => 'Unable to load the menu.';
 
   @override
+  String get guestPlanLoadError => 'Unable to load this meal plan.';
+
+  @override
   String get retry => 'Retry';
 
   @override
   String get noMealsAvailable => 'No meals available for this selection.';
+
+  @override
+  String get noMealsAvailableForPlan => 'No meals available for this plan.';
 
   @override
   String get tryAnotherMealFilter => 'Try another date or meal category.';

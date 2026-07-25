@@ -30,8 +30,11 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   String _selectedMealTimeCode = 'ALL';
   bool _isLoading = false;
   bool _isRefreshing = false;
+  bool _isPlanLoading = false;
   bool _hasLoaded = false;
   bool _hasError = false;
+  bool _hasPlanError = false;
+  bool _hasPlanSpecificData = false;
   int _requestId = 0;
 
   @override
@@ -66,6 +69,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     final hadData = _originalData != null;
     setState(() {
       _hasError = false;
+      _hasPlanError = false;
       if (!hadData) {
         _isLoading = true;
       } else {
@@ -109,7 +113,9 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
         _visibleMeals = visibleMeals;
         _isLoading = false;
         _isRefreshing = false;
+        _isPlanLoading = false;
         _hasLoaded = true;
+        _hasPlanSpecificData = false;
       });
       _precacheMenuImages(data, planCode, visibleMeals);
     } on Object {
@@ -117,6 +123,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       setState(() {
         _isLoading = false;
         _isRefreshing = false;
+        _isPlanLoading = false;
         _hasError = true;
       });
     }
@@ -151,14 +158,25 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
         ?.date;
   }
 
-  String _resolveMealTime(GuestHomeData data, String? preferredCode) {
+  String _resolveMealTime(
+    GuestHomeData data,
+    String? preferredCode, {
+    bool fallbackToAll = false,
+  }) {
     if (preferredCode != null &&
         data.mealTimeFilters.any(
           (filter) =>
-              _normalizeMealTimeCode(filter.code) ==
-              _normalizeMealTimeCode(preferredCode),
+              normalizeMealTimeCode(filter.code) ==
+              normalizeMealTimeCode(preferredCode),
         )) {
       return preferredCode;
+    }
+    if (fallbackToAll) {
+      return data.mealTimeFilters
+              .where((filter) => normalizeMealTimeCode(filter.code) == 'ALL')
+              .firstOrNull
+              ?.code ??
+          'ALL';
     }
     return _firstSelected(
           data.mealTimeFilters,
@@ -168,20 +186,77 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
         'ALL';
   }
 
-  void _selectPlan(GuestMealPlan plan) {
-    final data = _originalData;
-    if (data == null || plan.code == _selectedPlanCode) return;
-    final date = _resolveDate(data, plan.code, _selectedDate);
+  Future<void> _selectPlan(GuestMealPlan plan) async {
+    final planCode = plan.code;
+    if (_originalData == null ||
+        planCode.trim().isEmpty ||
+        planCode == _selectedPlanCode) {
+      return;
+    }
+    await _loadPlan(planCode);
+  }
+
+  Future<void> _loadPlan(String planCode) async {
+    if (planCode.isEmpty || (_isPlanLoading && planCode == _selectedPlanCode)) {
+      return;
+    }
+    final requestId = ++_requestId;
+    final requestedDate = _selectedDate;
+    final requestedMealTimeCode = _selectedMealTimeCode;
     setState(() {
-      _selectedPlanCode = plan.code;
-      _selectedDate = date;
-      _visibleMeals = _filterMeals(
-        data,
-        planCode: plan.code,
-        date: date,
-        mealTimeCode: _selectedMealTimeCode,
-      );
+      _selectedPlanCode = planCode;
+      _isPlanLoading = true;
+      _hasPlanError = false;
     });
+    try {
+      final response = await ref
+          .read(guestMenuRepositoryProvider)
+          .getGuestHome(
+            language: _language ?? 'en',
+            date: requestedDate,
+            planCode: planCode,
+            mealTimeCode: requestedMealTimeCode,
+            page: 1,
+            pageSize: 20,
+          );
+      if (!mounted || requestId != _requestId) return;
+      final data = response.data;
+      final selectedPlanCode =
+          _firstSelected(data.mealPlans, (plan) => plan.isSelected)?.code ??
+          _resolvePlan(data, planCode);
+      final selectedDate = _resolveDate(data, selectedPlanCode, requestedDate);
+      final mealTimeCode = _resolveMealTime(
+        data,
+        requestedMealTimeCode,
+        fallbackToAll: true,
+      );
+      final visibleMeals = _filterMeals(
+        data,
+        planCode: selectedPlanCode,
+        date: selectedDate,
+        mealTimeCode: mealTimeCode,
+      );
+      setState(() {
+        _originalData = data;
+        _selectedPlanCode = selectedPlanCode;
+        _selectedDate = selectedDate;
+        _selectedMealTimeCode = mealTimeCode;
+        _visibleMeals = visibleMeals;
+        _isPlanLoading = false;
+        _hasPlanError = false;
+        _hasError = false;
+        _hasLoaded = true;
+        _hasPlanSpecificData = true;
+      });
+      _precacheMenuImages(data, selectedPlanCode, visibleMeals);
+    } on Object {
+      if (!mounted || requestId != _requestId) return;
+      setState(() {
+        _isPlanLoading = false;
+        _hasPlanError = true;
+        _visibleMeals = const [];
+      });
+    }
   }
 
   void _selectDate(GuestCalendarDate date) {
@@ -206,8 +281,8 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   void _selectMealTime(GuestMealTimeFilter filter) {
     final data = _originalData;
     if (data == null ||
-        _normalizeMealTimeCode(filter.code) ==
-            _normalizeMealTimeCode(_selectedMealTimeCode)) {
+        normalizeMealTimeCode(filter.code) ==
+            normalizeMealTimeCode(_selectedMealTimeCode)) {
       return;
     }
     setState(() {
@@ -302,15 +377,18 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
           menu.planCode == planCode &&
           (date == null || _sameDate(menu.date, date)),
     );
-    final meals = selectedMenus
-        .expand((menu) => menu.slots)
-        .expand((slot) => slot.meals);
-    final normalizedFilter = _normalizeMealTimeCode(mealTimeCode);
+    final selectedMenuList = selectedMenus.toList(growable: false);
+    final Iterable<GuestMeal> meals = selectedMenuList.isNotEmpty
+        ? selectedMenuList
+              .expand((menu) => menu.slots)
+              .expand((slot) => slot.meals)
+        : data.meals;
+    final normalizedFilter = normalizeMealTimeCode(mealTimeCode);
     final filtered = normalizedFilter == 'ALL'
         ? meals
         : meals.where(
             (meal) =>
-                _normalizeMealTimeCode(meal.mealTime.code) == normalizedFilter,
+                normalizeMealTimeCode(meal.mealTime.code) == normalizedFilter,
           );
     return filtered.toList(growable: false)
       ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
@@ -344,16 +422,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     final filters = [...data.mealTimeFilters]
       ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
     final meals = _visibleMeals;
-    final selectedPlan = plans
-        .where((plan) => plan.code == _selectedPlanCode)
-        .firstOrNull;
-    final hero = selectedPlan == null
-        ? data.hero
-        : GuestHero(
-            title: selectedPlan.name,
-            subtitle: selectedPlan.description,
-            bannerImageUrl: selectedPlan.imageUrl,
-          );
+    final hero = data.hero;
     final width = MediaQuery.sizeOf(context).width;
     const columns = 2;
     final compactMealCards = width < 680;
@@ -416,7 +485,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                                 plan: plan,
                                 width: cardWidth,
                                 selected: plan.code == _selectedPlanCode,
-                                onTap: () => _selectPlan(plan),
+                                onTap: () => unawaited(_selectPlan(plan)),
                               );
                             },
                           );
@@ -455,11 +524,35 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                   },
                 ),
               ),
-              if (meals.isEmpty)
+              if (_isPlanLoading)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: SizedBox.square(
+                      dimension: 28,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        color: AppColors.emeraldGreen,
+                      ),
+                    ),
+                  ),
+                )
+              else if (_hasPlanError)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _GuestMenuError(
+                    message: l10n.guestPlanLoadError,
+                    retryLabel: l10n.retry,
+                    onRetry: () => _loadPlan(_selectedPlanCode ?? ''),
+                  ),
+                )
+              else if (meals.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: _GuestMenuEmpty(
-                    title: l10n.noMealsAvailable,
+                    title: _hasPlanSpecificData
+                        ? l10n.noMealsAvailableForPlan
+                        : l10n.noMealsAvailable,
                     subtitle: l10n.tryAnotherMealFilter,
                   ),
                 )
@@ -783,8 +876,8 @@ class _GuestMenuFiltersHeader extends SliverPersistentHeaderDelegate {
                   key: ValueKey('guest-filter-${filter.code}'),
                   filter: filter,
                   selected:
-                      _normalizeMealTimeCode(filter.code) ==
-                      _normalizeMealTimeCode(selectedMealTimeCode),
+                      normalizeMealTimeCode(filter.code) ==
+                      normalizeMealTimeCode(selectedMealTimeCode),
                   onTap: () => onFilterSelected(filter, index),
                 );
               },
@@ -975,7 +1068,7 @@ class _GuestFilterChip extends StatelessWidget {
         size: 16,
         color: selected ? AppColors.white : AppColors.emeraldGreen,
       ),
-      label: Text(filter.name),
+      label: Text(filter.name, maxLines: 1, softWrap: false),
       labelStyle: TextStyle(
         color: selected ? AppColors.white : AppColors.darkGreen,
         fontWeight: FontWeight.w700,
@@ -1030,31 +1123,42 @@ class _GuestMealCard extends StatelessWidget {
               Stack(
                 children: [
                   _NetworkMealImage(url: imageUrl, height: compact ? 130 : 165),
-                  PositionedDirectional(
-                    start: 12,
-                    top: 12,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: compact ? 7 : 10,
-                        vertical: compact ? 5 : 6,
-                      ),
-                      constraints: BoxConstraints(maxWidth: compact ? 92 : 160),
-                      decoration: BoxDecoration(
-                        color: AppColors.white.withValues(alpha: .92),
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: Text(
-                        meal.mealTime.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.emeraldGreen,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
+                  if (meal.mealTime.name.trim().isNotEmpty)
+                    PositionedDirectional(
+                      start: 12,
+                      end: 12,
+                      top: 12,
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Container(
+                          key: ValueKey('guest-meal-time-${meal.id}'),
+                          constraints: const BoxConstraints(
+                            minHeight: 28,
+                            maxWidth: 150,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.white.withValues(alpha: .94),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Text(
+                            meal.mealTime.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.start,
+                            style: const TextStyle(
+                              color: AppColors.emeraldGreen,
+                              fontSize: 11,
+                              height: 1.15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
                   PositionedDirectional(
                     end: 12,
                     bottom: 12,
@@ -1352,13 +1456,13 @@ bool _sameDate(DateTime? a, DateTime? b) =>
     a.month == b.month &&
     a.day == b.day;
 
-String _normalizeMealTimeCode(String? value) {
+String normalizeMealTimeCode(String? value) {
   final code = value?.trim().toUpperCase() ?? '';
   return code == 'SNACK_DESSERT' ? 'SNACK' : code;
 }
 
 IconData _filterIcon(String code) {
-  return switch (_normalizeMealTimeCode(code)) {
+  return switch (normalizeMealTimeCode(code)) {
     'BREAKFAST' => Icons.wb_sunny_outlined,
     'LUNCH' => Icons.lunch_dining_outlined,
     'DINNER' => Icons.nightlight_outlined,

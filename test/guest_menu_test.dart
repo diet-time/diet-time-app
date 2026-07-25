@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/features/menu/data/guest_menu_repository.dart';
 import 'package:diet_time/features/menu/data/meal_detail_repository.dart';
@@ -398,7 +400,7 @@ void main() {
     expect(find.byKey(const ValueKey('guest-meal-meal-1')), findsOneWidget);
   });
 
-  testWidgets('plan, date, and meal-time selections filter without API calls', (
+  testWidgets('plan selection requests its code and preserves request state', (
     tester,
   ) async {
     await _useTallSurface(tester);
@@ -411,7 +413,14 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('guest-plan-PLN_KETO')));
     await _load(tester);
-    expect(repository.calls, hasLength(1));
+    expect(repository.calls, hasLength(2));
+    expect(repository.calls.last.planCode, 'PLN_KETO');
+    expect(repository.calls.last.language, 'en');
+    expect(repository.calls.last.date, DateTime(2026, 7, 25));
+    expect(repository.calls.last.mealTimeCode, 'ALL');
+    expect(repository.calls.last.page, 1);
+    expect(repository.calls.last.pageSize, 20);
+    expect(repository.calls.last.includeAll, isFalse);
     expect(find.text('Keto Omelette'), findsOneWidget);
     expect(find.text('Oatmeal Banana'), findsNothing);
 
@@ -422,7 +431,7 @@ void main() {
       find.byKey(const ValueKey('guest-date-2026-07-26T00:00:00.000')),
     );
     await _load(tester);
-    expect(repository.calls, hasLength(1));
+    expect(repository.calls, hasLength(2));
     expect(find.text('Keto Chicken'), findsOneWidget);
     expect(find.text('Keto Omelette'), findsNothing);
 
@@ -431,8 +440,148 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('guest-filter-LUNCH')));
     await _load(tester);
-    expect(repository.calls, hasLength(1));
+    expect(repository.calls, hasLength(2));
     expect(find.text('Keto Chicken'), findsOneWidget);
+  });
+
+  testWidgets(
+    'selected plan and repeated in-flight taps do not request twice',
+    (tester) async {
+      await _useTallSurface(tester);
+      final repository = _DeferredGuestMenuRepository(_response());
+      await tester.pumpWidget(_app(repository: repository));
+      await _load(tester);
+
+      await tester.tap(find.byKey(const ValueKey('guest-plan-PLN_CLASSIC')));
+      expect(repository.calls, hasLength(1));
+
+      await tester.tap(find.byKey(const ValueKey('guest-plan-PLN_KETO')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('guest-plan-PLN_KETO')));
+      await tester.pump();
+      expect(repository.calls, hasLength(2));
+
+      repository.completePlanRequest(
+        0,
+        _planResponse(
+          planCode: 'PLN_KETO',
+          heroTitle: 'Keto response',
+          mealName: 'Keto API Meal',
+        ),
+      );
+      await _load(tester);
+      expect(find.text('Keto API Meal'), findsOneWidget);
+    },
+  );
+
+  testWidgets('latest selected plan response wins', (tester) async {
+    await _useTallSurface(tester);
+    final repository = _DeferredGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    await tester.tap(find.byKey(const ValueKey('guest-plan-PLN_KETO')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('guest-plan-PLN_CLASSIC')));
+    await tester.pump();
+    expect(repository.calls, hasLength(3));
+
+    repository.completePlanRequest(
+      1,
+      _planResponse(
+        planCode: 'PLN_CLASSIC',
+        heroTitle: 'Latest Classic Hero',
+        mealName: 'Latest Classic Meal',
+      ),
+    );
+    await _load(tester);
+    repository.completePlanRequest(
+      0,
+      _planResponse(
+        planCode: 'PLN_KETO',
+        heroTitle: 'Stale Keto Hero',
+        mealName: 'Stale Keto Meal',
+      ),
+    );
+    await _load(tester);
+
+    expect(find.text('Latest Classic Hero'), findsOneWidget);
+    expect(find.text('Latest Classic Meal'), findsOneWidget);
+    expect(find.text('Stale Keto Meal'), findsNothing);
+  });
+
+  testWidgets('failed plan request shows compact retry for the same code', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _DeferredGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    await tester.tap(find.byKey(const ValueKey('guest-plan-PLN_KETO')));
+    await tester.pump();
+    repository.failPlanRequest(0);
+    await _load(tester);
+
+    expect(find.text('Unable to load this meal plan.'), findsOneWidget);
+    await tester.tap(find.text('Retry'));
+    await tester.pump();
+    expect(repository.calls, hasLength(3));
+    expect(repository.calls.last.planCode, 'PLN_KETO');
+  });
+
+  testWidgets('Snack / Dessert is not truncated on cards or filter chips', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('guest-filter-SNACK')),
+    );
+    final chipLabel = tester.widget<Text>(find.text('Snack / Dessert').first);
+    expect(chipLabel.maxLines, 1);
+    expect(chipLabel.softWrap, isFalse);
+
+    await tester.binding.setSurfaceSize(const Size(390, 1400));
+    await tester.pump();
+    final badge = find.byKey(const ValueKey('guest-meal-time-meal-2'));
+    await tester.ensureVisible(badge);
+    expect(badge, findsOneWidget);
+    expect(tester.getSize(badge).width, greaterThan(92));
+    expect(tester.takeException(), isNull);
+  });
+
+  test('SNACK_DESSERT and SNACK normalize to the same code', () {
+    expect(normalizeMealTimeCode(' snack_dessert '), 'SNACK');
+    expect(normalizeMealTimeCode('snack'), 'SNACK');
+  });
+
+  testWidgets('Arabic meal-time labels fit without clipping', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final json = _fixtureJson();
+    final data = json['data']! as Map<String, dynamic>;
+    final menus = data['menus']! as List<dynamic>;
+    final firstMenu = menus.first as Map<String, dynamic>;
+    final slots = firstMenu['slots']! as List<dynamic>;
+    final snackSlot = slots[1] as Map<String, dynamic>;
+    (snackSlot['mealTime']! as Map<String, dynamic>)['name'] =
+        'وجبة خفيفة / حلوى';
+    final repository = _FakeGuestMenuRepository(
+      GuestHomeResponse.fromJson(json),
+    );
+    await tester.pumpWidget(
+      _app(repository: repository, locale: const Locale('ar')),
+    );
+    await _load(tester);
+
+    final badge = find.byKey(const ValueKey('guest-meal-time-meal-2'));
+    expect(badge, findsOneWidget);
+    expect(tester.getSize(badge).width, lessThanOrEqualTo(150));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('snack filter includes SNACK_DESSERT meals locally', (
@@ -738,7 +887,7 @@ class _FakeGuestMenuRepository implements GuestMenuRepository {
     String mealTimeCode = 'ALL',
     int page = 1,
     int pageSize = 20,
-    bool includeAll = true,
+    bool includeAll = false,
   }) async {
     calls.add(
       _Request(
@@ -746,6 +895,8 @@ class _FakeGuestMenuRepository implements GuestMenuRepository {
         date: date,
         planCode: planCode,
         mealTimeCode: mealTimeCode,
+        page: page,
+        pageSize: pageSize,
         includeAll: includeAll,
       ),
     );
@@ -763,6 +914,8 @@ class _Request {
     required this.date,
     required this.planCode,
     required this.mealTimeCode,
+    required this.page,
+    required this.pageSize,
     required this.includeAll,
   });
 
@@ -770,10 +923,96 @@ class _Request {
   final DateTime? date;
   final String? planCode;
   final String mealTimeCode;
+  final int page;
+  final int pageSize;
   final bool includeAll;
 }
 
+class _DeferredGuestMenuRepository implements GuestMenuRepository {
+  _DeferredGuestMenuRepository(this.initialResponse);
+
+  final GuestHomeResponse initialResponse;
+  final calls = <_Request>[];
+  final _planRequests = <Completer<GuestHomeResponse>>[];
+
+  void completePlanRequest(int index, GuestHomeResponse response) {
+    _planRequests[index].complete(response);
+  }
+
+  void failPlanRequest(int index) {
+    _planRequests[index].completeError(const GuestMenuException());
+  }
+
+  @override
+  Future<GuestHomeResponse> getGuestHome({
+    required String language,
+    DateTime? date,
+    String? planCode,
+    String mealTimeCode = 'ALL',
+    int page = 1,
+    int pageSize = 20,
+    bool includeAll = false,
+  }) {
+    calls.add(
+      _Request(
+        language: language,
+        date: date,
+        planCode: planCode,
+        mealTimeCode: mealTimeCode,
+        page: page,
+        pageSize: pageSize,
+        includeAll: includeAll,
+      ),
+    );
+    if (planCode == null) return Future.value(initialResponse);
+    final completer = Completer<GuestHomeResponse>();
+    _planRequests.add(completer);
+    return completer.future;
+  }
+}
+
 GuestHomeResponse _response() => GuestHomeResponse.fromJson(_fixtureJson());
+
+GuestHomeResponse _planResponse({
+  required String planCode,
+  required String heroTitle,
+  required String mealName,
+}) {
+  final json = _fixtureJson();
+  final data = json['data']! as Map<String, dynamic>;
+  data['hero'] = {
+    'title': heroTitle,
+    'subtitle': '$heroTitle subtitle',
+    'bannerImageUrl': '',
+  };
+  final plans = data['mealPlans']! as List<dynamic>;
+  for (final item in plans) {
+    final plan = item as Map<String, dynamic>;
+    plan['isSelected'] = plan['code'] == planCode;
+  }
+  final menus = data['menus']! as List<dynamic>;
+  final menu =
+      menus.cast<Map<String, dynamic>>().firstWhere(
+          (item) =>
+              item['planCode'] == planCode && item['date'] == '2026-07-25',
+        )
+        ..['slots'] =
+            ((menus.cast<Map<String, dynamic>>().firstWhere(
+                      (item) =>
+                          item['planCode'] == planCode &&
+                          item['date'] == '2026-07-25',
+                    )['slots'])
+                    as List<dynamic>)
+                .take(1)
+                .toList();
+  final slot = (menu['slots']! as List<dynamic>).first as Map<String, dynamic>;
+  final meal = (slot['meals']! as List<dynamic>).first as Map<String, dynamic>;
+  meal['id'] = 'api-$planCode';
+  meal['name'] = mealName;
+  data['menus'] = [menu];
+  data['meals'] = <dynamic>[];
+  return GuestHomeResponse.fromJson(json);
+}
 
 Map<String, dynamic> _fixtureJson() {
   return {
@@ -842,7 +1081,7 @@ Map<String, dynamic> _fixtureJson() {
         {
           'id': 'filter-3',
           'code': 'SNACK',
-          'name': 'Snacks',
+          'name': 'Snack / Dessert',
           'displayOrder': 3,
           'isSelected': false,
         },

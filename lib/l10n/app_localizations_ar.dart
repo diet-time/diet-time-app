@@ -277,10 +277,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get guestMenuLoadError => 'تعذر تحميل قائمة الوجبات.';
 
   @override
+  String get guestPlanLoadError => 'تعذر تحميل خطة الوجبات هذه.';
+
+  @override
   String get retry => 'إعادة المحاولة';
 
   @override
   String get noMealsAvailable => 'لا توجد وجبات متاحة لهذا الاختيار.';
+
+  @override
+  String get noMealsAvailableForPlan => 'لا توجد وجبات متاحة لهذه الخطة.';
 
   @override
   String get tryAnotherMealFilter => 'جرّب تاريخاً أو فئة وجبات مختلفة.';
