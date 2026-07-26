@@ -6,6 +6,6 @@ abstract final class AppEnvironment {
 
   static const useMockOtp = bool.fromEnvironment(
     'USE_MOCK_OTP',
-    defaultValue: false,
+    defaultValue: true,
   );
 }

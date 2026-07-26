@@ -190,10 +190,7 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
                                 autofillHints: const [
                                   AutofillHints.telephoneNumberNational,
                                 ],
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                  LengthLimitingTextInputFormatter(8),
-                                ],
+                                inputFormatters: [_QatarPhoneInputFormatter()],
                                 onChanged: _onChanged,
                                 onSubmitted: (_) => _continue(),
                                 decoration: InputDecoration(
@@ -244,5 +241,25 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
       OtpUiError.resendUnavailable => l10n.otpResendUnavailable,
       _ => l10n.otpRequestFailed,
     };
+  }
+}
+
+class _QatarPhoneInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('974') && digits.length > 8) {
+      digits = digits.substring(3);
+    }
+    if (digits.length > 8) {
+      digits = digits.substring(0, 8);
+    }
+    return TextEditingValue(
+      text: digits,
+      selection: TextSelection.collapsed(offset: digits.length),
+    );
   }
 }

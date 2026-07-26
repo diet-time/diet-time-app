@@ -54,6 +54,11 @@ void main() {
     }
   });
 
+  test('mock OTP is the default while the backend is unavailable', () {
+    expect(AppEnvironment.useMockOtp, isTrue);
+    expect(createOtpService(), isA<MockOtpService>());
+  });
+
   test('mock OTP request succeeds without a network dependency', () async {
     const service = MockOtpService(
       requestDelay: Duration.zero,
@@ -115,6 +120,26 @@ void main() {
       isFalse,
     );
     expect(otp.requestCount, 0);
+  });
+
+  testWidgets('pasted E.164 Qatar number does not duplicate the prefix', (
+    tester,
+  ) async {
+    final otp = _FakeOtpService();
+    await tester.pumpWidget(_app(otp: otp));
+    final input = find.byKey(const ValueKey('phoneNumberInput'));
+
+    await tester.enterText(input, '+974 7445 2435');
+    await tester.pump();
+
+    expect(tester.widget<TextField>(input).controller?.text, '74452435');
+    expect(
+      _isButtonEnabled(
+        tester,
+        find.byKey(const ValueKey('phoneContinueButton')),
+      ),
+      isTrue,
+    );
   });
 
   testWidgets('six digit mock code verifies and keeps pending destination', (
