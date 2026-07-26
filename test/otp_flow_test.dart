@@ -1,4 +1,5 @@
 import 'package:diet_time/app/theme/app_theme.dart';
+import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
 import 'package:diet_time/features/authentication/data/mock_otp_service.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
@@ -37,6 +38,36 @@ void main() {
       )).success,
       isFalse,
     );
+  });
+
+  test('service factory selects mock and API implementations', () {
+    expect(createOtpService(useMockOtp: true), isA<MockOtpService>());
+    expect(createOtpService(useMockOtp: false), isA<ApiOtpService>());
+  });
+
+  test('service factory follows the compiled USE_MOCK_OTP flag', () {
+    final service = createOtpService();
+    if (AppEnvironment.useMockOtp) {
+      expect(service, isA<MockOtpService>());
+    } else {
+      expect(service, isA<ApiOtpService>());
+    }
+  });
+
+  test('mock OTP request succeeds without a network dependency', () async {
+    const service = MockOtpService(
+      requestDelay: Duration.zero,
+      verificationDelay: Duration.zero,
+    );
+
+    final result = await service.requestOtp(
+      phoneNumber: '+97474452435',
+      channel: OtpChannel.sms,
+    );
+
+    expect(result.success, isTrue);
+    expect(result.expiresInSeconds, 120);
+    expect(result.requestId, startsWith('mock-'));
   });
 
   testWidgets('valid Qatar phone is normalized and requests OTP once', (

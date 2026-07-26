@@ -1,11 +1,20 @@
 import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final otpServiceProvider = Provider<OtpService>((ref) {
-  if (AppEnvironment.useMockOtp) return const MockOtpService();
-  return const UnavailableOtpService();
+  final service = createOtpService();
+  debugPrint('Using ${service.runtimeType}');
+  return service;
 });
+
+OtpService createOtpService({bool? useMockOtp}) {
+  if (useMockOtp ?? AppEnvironment.useMockOtp) {
+    return const MockOtpService();
+  }
+  return const ApiOtpService();
+}
 
 class MockOtpService implements OtpService {
   const MockOtpService({
@@ -41,8 +50,12 @@ class MockOtpService implements OtpService {
   }
 }
 
-class UnavailableOtpService implements OtpService {
-  const UnavailableOtpService();
+/// Placeholder for the backend implementation.
+///
+/// This performs no network requests until the Diet Time OTP endpoints are
+/// available. Replacing its method bodies later does not require UI changes.
+class ApiOtpService implements OtpService {
+  const ApiOtpService();
 
   @override
   Future<OtpRequestResult> requestOtp({
