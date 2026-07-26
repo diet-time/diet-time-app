@@ -572,6 +572,126 @@ abstract class AppLocalizations {
   /// **'Continue'**
   String get continueLabel;
 
+  /// No description provided for @otpPhoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s Get Started'**
+  String get otpPhoneTitle;
+
+  /// No description provided for @otpPhoneSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your mobile number to continue.'**
+  String get otpPhoneSubtitle;
+
+  /// No description provided for @otpPhoneHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'We will send you a 6-digit verification code.'**
+  String get otpPhoneHelper;
+
+  /// No description provided for @otpMobileNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile number'**
+  String get otpMobileNumber;
+
+  /// No description provided for @otpInvalidPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid mobile number.'**
+  String get otpInvalidPhone;
+
+  /// No description provided for @otpRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to send the verification code. Please try again.'**
+  String get otpRequestFailed;
+
+  /// No description provided for @otpCodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the Code'**
+  String get otpCodeTitle;
+
+  /// No description provided for @otpCodeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A 6-digit verification code was sent to:'**
+  String get otpCodeSubtitle;
+
+  /// No description provided for @otpVerifyCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify Code'**
+  String get otpVerifyCode;
+
+  /// No description provided for @otpResendCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend code'**
+  String get otpResendCode;
+
+  /// No description provided for @otpResendCountdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend code in {time}'**
+  String otpResendCountdown(String time);
+
+  /// No description provided for @otpSendViaSms.
+  ///
+  /// In en, this message translates to:
+  /// **'Send via SMS'**
+  String get otpSendViaSms;
+
+  /// No description provided for @otpSendViaWhatsapp.
+  ///
+  /// In en, this message translates to:
+  /// **'Send via WhatsApp'**
+  String get otpSendViaWhatsapp;
+
+  /// No description provided for @otpDevelopmentCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Development code: {code}'**
+  String otpDevelopmentCode(String code);
+
+  /// No description provided for @otpIncorrectCode.
+  ///
+  /// In en, this message translates to:
+  /// **'The verification code is incorrect. Please try again.'**
+  String get otpIncorrectCode;
+
+  /// No description provided for @otpExpiredCode.
+  ///
+  /// In en, this message translates to:
+  /// **'This verification code has expired. Request a new code.'**
+  String get otpExpiredCode;
+
+  /// No description provided for @otpTooManyAttempts.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Please try again later.'**
+  String get otpTooManyAttempts;
+
+  /// No description provided for @otpResendUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend is temporarily unavailable. Please try again.'**
+  String get otpResendUnavailable;
+
+  /// No description provided for @otpResendConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'A new verification code has been sent.'**
+  String get otpResendConfirmation;
+
+  /// No description provided for @otpWhatsappTestGenerated.
+  ///
+  /// In en, this message translates to:
+  /// **'Test code generated for WhatsApp verification.'**
+  String get otpWhatsappTestGenerated;
+
   /// No description provided for @guestMealPlansTitle.
   ///
   /// In en, this message translates to:

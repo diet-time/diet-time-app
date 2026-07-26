@@ -2,6 +2,7 @@ import 'package:diet_time/app/app.dart';
 import 'package:diet_time/features/language/presentation/language_selection_screen.dart';
 import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:diet_time/features/authentication/presentation/phone_login_page.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -103,7 +104,7 @@ void main() {
     expect(find.byType(MealPlanScreen), findsNothing);
   });
 
-  testWidgets('start plan choice opens plans and can continue to login', (
+  testWidgets('start plan choice opens phone login for a guest', (
     tester,
   ) async {
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
@@ -116,12 +117,8 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('onboardingPlanChoice')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.byType(MealPlanScreen), findsOneWidget);
-    await tester.tap(find.text('Continue'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(find.text('Welcome Back'), findsOneWidget);
+    expect(find.byType(PhoneLoginPage), findsOneWidget);
+    expect(find.text('Let\'s Get Started'), findsOneWidget);
   });
 
   testWidgets('saved language skips language selection on later launches', (
@@ -221,14 +218,16 @@ Future<void> _reachFinalChoice(WidgetTester tester) async {
 }
 
 Widget _onboardingApp() {
-  return const MaterialApp(
-    localizationsDelegates: [
-      AppLocalizations.delegate,
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: OnboardingScreen(),
+  return const ProviderScope(
+    child: MaterialApp(
+      localizationsDelegates: [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: OnboardingScreen(),
+    ),
   );
 }

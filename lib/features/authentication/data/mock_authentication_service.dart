@@ -9,6 +9,8 @@ abstract interface class AuthenticationService {
   Future<bool> isLoggedIn();
 
   Future<void> signIn({required String identity, required String password});
+
+  Future<void> markAuthenticated();
 }
 
 class MockAuthenticationService implements AuthenticationService {
@@ -25,6 +27,10 @@ class MockAuthenticationService implements AuthenticationService {
     required String password,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 900));
-    await _storage.delete('auth_token');
+    await markAuthenticated();
   }
+
+  @override
+  Future<void> markAuthenticated() =>
+      _storage.write('auth_token', 'mock-session');
 }

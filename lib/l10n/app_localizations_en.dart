@@ -270,6 +270,75 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueLabel => 'Continue';
 
   @override
+  String get otpPhoneTitle => 'Let\'s Get Started';
+
+  @override
+  String get otpPhoneSubtitle => 'Enter your mobile number to continue.';
+
+  @override
+  String get otpPhoneHelper => 'We will send you a 6-digit verification code.';
+
+  @override
+  String get otpMobileNumber => 'Mobile number';
+
+  @override
+  String get otpInvalidPhone => 'Enter a valid mobile number.';
+
+  @override
+  String get otpRequestFailed =>
+      'Unable to send the verification code. Please try again.';
+
+  @override
+  String get otpCodeTitle => 'Enter the Code';
+
+  @override
+  String get otpCodeSubtitle => 'A 6-digit verification code was sent to:';
+
+  @override
+  String get otpVerifyCode => 'Verify Code';
+
+  @override
+  String get otpResendCode => 'Resend code';
+
+  @override
+  String otpResendCountdown(String time) {
+    return 'Resend code in $time';
+  }
+
+  @override
+  String get otpSendViaSms => 'Send via SMS';
+
+  @override
+  String get otpSendViaWhatsapp => 'Send via WhatsApp';
+
+  @override
+  String otpDevelopmentCode(String code) {
+    return 'Development code: $code';
+  }
+
+  @override
+  String get otpIncorrectCode =>
+      'The verification code is incorrect. Please try again.';
+
+  @override
+  String get otpExpiredCode =>
+      'This verification code has expired. Request a new code.';
+
+  @override
+  String get otpTooManyAttempts => 'Too many attempts. Please try again later.';
+
+  @override
+  String get otpResendUnavailable =>
+      'Resend is temporarily unavailable. Please try again.';
+
+  @override
+  String get otpResendConfirmation => 'A new verification code has been sent.';
+
+  @override
+  String get otpWhatsappTestGenerated =>
+      'Test code generated for WhatsApp verification.';
+
+  @override
   String get guestMealPlansTitle => 'Choose your lifestyle plan';
 
   @override

@@ -4,18 +4,21 @@ import 'dart:ui';
 
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
+import 'package:diet_time/features/authentication/domain/otp_service.dart';
+import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen>
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   static const _pageDuration = Duration(milliseconds: 2800);
   static const _pageTransitionDuration = Duration(milliseconds: 350);
@@ -128,6 +131,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final pages = _pages(AppLocalizations.of(context));
+    final isAuthenticated = ref
+        .watch(otpAuthControllerProvider)
+        .isAuthenticated;
     return PopScope(
       canPop: _index != pages.length - 1,
       child: Scaffold(
@@ -190,7 +196,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             if (_index == pages.length - 1 && _showFinalChoice)
               _FinalChoiceSheet(
                 onMenu: () => context.go(AppRoutes.menu),
-                onStartPlan: () => context.go(AppRoutes.plans),
+                onStartPlan: () {
+                  if (isAuthenticated) {
+                    context.go(AppRoutes.plans);
+                    return;
+                  }
+                  context.push(
+                    AppRoutes.phoneLogin,
+                    extra: const PendingAuthDestination(route: AppRoutes.plans),
+                  );
+                },
               ),
           ],
         ),

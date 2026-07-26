@@ -268,6 +268,73 @@ class AppLocalizationsAr extends AppLocalizations {
   String get continueLabel => 'متابعة';
 
   @override
+  String get otpPhoneTitle => 'لنبدأ';
+
+  @override
+  String get otpPhoneSubtitle => 'أدخل رقم هاتفك للمتابعة.';
+
+  @override
+  String get otpPhoneHelper => 'سنرسل إليك رمز تحقق مكوّناً من 6 أرقام.';
+
+  @override
+  String get otpMobileNumber => 'رقم الجوال';
+
+  @override
+  String get otpInvalidPhone => 'أدخل رقم جوال صالحاً.';
+
+  @override
+  String get otpRequestFailed =>
+      'تعذّر إرسال رمز التحقق. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get otpCodeTitle => 'أدخل الرمز';
+
+  @override
+  String get otpCodeSubtitle => 'تم إرسال رمز تحقق مكوّن من 6 أرقام إلى:';
+
+  @override
+  String get otpVerifyCode => 'تحقق من الرمز';
+
+  @override
+  String get otpResendCode => 'إعادة إرسال الرمز';
+
+  @override
+  String otpResendCountdown(String time) {
+    return 'إعادة إرسال الرمز خلال $time';
+  }
+
+  @override
+  String get otpSendViaSms => 'الإرسال عبر رسالة نصية';
+
+  @override
+  String get otpSendViaWhatsapp => 'الإرسال عبر واتساب';
+
+  @override
+  String otpDevelopmentCode(String code) {
+    return 'رمز التطوير: $code';
+  }
+
+  @override
+  String get otpIncorrectCode => 'رمز التحقق غير صحيح. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get otpExpiredCode => 'انتهت صلاحية رمز التحقق. اطلب رمزاً جديداً.';
+
+  @override
+  String get otpTooManyAttempts => 'عدد محاولات كبير. يرجى المحاولة لاحقاً.';
+
+  @override
+  String get otpResendUnavailable =>
+      'إعادة الإرسال غير متاحة مؤقتاً. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get otpResendConfirmation => 'تم إرسال رمز تحقق جديد.';
+
+  @override
+  String get otpWhatsappTestGenerated =>
+      'تم إنشاء رمز تجريبي للتحقق عبر واتساب.';
+
+  @override
   String get guestMealPlansTitle => 'اختر خطة نمط حياتك';
 
   @override

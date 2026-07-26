@@ -100,6 +100,36 @@
     }
   },
   "continueLabel": "Continue",
+  "otpPhoneTitle": "Let's Get Started",
+  "otpPhoneSubtitle": "Enter your mobile number to continue.",
+  "otpPhoneHelper": "We will send you a 6-digit verification code.",
+  "otpMobileNumber": "Mobile number",
+  "otpInvalidPhone": "Enter a valid mobile number.",
+  "otpRequestFailed": "Unable to send the verification code. Please try again.",
+  "otpCodeTitle": "Enter the Code",
+  "otpCodeSubtitle": "A 6-digit verification code was sent to:",
+  "otpVerifyCode": "Verify Code",
+  "otpResendCode": "Resend code",
+  "otpResendCountdown": "Resend code in {time}",
+  "@otpResendCountdown": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "otpSendViaSms": "Send via SMS",
+  "otpSendViaWhatsapp": "Send via WhatsApp",
+  "otpDevelopmentCode": "Development code: {code}",
+  "@otpDevelopmentCode": {
+    "placeholders": {
+      "code": {"type": "String"}
+    }
+  },
+  "otpIncorrectCode": "The verification code is incorrect. Please try again.",
+  "otpExpiredCode": "This verification code has expired. Request a new code.",
+  "otpTooManyAttempts": "Too many attempts. Please try again later.",
+  "otpResendUnavailable": "Resend is temporarily unavailable. Please try again.",
+  "otpResendConfirmation": "A new verification code has been sent.",
+  "otpWhatsappTestGenerated": "Test code generated for WhatsApp verification.",
   "guestMealPlansTitle": "Choose your lifestyle plan",
   "guestWeeklyMenuTitle": "This week's menu",
   "guestMenuLoadError": "Unable to load the menu.",

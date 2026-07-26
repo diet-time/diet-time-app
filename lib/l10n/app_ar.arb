@@ -100,6 +100,36 @@
     }
   },
   "continueLabel": "متابعة",
+  "otpPhoneTitle": "لنبدأ",
+  "otpPhoneSubtitle": "أدخل رقم هاتفك للمتابعة.",
+  "otpPhoneHelper": "سنرسل إليك رمز تحقق مكوّناً من 6 أرقام.",
+  "otpMobileNumber": "رقم الجوال",
+  "otpInvalidPhone": "أدخل رقم جوال صالحاً.",
+  "otpRequestFailed": "تعذّر إرسال رمز التحقق. يرجى المحاولة مرة أخرى.",
+  "otpCodeTitle": "أدخل الرمز",
+  "otpCodeSubtitle": "تم إرسال رمز تحقق مكوّن من 6 أرقام إلى:",
+  "otpVerifyCode": "تحقق من الرمز",
+  "otpResendCode": "إعادة إرسال الرمز",
+  "otpResendCountdown": "إعادة إرسال الرمز خلال {time}",
+  "@otpResendCountdown": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "otpSendViaSms": "الإرسال عبر رسالة نصية",
+  "otpSendViaWhatsapp": "الإرسال عبر واتساب",
+  "otpDevelopmentCode": "رمز التطوير: {code}",
+  "@otpDevelopmentCode": {
+    "placeholders": {
+      "code": {"type": "String"}
+    }
+  },
+  "otpIncorrectCode": "رمز التحقق غير صحيح. يرجى المحاولة مرة أخرى.",
+  "otpExpiredCode": "انتهت صلاحية رمز التحقق. اطلب رمزاً جديداً.",
+  "otpTooManyAttempts": "عدد محاولات كبير. يرجى المحاولة لاحقاً.",
+  "otpResendUnavailable": "إعادة الإرسال غير متاحة مؤقتاً. يرجى المحاولة مرة أخرى.",
+  "otpResendConfirmation": "تم إرسال رمز تحقق جديد.",
+  "otpWhatsappTestGenerated": "تم إنشاء رمز تجريبي للتحقق عبر واتساب.",
   "guestMealPlansTitle": "اختر خطة نمط حياتك",
   "guestWeeklyMenuTitle": "قائمة هذا الأسبوع",
   "guestMenuLoadError": "تعذر تحميل قائمة الوجبات.",

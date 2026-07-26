@@ -1,25 +1,30 @@
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
+import 'package:diet_time/features/authentication/domain/otp_service.dart';
+import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class MealPlanScreen extends StatefulWidget {
+class MealPlanScreen extends ConsumerStatefulWidget {
   const MealPlanScreen({super.key});
 
   @override
-  State<MealPlanScreen> createState() => _MealPlanScreenState();
+  ConsumerState<MealPlanScreen> createState() => _MealPlanScreenState();
 }
 
-class _MealPlanScreenState extends State<MealPlanScreen> {
+class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
   int _selected = 0;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final authState = ref.watch(otpAuthControllerProvider);
     final plans = [
       _Plan(
+        code: 'WEIGHT_LOSS',
         title: l10n.weightLoss,
         description: l10n.weightLossDescription,
         image: 'assets/images/onboarding_1.png',
@@ -27,6 +32,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
         price: 349,
       ),
       _Plan(
+        code: 'KETO',
         title: l10n.keto,
         description: l10n.ketoDescription,
         image: 'assets/images/onboarding_3.png',
@@ -34,6 +40,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
         price: 399,
       ),
       _Plan(
+        code: 'HIGH_PROTEIN',
         title: l10n.highProtein,
         description: l10n.highProteinDescription,
         image: 'assets/images/onboarding_2.png',
@@ -41,6 +48,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
         price: 429,
       ),
       _Plan(
+        code: 'BALANCED',
         title: l10n.balancedDiet,
         description: l10n.balancedDietDescription,
         image: 'assets/images/onboarding_4.png',
@@ -106,7 +114,22 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                 constraints: const BoxConstraints(maxWidth: 560),
                 child: AppButton(
                   label: l10n.continueLabel,
-                  onPressed: () => context.go(AppRoutes.login),
+                  onPressed: () {
+                    final plan = plans[_selected];
+                    final destination = PendingAuthDestination(
+                      route: AppRoutes.home,
+                      planCode: plan.code,
+                      planName: plan.title,
+                    );
+                    if (authState.isAuthenticated) {
+                      ref
+                          .read(otpAuthControllerProvider.notifier)
+                          .begin(destination);
+                      context.go(AppRoutes.home);
+                      return;
+                    }
+                    context.push(AppRoutes.phoneLogin, extra: destination);
+                  },
                 ),
               ),
             ),
@@ -268,6 +291,7 @@ class _Detail extends StatelessWidget {
 
 class _Plan {
   const _Plan({
+    required this.code,
     required this.title,
     required this.description,
     required this.image,
@@ -275,6 +299,7 @@ class _Plan {
     required this.price,
   });
 
+  final String code;
   final String title;
   final String description;
   final String image;

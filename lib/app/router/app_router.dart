@@ -1,4 +1,7 @@
 import 'package:diet_time/features/authentication/presentation/login_screen.dart';
+import 'package:diet_time/features/authentication/domain/otp_service.dart';
+import 'package:diet_time/features/authentication/presentation/otp_verification_page.dart';
+import 'package:diet_time/features/authentication/presentation/phone_login_page.dart';
 import 'package:diet_time/features/home/presentation/home_screen.dart';
 import 'package:diet_time/features/home/presentation/route_placeholder_screen.dart';
 import 'package:diet_time/features/language/presentation/language_selection_screen.dart';
@@ -17,6 +20,8 @@ abstract final class AppRoutes {
   static const menu = '/menu';
   static const language = '/language';
   static const login = '/login';
+  static const phoneLogin = '/phone-login';
+  static const otp = '/otp-verification';
   static const plans = '/plans';
   static const register = '/register';
   static const home = '/home';
@@ -75,6 +80,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             );
           },
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.phoneLogin,
+        pageBuilder: (context, state) {
+          final destination =
+              state.extra as PendingAuthDestination? ??
+              const PendingAuthDestination(route: AppRoutes.plans);
+          return _slidePage(
+            state: state,
+            child: PhoneLoginPage(pendingDestination: destination),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.otp,
+        pageBuilder: (context, state) =>
+            _slidePage(state: state, child: const OtpVerificationPage()),
       ),
       GoRoute(
         path: AppRoutes.plans,
