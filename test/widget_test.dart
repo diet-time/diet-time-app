@@ -1,4 +1,5 @@
 import 'package:diet_time/app/app.dart';
+import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/language/presentation/language_selection_screen.dart';
 import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
@@ -93,6 +94,21 @@ void main() {
     );
     expect(find.byKey(const ValueKey('onboardingMenuChoice')), findsOneWidget);
     expect(find.byKey(const ValueKey('onboardingPlanChoice')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('onboardingPlanChoice')),
+        matching: find.byType(FilledButton),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('onboardingPlanChoice'))).height,
+      AppButton.height,
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('onboardingMenuChoice'))).height,
+      AppButton.height,
+    );
     final menuCenter = tester.getCenter(
       find.byKey(const ValueKey('onboardingMenuChoice')),
     );

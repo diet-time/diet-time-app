@@ -6,6 +6,7 @@ import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/app/theme/app_spacing.dart';
+import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
@@ -293,17 +294,17 @@ class _FinalChoiceSheetState extends State<_FinalChoiceSheet> {
           AppSpacing.lg,
         ),
         decoration: BoxDecoration(
-          color: AppColors.darkGreen.withValues(alpha: .94),
+          color: AppColors.white.withValues(alpha: .97),
           borderRadius: BorderRadius.circular(AppRadius.xl),
           border: Border.all(
-            color: AppColors.white.withValues(alpha: .42),
+            color: AppColors.white.withValues(alpha: .72),
             width: 1.2,
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.black.withValues(alpha: .24),
-              blurRadius: 28,
-              offset: const Offset(0, 10),
+              color: AppColors.darkGreen.withValues(alpha: .18),
+              blurRadius: 30,
+              offset: const Offset(0, -8),
             ),
           ],
         ),
@@ -314,7 +315,7 @@ class _FinalChoiceSheetState extends State<_FinalChoiceSheet> {
               width: 44,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.white.withValues(alpha: .32),
+                color: AppColors.darkGreen.withValues(alpha: .16),
                 borderRadius: BorderRadius.circular(AppRadius.pill),
               ),
             ),
@@ -333,24 +334,20 @@ class _FinalChoiceSheetState extends State<_FinalChoiceSheet> {
                   children: [
                     SizedBox(
                       width: buttonWidth,
-                      child: _FinalChoiceButton(
+                      child: _FinalChoiceSecondaryButton(
                         key: const ValueKey('onboardingMenuChoice'),
-                        icon: Icons.restaurant_menu_rounded,
                         label: l10n.onboardingMenu,
-                        primary: false,
-                        onTap: _hasNavigated
+                        onPressed: _hasNavigated
                             ? null
                             : () => _navigate(widget.onMenu),
                       ),
                     ),
                     SizedBox(
                       width: buttonWidth,
-                      child: _FinalChoiceButton(
+                      child: AppButton(
                         key: const ValueKey('onboardingPlanChoice'),
-                        icon: Icons.auto_awesome_rounded,
                         label: l10n.onboardingStartPlan,
-                        primary: true,
-                        onTap: _hasNavigated
+                        onPressed: _hasNavigated
                             ? null
                             : () => _navigate(widget.onStartPlan),
                       ),
@@ -366,60 +363,39 @@ class _FinalChoiceSheetState extends State<_FinalChoiceSheet> {
   }
 }
 
-class _FinalChoiceButton extends StatelessWidget {
-  const _FinalChoiceButton({
-    required this.icon,
+class _FinalChoiceSecondaryButton extends StatelessWidget {
+  const _FinalChoiceSecondaryButton({
     required this.label,
-    required this.primary,
-    required this.onTap,
+    required this.onPressed,
     super.key,
   });
 
-  final IconData icon;
   final String label;
-  final bool primary;
-  final VoidCallback? onTap;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final foreground = primary ? AppColors.darkGreen : AppColors.white;
-    final style = FilledButton.styleFrom(
-      minimumSize: const Size(double.infinity, 56),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.sm,
-      ),
-      backgroundColor: primary
-          ? AppColors.limeGlow
-          : AppColors.white.withValues(alpha: .08),
-      disabledBackgroundColor: primary
-          ? AppColors.limeGlow.withValues(alpha: .55)
-          : AppColors.white.withValues(alpha: .05),
-      foregroundColor: foreground,
-      disabledForegroundColor: foreground.withValues(alpha: .55),
-      textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        side: BorderSide(
-          color: primary
-              ? AppColors.limeGlow
-              : AppColors.white.withValues(alpha: .72),
+    return SizedBox(
+      width: double.infinity,
+      height: AppButton.height,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.emeraldGreen,
+          disabledForegroundColor: AppColors.emeraldGreen.withValues(
+            alpha: .45,
+          ),
+          side: BorderSide(
+            color: onPressed == null
+                ? AppColors.emeraldGreen.withValues(alpha: .35)
+                : AppColors.emeraldGreen,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         ),
-      ),
-    );
-    return Semantics(
-      button: true,
-      label: label,
-      child: FilledButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, size: 18),
-        label: Text(
-          label,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-        ),
-        style: style,
+        child: Text(label),
       ),
     );
   }
