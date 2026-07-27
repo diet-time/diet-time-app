@@ -19,7 +19,8 @@ class MockAuthenticationService implements AuthenticationService {
   final SecureStorageService _storage;
 
   @override
-  Future<bool> isLoggedIn() async => false;
+  Future<bool> isLoggedIn() async =>
+      (await _storage.read('auth_token'))?.isNotEmpty == true;
 
   @override
   Future<void> signIn({

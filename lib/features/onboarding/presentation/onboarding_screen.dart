@@ -9,6 +9,9 @@ import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
+import 'package:diet_time/features/onboarding/data/journey_state_repository.dart';
+import 'package:diet_time/features/personalization/domain/personalization_draft.dart';
+import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -23,12 +26,308 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
+  static const _pageDuration = Duration(milliseconds: 2800);
+  final PageController _controller = PageController();
+  Timer? _timer;
+  int _index = 0;
+  bool _showFinalChoice = false;
+
+  List<({String image, String title, String accent, String description})>
+  _pages(AppLocalizations l10n) => [
+    (
+      image: 'assets/images/onboarding_1.png',
+      title: l10n.onboardingHealthyMealsTitle,
+      accent: l10n.onboardingHealthyMealsAccent,
+      description: l10n.onboardingHealthyMealsDescription,
+    ),
+    (
+      image: 'assets/images/onboarding_2.png',
+      title: l10n.onboardingPlansTitle,
+      accent: l10n.onboardingPlansAccent,
+      description: l10n.onboardingPlansDescription,
+    ),
+    (
+      image: 'assets/images/onboarding_3.png',
+      title: l10n.onboardingFreshTitle,
+      accent: l10n.onboardingFreshAccent,
+      description: l10n.onboardingFreshDescription,
+    ),
+    (
+      image: 'assets/images/onboarding_4.png',
+      title: l10n.onboardingTrackTitle,
+      accent: l10n.onboardingTrackAccent,
+      description: l10n.onboardingTrackDescription,
+    ),
+    (
+      image: 'assets/images/onboarding_5.png',
+      title: l10n.onboardingTogetherTitle,
+      accent: l10n.onboardingTogetherAccent,
+      description: l10n.onboardingTogetherDescription,
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleAdvance();
+  }
+
+  void _scheduleAdvance() {
+    _timer?.cancel();
+    _timer = Timer(_pageDuration, () {
+      if (!mounted || !_controller.hasClients) return;
+      final count = _pages(AppLocalizations.of(context)).length;
+      if (_index < count - 1) {
+        unawaited(
+          _controller.nextPage(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeInOut,
+          ),
+        );
+      } else {
+        setState(() => _showFinalChoice = true);
+      }
+    });
+  }
+
+  void _advance() {
+    final count = _pages(AppLocalizations.of(context)).length;
+    if (_index == count - 1) {
+      _timer?.cancel();
+      setState(() => _showFinalChoice = true);
+      return;
+    }
+    unawaited(
+      _controller.nextPage(
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pages = _pages(AppLocalizations.of(context));
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D0F0E),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: Row(
+                    children: List.generate(
+                      pages.length,
+                      (index) => Expanded(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 240),
+                          height: 4,
+                          margin: EdgeInsetsDirectional.only(
+                            end: index == pages.length - 1 ? 0 : 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: index <= _index
+                                ? const Color(0xFF62CE55)
+                                : AppColors.white.withValues(alpha: .20),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: PageView.builder(
+                    key: const ValueKey('onboardingCarousel'),
+                    controller: _controller,
+                    itemCount: pages.length,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _index = index;
+                        _showFinalChoice = false;
+                      });
+                      _scheduleAdvance();
+                    },
+                    itemBuilder: (context, index) {
+                      final page = pages[index];
+                      return GestureDetector(
+                        key: ValueKey('onboardingTapArea-$index'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _advance,
+                        child: _CarouselPage(
+                          image: page.image,
+                          title: page.title,
+                          accent: page.accent,
+                          description: page.description,
+                          current: index,
+                          count: pages.length,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_showFinalChoice)
+            _FinalChoiceSheet(
+              onDismiss: () => setState(() => _showFinalChoice = false),
+              onMenu: () async {
+                await ref
+                    .read(journeyStateRepositoryProvider)
+                    .markOnboardingComplete();
+                if (!context.mounted) return;
+                await context.push<void>(AppRoutes.menu);
+              },
+              onStartPlan: () async {
+                await ref
+                    .read(journeyStateRepositoryProvider)
+                    .markOnboardingComplete();
+                if (!context.mounted) return;
+                await context.push<void>(AppRoutes.personalization);
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CarouselPage extends StatelessWidget {
+  const _CarouselPage({
+    required this.image,
+    required this.title,
+    required this.accent,
+    required this.description,
+    required this.current,
+    required this.count,
+  });
+
+  final String image;
+  final String title;
+  final String accent;
+  final String description;
+  final int current;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).height < 650;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: Column(
+        children: [
+          Expanded(
+            child: ClipRect(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(image, fit: BoxFit.cover),
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0x000D0F0E),
+                          Color(0x000D0F0E),
+                          Color(0xFF0D0F0E),
+                        ],
+                        stops: [0, .62, 1],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(height: compact ? 8 : 16),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.white,
+              fontSize: compact ? 23 : 28,
+              height: 1.1,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          Text(
+            accent,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: const Color(0xFF62CE55),
+              fontSize: compact ? 23 : 28,
+              height: 1.1,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            description,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.white.withValues(alpha: .66),
+              fontSize: 14,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Semantics(
+            label: AppLocalizations.of(
+              context,
+            ).pageProgress(current + 1, count),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                count,
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  width: index == current ? 18 : 7,
+                  height: 7,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: index == current
+                        ? const Color(0xFF62CE55)
+                        : AppColors.white.withValues(alpha: .22),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class PersonalizationScreen extends ConsumerStatefulWidget {
+  const PersonalizationScreen({super.key});
+
+  @override
+  ConsumerState<PersonalizationScreen> createState() =>
+      _PersonalizationScreenState();
+}
+
+class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   static const _stepCount = 8;
   final PageController _controller = PageController();
 
   int _index = 0;
   bool _isNavigating = false;
-  bool _showFinalChoice = false;
+  String? _validationMessage;
   String? _goal;
   String _gender = 'female';
   int _age = 28;
@@ -60,8 +359,34 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _continue() {
+    final l10n = AppLocalizations.of(context);
+    final invalid =
+        (_index == 1 && _goal == null) ||
+        (_index == 3 && _lifestyle == null) ||
+        (_index == 4 && _activity == null);
+    if (invalid) {
+      setState(() => _validationMessage = l10n.personalizationSelectOption);
+      return;
+    }
+    if (_validationMessage != null) {
+      setState(() => _validationMessage = null);
+    }
     if (_index == _stepCount - 1) {
-      setState(() => _showFinalChoice = true);
+      final route = ref.read(otpAuthControllerProvider).isAuthenticated
+          ? AppRoutes.recommendation
+          : AppRoutes.phoneLogin;
+      if (route == AppRoutes.phoneLogin) {
+        unawaited(
+          context.push<void>(
+            route,
+            extra: const PendingAuthDestination(
+              route: AppRoutes.recommendation,
+            ),
+          ),
+        );
+      } else {
+        unawaited(context.push<void>(route));
+      }
       return;
     }
     unawaited(_goTo(_index + 1));
@@ -71,10 +396,43 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (_index > 0) unawaited(_goTo(_index - 1));
   }
 
+  void _selectGoal(String value) {
+    setState(() {
+      _goal = value;
+      _validationMessage = null;
+    });
+    ref
+        .read(personalizationControllerProvider.notifier)
+        .setGoal(value.toUpperCase());
+  }
+
+  void _selectLifestyle(String value) {
+    setState(() {
+      _lifestyle = value;
+      _validationMessage = null;
+    });
+    ref
+        .read(personalizationControllerProvider.notifier)
+        .setRoutine(value.toUpperCase());
+  }
+
+  void _selectActivity(String value) {
+    setState(() {
+      _activity = value;
+      _validationMessage = null;
+    });
+    ref
+        .read(personalizationControllerProvider.notifier)
+        .setActivity(value.toUpperCase());
+  }
+
   void _togglePreference(String value) {
     setState(() {
       if (!_preferences.add(value)) _preferences.remove(value);
     });
+    ref
+        .read(personalizationControllerProvider.notifier)
+        .togglePreference(value.toUpperCase());
   }
 
   void _toggleAllergy(String value) {
@@ -88,6 +446,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         if (!_allergies.add(value)) _allergies.remove(value);
       }
     });
+    ref
+        .read(personalizationControllerProvider.notifier)
+        .toggleAllergy(value.toUpperCase());
   }
 
   Future<void> _showPicker({
@@ -173,9 +534,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context);
-    final isAuthenticated = ref
-        .watch(otpAuthControllerProvider)
-        .isAuthenticated;
     final steps = _buildSteps(l10n);
     return PopScope(
       canPop: _index == 0,
@@ -214,6 +572,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       ),
                     ),
                   ),
+                  if (_validationMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            size: 17,
+                            color: AppColors.portlandOrange,
+                          ),
+                          const SizedBox(width: 7),
+                          Expanded(
+                            child: Text(
+                              _validationMessage!,
+                              key: const ValueKey('personalizationError'),
+                              style: const TextStyle(
+                                color: AppColors.darkGreen,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   _OnboardingNavigation(
                     index: _index,
                     onPrevious: _previous,
@@ -222,23 +605,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ],
               ),
             ),
-            if (_showFinalChoice)
-              _FinalChoiceSheet(
-                onDismiss: () => setState(() => _showFinalChoice = false),
-                onMenu: () async {
-                  await context.push<void>(AppRoutes.menu);
-                },
-                onStartPlan: () async {
-                  if (isAuthenticated) {
-                    await context.push<void>(AppRoutes.plans);
-                    return;
-                  }
-                  await context.push<void>(
-                    AppRoutes.phoneLogin,
-                    extra: const PendingAuthDestination(route: AppRoutes.plans),
-                  );
-                },
-              ),
           ],
         ),
       ),
@@ -246,7 +612,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   List<Widget> _buildSteps(AppLocalizations l10n) => [
-    _WelcomeStep(l10n: l10n),
+    _WelcomeStep(l10n: l10n, onNotNow: () => context.go(AppRoutes.menu)),
     _StepFrame(
       title: l10n.onboardingGoalTitle,
       subtitle: l10n.onboardingGoalSubtitle,
@@ -257,32 +623,40 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             icon: Icons.trending_down_rounded,
             title: l10n.onboardingLoseWeight,
             description: l10n.onboardingLoseWeightDescription,
-            selected: _goal == 'lose',
-            onTap: () => setState(() => _goal = 'lose'),
+            selected: _goal == 'lose_weight',
+            onTap: () => _selectGoal('lose_weight'),
+          ),
+          _SelectionCard(
+            key: const ValueKey('goal-maintain'),
+            icon: Icons.balance_rounded,
+            title: l10n.onboardingMaintainWeight,
+            description: l10n.onboardingMaintainWeightDescription,
+            selected: _goal == 'maintain_weight',
+            onTap: () => _selectGoal('maintain_weight'),
+          ),
+          _SelectionCard(
+            key: const ValueKey('goal-gain'),
+            icon: Icons.trending_up_rounded,
+            title: l10n.onboardingGainWeight,
+            description: l10n.onboardingGainWeightDescription,
+            selected: _goal == 'gain_weight',
+            onTap: () => _selectGoal('gain_weight'),
           ),
           _SelectionCard(
             key: const ValueKey('goal-muscle'),
             icon: Icons.fitness_center_rounded,
             title: l10n.onboardingBuildMuscle,
             description: l10n.onboardingBuildMuscleDescription,
-            selected: _goal == 'muscle',
-            onTap: () => setState(() => _goal = 'muscle'),
+            selected: _goal == 'build_muscle',
+            onTap: () => _selectGoal('build_muscle'),
           ),
           _SelectionCard(
             key: const ValueKey('goal-healthy'),
             icon: Icons.favorite_rounded,
-            title: l10n.onboardingStayHealthy,
-            description: l10n.onboardingStayHealthyDescription,
-            selected: _goal == 'healthy',
-            onTap: () => setState(() => _goal = 'healthy'),
-          ),
-          _SelectionCard(
-            key: const ValueKey('goal-fitness'),
-            icon: Icons.bolt_rounded,
-            title: l10n.onboardingImproveFitness,
-            description: l10n.onboardingImproveFitnessDescription,
-            selected: _goal == 'fitness',
-            onTap: () => setState(() => _goal = 'fitness'),
+            title: l10n.onboardingEatHealthier,
+            description: l10n.onboardingEatHealthierDescription,
+            selected: _goal == 'eat_healthier',
+            onTap: () => _selectGoal('eat_healthier'),
           ),
         ],
       ),
@@ -323,9 +697,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         'male' => 1,
                         _ => 2,
                       },
-                      onSelected: (index) => setState(
-                        () => _gender = ['female', 'male', 'other'][index],
-                      ),
+                      onSelected: (index) {
+                        final value = ['female', 'male', 'other'][index];
+                        setState(() => _gender = value);
+                        ref
+                            .read(personalizationControllerProvider.notifier)
+                            .setGender(value.toUpperCase());
+                      },
                     ),
                   ),
                   _ProfileCard(
@@ -344,8 +722,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           title: l10n.onboardingAge,
                           values: values,
                           selectedIndex: _age - 16,
-                          onSelected: (index) =>
-                              setState(() => _age = index + 16),
+                          onSelected: (index) {
+                            final value = index + 16;
+                            setState(() => _age = value);
+                            ref
+                                .read(
+                                  personalizationControllerProvider.notifier,
+                                )
+                                .setAge(value);
+                          },
                         ),
                       );
                     },
@@ -366,8 +751,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           title: l10n.onboardingHeight,
                           values: values,
                           selectedIndex: _height - 130,
-                          onSelected: (index) =>
-                              setState(() => _height = index + 130),
+                          onSelected: (index) {
+                            final value = index + 130;
+                            setState(() => _height = value);
+                            ref
+                                .read(
+                                  personalizationControllerProvider.notifier,
+                                )
+                                .setHeight(value.toDouble());
+                          },
                         ),
                       );
                     },
@@ -388,8 +780,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           title: l10n.onboardingWeight,
                           values: values,
                           selectedIndex: _weight - 40,
-                          onSelected: (index) =>
-                              setState(() => _weight = index + 40),
+                          onSelected: (index) {
+                            final value = index + 40;
+                            setState(() => _weight = value);
+                            ref
+                                .read(
+                                  personalizationControllerProvider.notifier,
+                                )
+                                .setWeight(value.toDouble());
+                          },
                         ),
                       );
                     },
@@ -410,32 +809,32 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             key: const ValueKey('lifestyle-office'),
             icon: Icons.apartment_rounded,
             label: l10n.onboardingOfficeWork,
-            selected: _lifestyle == 'office',
-            onTap: () => setState(() => _lifestyle = 'office'),
+            selected: _lifestyle == 'office_work',
+            onTap: () => _selectLifestyle('office_work'),
           ),
           _CompactOption(
             icon: Icons.home_work_outlined,
             label: l10n.onboardingWorkFromHome,
-            selected: _lifestyle == 'home',
-            onTap: () => setState(() => _lifestyle = 'home'),
+            selected: _lifestyle == 'work_from_home',
+            onTap: () => _selectLifestyle('work_from_home'),
           ),
           _CompactOption(
             icon: Icons.school_outlined,
             label: l10n.onboardingStudent,
             selected: _lifestyle == 'student',
-            onTap: () => setState(() => _lifestyle = 'student'),
+            onTap: () => _selectLifestyle('student'),
           ),
           _CompactOption(
             icon: Icons.directions_walk_rounded,
             label: l10n.onboardingActiveJob,
-            selected: _lifestyle == 'active',
-            onTap: () => setState(() => _lifestyle = 'active'),
+            selected: _lifestyle == 'active_job',
+            onTap: () => _selectLifestyle('active_job'),
           ),
           _CompactOption(
             icon: Icons.nightlight_outlined,
             label: l10n.onboardingShiftWorker,
-            selected: _lifestyle == 'shift',
-            onTap: () => setState(() => _lifestyle = 'shift'),
+            selected: _lifestyle == 'shift_work',
+            onTap: () => _selectLifestyle('shift_work'),
           ),
         ],
       ),
@@ -449,26 +848,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             key: const ValueKey('activity-sitting'),
             icon: Icons.weekend_outlined,
             label: l10n.onboardingMostlySitting,
-            selected: _activity == 'sitting',
-            onTap: () => setState(() => _activity = 'sitting'),
+            selected: _activity == 'mostly_seated',
+            onTap: () => _selectActivity('mostly_seated'),
           ),
           _ActivityCard(
             icon: Icons.directions_walk_rounded,
             label: l10n.onboardingLightActivity,
-            selected: _activity == 'light',
-            onTap: () => setState(() => _activity = 'light'),
+            selected: _activity == 'lightly_active',
+            onTap: () => _selectActivity('lightly_active'),
           ),
           _ActivityCard(
             icon: Icons.directions_run_rounded,
             label: l10n.onboardingActiveLifestyle,
-            selected: _activity == 'active',
-            onTap: () => setState(() => _activity = 'active'),
+            selected: _activity == 'moderately_active',
+            onTap: () => _selectActivity('moderately_active'),
           ),
           _ActivityCard(
             icon: Icons.sports_gymnastics_rounded,
             label: l10n.onboardingAthlete,
-            selected: _activity == 'athlete',
-            onTap: () => setState(() => _activity = 'athlete'),
+            selected: _activity == 'very_active',
+            onTap: () => _selectActivity('very_active'),
           ),
         ],
       ),
@@ -498,25 +897,42 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _StepFrame(
       title: l10n.onboardingAllergiesTitle,
       subtitle: l10n.onboardingAllergiesSubtitle,
-      child: _ChoiceWrap(
-        leadingIcon: Icons.health_and_safety_outlined,
-        choices: {
-          'milk': l10n.onboardingMilk,
-          'egg': l10n.onboardingEgg,
-          'fish': l10n.onboardingFish,
-          'shellfish': l10n.onboardingShellfish,
-          'treeNuts': l10n.onboardingTreeNuts,
-          'peanuts': l10n.onboardingPeanuts,
-          'soy': l10n.onboardingSoy,
-          'sesame': l10n.onboardingSesame,
-          'gluten': l10n.onboardingGluten,
-          'none': l10n.onboardingNoAllergies,
-        },
-        selected: _allergies,
-        onSelected: _toggleAllergy,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ChoiceWrap(
+            leadingIcon: Icons.health_and_safety_outlined,
+            choices: {
+              'milk': l10n.onboardingMilk,
+              'egg': l10n.onboardingEgg,
+              'fish': l10n.onboardingFish,
+              'shellfish': l10n.onboardingShellfish,
+              'treeNuts': l10n.onboardingTreeNuts,
+              'peanuts': l10n.onboardingPeanuts,
+              'soy': l10n.onboardingSoy,
+              'sesame': l10n.onboardingSesame,
+              'gluten': l10n.onboardingGluten,
+              'none': l10n.onboardingNoAllergies,
+            },
+            selected: _allergies,
+            onSelected: _toggleAllergy,
+          ),
+          const SizedBox(height: 20),
+          Text(
+            l10n.allergySafetyNote,
+            style: TextStyle(
+              color: AppColors.darkGreen.withValues(alpha: .62),
+              fontSize: 12,
+              height: 1.45,
+            ),
+          ),
+        ],
       ),
     ),
-    _BuildingStep(l10n: l10n),
+    _BmiSummaryStep(
+      l10n: l10n,
+      draft: ref.watch(personalizationControllerProvider),
+    ),
   ];
 }
 
@@ -670,9 +1086,9 @@ class _OnboardingNavigation extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final label = index == 0
-        ? l10n.onboardingStartJourney
+        ? l10n.personalizationBegin
         : index == 7
-        ? l10n.onboardingReadyAction
+        ? l10n.onboardingContinue
         : l10n.onboardingContinue;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
@@ -769,9 +1185,10 @@ class _StepFrame extends StatelessWidget {
 }
 
 class _WelcomeStep extends StatelessWidget {
-  const _WelcomeStep({required this.l10n});
+  const _WelcomeStep({required this.l10n, required this.onNotNow});
 
   final AppLocalizations l10n;
+  final VoidCallback onNotNow;
 
   @override
   Widget build(BuildContext context) {
@@ -790,7 +1207,7 @@ class _WelcomeStep extends StatelessWidget {
                 _WelcomeArtwork(height: compact ? 240 : 330),
                 SizedBox(height: compact ? 16 : 26),
                 Text(
-                  l10n.onboardingWelcomeTitle,
+                  l10n.personalizationIntroTitle,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.darkGreen,
@@ -802,13 +1219,19 @@ class _WelcomeStep extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  l10n.onboardingWelcomeSubtitle,
+                  l10n.personalizationIntroSubtitle,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.darkGreen.withValues(alpha: .64),
                     fontSize: 15,
                     height: 1.5,
                   ),
+                ),
+                const SizedBox(height: 10),
+                TextButton(
+                  key: const ValueKey('personalizationNotNow'),
+                  onPressed: onNotNow,
+                  child: Text(l10n.personalizationNotNow),
                 ),
               ],
             ),
@@ -1276,154 +1699,126 @@ class _ChoiceWrap extends StatelessWidget {
   }
 }
 
-class _BuildingStep extends StatelessWidget {
-  const _BuildingStep({required this.l10n});
+class _BmiSummaryStep extends StatelessWidget {
+  const _BmiSummaryStep({required this.l10n, required this.draft});
 
   final AppLocalizations l10n;
+  final PersonalizationDraft draft;
 
   @override
   Widget build(BuildContext context) {
+    final bmi = draft.bmi;
+    final marker = ((bmi.clamp(14, 40) - 14) / 26).toDouble();
+    final category = draft.age < 18
+        ? l10n.bmiYouthNote
+        : bmi < 18.5
+        ? l10n.bmiBelowRange
+        : bmi < 25
+        ? l10n.bmiWithinRange
+        : bmi < 30
+        ? l10n.bmiAboveRange
+        : l10n.bmiWellAboveRange;
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 32, 24, 20),
+        padding: const EdgeInsets.fromLTRB(24, 30, 24, 20),
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            minHeight: math.max(0, constraints.maxHeight - 52),
+            minHeight: math.max(0, constraints.maxHeight - 50),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const _BuildingArtwork(),
-              const SizedBox(height: 34),
               Text(
-                l10n.onboardingBuildingTitle,
+                l10n.bmiSummaryTitle,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: AppColors.darkGreen,
-                  fontSize: 30,
-                  height: 1.1,
+                  fontSize: 31,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: -.8,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                l10n.onboardingBuildingSubtitle,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.darkGreen.withValues(alpha: .62),
-                  fontSize: 14,
-                  height: 1.5,
                 ),
               ),
               const SizedBox(height: 28),
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: .92),
-                duration: const Duration(milliseconds: 1800),
-                curve: Curves.easeOutCubic,
-                builder: (context, value, _) => ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  child: LinearProgressIndicator(
-                    key: const ValueKey('onboardingPlanProgress'),
-                    value: value,
-                    minHeight: 8,
-                    backgroundColor: AppColors.emeraldGreen.withValues(
-                      alpha: .10,
-                    ),
-                    color: AppColors.emeraldGreen,
+              Text(
+                bmi.toStringAsFixed(1),
+                key: const ValueKey('bmiValue'),
+                textDirection: TextDirection.ltr,
+                style: const TextStyle(
+                  color: AppColors.emeraldGreen,
+                  fontSize: 68,
+                  height: 1,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(l10n.bmiCalculatedLabel),
+              const SizedBox(height: 28),
+              SizedBox(
+                key: const ValueKey('bmiRange'),
+                height: 34,
+                child: LayoutBuilder(
+                  builder: (context, rangeConstraints) => Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                        child: const Row(
+                          children: [
+                            Expanded(
+                              child: ColoredBox(color: Color(0xFFB8D8EA)),
+                            ),
+                            Expanded(
+                              child: ColoredBox(color: Color(0xFF9BD3A8)),
+                            ),
+                            Expanded(
+                              child: ColoredBox(color: Color(0xFFF0C878)),
+                            ),
+                            Expanded(
+                              child: ColoredBox(color: Color(0xFFE89A78)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      AnimatedAlign(
+                        duration: const Duration(milliseconds: 360),
+                        curve: Curves.easeOutCubic,
+                        alignment: AlignmentDirectional((marker * 2) - 1, 0),
+                        child: Container(
+                          width: 5,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: AppColors.darkGreen,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                category,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.darkGreen,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                l10n.bmiDisclaimer,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.darkGreen.withValues(alpha: .58),
+                  fontSize: 12,
+                  height: 1.45,
                 ),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _BuildingArtwork extends StatefulWidget {
-  const _BuildingArtwork();
-
-  @override
-  State<_BuildingArtwork> createState() => _BuildingArtworkState();
-}
-
-class _BuildingArtworkState extends State<_BuildingArtwork>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 7),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final angle = _controller.value * math.pi * 2;
-        return SizedBox(
-          width: 250,
-          height: 250,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 210,
-                height: 210,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDDF4EA),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.emeraldGreen.withValues(alpha: .12),
-                      blurRadius: 50,
-                      spreadRadius: 10,
-                    ),
-                  ],
-                ),
-              ),
-              Transform.translate(
-                offset: Offset(0, math.sin(angle) * 6),
-                child: const Icon(
-                  Icons.ramen_dining_rounded,
-                  key: ValueKey('onboardingBuildingBowl'),
-                  size: 100,
-                  color: AppColors.emeraldGreen,
-                ),
-              ),
-              ...List.generate(5, (index) {
-                final itemAngle = angle + ((math.pi * 2 / 5) * index);
-                return Transform.translate(
-                  offset: Offset(
-                    math.cos(itemAngle) * 100,
-                    math.sin(itemAngle) * 78,
-                  ),
-                  child: Icon(
-                    index.isEven ? Icons.eco_rounded : Icons.spa_rounded,
-                    size: 23,
-                    color: index.isEven
-                        ? AppColors.emeraldGreen
-                        : const Color(0xFFE29A57),
-                  ),
-                );
-              }),
-            ],
-          ),
-        );
-      },
     );
   }
 }

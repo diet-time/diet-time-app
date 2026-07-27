@@ -193,7 +193,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Invite friends, share your journey and achieve more together.';
 
   @override
-  String get onboardingMenu => 'Menu';
+  String get onboardingMenu => 'View Menu';
 
   @override
   String get onboardingStartPlan => 'Start your Plan';
@@ -409,6 +409,96 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingReadyAction => 'View My Options';
+
+  @override
+  String get personalizationIntroTitle => 'Let\'s shape your plan';
+
+  @override
+  String get personalizationIntroSubtitle =>
+      'Answer a few simple questions so we can recommend meals that suit your goals, routine, and preferences.';
+
+  @override
+  String get personalizationBegin => 'Begin';
+
+  @override
+  String get personalizationNotNow => 'Not now';
+
+  @override
+  String get personalizationSelectOption => 'Choose an option to continue.';
+
+  @override
+  String get onboardingMaintainWeight => 'Maintain Weight';
+
+  @override
+  String get onboardingMaintainWeightDescription =>
+      'Balanced meals that support your current routine.';
+
+  @override
+  String get onboardingGainWeight => 'Gain Weight';
+
+  @override
+  String get onboardingGainWeightDescription =>
+      'Nourishing meals with the energy your goals need.';
+
+  @override
+  String get onboardingEatHealthier => 'Eat Healthier';
+
+  @override
+  String get onboardingEatHealthierDescription =>
+      'Make wholesome everyday choices easier.';
+
+  @override
+  String get bmiSummaryTitle => 'Your wellness snapshot';
+
+  @override
+  String get bmiCalculatedLabel => 'Your calculated BMI';
+
+  @override
+  String get bmiDisclaimer =>
+      'BMI is a general screening measure and does not account for muscle mass, body composition, age, or individual health conditions.';
+
+  @override
+  String get bmiYouthNote =>
+      'Children and teenagers require age- and sex-specific assessment.';
+
+  @override
+  String get bmiBelowRange => 'Below standard range';
+
+  @override
+  String get bmiWithinRange => 'Within standard range';
+
+  @override
+  String get bmiAboveRange => 'Above standard range';
+
+  @override
+  String get bmiWellAboveRange => 'Well above standard range';
+
+  @override
+  String get allergySafetyNote =>
+      'We\'ll use this information to highlight meals that may not be suitable for you. Always review the meal\'s ingredient and allergen details before ordering.';
+
+  @override
+  String get recommendationTitle => 'A plan that fits your routine';
+
+  @override
+  String get recommendationReasonGoal => 'Matches your primary goal';
+
+  @override
+  String get recommendationReasonActivity => 'Fits your activity level';
+
+  @override
+  String get recommendationReasonPreferences =>
+      'Includes your preferred meal styles';
+
+  @override
+  String get recommendationReasonAllergens =>
+      'Considers your recorded allergens';
+
+  @override
+  String get viewRecommendedPlan => 'View Recommended Plan';
+
+  @override
+  String get compareAllPlans => 'Compare All Plans';
 
   @override
   String get chooseLanguage => 'Choose your Language';

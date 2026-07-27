@@ -193,7 +193,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'ادعُ أصدقاءك، وشارك رحلتك، وحققوا المزيد معاً.';
 
   @override
-  String get onboardingMenu => 'القائمة';
+  String get onboardingMenu => 'عرض القائمة';
 
   @override
   String get onboardingStartPlan => 'ابدأ خطتك';
@@ -407,6 +407,96 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get onboardingReadyAction => 'عرض خياراتي';
+
+  @override
+  String get personalizationIntroTitle => 'لنصمم خطتك';
+
+  @override
+  String get personalizationIntroSubtitle =>
+      'أجب عن بعض الأسئلة البسيطة لنقترح وجبات تناسب أهدافك وروتينك وتفضيلاتك.';
+
+  @override
+  String get personalizationBegin => 'ابدأ';
+
+  @override
+  String get personalizationNotNow => 'ليس الآن';
+
+  @override
+  String get personalizationSelectOption => 'اختر أحد الخيارات للمتابعة.';
+
+  @override
+  String get onboardingMaintainWeight => 'الحفاظ على الوزن';
+
+  @override
+  String get onboardingMaintainWeightDescription =>
+      'وجبات متوازنة تدعم روتينك الحالي.';
+
+  @override
+  String get onboardingGainWeight => 'زيادة الوزن';
+
+  @override
+  String get onboardingGainWeightDescription =>
+      'وجبات مغذية توفر الطاقة التي تحتاجها أهدافك.';
+
+  @override
+  String get onboardingEatHealthier => 'تناول طعام صحي';
+
+  @override
+  String get onboardingEatHealthierDescription =>
+      'اجعل الخيارات الصحية اليومية أسهل.';
+
+  @override
+  String get bmiSummaryTitle => 'لمحة عن عافيتك';
+
+  @override
+  String get bmiCalculatedLabel => 'مؤشر كتلة الجسم المحسوب';
+
+  @override
+  String get bmiDisclaimer =>
+      'مؤشر كتلة الجسم مقياس عام ولا يأخذ في الاعتبار الكتلة العضلية أو تكوين الجسم أو العمر أو الظروف الصحية الفردية.';
+
+  @override
+  String get bmiYouthNote =>
+      'يحتاج الأطفال والمراهقون إلى تقييم خاص بالعمر والجنس.';
+
+  @override
+  String get bmiBelowRange => 'أقل من النطاق القياسي';
+
+  @override
+  String get bmiWithinRange => 'ضمن النطاق القياسي';
+
+  @override
+  String get bmiAboveRange => 'أعلى من النطاق القياسي';
+
+  @override
+  String get bmiWellAboveRange => 'أعلى بكثير من النطاق القياسي';
+
+  @override
+  String get allergySafetyNote =>
+      'سنستخدم هذه المعلومات لإبراز الوجبات التي قد لا تناسبك. راجع دائماً تفاصيل المكونات ومسببات الحساسية قبل الطلب.';
+
+  @override
+  String get recommendationTitle => 'خطة تناسب روتينك';
+
+  @override
+  String get recommendationReasonGoal => 'تتناسب مع هدفك الأساسي';
+
+  @override
+  String get recommendationReasonActivity => 'تناسب مستوى نشاطك';
+
+  @override
+  String get recommendationReasonPreferences =>
+      'تتضمن أنماط الوجبات التي تفضلها';
+
+  @override
+  String get recommendationReasonAllergens =>
+      'تأخذ مسببات الحساسية المسجلة في الاعتبار';
+
+  @override
+  String get viewRecommendedPlan => 'عرض الخطة المقترحة';
+
+  @override
+  String get compareAllPlans => 'مقارنة جميع الخطط';
 
   @override
   String get chooseLanguage => 'اختر لغتك';

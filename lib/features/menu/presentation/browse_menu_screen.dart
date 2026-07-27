@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/app/theme/app_spacing.dart';
@@ -11,6 +12,7 @@ import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class BrowseMenuScreen extends ConsumerStatefulWidget {
   const BrowseMenuScreen({super.key});
@@ -441,12 +443,27 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
   }
 
+  Widget _startPlanButton(AppLocalizations l10n) {
+    return FloatingActionButton.extended(
+      key: const ValueKey('guestStartPlan'),
+      onPressed: () => context.push(AppRoutes.personalization),
+      backgroundColor: AppColors.emeraldGreen,
+      foregroundColor: AppColors.white,
+      icon: const Icon(Icons.auto_awesome_rounded),
+      label: Text(
+        l10n.onboardingStartPlan,
+        style: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (_isHomeLoading || (_homeData == null && !_hasHomeError)) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F8F3),
+        floatingActionButton: _startPlanButton(l10n),
         body: SafeArea(
           child: Stack(
             children: [
@@ -472,6 +489,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     if (_homeData == null) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F8F3),
+        floatingActionButton: _startPlanButton(l10n),
         body: SafeArea(
           child: Stack(
             children: [
@@ -514,6 +532,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8F3),
+      floatingActionButton: _startPlanButton(l10n),
       body: Stack(
         children: [
           SafeArea(

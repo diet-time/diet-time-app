@@ -449,7 +449,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingMenu.
   ///
   /// In en, this message translates to:
-  /// **'Menu'**
+  /// **'View Menu'**
   String get onboardingMenu;
 
   /// No description provided for @onboardingStartPlan.
@@ -859,6 +859,168 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View My Options'**
   String get onboardingReadyAction;
+
+  /// No description provided for @personalizationIntroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s shape your plan'**
+  String get personalizationIntroTitle;
+
+  /// No description provided for @personalizationIntroSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer a few simple questions so we can recommend meals that suit your goals, routine, and preferences.'**
+  String get personalizationIntroSubtitle;
+
+  /// No description provided for @personalizationBegin.
+  ///
+  /// In en, this message translates to:
+  /// **'Begin'**
+  String get personalizationBegin;
+
+  /// No description provided for @personalizationNotNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get personalizationNotNow;
+
+  /// No description provided for @personalizationSelectOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an option to continue.'**
+  String get personalizationSelectOption;
+
+  /// No description provided for @onboardingMaintainWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintain Weight'**
+  String get onboardingMaintainWeight;
+
+  /// No description provided for @onboardingMaintainWeightDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced meals that support your current routine.'**
+  String get onboardingMaintainWeightDescription;
+
+  /// No description provided for @onboardingGainWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Gain Weight'**
+  String get onboardingGainWeight;
+
+  /// No description provided for @onboardingGainWeightDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Nourishing meals with the energy your goals need.'**
+  String get onboardingGainWeightDescription;
+
+  /// No description provided for @onboardingEatHealthier.
+  ///
+  /// In en, this message translates to:
+  /// **'Eat Healthier'**
+  String get onboardingEatHealthier;
+
+  /// No description provided for @onboardingEatHealthierDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Make wholesome everyday choices easier.'**
+  String get onboardingEatHealthierDescription;
+
+  /// No description provided for @bmiSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your wellness snapshot'**
+  String get bmiSummaryTitle;
+
+  /// No description provided for @bmiCalculatedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your calculated BMI'**
+  String get bmiCalculatedLabel;
+
+  /// No description provided for @bmiDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'BMI is a general screening measure and does not account for muscle mass, body composition, age, or individual health conditions.'**
+  String get bmiDisclaimer;
+
+  /// No description provided for @bmiYouthNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Children and teenagers require age- and sex-specific assessment.'**
+  String get bmiYouthNote;
+
+  /// No description provided for @bmiBelowRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Below standard range'**
+  String get bmiBelowRange;
+
+  /// No description provided for @bmiWithinRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Within standard range'**
+  String get bmiWithinRange;
+
+  /// No description provided for @bmiAboveRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Above standard range'**
+  String get bmiAboveRange;
+
+  /// No description provided for @bmiWellAboveRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Well above standard range'**
+  String get bmiWellAboveRange;
+
+  /// No description provided for @allergySafetyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll use this information to highlight meals that may not be suitable for you. Always review the meal\'s ingredient and allergen details before ordering.'**
+  String get allergySafetyNote;
+
+  /// No description provided for @recommendationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A plan that fits your routine'**
+  String get recommendationTitle;
+
+  /// No description provided for @recommendationReasonGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Matches your primary goal'**
+  String get recommendationReasonGoal;
+
+  /// No description provided for @recommendationReasonActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Fits your activity level'**
+  String get recommendationReasonActivity;
+
+  /// No description provided for @recommendationReasonPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Includes your preferred meal styles'**
+  String get recommendationReasonPreferences;
+
+  /// No description provided for @recommendationReasonAllergens.
+  ///
+  /// In en, this message translates to:
+  /// **'Considers your recorded allergens'**
+  String get recommendationReasonAllergens;
+
+  /// No description provided for @viewRecommendedPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'View Recommended Plan'**
+  String get viewRecommendedPlan;
+
+  /// No description provided for @compareAllPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare All Plans'**
+  String get compareAllPlans;
 
   /// No description provided for @chooseLanguage.
   ///
