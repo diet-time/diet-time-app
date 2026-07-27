@@ -203,13 +203,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
             ),
             if (_index == pages.length - 1 && _showFinalChoice)
               _FinalChoiceSheet(
-                onMenu: () => context.go(AppRoutes.menu),
-                onStartPlan: () {
+                onMenu: () async {
+                  await context.push<void>(AppRoutes.menu);
+                },
+                onStartPlan: () async {
                   if (isAuthenticated) {
-                    context.go(AppRoutes.plans);
+                    await context.push<void>(AppRoutes.plans);
                     return;
                   }
-                  context.push(
+                  await context.push<void>(
                     AppRoutes.phoneLogin,
                     extra: const PendingAuthDestination(route: AppRoutes.plans),
                   );
@@ -225,8 +227,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 class _FinalChoiceSheet extends StatefulWidget {
   const _FinalChoiceSheet({required this.onMenu, required this.onStartPlan});
 
-  final VoidCallback onMenu;
-  final VoidCallback onStartPlan;
+  final Future<void> Function() onMenu;
+  final Future<void> Function() onStartPlan;
 
   @override
   State<_FinalChoiceSheet> createState() => _FinalChoiceSheetState();
@@ -235,10 +237,14 @@ class _FinalChoiceSheet extends StatefulWidget {
 class _FinalChoiceSheetState extends State<_FinalChoiceSheet> {
   bool _hasNavigated = false;
 
-  void _navigate(VoidCallback action) {
+  Future<void> _navigate(Future<void> Function() action) async {
     if (_hasNavigated) return;
     setState(() => _hasNavigated = true);
-    action();
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _hasNavigated = false);
+    }
   }
 
   @override
@@ -255,10 +261,7 @@ class _FinalChoiceSheetState extends State<_FinalChoiceSheet> {
             Opacity(
               opacity: value.clamp(0, 1),
               child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: 4 * value,
-                  sigmaY: 4 * value,
-                ),
+                filter: ImageFilter.blur(sigmaX: 4 * value, sigmaY: 4 * value),
                 child: ColoredBox(
                   color: AppColors.black.withValues(alpha: .24 * value),
                 ),
@@ -339,7 +342,7 @@ class _FinalChoiceSheetState extends State<_FinalChoiceSheet> {
                         label: l10n.onboardingMenu,
                         onPressed: _hasNavigated
                             ? null
-                            : () => _navigate(widget.onMenu),
+                            : () => unawaited(_navigate(widget.onMenu)),
                       ),
                     ),
                     SizedBox(
@@ -349,7 +352,7 @@ class _FinalChoiceSheetState extends State<_FinalChoiceSheet> {
                         label: l10n.onboardingStartPlan,
                         onPressed: _hasNavigated
                             ? null
-                            : () => _navigate(widget.onStartPlan),
+                            : () => unawaited(_navigate(widget.onStartPlan)),
                       ),
                     ),
                   ],

@@ -123,9 +123,23 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(BrowseMenuScreen), findsOneWidget);
     expect(find.byType(MealPlanScreen), findsNothing);
+    expect(find.byKey(const ValueKey('guestMenuBack')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('guestMenuBack')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+    final menuButton = tester.widget<OutlinedButton>(
+      find.descendant(
+        of: find.byKey(const ValueKey('onboardingMenuChoice')),
+        matching: find.byType(OutlinedButton),
+      ),
+    );
+    expect(menuButton.onPressed, isNotNull);
   });
 
-  testWidgets('start plan choice opens phone login for a guest', (
+  testWidgets('returning from plan login re-enables onboarding actions', (
     tester,
   ) async {
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
@@ -141,6 +155,26 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(PhoneLoginPage), findsOneWidget);
     expect(find.text('Let\'s Get Started'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('otpFlowBack')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+    final planButton = tester.widget<FilledButton>(
+      find.descendant(
+        of: find.byKey(const ValueKey('onboardingPlanChoice')),
+        matching: find.byType(FilledButton),
+      ),
+    );
+    final menuButton = tester.widget<OutlinedButton>(
+      find.descendant(
+        of: find.byKey(const ValueKey('onboardingMenuChoice')),
+        matching: find.byType(OutlinedButton),
+      ),
+    );
+    expect(planButton.onPressed, isNotNull);
+    expect(menuButton.onPressed, isNotNull);
   });
 
   testWidgets('saved language skips language selection on later launches', (

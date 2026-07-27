@@ -35,8 +35,6 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   bool _isHomeLoading = false;
   bool _isHomeRefreshing = false;
   bool _isMenuLoading = false;
-  bool _isPlanSwitching = false;
-  String? _switchingPlanName;
   bool _hasLoaded = false;
   bool _hasHomeError = false;
   bool _hasMenuError = false;
@@ -182,19 +180,12 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       return;
     }
     unawaited(HapticFeedback.selectionClick());
-    await _refreshSelection(
-      planCode: planCode,
-      date: _selectedDate,
-      showPlanLoader: true,
-      switchingPlanName: plan.name,
-    );
+    await _refreshSelection(planCode: planCode, date: _selectedDate);
   }
 
   Future<void> _refreshSelection({
     required String planCode,
     required DateTime? date,
-    bool showPlanLoader = false,
-    String? switchingPlanName,
   }) async {
     if (planCode.trim().isEmpty || date == null) {
       return;
@@ -207,8 +198,6 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       _selectedDate = date;
       _isHomeRefreshing = true;
       _isMenuLoading = true;
-      _isPlanSwitching = showPlanLoader;
-      _switchingPlanName = showPlanLoader ? switchingPlanName : null;
       _hasHomeError = false;
       _hasMenuError = false;
     });
@@ -250,12 +239,6 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
           _isMenuLoading = false;
         });
       }
-      if (mounted && selectionRequestId == _selectionRequestId) {
-        setState(() {
-          _isPlanSwitching = false;
-          _switchingPlanName = null;
-        });
-      }
     } on Object {
       if (!mounted ||
           selectionRequestId != _selectionRequestId ||
@@ -265,8 +248,6 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       setState(() {
         _isHomeRefreshing = false;
         _isMenuLoading = false;
-        _isPlanSwitching = false;
-        _switchingPlanName = null;
         _hasHomeError = true;
       });
     }
@@ -467,11 +448,23 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F8F3),
         body: SafeArea(
-          child: _MealContentLoader(
-            key: const ValueKey('guestHomeLoader'),
-            title: l10n.mealContentLoadingTitle,
-            subtitle: l10n.mealContentLoadingSubtitle,
-            fullPage: true,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: _MealContentLoader(
+                  key: const ValueKey('guestHomeLoader'),
+                  title: l10n.mealContentLoadingTitle,
+                  subtitle: l10n.mealContentLoadingSubtitle,
+                  fullPage: true,
+                ),
+              ),
+              if (Navigator.of(context).canPop())
+                PositionedDirectional(
+                  top: AppSpacing.md,
+                  start: AppSpacing.md,
+                  child: const _GuestMenuBackButton(),
+                ),
+            ],
           ),
         ),
       );
@@ -479,10 +472,24 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     if (_homeData == null) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F8F3),
-        body: _GuestMenuError(
-          message: l10n.guestMenuLoadError,
-          retryLabel: l10n.retry,
-          onRetry: () => _loadHome(force: true),
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: _GuestMenuError(
+                  message: l10n.guestMenuLoadError,
+                  retryLabel: l10n.retry,
+                  onRetry: () => _loadHome(force: true),
+                ),
+              ),
+              if (Navigator.of(context).canPop())
+                const PositionedDirectional(
+                  top: AppSpacing.md,
+                  start: AppSpacing.md,
+                  child: _GuestMenuBackButton(),
+                ),
+            ],
+          ),
         ),
       );
     }
@@ -498,6 +505,12 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     final width = MediaQuery.sizeOf(context).width;
     const columns = 2;
     final compactMealCards = width < 680;
+    final textScale = MediaQuery.textScalerOf(
+      context,
+    ).scale(1).clamp(1, 1.4).toDouble();
+    final mealCardExtent = compactMealCards
+        ? 315 + ((textScale - 1) * 420)
+        : 365 + ((textScale - 1) * 220);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8F3),
@@ -518,12 +531,18 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                     padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
                     sliver: SliverList.list(
                       children: [
-                        Align(
-                          alignment: AlignmentDirectional.centerEnd,
-                          child: _GuestLanguageSelector(
-                            languageCode: _language ?? 'en',
-                            onSelected: _changeLanguage,
-                          ),
+                        Row(
+                          children: [
+                            if (Navigator.of(context).canPop())
+                              const _GuestMenuBackButton()
+                            else
+                              const SizedBox(width: 48),
+                            const Spacer(),
+                            _GuestLanguageSelector(
+                              languageCode: _language ?? 'en',
+                              onSelected: _changeLanguage,
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 10),
                         _GuestMenuHeader(
@@ -542,6 +561,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                                   .clamp(250.0, 330.0)
                                   .toDouble();
                               return ListView.separated(
+                                key: const ValueKey('guestPlanScroller'),
                                 controller: _planScrollController,
                                 scrollDirection: Axis.horizontal,
                                 padding: const EdgeInsetsDirectional.only(
@@ -600,6 +620,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                       selectedMealTimeCode: _selectedMealTimeCode,
                       dateScrollController: _dateScrollController,
                       filterScrollController: _filterScrollController,
+                      textScale: textScale,
                       isDateAvailable: (date) => _isDateAvailable(data, date),
                       onDateSelected: (date) => unawaited(_selectDate(date)),
                       onFilterSelected: (filter, index) {
@@ -609,12 +630,23 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                     ),
                   ),
                   if (_isMenuLoading)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: _MealContentLoader(
-                        key: const ValueKey('guestMealLoader'),
-                        title: l10n.mealContentLoadingTitle,
-                        subtitle: l10n.mealContentLoadingSubtitle,
+                    SliverPadding(
+                      key: const ValueKey('guestMealResultsLoading'),
+                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+                      sliver: SliverGrid(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: columns,
+                          mainAxisSpacing: compactMealCards ? 12 : 16,
+                          crossAxisSpacing: compactMealCards ? 12 : 16,
+                          mainAxisExtent: mealCardExtent,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          childCount: meals.isEmpty ? 4 : meals.length,
+                          (context, index) => _GuestMealSkeletonCard(
+                            key: ValueKey('guest-meal-skeleton-$index'),
+                            compact: compactMealCards,
+                          ),
+                        ),
                       ),
                     )
                   else if (_hasMenuError)
@@ -654,7 +686,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                           crossAxisCount: columns,
                           mainAxisSpacing: compactMealCards ? 12 : 16,
                           crossAxisSpacing: compactMealCards ? 12 : 16,
-                          mainAxisExtent: compactMealCards ? 315 : 365,
+                          mainAxisExtent: mealCardExtent,
                         ),
                         delegate: SliverChildBuilderDelegate(
                           childCount: meals.length,
@@ -678,15 +710,31 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
               ),
             ),
           ),
-          if (_isPlanSwitching)
-            Positioned.fill(
-              child: _PlanSwitchingOverlay(
-                planName: _switchingPlanName,
-                title: l10n.planSwitchLoadingTitle,
-                subtitle: l10n.planSwitchLoadingSubtitle,
-              ),
-            ),
         ],
+      ),
+    );
+  }
+}
+
+class _GuestMenuBackButton extends StatelessWidget {
+  const _GuestMenuBackButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 48,
+      child: IconButton.filled(
+        key: const ValueKey('guestMenuBack'),
+        tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+        onPressed: () => Navigator.of(context).maybePop(),
+        style: IconButton.styleFrom(
+          backgroundColor: AppColors.white,
+          foregroundColor: AppColors.darkGreen,
+          side: BorderSide(color: AppColors.darkGreen.withValues(alpha: .08)),
+          shadowColor: AppColors.darkGreen.withValues(alpha: .10),
+          elevation: 2,
+        ),
+        icon: const Icon(Icons.arrow_back_rounded, size: 22),
       ),
     );
   }
@@ -883,7 +931,7 @@ class _GuestMenuHeader extends StatelessWidget {
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.label});
+  const _SectionTitle({required this.label, super.key});
 
   final String label;
 
@@ -911,6 +959,7 @@ class _GuestMenuFiltersHeader extends SliverPersistentHeaderDelegate {
     required this.selectedMealTimeCode,
     required this.dateScrollController,
     required this.filterScrollController,
+    required this.textScale,
     required this.isDateAvailable,
     required this.onDateSelected,
     required this.onFilterSelected,
@@ -924,15 +973,18 @@ class _GuestMenuFiltersHeader extends SliverPersistentHeaderDelegate {
   final String selectedMealTimeCode;
   final ScrollController dateScrollController;
   final ScrollController filterScrollController;
+  final double textScale;
   final bool Function(DateTime? date) isDateAvailable;
   final ValueChanged<GuestCalendarDate> onDateSelected;
   final void Function(GuestMealTime filter, int index) onFilterSelected;
 
-  @override
-  double get minExtent => 138;
+  double get _scale => textScale.clamp(1, 1.4);
 
   @override
-  double get maxExtent => 172;
+  double get minExtent => 161 + ((_scale - 1) * 54);
+
+  @override
+  double get maxExtent => 175 + ((_scale - 1) * 54);
 
   @override
   Widget build(
@@ -940,35 +992,42 @@ class _GuestMenuFiltersHeader extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    final titleHeight = (maxExtent - shrinkOffset - minExtent).clamp(0.0, 34.0);
+    final collapseRange = maxExtent - minExtent;
+    final stickyProgress = collapseRange == 0
+        ? 1.0
+        : (shrinkOffset / collapseRange).clamp(0.0, 1.0);
+    final topPadding = _lerp(8, 4, stickyProgress);
+    final titleHeight = 32 + ((_scale - 1) * 22);
+    final dateHeight = _lerp(72, 68, stickyProgress) + ((_scale - 1) * 16);
+    final rowGap = _lerp(8, 6, stickyProgress);
+    final filterHeight = _lerp(42, 40, stickyProgress) + ((_scale - 1) * 16);
+    final bottomPadding = _lerp(8, 6, stickyProgress);
     return Material(
+      key: const ValueKey('guestStickyFilterPanel'),
       color: const Color(0xFFF8F8F3),
-      elevation: overlapsContent ? 3 : 0,
-      shadowColor: const Color(0x240B3226),
+      elevation: 2 * stickyProgress,
+      shadowColor: AppColors.darkGreen.withValues(alpha: .12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 6),
-          ClipRect(
-            child: SizedBox(
-              height: titleHeight,
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: 18,
-                  ),
-                  child: Opacity(
-                    opacity: (titleHeight / 34).clamp(0.0, 1.0),
-                    child: _SectionTitle(label: title),
-                  ),
+          SizedBox(height: topPadding),
+          SizedBox(
+            height: titleHeight,
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 18),
+                child: _SectionTitle(
+                  key: const ValueKey('guestWeeklyMenuHeading'),
+                  label: title,
                 ),
               ),
             ),
           ),
           SizedBox(
-            height: 72,
+            height: dateHeight,
             child: ListView.separated(
+              key: const ValueKey('guestDateScroller'),
               controller: dateScrollController,
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsetsDirectional.fromSTEB(18, 0, 18, 0),
@@ -986,10 +1045,11 @@ class _GuestMenuFiltersHeader extends SliverPersistentHeaderDelegate {
               },
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: rowGap),
           SizedBox(
-            height: 42,
+            height: filterHeight,
             child: ListView.separated(
+              key: const ValueKey('guestMealTypeScroller'),
               controller: filterScrollController,
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsetsDirectional.fromSTEB(18, 0, 18, 0),
@@ -1010,7 +1070,11 @@ class _GuestMenuFiltersHeader extends SliverPersistentHeaderDelegate {
               },
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: bottomPadding),
+          Container(
+            height: 1,
+            color: AppColors.darkGreen.withValues(alpha: .08 * stickyProgress),
+          ),
         ],
       ),
     );
@@ -1023,6 +1087,7 @@ class _GuestMenuFiltersHeader extends SliverPersistentHeaderDelegate {
       oldDelegate.selectedPlanCode != selectedPlanCode ||
       !_sameDate(oldDelegate.selectedDate, selectedDate) ||
       oldDelegate.selectedMealTimeCode != selectedMealTimeCode ||
+      oldDelegate.textScale != textScale ||
       oldDelegate.title != title;
 }
 
@@ -1331,6 +1396,98 @@ class _GuestFilterChip extends StatelessWidget {
   }
 }
 
+class _GuestMealSkeletonCard extends StatelessWidget {
+  const _GuestMealSkeletonCard({required this.compact, super.key});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final base = AppColors.darkGreen.withValues(alpha: .07);
+    return Semantics(
+      label: AppLocalizations.of(context).mealContentLoadingTitle,
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(compact ? 20 : 26),
+          boxShadow: _softShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              height: compact ? 130 : 165,
+              color: AppColors.teaGreen.withValues(alpha: .20),
+              child: const Center(child: _FreshMealLoaderIcon(size: 58)),
+            ),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(compact ? 12 : 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _SkeletonLine(color: base, widthFactor: .82, height: 15),
+                    const SizedBox(height: 10),
+                    _SkeletonLine(color: base, widthFactor: 1, height: 10),
+                    const SizedBox(height: 7),
+                    _SkeletonLine(color: base, widthFactor: .64, height: 10),
+                    const Spacer(),
+                    Row(
+                      children: List.generate(
+                        3,
+                        (index) => Expanded(
+                          child: Padding(
+                            padding: EdgeInsetsDirectional.only(
+                              end: index == 2 ? 0 : 8,
+                            ),
+                            child: _SkeletonLine(
+                              color: base,
+                              widthFactor: 1,
+                              height: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SkeletonLine extends StatelessWidget {
+  const _SkeletonLine({
+    required this.color,
+    required this.widthFactor,
+    required this.height,
+  });
+
+  final Color color;
+  final double widthFactor;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return FractionallySizedBox(
+      widthFactor: widthFactor,
+      alignment: AlignmentDirectional.centerStart,
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
+      ),
+    );
+  }
+}
+
 class _GuestMealCard extends StatelessWidget {
   const _GuestMealCard({
     required this.meal,
@@ -1451,17 +1608,21 @@ class _GuestMealCard extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: compact ? 4 : 6),
-                      Text(
-                        meal.description ?? '',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppColors.darkGreen.withValues(alpha: .60),
-                          fontSize: compact ? 10.5 : 12,
-                          height: 1.35,
+                      Expanded(
+                        child: Align(
+                          alignment: AlignmentDirectional.topStart,
+                          child: Text(
+                            meal.description ?? '',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: AppColors.darkGreen.withValues(alpha: .60),
+                              fontSize: compact ? 10.5 : 12,
+                              height: 1.35,
+                            ),
+                          ),
                         ),
                       ),
-                      const Spacer(),
                       Row(
                         children: [
                           _NutritionValue(
@@ -1585,102 +1746,6 @@ class _NetworkMealImage extends StatelessWidget {
             errorBuilder: (_, _, _) => const SizedBox.shrink(),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PlanSwitchingOverlay extends StatelessWidget {
-  const _PlanSwitchingOverlay({
-    required this.planName,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final String? planName;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: ColoredBox(
-        color: AppColors.darkGreen.withValues(alpha: .08),
-        child: SafeArea(
-          top: false,
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              key: const ValueKey('guestPlanSwitchingOverlay'),
-              width: double.infinity,
-              constraints: const BoxConstraints(maxWidth: 560),
-              margin: const EdgeInsets.all(AppSpacing.md),
-              padding: const EdgeInsets.fromLTRB(24, 18, 24, 22),
-              decoration: BoxDecoration(
-                color: AppColors.white.withValues(alpha: .98),
-                borderRadius: BorderRadius.circular(AppRadius.xl),
-                border: Border.all(
-                  color: AppColors.emeraldGreen.withValues(alpha: .14),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.darkGreen.withValues(alpha: .18),
-                    blurRadius: 32,
-                    offset: const Offset(0, 14),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const _FreshMealLoaderIcon(size: 62),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.darkGreen,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  if ((planName ?? '').trim().isNotEmpty) ...[
-                    const SizedBox(height: 3),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 20,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          planName!,
-                          maxLines: 1,
-                          softWrap: false,
-                          style: const TextStyle(
-                            color: AppColors.emeraldGreen,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 5),
-                  Text(
-                    subtitle,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.darkGreen.withValues(alpha: .62),
-                      fontSize: 13,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  const _AnimatedLoadingDots(),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -1976,6 +2041,9 @@ String _nutrition(double value) {
   if (value == value.roundToDouble()) return value.toInt().toString();
   return value.toStringAsFixed(1);
 }
+
+double _lerp(double start, double end, double progress) =>
+    start + ((end - start) * progress);
 
 const _softShadow = [
   BoxShadow(color: Color(0x120B3226), blurRadius: 24, offset: Offset(0, 9)),

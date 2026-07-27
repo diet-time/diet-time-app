@@ -376,7 +376,7 @@ void main() {
     expect(detailRepository.calls, [meals.first.id, meals.last.id]);
   });
 
-  testWidgets('calendar and filters remain pinned while meals scroll', (
+  testWidgets('complete filter panel pins while hero and plans scroll away', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(390, 450));
@@ -385,13 +385,190 @@ void main() {
     await tester.pumpWidget(_app(repository: repository));
     await _load(tester);
 
-    final allFilter = find.byKey(const ValueKey('guest-filter-ALL'));
+    final stickyPanel = find.byKey(const ValueKey('guestStickyFilterPanel'));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -300));
+    await tester.pump();
+    final initialPanelTop = tester.getTopLeft(stickyPanel).dy;
+    expect(initialPanelTop, greaterThan(0));
+
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -500));
+    await tester.pumpAndSettle();
+
+    final pinnedTop = tester.getTopLeft(stickyPanel).dy;
+    expect(pinnedTop, closeTo(0, 1));
+    expect(
+      find.byKey(const ValueKey('guestWeeklyMenuHeading')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('guestMealPlanHeader')), findsNothing);
+    expect(find.byKey(const ValueKey('guest-plan-PLN_CLASSIC')), findsNothing);
+    expect(repository.calls, hasLength(1));
+  });
+
+  testWidgets('date selector remains horizontally scrollable while sticky', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 520));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final json = _fixtureJson();
+    final data = json['data']! as Map<String, dynamic>;
+    final calendar = data['weeklyCalendar']! as List<dynamic>;
+    for (var day = 27; day <= 31; day++) {
+      calendar.add({
+        'date': '2026-07-$day',
+        'dayNumber': day,
+        'dayName': 'Day $day',
+        'shortDayName': 'D$day',
+        'isToday': false,
+        'isSelected': false,
+        'isAvailable': true,
+      });
+    }
+    final repository = _FakeGuestMenuRepository(
+      GuestHomeResponse.fromJson(json),
+    );
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -800));
     await tester.pumpAndSettle();
 
-    expect(allFilter, findsOneWidget);
-    expect(tester.getTopLeft(allFilter).dy, lessThan(150));
-    expect(repository.calls, hasLength(1));
+    final dateScroller = find.byKey(const ValueKey('guestDateScroller'));
+    final controller = tester.widget<ListView>(dateScroller).controller!;
+    expect(controller.offset, 0);
+    await tester.drag(dateScroller, const Offset(-260, 0));
+    await tester.pumpAndSettle();
+
+    expect(controller.offset, greaterThan(0));
+    expect(
+      tester
+          .getTopLeft(find.byKey(const ValueKey('guestStickyFilterPanel')))
+          .dy,
+      closeTo(0, 1),
+    );
+  });
+
+  testWidgets('meal chips remain usable without moving the sticky panel', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 520));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+    final scrollView = find.byType(CustomScrollView);
+    await tester.drag(scrollView, const Offset(0, -800));
+    await tester.pumpAndSettle();
+
+    final panel = find.byKey(const ValueKey('guestStickyFilterPanel'));
+    final panelTop = tester.getTopLeft(panel).dy;
+    final verticalOffset = tester
+        .widget<CustomScrollView>(scrollView)
+        .controller!
+        .offset;
+    final chipScroller = find.byKey(const ValueKey('guestMealTypeScroller'));
+    await tester.drag(chipScroller, const Offset(-180, 0));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('guest-filter-SNACK')),
+    );
+    await tester.tap(find.byKey(const ValueKey('guest-filter-SNACK')));
+    await tester.pump();
+
+    expect(find.text('Protein Bite'), findsOneWidget);
+    expect(tester.getTopLeft(panel).dy, closeTo(panelTop, 1));
+    expect(
+      tester.widget<CustomScrollView>(scrollView).controller!.offset,
+      closeTo(verticalOffset, 1),
+    );
+  });
+
+  testWidgets('plan refresh preserves pinned scroll position', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 520));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = _DeferredGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    await tester.drag(
+      find.byKey(const ValueKey('guestPlanScroller')),
+      const Offset(-220, 0),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('guest-plan-PLN_KETO')));
+    await tester.pump();
+    final scrollView = find.byType(CustomScrollView);
+    await tester.drag(scrollView, const Offset(0, -800));
+    await tester.pump();
+    final controller = tester.widget<CustomScrollView>(scrollView).controller!;
+    final offsetWhileLoading = controller.offset;
+    final panelTop = tester
+        .getTopLeft(find.byKey(const ValueKey('guestStickyFilterPanel')))
+        .dy;
+    expect(
+      find.byKey(const ValueKey('guestMealResultsLoading')),
+      findsOneWidget,
+    );
+
+    repository.completePlanRequest(
+      0,
+      _planResponse(
+        planCode: 'PLN_KETO',
+        heroTitle: 'Keto response',
+        mealName: 'Keto API Meal',
+      ),
+    );
+    await _load(tester);
+
+    expect(controller.offset, greaterThan(0));
+    expect(controller.offset, greaterThan(offsetWhileLoading * .70));
+    expect(
+      tester
+          .getTopLeft(find.byKey(const ValueKey('guestStickyFilterPanel')))
+          .dy,
+      closeTo(panelTop, 1),
+    );
+  });
+
+  testWidgets('menu has one vertical scroller and no nested-scroll overflow', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    expect(find.byType(CustomScrollView), findsOneWidget);
+    final listViews = tester.widgetList<ListView>(find.byType(ListView));
+    expect(listViews, isNotEmpty);
+    expect(
+      listViews.every((list) => list.scrollDirection == Axis.horizontal),
+      isTrue,
+    );
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -1000));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Arabic sticky panel stays pinned with large text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = _FakeGuestMenuRepository(_response());
+    await tester.pumpWidget(
+      _app(repository: repository, locale: const Locale('ar'), textScale: 1.4),
+    );
+    await _load(tester);
+    expect(tester.takeException(), isNull);
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -1000));
+    await tester.pumpAndSettle();
+
+    final panel = find.byKey(const ValueKey('guestStickyFilterPanel'));
+    expect(tester.getTopLeft(panel).dy, closeTo(0, 1));
+    expect(Directionality.of(tester.element(panel)), TextDirection.rtl);
+    expect(find.text('قائمة هذا الأسبوع'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('unavailable calendar dates are disabled', (tester) async {
@@ -476,7 +653,7 @@ void main() {
     expect(find.text('Keto Chicken'), findsOneWidget);
   });
 
-  testWidgets('plan selection shows a friendly switching overlay', (
+  testWidgets('plan selection loads only the meal-results area', (
     tester,
   ) async {
     await _useTallSurface(tester);
@@ -488,11 +665,13 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const ValueKey('guestPlanSwitchingOverlay')),
+      find.byKey(const ValueKey('guestMealResultsLoading')),
       findsOneWidget,
     );
-    expect(find.text('Preparing your new plan'), findsOneWidget);
-    expect(find.text('Keto'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('guestStickyFilterPanel')),
+      findsOneWidget,
+    );
     expect(find.byType(LinearProgressIndicator), findsNothing);
 
     repository.completePlanRequest(
@@ -505,10 +684,7 @@ void main() {
     );
     await _load(tester);
 
-    expect(
-      find.byKey(const ValueKey('guestPlanSwitchingOverlay')),
-      findsNothing,
-    );
+    expect(find.byKey(const ValueKey('guestMealResultsLoading')), findsNothing);
   });
 
   testWidgets(
@@ -879,11 +1055,20 @@ Future<void> _useTallSurface(WidgetTester tester) async {
 Widget _app({
   required GuestMenuRepository repository,
   Locale locale = const Locale('en'),
+  double textScale = 1,
 }) {
   return ProviderScope(
     overrides: [guestMenuRepositoryProvider.overrideWithValue(repository)],
     child: MaterialApp(
       locale: locale,
+      builder: textScale == 1
+          ? null
+          : (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(textScale)),
+              child: child!,
+            ),
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
