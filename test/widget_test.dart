@@ -72,7 +72,7 @@ void main() {
     expect(find.text('Healthy Meals,'), findsOneWidget);
   });
 
-  testWidgets('final onboarding panel waits for and opens menu choice', (
+  testWidgets('final onboarding panel can be opened immediately by tapping', (
     tester,
   ) async {
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
@@ -83,9 +83,14 @@ void main() {
     expect(find.text('Better Together,'), findsOneWidget);
     expect(find.byKey(const ValueKey('onboardingMenuChoice')), findsNothing);
     expect(find.byKey(const ValueKey('onboardingPlanChoice')), findsNothing);
-    await tester.pump(const Duration(milliseconds: 3000));
+    await tester.tap(find.byKey(const ValueKey('onboardingTapArea-4')));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.byType(OnboardingScreen), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('onboardingFinalChoicePanel')),
+      findsOneWidget,
+    );
     expect(find.byKey(const ValueKey('onboardingMenuChoice')), findsOneWidget);
     expect(find.byKey(const ValueKey('onboardingPlanChoice')), findsOneWidget);
     final menuCenter = tester.getCenter(
@@ -111,7 +116,8 @@ void main() {
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
     await _reachFinalChoice(tester);
-    await tester.pump(const Duration(milliseconds: 3000));
+    await tester.tap(find.byKey(const ValueKey('onboardingTapArea-4')));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
     await tester.tap(find.byKey(const ValueKey('onboardingPlanChoice')));
@@ -168,7 +174,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(_onboardingApp());
     await _reachFinalChoice(tester);
-    await tester.pump(const Duration(milliseconds: 3000));
+    await tester.tap(find.byKey(const ValueKey('onboardingTapArea-4')));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.byKey(const ValueKey('onboardingMenuChoice')), findsOneWidget);

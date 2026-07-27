@@ -4,6 +4,8 @@ import 'dart:ui';
 
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
+import 'package:diet_time/app/theme/app_radius.dart';
+import 'package:diet_time/app/theme/app_spacing.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
@@ -115,8 +117,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       await _advanceToNextPage();
       return;
     }
-    // The final image remains fully visible for the complete page duration.
-    // Tapping it must not reveal the action panel early.
+    _showFinalActions();
+  }
+
+  void _showFinalActions() {
+    if (_showFinalChoice) return;
+    _progressController.stop();
+    setState(() => _showFinalChoice = true);
   }
 
   @override
@@ -248,11 +255,11 @@ class _FinalChoiceSheetState extends State<_FinalChoiceSheet> {
               opacity: value.clamp(0, 1),
               child: BackdropFilter(
                 filter: ImageFilter.blur(
-                  sigmaX: 2.5 * value,
-                  sigmaY: 2.5 * value,
+                  sigmaX: 4 * value,
+                  sigmaY: 4 * value,
                 ),
                 child: ColoredBox(
-                  color: AppColors.black.withValues(alpha: .32 * value),
+                  color: AppColors.black.withValues(alpha: .24 * value),
                 ),
               ),
             ),
@@ -270,19 +277,32 @@ class _FinalChoiceSheetState extends State<_FinalChoiceSheet> {
         );
       },
       child: Container(
+        key: const ValueKey('onboardingFinalChoicePanel'),
         width: double.infinity,
         constraints: const BoxConstraints(maxWidth: 680),
-        margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-        padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+        margin: const EdgeInsets.fromLTRB(
+          AppSpacing.sm,
+          0,
+          AppSpacing.sm,
+          AppSpacing.sm,
+        ),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.sm,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
         decoration: BoxDecoration(
-          color: const Color(0xFF0B140F),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: const Color(0x3D62CE55)),
+          color: AppColors.darkGreen.withValues(alpha: .94),
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          border: Border.all(
+            color: AppColors.white.withValues(alpha: .42),
+            width: 1.2,
+          ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF62CE55).withValues(alpha: .12),
-              blurRadius: 36,
-              spreadRadius: 1,
+              color: AppColors.black.withValues(alpha: .24),
+              blurRadius: 28,
               offset: const Offset(0, 10),
             ),
           ],
@@ -294,22 +314,22 @@ class _FinalChoiceSheetState extends State<_FinalChoiceSheet> {
               width: 44,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.white.withValues(alpha: .22),
-                borderRadius: BorderRadius.circular(99),
+                color: AppColors.white.withValues(alpha: .32),
+                borderRadius: BorderRadius.circular(AppRadius.pill),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpacing.md),
             LayoutBuilder(
               builder: (context, constraints) {
                 final textScale = MediaQuery.textScalerOf(context).scale(14);
                 final sideBySide =
                     constraints.maxWidth >= 300 && textScale <= 18;
                 final buttonWidth = sideBySide
-                    ? (constraints.maxWidth - 12) / 2
+                    ? (constraints.maxWidth - AppSpacing.sm) / 2
                     : constraints.maxWidth;
                 return Wrap(
-                  spacing: 12,
-                  runSpacing: 10,
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
                   children: [
                     SizedBox(
                       width: buttonWidth,
@@ -362,23 +382,28 @@ class _FinalChoiceButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = primary ? AppColors.white : const Color(0xFF8BEA78);
+    final foreground = primary ? AppColors.darkGreen : AppColors.white;
     final style = FilledButton.styleFrom(
-      minimumSize: const Size(double.infinity, 54),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      minimumSize: const Size(double.infinity, 56),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.sm,
+      ),
       backgroundColor: primary
-          ? const Color(0xFF278A42)
-          : const Color(0xFF102219),
+          ? AppColors.limeGlow
+          : AppColors.white.withValues(alpha: .08),
       disabledBackgroundColor: primary
-          ? const Color(0xFF278A42).withValues(alpha: .55)
-          : const Color(0xFF102219),
+          ? AppColors.limeGlow.withValues(alpha: .55)
+          : AppColors.white.withValues(alpha: .05),
       foregroundColor: foreground,
       disabledForegroundColor: foreground.withValues(alpha: .55),
-      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+      textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         side: BorderSide(
-          color: primary ? const Color(0xFF62CE55) : const Color(0x9962CE55),
+          color: primary
+              ? AppColors.limeGlow
+              : AppColors.white.withValues(alpha: .72),
         ),
       ),
     );
