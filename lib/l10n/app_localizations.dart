@@ -1319,14 +1319,32 @@ abstract class AppLocalizations {
   /// No description provided for @showAllIngredients.
   ///
   /// In en, this message translates to:
-  /// **'Show all ingredients'**
+  /// **'Show all'**
   String get showAllIngredients;
+
+  /// No description provided for @noIngredientsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No ingredient information available.'**
+  String get noIngredientsAvailable;
 
   /// No description provided for @noAllergensListed.
   ///
   /// In en, this message translates to:
-  /// **'No allergens listed'**
+  /// **'No allergens recorded.'**
   String get noAllergensListed;
+
+  /// No description provided for @readMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Read more'**
+  String get readMore;
+
+  /// No description provided for @showLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get showLess;
 
   /// No description provided for @allergenContains.
   ///

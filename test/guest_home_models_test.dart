@@ -55,7 +55,7 @@ void main() {
     expect(response.data.weeklyCalendar.single.date, DateTime(2026, 7, 23));
   });
 
-  test('menu parses and sorts slots and meals', () {
+  test('menu parses slots and applies meal display order', () {
     final response = GuestMenuResponse.fromJson({
       'data': {
         'planId': 'plan-1',
@@ -115,5 +115,51 @@ void main() {
     expect(response.data.meals.map((meal) => meal.name), ['First', 'Second']);
     expect(response.data.meals.first.mealTime.name, 'Lunch');
     expect(response.data.meals.first.allergens.single.name, 'Milk');
+  });
+
+  test('meal categories preserve the exact API sequence', () {
+    final response = GuestMenuResponse.fromJson({
+      'data': {
+        'planId': 'plan-1',
+        'planCode': 'CLASSIC',
+        'date': '2026-07-23',
+        'slots': [
+          {
+            'id': 'snack',
+            'mealTime': {'code': 'SNACK', 'name': 'Snack / Dessert'},
+            'displayOrder': 30,
+            'minimumSelection': 0,
+            'maximumSelection': 1,
+            'isRequired': false,
+            'meals': <dynamic>[],
+          },
+          {
+            'id': 'breakfast',
+            'mealTime': {'code': 'BREAKFAST', 'name': 'Breakfast'},
+            'displayOrder': 10,
+            'minimumSelection': 0,
+            'maximumSelection': 1,
+            'isRequired': false,
+            'meals': <dynamic>[],
+          },
+          {
+            'id': 'dinner',
+            'mealTime': {'code': 'DINNER', 'name': 'Dinner'},
+            'displayOrder': 20,
+            'minimumSelection': 0,
+            'maximumSelection': 1,
+            'isRequired': false,
+            'meals': <dynamic>[],
+          },
+        ],
+      },
+      'errors': <dynamic>[],
+    });
+
+    expect(response.data.slots.map((slot) => slot.mealTime.name), [
+      'Snack / Dessert',
+      'Breakfast',
+      'Dinner',
+    ]);
   });
 }

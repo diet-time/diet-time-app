@@ -669,10 +669,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mealAllergensTitle => 'Allergens';
 
   @override
-  String get showAllIngredients => 'Show all ingredients';
+  String get showAllIngredients => 'Show all';
 
   @override
-  String get noAllergensListed => 'No allergens listed';
+  String get noIngredientsAvailable => 'No ingredient information available.';
+
+  @override
+  String get noAllergensListed => 'No allergens recorded.';
+
+  @override
+  String get readMore => 'Read more';
+
+  @override
+  String get showLess => 'Show less';
 
   @override
   String allergenContains(String name) {

@@ -201,7 +201,7 @@ void main() {
     );
     expect(find.text('Contains Egg'), findsOneWidget);
     expect(find.bySemanticsLabel('Contains Egg'), findsOneWidget);
-    expect(find.text('MICRONUTRIENTS'), findsOneWidget);
+    expect(find.textContaining('Fiber'), findsOneWidget);
     expect(repository.calls, hasLength(1));
   });
 
@@ -314,7 +314,7 @@ void main() {
     expect(repository.calls, hasLength(1));
   });
 
-  testWidgets('meal detail hides missing sections and back closes it', (
+  testWidgets('meal detail shows premium empty states and back closes it', (
     tester,
   ) async {
     await _useTallSurface(tester);
@@ -333,12 +333,15 @@ void main() {
     );
     final firstDetail = find.byKey(const ValueKey('meal-detail-meal-1'));
     expect(
-      find.descendant(of: firstDetail, matching: find.text('Ingredients')),
-      findsNothing,
+      find.descendant(of: firstDetail, matching: find.text('INGREDIENTS')),
+      findsOneWidget,
     );
     expect(
-      find.descendant(of: firstDetail, matching: find.text('MICRONUTRIENTS')),
-      findsNothing,
+      find.descendant(
+        of: firstDetail,
+        matching: find.text('No ingredient information available.'),
+      ),
+      findsOneWidget,
     );
     expect(
       find.descendant(of: firstDetail, matching: find.text('ALLERGENS')),
@@ -347,7 +350,7 @@ void main() {
     expect(
       find.descendant(
         of: firstDetail,
-        matching: find.text('No allergens listed'),
+        matching: find.text('No allergens recorded.'),
       ),
       findsOneWidget,
     );
@@ -376,6 +379,59 @@ void main() {
       TextDirection.rtl,
     );
     expect(repository.calls, hasLength(1));
+  });
+
+  testWidgets('meal preview image and expandable description work in RTL', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final meal = _detailMeal(
+      id: 'image-meal',
+      name: 'Long Preview Meal',
+      mealTime: 'Dinner',
+      imageUrl: 'https://cdn.example.com/meal.jpg',
+      description:
+          'A deliberately longer meal description that provides useful '
+          'information about flavors, preparation, ingredients and texture '
+          'while remaining expandable inside the preview.',
+    );
+
+    await tester.pumpWidget(
+      _detailViewerApp(meal: meal, locale: const Locale('en')),
+    );
+    await tester.pump();
+    expect(
+      tester.getSize(find.byKey(const ValueKey('mealDetailHeroImage'))).width,
+      greaterThan(0),
+    );
+    expect(find.text('Read more'), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('mealDescriptionToggle')),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('mealDescriptionToggle')));
+    await tester.pump(const Duration(milliseconds: 220));
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('mealDescription')))
+          .maxLines,
+      isNull,
+    );
+
+    await tester.pumpWidget(
+      _detailViewerApp(meal: meal, locale: const Locale('ar')),
+    );
+    await tester.pump();
+    expect(
+      Directionality.of(tester.element(find.byType(MealDetailViewer))),
+      TextDirection.rtl,
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('mealDetailHeroImage'))).width,
+      greaterThan(0),
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('optional meal detail request is cached once per meal', (
@@ -414,13 +470,55 @@ void main() {
     );
     await _load(tester);
     expect(detailRepository.calls, [meals.first.id]);
-    expect(find.text('INGREDIENTS'), findsOneWidget);
+    final firstDetail = find.byKey(
+      const ValueKey('meal-detail-11111111-1111-4111-8111-111111111111'),
+    );
+    expect(
+      find.descendant(of: firstDetail, matching: find.text('INGREDIENTS')),
+      findsOneWidget,
+    );
+    expect(find.text('Olive oil'), findsOneWidget);
+    expect(find.textContaining('10 ml'), findsNothing);
     expect(find.text('Ingredient 9'), findsNothing);
     await tester.tap(find.byKey(const ValueKey('showAllIngredients')));
     await tester.pumpAndSettle();
     expect(find.text('Ingredient 9'), findsOneWidget);
     expect(find.text('May contain Egg'), findsOneWidget);
     expect(find.bySemanticsLabel('May contain Egg'), findsOneWidget);
+    expect(find.text('Contains Milk'), findsOneWidget);
+    expect(find.text('Traces of Sesame'), findsOneWidget);
+    expect(
+      tester
+          .widget<Chip>(find.byKey(const ValueKey('allergen-contains-Milk')))
+          .backgroundColor,
+      const Color(0xFFFFE5DF),
+    );
+    expect(
+      tester
+          .widget<Chip>(find.byKey(const ValueKey('allergen-mayContain-Egg')))
+          .backgroundColor,
+      const Color(0xFFFFF1CF),
+    );
+    expect(
+      tester
+          .widget<Chip>(find.byKey(const ValueKey('allergen-traces-Sesame')))
+          .backgroundColor,
+      const Color(0xFFFFEADB),
+    );
+
+    await tester.tap(
+      find.descendant(of: firstDetail, matching: find.text('INGREDIENTS')),
+    );
+    await tester.pump(const Duration(milliseconds: 220));
+    expect(
+      find.descendant(of: firstDetail, matching: find.text('Ingredient 9')),
+      findsNothing,
+    );
+    await tester.tap(
+      find.descendant(of: firstDetail, matching: find.text('INGREDIENTS')),
+    );
+    await tester.pump(const Duration(milliseconds: 220));
+    expect(find.text('Ingredient 9'), findsOneWidget);
 
     await tester.drag(
       find.byKey(const ValueKey('mealDetailPageView')),
@@ -1178,7 +1276,10 @@ class _FakeMealDetailRepository implements MealDetailRepository {
   }) async {
     calls.add(mealId);
     return const MealDetailData(
-      fullDescription: 'Loaded detail description.',
+      fullDescription:
+          'Loaded detail description with enough thoughtful information '
+          'to span several lines on a phone and demonstrate the premium '
+          'inline description expansion without opening another screen.',
       fiberGrams: 4,
       sodiumMg: 343,
       ingredients: [
@@ -1192,8 +1293,12 @@ class _FakeMealDetailRepository implements MealDetailRepository {
         MealDetailIngredient(name: 'Ingredient 8'),
         MealDetailIngredient(name: 'Ingredient 9'),
       ],
-      allergens: ['Egg'],
-      allergenLevels: {'Egg': 'MAY_CONTAIN'},
+      allergens: ['Egg', 'Milk', 'Sesame'],
+      allergenLevels: {
+        'Egg': 'MAY_CONTAIN',
+        'Milk': 'CONTAINS',
+        'Sesame': 'TRACES',
+      },
     );
   }
 }
@@ -1202,12 +1307,15 @@ GuestMeal _detailMeal({
   required String id,
   required String name,
   required String mealTime,
+  String? imageUrl,
+  String? description,
 }) {
   return GuestMeal.fromJson({
     'id': id,
     'code': id,
     'name': name,
-    'description': '$name description.',
+    'description': description ?? '$name description.',
+    'imageUrl': imageUrl,
     'mealTime': {'code': mealTime.toUpperCase(), 'name': mealTime},
     'nutrition': {'calories': 400, 'protein': 25, 'carbs': 30, 'fat': 12},
     'tags': <dynamic>[],
@@ -1215,6 +1323,22 @@ GuestMeal _detailMeal({
     'isAvailable': true,
     'displayOrder': 0,
   });
+}
+
+Widget _detailViewerApp({required GuestMeal meal, required Locale locale}) {
+  return ProviderScope(
+    child: MaterialApp(
+      locale: locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: MealDetailViewer(meals: [meal], initialIndex: 0),
+    ),
+  );
 }
 
 class _FakeGuestMenuRepository implements GuestMenuRepository {

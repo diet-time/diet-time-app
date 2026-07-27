@@ -53,11 +53,9 @@ class GuestMealPlan {
   });
 
   factory GuestMealPlan.fromJson(Map<String, dynamic> json) {
-    final slots =
-        _list(json['slots'])
-            .map((item) => GuestHomeSlot.fromJson(_map(item)))
-            .toList(growable: false)
-          ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+    final slots = _list(
+      json['slots'],
+    ).map((item) => GuestHomeSlot.fromJson(_map(item))).toList(growable: false);
     return GuestMealPlan(
       id: _string(json['id']) ?? '',
       code: _string(json['code']) ?? '',
@@ -173,11 +171,9 @@ class GuestMenuData {
   });
 
   factory GuestMenuData.fromJson(Map<String, dynamic> json) {
-    final slots =
-        _list(json['slots'])
-            .map((item) => GuestMenuSlot.fromJson(_map(item)))
-            .toList(growable: false)
-          ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+    final slots = _list(
+      json['slots'],
+    ).map((item) => GuestMenuSlot.fromJson(_map(item))).toList(growable: false);
     return GuestMenuData(
       planId: _string(json['planId']) ?? '',
       planCode: _string(json['planCode']) ?? '',
