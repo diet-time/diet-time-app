@@ -827,8 +827,14 @@ abstract class AppLocalizations {
   /// No description provided for @guestMealPlansTitle.
   ///
   /// In en, this message translates to:
-  /// **'Choose your lifestyle plan'**
+  /// **'Choose your plan'**
   String get guestMealPlansTitle;
+
+  /// No description provided for @selectMealPlanSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Select {planName} meal plan'**
+  String selectMealPlanSemantics(String planName);
 
   /// No description provided for @guestWeeklyMenuTitle.
   ///

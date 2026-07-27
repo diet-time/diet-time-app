@@ -152,7 +152,13 @@
   "planSwitchLoadingSubtitle": "We're organizing the best meals for you...",
   "mealContentLoadingTitle": "Cooking up something healthy!",
   "mealContentLoadingSubtitle": "Fetching today's meals...",
-  "guestMealPlansTitle": "Choose your lifestyle plan",
+  "guestMealPlansTitle": "Choose your plan",
+  "selectMealPlanSemantics": "Select {planName} meal plan",
+  "@selectMealPlanSemantics": {
+    "placeholders": {
+      "planName": {"type": "String"}
+    }
+  },
   "guestWeeklyMenuTitle": "This week's menu",
   "guestMenuLoadError": "Unable to load the menu.",
   "guestPlanLoadError": "Unable to load this meal plan.",

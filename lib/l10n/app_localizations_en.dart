@@ -410,7 +410,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mealContentLoadingSubtitle => 'Fetching today\'s meals...';
 
   @override
-  String get guestMealPlansTitle => 'Choose your lifestyle plan';
+  String get guestMealPlansTitle => 'Choose your plan';
+
+  @override
+  String selectMealPlanSemantics(String planName) {
+    return 'Select $planName meal plan';
+  }
 
   @override
   String get guestWeeklyMenuTitle => 'This week\'s menu';

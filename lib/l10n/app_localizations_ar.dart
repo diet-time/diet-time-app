@@ -404,7 +404,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mealContentLoadingSubtitle => 'جارٍ تحميل وجبات اليوم...';
 
   @override
-  String get guestMealPlansTitle => 'اختر خطة نمط حياتك';
+  String get guestMealPlansTitle => 'اختر خطتك';
+
+  @override
+  String selectMealPlanSemantics(String planName) {
+    return 'اختر خطة وجبات $planName';
+  }
 
   @override
   String get guestWeeklyMenuTitle => 'قائمة هذا الأسبوع';

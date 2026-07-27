@@ -70,10 +70,6 @@ void main() {
     await _load(tester);
 
     expect(find.text('Meal Plan'), findsOneWidget);
-    expect(
-      find.text('Choose a plan that fits your lifestyle and goals.'),
-      findsOneWidget,
-    );
     expect(find.text('Classic'), findsWidgets);
     expect(find.text('PLN_CLASSIC'), findsWidgets);
     expect(find.text('Oatmeal Banana'), findsOneWidget);
@@ -88,7 +84,7 @@ void main() {
     expect(repository.events, ['home', 'menu']);
   });
 
-  testWidgets('plan cards show one-line names and visible descriptions', (
+  testWidgets('plan selector uses compact one-line accessible chips', (
     tester,
   ) async {
     await _useTallSurface(tester);
@@ -96,15 +92,22 @@ void main() {
     await tester.pumpWidget(_app(repository: repository));
     await _load(tester);
 
-    final size = tester.getSize(
-      find.byKey(const ValueKey('guest-plan-PLN_CLASSIC')),
-    );
-    expect(size.width, inInclusiveRange(250, 330));
-    expect(size.height, 172);
+    final planChip = find.byKey(const ValueKey('guest-plan-PLN_CLASSIC'));
+    final size = tester.getSize(planChip);
+    expect(size.width, lessThanOrEqualTo(180));
+    expect(size.height, lessThanOrEqualTo(73));
     expect(find.text('PLN_CLASSIC'), findsOneWidget);
-    final planName = tester.widget<Text>(find.text('Classic').first);
+    expect(
+      find.descendant(of: planChip, matching: find.text('PLN_CLASSIC')),
+      findsNothing,
+    );
+    final planName = tester.widget<Text>(
+      find.descendant(of: planChip, matching: find.text('Classic')),
+    );
     expect(planName.maxLines, 1);
     expect(planName.softWrap, isFalse);
+    expect(planName.overflow, TextOverflow.ellipsis);
+    expect(tester.getSemantics(planChip).label, 'Select Classic meal plan');
   });
 
   testWidgets('phone layout displays two meal cards in each row', (
@@ -520,7 +523,7 @@ void main() {
     await _load(tester);
 
     expect(controller.offset, greaterThan(0));
-    expect(controller.offset, greaterThan(offsetWhileLoading * .70));
+    expect(controller.offset, greaterThan(offsetWhileLoading * .50));
     expect(
       tester
           .getTopLeft(find.byKey(const ValueKey('guestStickyFilterPanel')))

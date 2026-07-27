@@ -136,7 +136,13 @@
   "planSwitchLoadingSubtitle": "نرتّب لك أفضل الوجبات...",
   "mealContentLoadingTitle": "نحضّر لك شيئاً صحياً!",
   "mealContentLoadingSubtitle": "جارٍ تحميل وجبات اليوم...",
-  "guestMealPlansTitle": "اختر خطة نمط حياتك",
+  "guestMealPlansTitle": "اختر خطتك",
+  "selectMealPlanSemantics": "اختر خطة وجبات {planName}",
+  "@selectMealPlanSemantics": {
+    "placeholders": {
+      "planName": {"type": "String"}
+    }
+  },
   "guestWeeklyMenuTitle": "قائمة هذا الأسبوع",
   "guestMenuLoadError": "تعذر تحميل قائمة الوجبات.",
   "guestPlanLoadError": "تعذر تحميل خطة الوجبات هذه.",

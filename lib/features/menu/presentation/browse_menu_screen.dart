@@ -179,7 +179,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
         planCode == _selectedPlanCode) {
       return;
     }
-    unawaited(HapticFeedback.selectionClick());
+    unawaited(HapticFeedback.mediumImpact());
     await _refreshSelection(planCode: planCode, date: _selectedDate);
   }
 
@@ -554,32 +554,22 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                         _SectionTitle(label: l10n.guestMealPlansTitle),
                         const SizedBox(height: 12),
                         SizedBox(
-                          height: 172,
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final cardWidth = (constraints.maxWidth * .76)
-                                  .clamp(250.0, 330.0)
-                                  .toDouble();
-                              return ListView.separated(
-                                key: const ValueKey('guestPlanScroller'),
-                                controller: _planScrollController,
-                                scrollDirection: Axis.horizontal,
-                                padding: const EdgeInsetsDirectional.only(
-                                  end: 8,
-                                ),
-                                itemCount: plans.length,
-                                separatorBuilder: (_, _) =>
-                                    const SizedBox(width: 12),
-                                itemBuilder: (context, index) {
-                                  final plan = plans[index];
-                                  return _GuestPlanCard(
-                                    key: ValueKey('guest-plan-${plan.code}'),
-                                    plan: plan,
-                                    width: cardWidth,
-                                    selected: plan.code == _selectedPlanCode,
-                                    onTap: () => unawaited(_selectPlan(plan)),
-                                  );
-                                },
+                          height: 68 + ((textScale - 1) * 12),
+                          child: ListView.separated(
+                            key: const ValueKey('guestPlanScroller'),
+                            controller: _planScrollController,
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsetsDirectional.only(end: 8),
+                            itemCount: plans.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(width: 12),
+                            itemBuilder: (context, index) {
+                              final plan = plans[index];
+                              return _GuestPlanCard(
+                                key: ValueKey('guest-plan-${plan.code}'),
+                                plan: plan,
+                                selected: plan.code == _selectedPlanCode,
+                                onTap: () => unawaited(_selectPlan(plan)),
                               );
                             },
                           ),
@@ -832,6 +822,11 @@ class _GuestMenuHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = resolveMediaUrl(plan?.imageUrl);
+    final planKey = ValueKey(plan?.code ?? 'meal-plan-placeholder');
+    final planName = (plan?.name ?? '').trim().isEmpty ? title : plan!.name;
+    final planDescription = (plan?.description ?? '').trim().isEmpty
+        ? subtitle
+        : plan!.description!;
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 360;
@@ -855,21 +850,29 @@ class _GuestMenuHeader extends StatelessWidget {
                 bottom: 0,
                 end: 0,
                 width: compact ? 122 : 165,
-                child: imageUrl.isEmpty
-                    ? Image.asset(
-                        'assets/images/onboarding_1.png',
-                        fit: BoxFit.cover,
-                        alignment: Alignment.center,
-                      )
-                    : Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        alignment: Alignment.center,
-                        errorBuilder: (_, _, _) => Image.asset(
-                          'assets/images/onboarding_1.png',
-                          fit: BoxFit.cover,
-                        ),
-                      ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 280),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  child: SizedBox.expand(
+                    key: planKey,
+                    child: imageUrl.isEmpty
+                        ? Image.asset(
+                            'assets/images/onboarding_1.png',
+                            fit: BoxFit.cover,
+                            alignment: Alignment.center,
+                          )
+                        : Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.center,
+                            errorBuilder: (_, _, _) => Image.asset(
+                              'assets/images/onboarding_1.png',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                  ),
+                ),
               ),
               const DecoratedBox(
                 decoration: BoxDecoration(
@@ -889,37 +892,66 @@ class _GuestMenuHeader extends StatelessWidget {
               Padding(
                 padding: EdgeInsetsDirectional.fromSTEB(
                   compact ? 18 : 22,
-                  20,
+                  16,
                   compact ? 118 : 150,
-                  20,
+                  16,
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      style: TextStyle(
-                        color: AppColors.darkGreen,
-                        fontSize: compact ? 27 : 32,
-                        height: 1.05,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -.7,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 280),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) {
+                    final slide = Tween<Offset>(
+                      begin: const Offset(0, .08),
+                      end: Offset.zero,
+                    ).animate(animation);
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(position: slide, child: child),
+                    );
+                  },
+                  child: Column(
+                    key: planKey,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        style: TextStyle(
+                          color: AppColors.emeraldGreen,
+                          fontSize: compact ? 10.5 : 11.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: .4,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      subtitle,
-                      maxLines: 3,
-                      style: TextStyle(
-                        color: AppColors.darkGreen.withValues(alpha: .72),
-                        fontSize: compact ? 11.5 : 14,
-                        height: compact ? 1.3 : 1.4,
-                        fontWeight: FontWeight.w500,
+                      const SizedBox(height: 4),
+                      Text(
+                        planName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.darkGreen,
+                          fontSize: compact ? 23 : 27,
+                          height: 1.08,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -.6,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 7),
+                      Text(
+                        planDescription,
+                        maxLines: 2,
+                        overflow: TextOverflow.fade,
+                        style: TextStyle(
+                          color: AppColors.darkGreen.withValues(alpha: .68),
+                          fontSize: compact ? 10.5 : 12.5,
+                          height: 1.35,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -1094,159 +1126,107 @@ class _GuestMenuFiltersHeader extends SliverPersistentHeaderDelegate {
 class _GuestPlanCard extends StatelessWidget {
   const _GuestPlanCard({
     required this.plan,
-    required this.width,
     required this.selected,
     required this.onTap,
     super.key,
   });
 
   final GuestMealPlan plan;
-  final double width;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = resolveMediaUrl(plan.imageUrl);
+    const labelStyle = TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700);
+    final textScaler = MediaQuery.textScalerOf(context);
+    final textPainter = TextPainter(
+      text: TextSpan(text: plan.name, style: labelStyle),
+      textDirection: Directionality.of(context),
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout();
+    final width = (textPainter.width + 98).clamp(118.0, 180.0).toDouble();
+    final scale = textScaler.scale(1).clamp(1, 1.4).toDouble();
+    final height = 60 + ((scale - 1) * 12);
+    final foreground = selected ? AppColors.white : AppColors.darkGreen;
     return Semantics(
       button: true,
       selected: selected,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.xl),
+      label: AppLocalizations.of(context).selectMealPlanSemantics(plan.name),
+      excludeSemantics: true,
+      child: AnimatedScale(
+        scale: selected ? 1.02 : 1,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 260),
+          duration: const Duration(milliseconds: 250),
           curve: Curves.easeOutCubic,
           width: width,
+          height: height,
+          margin: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFFF4FAEE) : AppColors.white,
-            borderRadius: BorderRadius.circular(AppRadius.xl),
+            color: selected ? AppColors.emeraldGreen : AppColors.white,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
             border: Border.all(
-              color: selected
-                  ? AppColors.emeraldGreen
-                  : AppColors.darkGreen.withValues(alpha: .08),
-              width: selected ? 1.7 : 1,
+              color: AppColors.emeraldGreen.withValues(
+                alpha: selected ? 1 : .30,
+              ),
+              width: selected ? 1.5 : 1,
             ),
             boxShadow: selected
                 ? [
                     BoxShadow(
-                      color: AppColors.emeraldGreen.withValues(alpha: .16),
-                      blurRadius: 24,
-                      offset: const Offset(0, 10),
+                      color: AppColors.emeraldGreen.withValues(alpha: .22),
+                      blurRadius: 16,
+                      offset: const Offset(0, 7),
                     ),
                   ]
-                : _softShadow,
+                : null,
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.xl - 1),
-            child: Stack(
-              children: [
-                PositionedDirectional(
-                  top: 0,
-                  bottom: 0,
-                  end: 0,
-                  width: width * .43,
-                  child: imageUrl.isEmpty
-                      ? Image.asset(
-                          'assets/images/onboarding_1.png',
-                          fit: BoxFit.cover,
-                        )
-                      : _NetworkMealImage(url: imageUrl, height: 170),
-                ),
-                const Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: AlignmentDirectional.centerStart,
-                        end: AlignmentDirectional.centerEnd,
-                        colors: [
-                          Color(0xFFFFFFFF),
-                          Color(0xFFFEFFF9),
-                          Color(0xE6F4FAEE),
-                          Color(0x00F4FAEE),
-                        ],
-                        stops: [0, .50, .70, 1],
+          child: Material(
+            color: AppColors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 10, 6),
+                child: Row(
+                  children: [
+                    _PlanThumbnail(plan: plan, selected: selected),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      child: Text(
+                        plan.name,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: labelStyle.copyWith(color: foreground),
                       ),
                     ),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsetsDirectional.fromSTEB(
-                    16,
-                    15,
-                    width * .36,
-                    13,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        height: 23,
-                        width: double.infinity,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: AlignmentDirectional.centerStart,
-                          child: Text(
-                            plan.name,
-                            maxLines: 1,
-                            softWrap: false,
-                            style: const TextStyle(
-                              color: AppColors.darkGreen,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -.2,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 7),
-                      Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) => FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: AlignmentDirectional.topStart,
-                            child: SizedBox(
-                              width: constraints.maxWidth,
-                              child: Text(
-                                plan.description ?? '',
-                                style: TextStyle(
-                                  color: AppColors.darkGreen.withValues(
-                                    alpha: .68,
-                                  ),
-                                  fontSize: 11,
-                                  height: 1.35,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                    const SizedBox(width: 4),
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        switchInCurve: Curves.easeOutBack,
+                        transitionBuilder: (child, animation) =>
+                            ScaleTransition(scale: animation, child: child),
+                        child: selected
+                            ? const Icon(
+                                Icons.check_rounded,
+                                key: ValueKey('selected-plan-check'),
+                                size: 18,
+                                color: AppColors.white,
+                              )
+                            : const SizedBox.shrink(
+                                key: ValueKey('unselected-plan-check'),
                               ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _PlanFeatureIcons(plan: plan),
-                    ],
-                  ),
-                ),
-                if (selected)
-                  const PositionedDirectional(
-                    top: 11,
-                    end: 11,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: AppColors.emeraldGreen,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(3),
-                        child: Icon(
-                          Icons.check_rounded,
-                          size: 17,
-                          color: AppColors.white,
-                        ),
                       ),
                     ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -1255,40 +1235,44 @@ class _GuestPlanCard extends StatelessWidget {
   }
 }
 
-class _PlanFeatureIcons extends StatelessWidget {
-  const _PlanFeatureIcons({required this.plan});
+class _PlanThumbnail extends StatelessWidget {
+  const _PlanThumbnail({required this.plan, required this.selected});
 
   final GuestMealPlan plan;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
-    final slotIcons = plan.slots
-        .map((slot) => _filterIcon(slot.mealTime.code))
-        .take(4)
-        .toList(growable: false);
-    final icons = slotIcons.isEmpty
-        ? const [
-            Icons.restaurant_rounded,
-            Icons.eco_outlined,
-            Icons.favorite_border_rounded,
-          ]
-        : slotIcons;
-    return Row(
-      children: [
-        for (final icon in icons) ...[
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: AppColors.teaGreen.withValues(alpha: .24),
-              shape: BoxShape.circle,
+    final imageUrl = resolveMediaUrl(plan.imageUrl);
+    final fallbackColor = selected ? AppColors.white : AppColors.emeraldGreen;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      width: 44,
+      height: 44,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: selected
+            ? AppColors.white.withValues(alpha: .16)
+            : AppColors.teaGreen.withValues(alpha: .22),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: selected
+              ? AppColors.white.withValues(alpha: .72)
+              : AppColors.emeraldGreen.withValues(alpha: .14),
+        ),
+      ),
+      child: imageUrl.isEmpty
+          ? Icon(Icons.restaurant_rounded, size: 20, color: fallbackColor)
+          : Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              excludeFromSemantics: true,
+              errorBuilder: (_, _, _) => Icon(
+                Icons.restaurant_rounded,
+                size: 20,
+                color: fallbackColor,
+              ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(5),
-              child: Icon(icon, size: 13, color: AppColors.emeraldGreen),
-            ),
-          ),
-          const SizedBox(width: 6),
-        ],
-      ],
     );
   }
 }
