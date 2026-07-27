@@ -788,6 +788,42 @@ abstract class AppLocalizations {
   /// **'Test code generated for WhatsApp verification.'**
   String get otpWhatsappTestGenerated;
 
+  /// No description provided for @mealPlanHeaderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Meal Plan'**
+  String get mealPlanHeaderTitle;
+
+  /// No description provided for @mealPlanHeaderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a plan that fits your lifestyle and goals.'**
+  String get mealPlanHeaderSubtitle;
+
+  /// No description provided for @planSwitchLoadingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing your new plan'**
+  String get planSwitchLoadingTitle;
+
+  /// No description provided for @planSwitchLoadingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'re organizing the best meals for you...'**
+  String get planSwitchLoadingSubtitle;
+
+  /// No description provided for @mealContentLoadingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cooking up something healthy!'**
+  String get mealContentLoadingTitle;
+
+  /// No description provided for @mealContentLoadingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetching today\'s meals...'**
+  String get mealContentLoadingSubtitle;
+
   /// No description provided for @guestMealPlansTitle.
   ///
   /// In en, this message translates to:

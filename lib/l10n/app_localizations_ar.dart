@@ -386,6 +386,24 @@ class AppLocalizationsAr extends AppLocalizations {
       'تم إنشاء رمز تجريبي للتحقق عبر واتساب.';
 
   @override
+  String get mealPlanHeaderTitle => 'خطة الوجبات';
+
+  @override
+  String get mealPlanHeaderSubtitle => 'اختر خطة تناسب نمط حياتك وأهدافك.';
+
+  @override
+  String get planSwitchLoadingTitle => 'نُحضّر خطتك الجديدة';
+
+  @override
+  String get planSwitchLoadingSubtitle => 'نرتّب لك أفضل الوجبات...';
+
+  @override
+  String get mealContentLoadingTitle => 'نحضّر لك شيئاً صحياً!';
+
+  @override
+  String get mealContentLoadingSubtitle => 'جارٍ تحميل وجبات اليوم...';
+
+  @override
   String get guestMealPlansTitle => 'اختر خطة نمط حياتك';
 
   @override

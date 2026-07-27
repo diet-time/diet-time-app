@@ -1,13 +1,15 @@
 import 'dart:async';
 
 import 'package:diet_time/app/theme/app_colors.dart';
-import 'package:diet_time/core/widgets/app_logo.dart';
+import 'package:diet_time/app/theme/app_radius.dart';
+import 'package:diet_time/app/theme/app_spacing.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/features/menu/data/guest_menu_repository.dart';
 import 'package:diet_time/features/menu/domain/guest_home_models.dart';
 import 'package:diet_time/features/menu/presentation/meal_detail_viewer.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class BrowseMenuScreen extends ConsumerStatefulWidget {
@@ -33,6 +35,8 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   bool _isHomeLoading = false;
   bool _isHomeRefreshing = false;
   bool _isMenuLoading = false;
+  bool _isPlanSwitching = false;
+  String? _switchingPlanName;
   bool _hasLoaded = false;
   bool _hasHomeError = false;
   bool _hasMenuError = false;
@@ -177,12 +181,20 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
         planCode == _selectedPlanCode) {
       return;
     }
-    await _refreshSelection(planCode: planCode, date: _selectedDate);
+    unawaited(HapticFeedback.selectionClick());
+    await _refreshSelection(
+      planCode: planCode,
+      date: _selectedDate,
+      showPlanLoader: true,
+      switchingPlanName: plan.name,
+    );
   }
 
   Future<void> _refreshSelection({
     required String planCode,
     required DateTime? date,
+    bool showPlanLoader = false,
+    String? switchingPlanName,
   }) async {
     if (planCode.trim().isEmpty || date == null) {
       return;
@@ -195,6 +207,8 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       _selectedDate = date;
       _isHomeRefreshing = true;
       _isMenuLoading = true;
+      _isPlanSwitching = showPlanLoader;
+      _switchingPlanName = showPlanLoader ? switchingPlanName : null;
       _hasHomeError = false;
       _hasMenuError = false;
     });
@@ -236,6 +250,12 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
           _isMenuLoading = false;
         });
       }
+      if (mounted && selectionRequestId == _selectionRequestId) {
+        setState(() {
+          _isPlanSwitching = false;
+          _switchingPlanName = null;
+        });
+      }
     } on Object {
       if (!mounted ||
           selectionRequestId != _selectionRequestId ||
@@ -245,6 +265,8 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       setState(() {
         _isHomeRefreshing = false;
         _isMenuLoading = false;
+        _isPlanSwitching = false;
+        _switchingPlanName = null;
         _hasHomeError = true;
       });
     }
@@ -442,10 +464,15 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (_isHomeLoading || (_homeData == null && !_hasHomeError)) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFF8F8F3),
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.emeraldGreen),
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8F8F3),
+        body: SafeArea(
+          child: _MealContentLoader(
+            key: const ValueKey('guestHomeLoader'),
+            title: l10n.mealContentLoadingTitle,
+            subtitle: l10n.mealContentLoadingSubtitle,
+            fullPage: true,
+          ),
         ),
       );
     }
@@ -474,183 +501,192 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8F3),
-      body: SafeArea(
-        child: RefreshIndicator(
-          color: AppColors.emeraldGreen,
-          onRefresh: () => _loadHome(force: true),
-          child: CustomScrollView(
-            controller: _scrollController,
-            key: const PageStorageKey('guestMenuScroll'),
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
-            ),
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-                sliver: SliverList.list(
-                  children: [
-                    Align(
-                      alignment: AlignmentDirectional.centerEnd,
-                      child: _GuestLanguageSelector(
-                        languageCode: _language ?? 'en',
-                        onSelected: _changeLanguage,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _GuestMenuHeader(plan: selectedPlan),
-                    if (_isHomeRefreshing) ...[
-                      const SizedBox(height: 12),
-                      const LinearProgressIndicator(
-                        minHeight: 3,
-                        color: AppColors.emeraldGreen,
-                        backgroundColor: Color(0x1A00674E),
-                      ),
-                    ],
-                    const SizedBox(height: 22),
-                    _SectionTitle(label: l10n.guestMealPlansTitle),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 108,
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final cardWidth = (constraints.maxWidth * .36)
-                              .clamp(120.0, 145.0)
-                              .toDouble();
-                          return ListView.separated(
-                            controller: _planScrollController,
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsetsDirectional.only(end: 8),
-                            itemCount: plans.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(width: 12),
-                            itemBuilder: (context, index) {
-                              final plan = plans[index];
-                              return _GuestPlanCard(
-                                key: ValueKey('guest-plan-${plan.code}'),
-                                plan: plan,
-                                width: cardWidth,
-                                selected: plan.code == _selectedPlanCode,
-                                onTap: () => unawaited(_selectPlan(plan)),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: RefreshIndicator(
+              color: AppColors.emeraldGreen,
+              onRefresh: () => _loadHome(force: true),
+              child: CustomScrollView(
+                controller: _scrollController,
+                key: const PageStorageKey('guestMenuScroll'),
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+                    sliver: SliverList.list(
+                      children: [
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: _GuestLanguageSelector(
+                            languageCode: _language ?? 'en',
+                            onSelected: _changeLanguage,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _GuestMenuHeader(
+                          plan: selectedPlan,
+                          title: l10n.mealPlanHeaderTitle,
+                          subtitle: l10n.mealPlanHeaderSubtitle,
+                        ),
+                        const SizedBox(height: 22),
+                        _SectionTitle(label: l10n.guestMealPlansTitle),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 172,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final cardWidth = (constraints.maxWidth * .76)
+                                  .clamp(250.0, 330.0)
+                                  .toDouble();
+                              return ListView.separated(
+                                controller: _planScrollController,
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsetsDirectional.only(
+                                  end: 8,
+                                ),
+                                itemCount: plans.length,
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(width: 12),
+                                itemBuilder: (context, index) {
+                                  final plan = plans[index];
+                                  return _GuestPlanCard(
+                                    key: ValueKey('guest-plan-${plan.code}'),
+                                    plan: plan,
+                                    width: cardWidth,
+                                    selected: plan.code == _selectedPlanCode,
+                                    onTap: () => unawaited(_selectPlan(plan)),
+                                  );
+                                },
                               );
                             },
-                          );
-                        },
-                      ),
+                          ),
+                        ),
+                        if (_hasHomeError) ...[
+                          const SizedBox(height: 16),
+                          _InlineError(
+                            message: l10n.guestPlanLoadError,
+                            retryLabel: l10n.retry,
+                            onRetry: () {
+                              final planCode = _selectedPlanCode;
+                              final date = _selectedDate;
+                              if (planCode == null || date == null) {
+                                unawaited(_loadHome(force: true));
+                                return;
+                              }
+                              unawaited(
+                                _refreshSelection(
+                                  planCode: planCode,
+                                  date: date,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                      ],
                     ),
-                    if (_hasHomeError) ...[
-                      const SizedBox(height: 16),
-                      _InlineError(
+                  ),
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _GuestMenuFiltersHeader(
+                      title: l10n.guestWeeklyMenuTitle,
+                      data: data,
+                      filters: filters,
+                      selectedPlanCode: _selectedPlanCode,
+                      selectedDate: _selectedDate,
+                      selectedMealTimeCode: _selectedMealTimeCode,
+                      dateScrollController: _dateScrollController,
+                      filterScrollController: _filterScrollController,
+                      isDateAvailable: (date) => _isDateAvailable(data, date),
+                      onDateSelected: (date) => unawaited(_selectDate(date)),
+                      onFilterSelected: (filter, index) {
+                        _selectMealTime(filter);
+                        _keepFilterVisible(index);
+                      },
+                    ),
+                  ),
+                  if (_isMenuLoading)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _MealContentLoader(
+                        key: const ValueKey('guestMealLoader'),
+                        title: l10n.mealContentLoadingTitle,
+                        subtitle: l10n.mealContentLoadingSubtitle,
+                      ),
+                    )
+                  else if (_hasMenuError)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _GuestMenuError(
                         message: l10n.guestPlanLoadError,
                         retryLabel: l10n.retry,
                         onRetry: () {
                           final planCode = _selectedPlanCode;
                           final date = _selectedDate;
-                          if (planCode == null || date == null) {
-                            unawaited(_loadHome(force: true));
-                            return;
-                          }
+                          if (planCode == null || date == null) return;
                           unawaited(
-                            _refreshSelection(planCode: planCode, date: date),
+                            _loadMenu(
+                              planCode: planCode,
+                              date: date,
+                              selectionRequestId: _selectionRequestId,
+                              force: true,
+                            ),
                           );
                         },
                       ),
-                    ],
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              ),
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _GuestMenuFiltersHeader(
-                  title: l10n.guestWeeklyMenuTitle,
-                  data: data,
-                  filters: filters,
-                  selectedPlanCode: _selectedPlanCode,
-                  selectedDate: _selectedDate,
-                  selectedMealTimeCode: _selectedMealTimeCode,
-                  dateScrollController: _dateScrollController,
-                  filterScrollController: _filterScrollController,
-                  isDateAvailable: (date) => _isDateAvailable(data, date),
-                  onDateSelected: (date) => unawaited(_selectDate(date)),
-                  onFilterSelected: (filter, index) {
-                    _selectMealTime(filter);
-                    _keepFilterVisible(index);
-                  },
-                ),
-              ),
-              if (_isMenuLoading)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(
-                    child: SizedBox.square(
-                      dimension: 28,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        color: AppColors.emeraldGreen,
+                    )
+                  else if (meals.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _GuestMenuEmpty(
+                        title: l10n.noMealsAvailableForPlan,
+                        subtitle: l10n.tryAnotherMealFilter,
                       ),
-                    ),
-                  ),
-                )
-              else if (_hasMenuError)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _GuestMenuError(
-                    message: l10n.guestPlanLoadError,
-                    retryLabel: l10n.retry,
-                    onRetry: () {
-                      final planCode = _selectedPlanCode;
-                      final date = _selectedDate;
-                      if (planCode == null || date == null) return;
-                      unawaited(
-                        _loadMenu(
-                          planCode: planCode,
-                          date: date,
-                          selectionRequestId: _selectionRequestId,
-                          force: true,
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+                      sliver: SliverGrid(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: columns,
+                          mainAxisSpacing: compactMealCards ? 12 : 16,
+                          crossAxisSpacing: compactMealCards ? 12 : 16,
+                          mainAxisExtent: compactMealCards ? 315 : 365,
                         ),
-                      );
-                    },
-                  ),
-                )
-              else if (meals.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: _GuestMenuEmpty(
-                    title: l10n.noMealsAvailableForPlan,
-                    subtitle: l10n.tryAnotherMealFilter,
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
-                  sliver: SliverGrid(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: columns,
-                      mainAxisSpacing: compactMealCards ? 12 : 16,
-                      crossAxisSpacing: compactMealCards ? 12 : 16,
-                      mainAxisExtent: compactMealCards ? 315 : 365,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      childCount: meals.length,
-                      (context, index) => _GuestMealCard(
-                        key: ValueKey('guest-meal-${meals[index].id}'),
-                        meal: meals[index],
-                        l10n: l10n,
-                        compact: compactMealCards,
-                        onTap: () => unawaited(
-                          showMealDetailViewer(
-                            context: context,
-                            meals: meals,
-                            initialIndex: index,
+                        delegate: SliverChildBuilderDelegate(
+                          childCount: meals.length,
+                          (context, index) => _GuestMealCard(
+                            key: ValueKey('guest-meal-${meals[index].id}'),
+                            meal: meals[index],
+                            l10n: l10n,
+                            compact: compactMealCards,
+                            onTap: () => unawaited(
+                              showMealDetailViewer(
+                                context: context,
+                                meals: meals,
+                                initialIndex: index,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
-        ),
+          if (_isPlanSwitching)
+            Positioned.fill(
+              child: _PlanSwitchingOverlay(
+                planName: _switchingPlanName,
+                title: l10n.planSwitchLoadingTitle,
+                subtitle: l10n.planSwitchLoadingSubtitle,
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -735,88 +771,113 @@ class _GuestLanguageSelector extends StatelessWidget {
 }
 
 class _GuestMenuHeader extends StatelessWidget {
-  const _GuestMenuHeader({required this.plan});
+  const _GuestMenuHeader({
+    required this.plan,
+    required this.title,
+    required this.subtitle,
+  });
 
   final GuestMealPlan? plan;
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
     final imageUrl = resolveMediaUrl(plan?.imageUrl);
-    return Container(
-      height: 200,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: _softShadow,
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (imageUrl.isNotEmpty)
-            Align(
-              alignment: AlignmentDirectional.centerEnd,
-              child: FractionallySizedBox(
-                widthFactor: .58,
-                heightFactor: 1,
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 360;
+        return Container(
+          key: const ValueKey('guestMealPlanHeader'),
+          height: compact ? 160 : 170,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+            border: Border.all(
+              color: AppColors.darkGreen.withValues(alpha: .07),
+            ),
+            boxShadow: _softShadow,
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              PositionedDirectional(
+                top: 0,
+                bottom: 0,
+                end: 0,
+                width: compact ? 122 : 165,
+                child: imageUrl.isEmpty
+                    ? Image.asset(
+                        'assets/images/onboarding_1.png',
+                        fit: BoxFit.cover,
+                        alignment: Alignment.center,
+                      )
+                    : Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.center,
+                        errorBuilder: (_, _, _) => Image.asset(
+                          'assets/images/onboarding_1.png',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+              ),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: AlignmentDirectional.centerStart,
+                    end: AlignmentDirectional.centerEnd,
+                    colors: [
+                      Color(0xFFFFFFFF),
+                      Color(0xFFFDFEF9),
+                      Color(0xE6F4FAEE),
+                      Color(0x00F4FAEE),
+                    ],
+                    stops: [0, .48, .70, 1],
+                  ),
                 ),
               ),
-            ),
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: AlignmentDirectional.centerStart,
-                end: AlignmentDirectional.centerEnd,
-                colors: [
-                  Color(0xFFFEFEFB),
-                  Color(0xFFF4FAEE),
-                  Color(0x99F4FAEE),
-                ],
-                stops: [0, .52, 1],
+              Padding(
+                padding: EdgeInsetsDirectional.fromSTEB(
+                  compact ? 18 : 22,
+                  20,
+                  compact ? 118 : 150,
+                  20,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: AppColors.darkGreen,
+                        fontSize: compact ? 27 : 32,
+                        height: 1.05,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -.7,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      subtitle,
+                      maxLines: 3,
+                      style: TextStyle(
+                        color: AppColors.darkGreen.withValues(alpha: .72),
+                        fontSize: compact ? 11.5 : 14,
+                        height: compact ? 1.3 : 1.4,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const AppLogo(width: 76),
-                const Spacer(),
-                if ((plan?.name ?? '').isNotEmpty)
-                  Text(
-                    plan!.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.darkGreen,
-                      fontSize: 30,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -.7,
-                    ),
-                  ),
-                if ((plan?.description ?? '').isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    plan!.description!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.emeraldGreen.withValues(alpha: .72),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -987,63 +1048,182 @@ class _GuestPlanCard extends StatelessWidget {
       selected: selected,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
           width: width,
-          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFFF0F8EB) : AppColors.white,
-            borderRadius: BorderRadius.circular(18),
+            color: selected ? const Color(0xFFF4FAEE) : AppColors.white,
+            borderRadius: BorderRadius.circular(AppRadius.xl),
             border: Border.all(
               color: selected
                   ? AppColors.emeraldGreen
                   : AppColors.darkGreen.withValues(alpha: .08),
-              width: selected ? 1.5 : 1,
+              width: selected ? 1.7 : 1,
             ),
-            boxShadow: _softShadow,
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: AppColors.emeraldGreen.withValues(alpha: .16),
+                      blurRadius: 24,
+                      offset: const Offset(0, 10),
+                    ),
+                  ]
+                : _softShadow,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: _NetworkMealImage(url: imageUrl, height: 50),
-              ),
-              const SizedBox(height: 5),
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        plan.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.darkGreen,
-                          fontSize: 12.5,
-                          height: 1.1,
-                          fontWeight: FontWeight.w800,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.xl - 1),
+            child: Stack(
+              children: [
+                PositionedDirectional(
+                  top: 0,
+                  bottom: 0,
+                  end: 0,
+                  width: width * .43,
+                  child: imageUrl.isEmpty
+                      ? Image.asset(
+                          'assets/images/onboarding_1.png',
+                          fit: BoxFit.cover,
+                        )
+                      : _NetworkMealImage(url: imageUrl, height: 170),
+                ),
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: AlignmentDirectional.centerStart,
+                        end: AlignmentDirectional.centerEnd,
+                        colors: [
+                          Color(0xFFFFFFFF),
+                          Color(0xFFFEFFF9),
+                          Color(0xE6F4FAEE),
+                          Color(0x00F4FAEE),
+                        ],
+                        stops: [0, .50, .70, 1],
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsetsDirectional.fromSTEB(
+                    16,
+                    15,
+                    width * .36,
+                    13,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        height: 23,
+                        width: double.infinity,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(
+                            plan.name,
+                            maxLines: 1,
+                            softWrap: false,
+                            style: const TextStyle(
+                              color: AppColors.darkGreen,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, constraints) => FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: AlignmentDirectional.topStart,
+                            child: SizedBox(
+                              width: constraints.maxWidth,
+                              child: Text(
+                                plan.description ?? '',
+                                style: TextStyle(
+                                  color: AppColors.darkGreen.withValues(
+                                    alpha: .68,
+                                  ),
+                                  fontSize: 11,
+                                  height: 1.35,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _PlanFeatureIcons(plan: plan),
+                    ],
+                  ),
+                ),
+                if (selected)
+                  const PositionedDirectional(
+                    top: 11,
+                    end: 11,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: AppColors.emeraldGreen,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.all(3),
+                        child: Icon(
+                          Icons.check_rounded,
+                          size: 17,
+                          color: AppColors.white,
                         ),
                       ),
                     ),
-                    if (selected)
-                      const Padding(
-                        padding: EdgeInsetsDirectional.only(start: 3),
-                        child: Icon(
-                          Icons.check_circle_rounded,
-                          size: 16,
-                          color: AppColors.emeraldGreen,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
+                  ),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PlanFeatureIcons extends StatelessWidget {
+  const _PlanFeatureIcons({required this.plan});
+
+  final GuestMealPlan plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final slotIcons = plan.slots
+        .map((slot) => _filterIcon(slot.mealTime.code))
+        .take(4)
+        .toList(growable: false);
+    final icons = slotIcons.isEmpty
+        ? const [
+            Icons.restaurant_rounded,
+            Icons.eco_outlined,
+            Icons.favorite_border_rounded,
+          ]
+        : slotIcons;
+    return Row(
+      children: [
+        for (final icon in icons) ...[
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.teaGreen.withValues(alpha: .24),
+              shape: BoxShape.circle,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(5),
+              child: Icon(icon, size: 13, color: AppColors.emeraldGreen),
+            ),
+          ),
+          const SizedBox(width: 6),
+        ],
+      ],
     );
   }
 }
@@ -1405,6 +1585,258 @@ class _NetworkMealImage extends StatelessWidget {
             errorBuilder: (_, _, _) => const SizedBox.shrink(),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PlanSwitchingOverlay extends StatelessWidget {
+  const _PlanSwitchingOverlay({
+    required this.planName,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final String? planName;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: ColoredBox(
+        color: AppColors.darkGreen.withValues(alpha: .08),
+        child: SafeArea(
+          top: false,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              key: const ValueKey('guestPlanSwitchingOverlay'),
+              width: double.infinity,
+              constraints: const BoxConstraints(maxWidth: 560),
+              margin: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.fromLTRB(24, 18, 24, 22),
+              decoration: BoxDecoration(
+                color: AppColors.white.withValues(alpha: .98),
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+                border: Border.all(
+                  color: AppColors.emeraldGreen.withValues(alpha: .14),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.darkGreen.withValues(alpha: .18),
+                    blurRadius: 32,
+                    offset: const Offset(0, 14),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const _FreshMealLoaderIcon(size: 62),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.darkGreen,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  if ((planName ?? '').trim().isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 20,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          planName!,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: const TextStyle(
+                            color: AppColors.emeraldGreen,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 5),
+                  Text(
+                    subtitle,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.darkGreen.withValues(alpha: .62),
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const _AnimatedLoadingDots(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MealContentLoader extends StatelessWidget {
+  const _MealContentLoader({
+    required this.title,
+    required this.subtitle,
+    this.fullPage = false,
+    super.key,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool fullPage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 420),
+        margin: const EdgeInsets.all(AppSpacing.lg),
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: fullPage ? AppSpacing.xl : AppSpacing.lg,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          border: Border.all(color: AppColors.darkGreen.withValues(alpha: .06)),
+          boxShadow: _softShadow,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _FreshMealLoaderIcon(size: fullPage ? 82 : 70),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.darkGreen,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.darkGreen.withValues(alpha: .60),
+                fontSize: 13,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const _AnimatedLoadingDots(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FreshMealLoaderIcon extends StatelessWidget {
+  const _FreshMealLoaderIcon({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.teaGreen.withValues(alpha: .22),
+              shape: BoxShape.circle,
+            ),
+            child: SizedBox.square(dimension: size),
+          ),
+          Icon(
+            Icons.soup_kitchen_outlined,
+            size: size * .48,
+            color: AppColors.emeraldGreen,
+          ),
+          PositionedDirectional(
+            top: size * .08,
+            end: size * .10,
+            child: Icon(
+              Icons.eco_rounded,
+              size: size * .24,
+              color: AppColors.emeraldGreen,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnimatedLoadingDots extends StatefulWidget {
+  const _AnimatedLoadingDots();
+
+  @override
+  State<_AnimatedLoadingDots> createState() => _AnimatedLoadingDotsState();
+}
+
+class _AnimatedLoadingDotsState extends State<_AnimatedLoadingDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(3, (index) {
+          final phase = (_controller.value - (index * .16)) % 1;
+          final pulse = (1 - ((phase - .5).abs() * 2)).clamp(0.0, 1.0);
+          return Container(
+            width: 9,
+            height: 9,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: AppColors.emeraldGreen.withValues(
+                alpha: .24 + (.76 * pulse),
+              ),
+              shape: BoxShape.circle,
+            ),
+          );
+        }),
       ),
     );
   }

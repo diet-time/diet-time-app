@@ -390,6 +390,26 @@ class AppLocalizationsEn extends AppLocalizations {
       'Test code generated for WhatsApp verification.';
 
   @override
+  String get mealPlanHeaderTitle => 'Meal Plan';
+
+  @override
+  String get mealPlanHeaderSubtitle =>
+      'Choose a plan that fits your lifestyle and goals.';
+
+  @override
+  String get planSwitchLoadingTitle => 'Preparing your new plan';
+
+  @override
+  String get planSwitchLoadingSubtitle =>
+      'We\'re organizing the best meals for you...';
+
+  @override
+  String get mealContentLoadingTitle => 'Cooking up something healthy!';
+
+  @override
+  String get mealContentLoadingSubtitle => 'Fetching today\'s meals...';
+
+  @override
   String get guestMealPlansTitle => 'Choose your lifestyle plan';
 
   @override

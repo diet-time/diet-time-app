@@ -69,6 +69,11 @@ void main() {
     await tester.pumpWidget(_app(repository: repository));
     await _load(tester);
 
+    expect(find.text('Meal Plan'), findsOneWidget);
+    expect(
+      find.text('Choose a plan that fits your lifestyle and goals.'),
+      findsOneWidget,
+    );
     expect(find.text('Classic'), findsWidgets);
     expect(find.text('PLN_CLASSIC'), findsWidgets);
     expect(find.text('Oatmeal Banana'), findsOneWidget);
@@ -83,7 +88,7 @@ void main() {
     expect(repository.events, ['home', 'menu']);
   });
 
-  testWidgets('plan cards stay compact and omit their descriptions', (
+  testWidgets('plan cards show one-line names and visible descriptions', (
     tester,
   ) async {
     await _useTallSurface(tester);
@@ -94,9 +99,12 @@ void main() {
     final size = tester.getSize(
       find.byKey(const ValueKey('guest-plan-PLN_CLASSIC')),
     );
-    expect(size.width, inInclusiveRange(120, 145));
-    expect(size.height, inInclusiveRange(95, 110));
+    expect(size.width, inInclusiveRange(250, 330));
+    expect(size.height, 172);
     expect(find.text('PLN_CLASSIC'), findsOneWidget);
+    final planName = tester.widget<Text>(find.text('Classic').first);
+    expect(planName.maxLines, 1);
+    expect(planName.softWrap, isFalse);
   });
 
   testWidgets('phone layout displays two meal cards in each row', (
@@ -466,6 +474,41 @@ void main() {
     await _load(tester);
     expect(repository.calls, hasLength(3));
     expect(find.text('Keto Chicken'), findsOneWidget);
+  });
+
+  testWidgets('plan selection shows a friendly switching overlay', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final repository = _DeferredGuestMenuRepository(_response());
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    await tester.tap(find.byKey(const ValueKey('guest-plan-PLN_KETO')));
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('guestPlanSwitchingOverlay')),
+      findsOneWidget,
+    );
+    expect(find.text('Preparing your new plan'), findsOneWidget);
+    expect(find.text('Keto'), findsWidgets);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+
+    repository.completePlanRequest(
+      0,
+      _planResponse(
+        planCode: 'PLN_KETO',
+        heroTitle: 'Keto response',
+        mealName: 'Keto API Meal',
+      ),
+    );
+    await _load(tester);
+
+    expect(
+      find.byKey(const ValueKey('guestPlanSwitchingOverlay')),
+      findsNothing,
+    );
   });
 
   testWidgets(
