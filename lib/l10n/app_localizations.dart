@@ -458,6 +458,408 @@ abstract class AppLocalizations {
   /// **'Start your Plan'**
   String get onboardingStartPlan;
 
+  /// No description provided for @onboardingBrand.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet Time'**
+  String get onboardingBrand;
+
+  /// No description provided for @onboardingWelcomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Diet Time'**
+  String get onboardingWelcomeTitle;
+
+  /// No description provided for @onboardingWelcomeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Healthy eating made simple.\nLet\'s build a meal plan designed just for you.'**
+  String get onboardingWelcomeSubtitle;
+
+  /// No description provided for @onboardingStartJourney.
+  ///
+  /// In en, this message translates to:
+  /// **'Start My Journey'**
+  String get onboardingStartJourney;
+
+  /// No description provided for @onboardingContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get onboardingContinue;
+
+  /// No description provided for @onboardingPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get onboardingPrevious;
+
+  /// No description provided for @onboardingGoalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What would you like to achieve?'**
+  String get onboardingGoalTitle;
+
+  /// No description provided for @onboardingGoalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll personalize your meals around your goal.'**
+  String get onboardingGoalSubtitle;
+
+  /// No description provided for @onboardingLoseWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Lose Weight'**
+  String get onboardingLoseWeight;
+
+  /// No description provided for @onboardingLoseWeightDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Burn fat while enjoying satisfying meals.'**
+  String get onboardingLoseWeightDescription;
+
+  /// No description provided for @onboardingBuildMuscle.
+  ///
+  /// In en, this message translates to:
+  /// **'Build Muscle'**
+  String get onboardingBuildMuscle;
+
+  /// No description provided for @onboardingBuildMuscleDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Protein-focused meals to support strength.'**
+  String get onboardingBuildMuscleDescription;
+
+  /// No description provided for @onboardingStayHealthy.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay Healthy'**
+  String get onboardingStayHealthy;
+
+  /// No description provided for @onboardingStayHealthyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced nutrition for everyday wellness.'**
+  String get onboardingStayHealthyDescription;
+
+  /// No description provided for @onboardingImproveFitness.
+  ///
+  /// In en, this message translates to:
+  /// **'Improve Fitness'**
+  String get onboardingImproveFitness;
+
+  /// No description provided for @onboardingImproveFitnessDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Fuel your body for an active lifestyle.'**
+  String get onboardingImproveFitnessDescription;
+
+  /// No description provided for @onboardingProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s get to know you'**
+  String get onboardingProfileTitle;
+
+  /// No description provided for @onboardingProfileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A few details help us tailor every meal to you.'**
+  String get onboardingProfileSubtitle;
+
+  /// No description provided for @onboardingGender.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get onboardingGender;
+
+  /// No description provided for @onboardingAge.
+  ///
+  /// In en, this message translates to:
+  /// **'Age'**
+  String get onboardingAge;
+
+  /// No description provided for @onboardingHeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Height'**
+  String get onboardingHeight;
+
+  /// No description provided for @onboardingWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight'**
+  String get onboardingWeight;
+
+  /// No description provided for @onboardingMale.
+  ///
+  /// In en, this message translates to:
+  /// **'Male'**
+  String get onboardingMale;
+
+  /// No description provided for @onboardingFemale.
+  ///
+  /// In en, this message translates to:
+  /// **'Female'**
+  String get onboardingFemale;
+
+  /// No description provided for @onboardingPreferNotToSay.
+  ///
+  /// In en, this message translates to:
+  /// **'Prefer not to say'**
+  String get onboardingPreferNotToSay;
+
+  /// No description provided for @onboardingLifestyleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us about your daily routine'**
+  String get onboardingLifestyleTitle;
+
+  /// No description provided for @onboardingLifestyleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the option that feels most like your day.'**
+  String get onboardingLifestyleSubtitle;
+
+  /// No description provided for @onboardingOfficeWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Office Work'**
+  String get onboardingOfficeWork;
+
+  /// No description provided for @onboardingWorkFromHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Work From Home'**
+  String get onboardingWorkFromHome;
+
+  /// No description provided for @onboardingStudent.
+  ///
+  /// In en, this message translates to:
+  /// **'Student'**
+  String get onboardingStudent;
+
+  /// No description provided for @onboardingActiveJob.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Job'**
+  String get onboardingActiveJob;
+
+  /// No description provided for @onboardingShiftWorker.
+  ///
+  /// In en, this message translates to:
+  /// **'Shift Worker'**
+  String get onboardingShiftWorker;
+
+  /// No description provided for @onboardingActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How active are you?'**
+  String get onboardingActivityTitle;
+
+  /// No description provided for @onboardingActivitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll balance your meals around your energy needs.'**
+  String get onboardingActivitySubtitle;
+
+  /// No description provided for @onboardingMostlySitting.
+  ///
+  /// In en, this message translates to:
+  /// **'Mostly Sitting'**
+  String get onboardingMostlySitting;
+
+  /// No description provided for @onboardingLightActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Light Activity'**
+  String get onboardingLightActivity;
+
+  /// No description provided for @onboardingActiveLifestyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Lifestyle'**
+  String get onboardingActiveLifestyle;
+
+  /// No description provided for @onboardingAthlete.
+  ///
+  /// In en, this message translates to:
+  /// **'Athlete'**
+  String get onboardingAthlete;
+
+  /// No description provided for @onboardingPreferencesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What do you enjoy eating?'**
+  String get onboardingPreferencesTitle;
+
+  /// No description provided for @onboardingPreferencesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select as many as you like.'**
+  String get onboardingPreferencesSubtitle;
+
+  /// No description provided for @onboardingHighProtein.
+  ///
+  /// In en, this message translates to:
+  /// **'High Protein'**
+  String get onboardingHighProtein;
+
+  /// No description provided for @onboardingLowCarb.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Carb'**
+  String get onboardingLowCarb;
+
+  /// No description provided for @onboardingVegetarian.
+  ///
+  /// In en, this message translates to:
+  /// **'Vegetarian'**
+  String get onboardingVegetarian;
+
+  /// No description provided for @onboardingVegan.
+  ///
+  /// In en, this message translates to:
+  /// **'Vegan'**
+  String get onboardingVegan;
+
+  /// No description provided for @onboardingSeafood.
+  ///
+  /// In en, this message translates to:
+  /// **'Seafood'**
+  String get onboardingSeafood;
+
+  /// No description provided for @onboardingChicken.
+  ///
+  /// In en, this message translates to:
+  /// **'Chicken'**
+  String get onboardingChicken;
+
+  /// No description provided for @onboardingBeef.
+  ///
+  /// In en, this message translates to:
+  /// **'Beef'**
+  String get onboardingBeef;
+
+  /// No description provided for @onboardingArabicCuisine.
+  ///
+  /// In en, this message translates to:
+  /// **'Arabic Cuisine'**
+  String get onboardingArabicCuisine;
+
+  /// No description provided for @onboardingInternational.
+  ///
+  /// In en, this message translates to:
+  /// **'International'**
+  String get onboardingInternational;
+
+  /// No description provided for @onboardingMediterranean.
+  ///
+  /// In en, this message translates to:
+  /// **'Mediterranean'**
+  String get onboardingMediterranean;
+
+  /// No description provided for @onboardingHealthySnacks.
+  ///
+  /// In en, this message translates to:
+  /// **'Healthy Snacks'**
+  String get onboardingHealthySnacks;
+
+  /// No description provided for @onboardingBreakfastLover.
+  ///
+  /// In en, this message translates to:
+  /// **'Breakfast Lover'**
+  String get onboardingBreakfastLover;
+
+  /// No description provided for @onboardingAllergiesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Any food allergies?'**
+  String get onboardingAllergiesTitle;
+
+  /// No description provided for @onboardingAllergiesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select everything we should keep in mind.'**
+  String get onboardingAllergiesSubtitle;
+
+  /// No description provided for @onboardingMilk.
+  ///
+  /// In en, this message translates to:
+  /// **'Milk'**
+  String get onboardingMilk;
+
+  /// No description provided for @onboardingEgg.
+  ///
+  /// In en, this message translates to:
+  /// **'Egg'**
+  String get onboardingEgg;
+
+  /// No description provided for @onboardingFish.
+  ///
+  /// In en, this message translates to:
+  /// **'Fish'**
+  String get onboardingFish;
+
+  /// No description provided for @onboardingShellfish.
+  ///
+  /// In en, this message translates to:
+  /// **'Shellfish'**
+  String get onboardingShellfish;
+
+  /// No description provided for @onboardingTreeNuts.
+  ///
+  /// In en, this message translates to:
+  /// **'Tree Nuts'**
+  String get onboardingTreeNuts;
+
+  /// No description provided for @onboardingPeanuts.
+  ///
+  /// In en, this message translates to:
+  /// **'Peanuts'**
+  String get onboardingPeanuts;
+
+  /// No description provided for @onboardingSoy.
+  ///
+  /// In en, this message translates to:
+  /// **'Soy'**
+  String get onboardingSoy;
+
+  /// No description provided for @onboardingSesame.
+  ///
+  /// In en, this message translates to:
+  /// **'Sesame'**
+  String get onboardingSesame;
+
+  /// No description provided for @onboardingGluten.
+  ///
+  /// In en, this message translates to:
+  /// **'Gluten'**
+  String get onboardingGluten;
+
+  /// No description provided for @onboardingNoAllergies.
+  ///
+  /// In en, this message translates to:
+  /// **'No Allergies'**
+  String get onboardingNoAllergies;
+
+  /// No description provided for @onboardingBuildingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating your personalized meal plan'**
+  String get onboardingBuildingTitle;
+
+  /// No description provided for @onboardingBuildingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'re preparing meals that match your goals, lifestyle and preferences.'**
+  String get onboardingBuildingSubtitle;
+
+  /// No description provided for @onboardingReadyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'View My Options'**
+  String get onboardingReadyAction;
+
   /// No description provided for @chooseLanguage.
   ///
   /// In en, this message translates to:

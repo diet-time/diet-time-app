@@ -199,6 +199,218 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingStartPlan => 'Start your Plan';
 
   @override
+  String get onboardingBrand => 'Diet Time';
+
+  @override
+  String get onboardingWelcomeTitle => 'Welcome to Diet Time';
+
+  @override
+  String get onboardingWelcomeSubtitle =>
+      'Healthy eating made simple.\nLet\'s build a meal plan designed just for you.';
+
+  @override
+  String get onboardingStartJourney => 'Start My Journey';
+
+  @override
+  String get onboardingContinue => 'Continue';
+
+  @override
+  String get onboardingPrevious => 'Previous';
+
+  @override
+  String get onboardingGoalTitle => 'What would you like to achieve?';
+
+  @override
+  String get onboardingGoalSubtitle =>
+      'We\'ll personalize your meals around your goal.';
+
+  @override
+  String get onboardingLoseWeight => 'Lose Weight';
+
+  @override
+  String get onboardingLoseWeightDescription =>
+      'Burn fat while enjoying satisfying meals.';
+
+  @override
+  String get onboardingBuildMuscle => 'Build Muscle';
+
+  @override
+  String get onboardingBuildMuscleDescription =>
+      'Protein-focused meals to support strength.';
+
+  @override
+  String get onboardingStayHealthy => 'Stay Healthy';
+
+  @override
+  String get onboardingStayHealthyDescription =>
+      'Balanced nutrition for everyday wellness.';
+
+  @override
+  String get onboardingImproveFitness => 'Improve Fitness';
+
+  @override
+  String get onboardingImproveFitnessDescription =>
+      'Fuel your body for an active lifestyle.';
+
+  @override
+  String get onboardingProfileTitle => 'Let\'s get to know you';
+
+  @override
+  String get onboardingProfileSubtitle =>
+      'A few details help us tailor every meal to you.';
+
+  @override
+  String get onboardingGender => 'Gender';
+
+  @override
+  String get onboardingAge => 'Age';
+
+  @override
+  String get onboardingHeight => 'Height';
+
+  @override
+  String get onboardingWeight => 'Weight';
+
+  @override
+  String get onboardingMale => 'Male';
+
+  @override
+  String get onboardingFemale => 'Female';
+
+  @override
+  String get onboardingPreferNotToSay => 'Prefer not to say';
+
+  @override
+  String get onboardingLifestyleTitle => 'Tell us about your daily routine';
+
+  @override
+  String get onboardingLifestyleSubtitle =>
+      'Choose the option that feels most like your day.';
+
+  @override
+  String get onboardingOfficeWork => 'Office Work';
+
+  @override
+  String get onboardingWorkFromHome => 'Work From Home';
+
+  @override
+  String get onboardingStudent => 'Student';
+
+  @override
+  String get onboardingActiveJob => 'Active Job';
+
+  @override
+  String get onboardingShiftWorker => 'Shift Worker';
+
+  @override
+  String get onboardingActivityTitle => 'How active are you?';
+
+  @override
+  String get onboardingActivitySubtitle =>
+      'We\'ll balance your meals around your energy needs.';
+
+  @override
+  String get onboardingMostlySitting => 'Mostly Sitting';
+
+  @override
+  String get onboardingLightActivity => 'Light Activity';
+
+  @override
+  String get onboardingActiveLifestyle => 'Active Lifestyle';
+
+  @override
+  String get onboardingAthlete => 'Athlete';
+
+  @override
+  String get onboardingPreferencesTitle => 'What do you enjoy eating?';
+
+  @override
+  String get onboardingPreferencesSubtitle => 'Select as many as you like.';
+
+  @override
+  String get onboardingHighProtein => 'High Protein';
+
+  @override
+  String get onboardingLowCarb => 'Low Carb';
+
+  @override
+  String get onboardingVegetarian => 'Vegetarian';
+
+  @override
+  String get onboardingVegan => 'Vegan';
+
+  @override
+  String get onboardingSeafood => 'Seafood';
+
+  @override
+  String get onboardingChicken => 'Chicken';
+
+  @override
+  String get onboardingBeef => 'Beef';
+
+  @override
+  String get onboardingArabicCuisine => 'Arabic Cuisine';
+
+  @override
+  String get onboardingInternational => 'International';
+
+  @override
+  String get onboardingMediterranean => 'Mediterranean';
+
+  @override
+  String get onboardingHealthySnacks => 'Healthy Snacks';
+
+  @override
+  String get onboardingBreakfastLover => 'Breakfast Lover';
+
+  @override
+  String get onboardingAllergiesTitle => 'Any food allergies?';
+
+  @override
+  String get onboardingAllergiesSubtitle =>
+      'Select everything we should keep in mind.';
+
+  @override
+  String get onboardingMilk => 'Milk';
+
+  @override
+  String get onboardingEgg => 'Egg';
+
+  @override
+  String get onboardingFish => 'Fish';
+
+  @override
+  String get onboardingShellfish => 'Shellfish';
+
+  @override
+  String get onboardingTreeNuts => 'Tree Nuts';
+
+  @override
+  String get onboardingPeanuts => 'Peanuts';
+
+  @override
+  String get onboardingSoy => 'Soy';
+
+  @override
+  String get onboardingSesame => 'Sesame';
+
+  @override
+  String get onboardingGluten => 'Gluten';
+
+  @override
+  String get onboardingNoAllergies => 'No Allergies';
+
+  @override
+  String get onboardingBuildingTitle => 'Creating your personalized meal plan';
+
+  @override
+  String get onboardingBuildingSubtitle =>
+      'We\'re preparing meals that match your goals, lifestyle and preferences.';
+
+  @override
+  String get onboardingReadyAction => 'View My Options';
+
+  @override
   String get chooseLanguage => 'Choose your Language';
 
   @override

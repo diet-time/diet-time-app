@@ -199,6 +199,216 @@ class AppLocalizationsAr extends AppLocalizations {
   String get onboardingStartPlan => 'ابدأ خطتك';
 
   @override
+  String get onboardingBrand => 'دايت تايم';
+
+  @override
+  String get onboardingWelcomeTitle => 'مرحباً بك في دايت تايم';
+
+  @override
+  String get onboardingWelcomeSubtitle =>
+      'الأكل الصحي أصبح أسهل.\nلنصمم خطة وجبات تناسبك أنت.';
+
+  @override
+  String get onboardingStartJourney => 'ابدأ رحلتي';
+
+  @override
+  String get onboardingContinue => 'متابعة';
+
+  @override
+  String get onboardingPrevious => 'السابق';
+
+  @override
+  String get onboardingGoalTitle => 'ما الهدف الذي ترغب في تحقيقه؟';
+
+  @override
+  String get onboardingGoalSubtitle => 'سنخصص وجباتك بما يناسب هدفك.';
+
+  @override
+  String get onboardingLoseWeight => 'خسارة الوزن';
+
+  @override
+  String get onboardingLoseWeightDescription =>
+      'اخسر الدهون مع وجبات مشبعة ولذيذة.';
+
+  @override
+  String get onboardingBuildMuscle => 'بناء العضلات';
+
+  @override
+  String get onboardingBuildMuscleDescription =>
+      'وجبات غنية بالبروتين لدعم القوة.';
+
+  @override
+  String get onboardingStayHealthy => 'الحفاظ على الصحة';
+
+  @override
+  String get onboardingStayHealthyDescription =>
+      'تغذية متوازنة لصحة يومية أفضل.';
+
+  @override
+  String get onboardingImproveFitness => 'تحسين اللياقة';
+
+  @override
+  String get onboardingImproveFitnessDescription =>
+      'غذاء يمنح جسمك طاقة لنمط حياة نشط.';
+
+  @override
+  String get onboardingProfileTitle => 'لنتعرف عليك أكثر';
+
+  @override
+  String get onboardingProfileSubtitle =>
+      'بعض التفاصيل تساعدنا في تخصيص كل وجبة لك.';
+
+  @override
+  String get onboardingGender => 'الجنس';
+
+  @override
+  String get onboardingAge => 'العمر';
+
+  @override
+  String get onboardingHeight => 'الطول';
+
+  @override
+  String get onboardingWeight => 'الوزن';
+
+  @override
+  String get onboardingMale => 'ذكر';
+
+  @override
+  String get onboardingFemale => 'أنثى';
+
+  @override
+  String get onboardingPreferNotToSay => 'أفضل عدم الإجابة';
+
+  @override
+  String get onboardingLifestyleTitle => 'أخبرنا عن روتينك اليومي';
+
+  @override
+  String get onboardingLifestyleSubtitle => 'اختر الوصف الأقرب ليومك.';
+
+  @override
+  String get onboardingOfficeWork => 'عمل مكتبي';
+
+  @override
+  String get onboardingWorkFromHome => 'العمل من المنزل';
+
+  @override
+  String get onboardingStudent => 'طالب';
+
+  @override
+  String get onboardingActiveJob => 'عمل يتطلب الحركة';
+
+  @override
+  String get onboardingShiftWorker => 'عمل بنظام المناوبات';
+
+  @override
+  String get onboardingActivityTitle => 'ما مستوى نشاطك؟';
+
+  @override
+  String get onboardingActivitySubtitle =>
+      'سنوازن وجباتك وفق احتياجاتك من الطاقة.';
+
+  @override
+  String get onboardingMostlySitting => 'الجلوس غالباً';
+
+  @override
+  String get onboardingLightActivity => 'نشاط خفيف';
+
+  @override
+  String get onboardingActiveLifestyle => 'نمط حياة نشط';
+
+  @override
+  String get onboardingAthlete => 'رياضي';
+
+  @override
+  String get onboardingPreferencesTitle => 'ما الأطعمة التي تستمتع بها؟';
+
+  @override
+  String get onboardingPreferencesSubtitle => 'اختر كل ما تفضله.';
+
+  @override
+  String get onboardingHighProtein => 'عالي البروتين';
+
+  @override
+  String get onboardingLowCarb => 'قليل الكربوهيدرات';
+
+  @override
+  String get onboardingVegetarian => 'نباتي';
+
+  @override
+  String get onboardingVegan => 'نباتي صرف';
+
+  @override
+  String get onboardingSeafood => 'مأكولات بحرية';
+
+  @override
+  String get onboardingChicken => 'دجاج';
+
+  @override
+  String get onboardingBeef => 'لحم بقري';
+
+  @override
+  String get onboardingArabicCuisine => 'مطبخ عربي';
+
+  @override
+  String get onboardingInternational => 'مطبخ عالمي';
+
+  @override
+  String get onboardingMediterranean => 'مطبخ متوسطي';
+
+  @override
+  String get onboardingHealthySnacks => 'وجبات خفيفة صحية';
+
+  @override
+  String get onboardingBreakfastLover => 'محب للإفطار';
+
+  @override
+  String get onboardingAllergiesTitle => 'هل لديك حساسية من أي طعام؟';
+
+  @override
+  String get onboardingAllergiesSubtitle =>
+      'اختر كل ما يجب أن نأخذه في الاعتبار.';
+
+  @override
+  String get onboardingMilk => 'الحليب';
+
+  @override
+  String get onboardingEgg => 'البيض';
+
+  @override
+  String get onboardingFish => 'السمك';
+
+  @override
+  String get onboardingShellfish => 'المحار';
+
+  @override
+  String get onboardingTreeNuts => 'المكسرات';
+
+  @override
+  String get onboardingPeanuts => 'الفول السوداني';
+
+  @override
+  String get onboardingSoy => 'الصويا';
+
+  @override
+  String get onboardingSesame => 'السمسم';
+
+  @override
+  String get onboardingGluten => 'الغلوتين';
+
+  @override
+  String get onboardingNoAllergies => 'لا توجد حساسية';
+
+  @override
+  String get onboardingBuildingTitle => 'جارٍ إنشاء خطة وجباتك المخصصة';
+
+  @override
+  String get onboardingBuildingSubtitle =>
+      'نجهز وجبات تناسب أهدافك ونمط حياتك وتفضيلاتك.';
+
+  @override
+  String get onboardingReadyAction => 'عرض خياراتي';
+
+  @override
   String get chooseLanguage => 'اختر لغتك';
 
   @override

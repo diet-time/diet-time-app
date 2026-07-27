@@ -1,11 +1,11 @@
 import 'package:diet_time/app/app.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
+import 'package:diet_time/features/authentication/presentation/phone_login_page.dart';
 import 'package:diet_time/features/language/presentation/language_selection_screen.dart';
 import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
-import 'package:diet_time/features/authentication/presentation/phone_login_page.dart';
-import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,37 +15,101 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('tap and swipe update the same onboarding page index', (
+  testWidgets('onboarding moves through steps and preserves goal selection', (
     tester,
   ) async {
     await tester.pumpWidget(_onboardingApp());
 
-    expect(find.text('Healthy Meals,'), findsOneWidget);
-    expect(find.text('Skip'), findsNothing);
-    expect(find.text('Next'), findsNothing);
+    expect(find.text('Welcome to Diet Time'), findsOneWidget);
+    expect(find.byKey(const ValueKey('onboardingProgress')), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('onboardingTapArea-0')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Plans That Fit'), findsOneWidget);
+    await _advance(tester);
+    expect(find.text('What would you like to achieve?'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('goal-muscle')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<AnimatedContainer>(
+            find
+                .descendant(
+                  of: find.byKey(const ValueKey('goal-muscle')),
+                  matching: find.byType(AnimatedContainer),
+                )
+                .first,
+          )
+          .decoration,
+      isNotNull,
+    );
 
-    await tester.drag(find.byType(PageView), const Offset(-500, 0));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Fresh. Clean.'), findsOneWidget);
+    await tester.drag(
+      find.byKey(const ValueKey('onboardingPageView')),
+      const Offset(-500, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text("Let's get to know you"), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('onboardingPrevious')));
+    await tester.pumpAndSettle();
+    expect(find.text('Build Muscle'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('onboarding automatically advances to the next page', (
+  testWidgets('profile values use an iOS wheel picker bottom sheet', (
     tester,
   ) async {
     await tester.pumpWidget(_onboardingApp());
+    await _advance(tester);
+    await _advance(tester);
 
-    expect(find.text('Healthy Meals,'), findsOneWidget);
-    await tester.pump(const Duration(milliseconds: 3000));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byKey(const ValueKey('profileAge')));
+    await tester.pumpAndSettle();
 
-    expect(find.text('Plans That Fit'), findsOneWidget);
+    expect(find.byKey(const ValueKey('onboardingWheelPicker')), findsOneWidget);
+    expect(find.byType(CupertinoPicker), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('preference and allergy chips support multiple selections', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_onboardingApp());
+    for (var index = 0; index < 5; index++) {
+      await _advance(tester);
+    }
+
+    expect(find.text('What do you enjoy eating?'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('choice-protein')));
+    await tester.tap(find.byKey(const ValueKey('choice-seafood')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<FilterChip>(find.byKey(const ValueKey('choice-protein')))
+          .selected,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<FilterChip>(find.byKey(const ValueKey('choice-seafood')))
+          .selected,
+      isTrue,
+    );
+
+    await _advance(tester);
+    await tester.tap(find.byKey(const ValueKey('choice-milk')));
+    await tester.tap(find.byKey(const ValueKey('choice-none')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<FilterChip>(find.byKey(const ValueKey('choice-none')))
+          .selected,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<FilterChip>(find.byKey(const ValueKey('choice-milk')))
+          .selected,
+      isFalse,
+    );
   });
 
   testWidgets('language selection opens before onboarding', (tester) async {
@@ -56,7 +120,7 @@ void main() {
     expect(find.byType(LanguageSelectionScreen), findsOneWidget);
     expect(find.text('English'), findsOneWidget);
     expect(find.text('العربية'), findsOneWidget);
-    expect(find.text('Healthy Meals,'), findsNothing);
+    expect(find.text('Welcome to Diet Time'), findsNothing);
   });
 
   testWidgets('language preference is saved before onboarding opens', (
@@ -64,30 +128,33 @@ void main() {
   ) async {
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
     await _finishSplash(tester);
-
     await _chooseLanguage(tester, 'English');
 
     final preferences = await SharedPreferences.getInstance();
     expect(preferences.getString('preferredLanguage'), 'en');
     expect(preferences.getBool('languageSelectionCompletedV2'), isTrue);
-    expect(find.text('Healthy Meals,'), findsOneWidget);
+    expect(find.text('Welcome to Diet Time'), findsOneWidget);
   });
 
-  testWidgets('final onboarding panel can be opened immediately by tapping', (
+  testWidgets('final plan-building screen reveals choices without waiting', (
     tester,
   ) async {
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
-    await _reachFinalChoice(tester);
+    await _reachBuildingStep(tester);
 
-    expect(find.text('Better Together,'), findsOneWidget);
+    expect(find.text('Creating your personalized meal plan'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('onboardingPlanProgress')),
+      findsOneWidget,
+    );
     expect(find.byKey(const ValueKey('onboardingMenuChoice')), findsNothing);
-    expect(find.byKey(const ValueKey('onboardingPlanChoice')), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('onboardingTapArea-4')));
+
+    await tester.tap(find.byKey(const ValueKey('onboardingContinue')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.byType(OnboardingScreen), findsOneWidget);
+
     expect(
       find.byKey(const ValueKey('onboardingFinalChoicePanel')),
       findsOneWidget,
@@ -95,58 +162,34 @@ void main() {
     expect(find.byKey(const ValueKey('onboardingMenuChoice')), findsOneWidget);
     expect(find.byKey(const ValueKey('onboardingPlanChoice')), findsOneWidget);
     expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('onboardingPlanChoice')),
-        matching: find.byType(FilledButton),
-      ),
-      findsOneWidget,
-    );
-    expect(
       tester.getSize(find.byKey(const ValueKey('onboardingPlanChoice'))).height,
       AppButton.height,
     );
-    expect(
-      tester.getSize(find.byKey(const ValueKey('onboardingMenuChoice'))).height,
-      AppButton.height,
-    );
-    final menuCenter = tester.getCenter(
-      find.byKey(const ValueKey('onboardingMenuChoice')),
-    );
-    final planCenter = tester.getCenter(
-      find.byKey(const ValueKey('onboardingPlanChoice')),
-    );
-    expect(menuCenter.dy, planCenter.dy);
-    expect(menuCenter.dx, lessThan(planCenter.dx));
 
     await tester.tap(find.byKey(const ValueKey('onboardingMenuChoice')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(BrowseMenuScreen), findsOneWidget);
-    expect(find.byType(MealPlanScreen), findsNothing);
     expect(find.byKey(const ValueKey('guestMenuBack')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('guestMenuBack')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-
     expect(find.byType(OnboardingScreen), findsOneWidget);
     final menuButton = tester.widget<OutlinedButton>(
-      find.descendant(
-        of: find.byKey(const ValueKey('onboardingMenuChoice')),
-        matching: find.byType(OutlinedButton),
-      ),
+      find.byKey(const ValueKey('onboardingMenuChoice')),
     );
     expect(menuButton.onPressed, isNotNull);
   });
 
-  testWidgets('returning from plan login re-enables onboarding actions', (
+  testWidgets('returning from plan login re-enables final actions', (
     tester,
   ) async {
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
-    await _reachFinalChoice(tester);
-    await tester.tap(find.byKey(const ValueKey('onboardingTapArea-4')));
+    await _reachBuildingStep(tester);
+    await tester.tap(find.byKey(const ValueKey('onboardingContinue')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -154,7 +197,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(PhoneLoginPage), findsOneWidget);
-    expect(find.text('Let\'s Get Started'), findsOneWidget);
+    expect(find.text("Let's Get Started"), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('otpFlowBack')));
     await tester.pump();
@@ -168,10 +211,7 @@ void main() {
       ),
     );
     final menuButton = tester.widget<OutlinedButton>(
-      find.descendant(
-        of: find.byKey(const ValueKey('onboardingMenuChoice')),
-        matching: find.byType(OutlinedButton),
-      ),
+      find.byKey(const ValueKey('onboardingMenuChoice')),
     );
     expect(planButton.onPressed, isNotNull);
     expect(menuButton.onPressed, isNotNull);
@@ -189,10 +229,10 @@ void main() {
 
     expect(find.byType(LanguageSelectionScreen), findsNothing);
     expect(find.byType(OnboardingScreen), findsOneWidget);
-    expect(find.text('Healthy Meals,'), findsOneWidget);
+    expect(find.text('Welcome to Diet Time'), findsOneWidget);
   });
 
-  testWidgets('older saved language still shows the newer language sheet', (
+  testWidgets('older saved language still shows the language sheet', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({'preferredLanguage': 'en'});
@@ -203,28 +243,29 @@ void main() {
     expect(find.text('Choose your Language'), findsOneWidget);
   });
 
-  testWidgets('compact onboarding has no overflow', (tester) async {
+  testWidgets('all onboarding steps avoid overflow on a compact phone', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-
     await tester.pumpWidget(_onboardingApp());
 
-    expect(find.text('Healthy Meals,'), findsOneWidget);
-    expect(
-      tester.getSize(find.byType(Image).first).width,
-      greaterThanOrEqualTo(280),
-    );
+    for (var index = 0; index < 7; index++) {
+      expect(tester.takeException(), isNull);
+      await _advance(tester);
+    }
+    expect(find.byKey(const ValueKey('onboardingStep-7')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('final choices wrap without overflow on a very narrow phone', (
+  testWidgets('final choices wrap without overflow on a narrow phone', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(280, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(_onboardingApp());
-    await _reachFinalChoice(tester);
-    await tester.tap(find.byKey(const ValueKey('onboardingTapArea-4')));
+    await _reachBuildingStep(tester);
+    await tester.tap(find.byKey(const ValueKey('onboardingContinue')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -238,7 +279,6 @@ void main() {
   ) async {
     await tester.pumpWidget(const ProviderScope(child: DietTimeApp()));
     await _finishSplash(tester);
-
     await _chooseLanguage(tester, 'العربية');
 
     final preferences = await SharedPreferences.getInstance();
@@ -249,6 +289,7 @@ void main() {
       Directionality.of(tester.element(find.byType(OnboardingScreen))),
       TextDirection.rtl,
     );
+    expect(find.text('مرحباً بك في دايت تايم'), findsOneWidget);
   });
 }
 
@@ -265,13 +306,16 @@ Future<void> _chooseLanguage(WidgetTester tester, String label) async {
   await tester.pump(const Duration(milliseconds: 400));
 }
 
-Future<void> _reachFinalChoice(WidgetTester tester) async {
-  for (var index = 0; index < 4; index++) {
-    await tester.tap(find.byKey(ValueKey('onboardingTapArea-$index')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-  }
+Future<void> _advance(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('onboardingContinue')));
+  await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
+}
+
+Future<void> _reachBuildingStep(WidgetTester tester) async {
+  for (var index = 0; index < 7; index++) {
+    await _advance(tester);
+  }
 }
 
 Widget _onboardingApp() {
