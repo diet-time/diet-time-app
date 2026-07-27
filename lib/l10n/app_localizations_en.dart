@@ -98,6 +98,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeScreen => 'Home Screen';
 
   @override
+  String get postLoginWelcomeLabel => 'Welcome to Diet Time';
+
+  @override
+  String get postLoginAccountReady => 'Your account is ready';
+
+  @override
+  String get postLoginTitleLead => 'Your plan starts';
+
+  @override
+  String get postLoginTitleAccent => 'with you';
+
+  @override
+  String get postLoginSupporting =>
+      'Tell us a little about your routine, goals, and food preferences.';
+
+  @override
+  String get postLoginSecondary =>
+      'We\'ll use your answers to shape a plan that feels practical, balanced, and easy to follow.';
+
+  @override
+  String get postLoginCta => 'Personalize My Plan';
+
+  @override
+  String get postLoginMealBalanced => 'Balanced meals';
+
+  @override
+  String get postLoginMealFlexible => 'Flexible choices';
+
+  @override
+  String get postLoginMealGoals => 'Built around your goals';
+
+  @override
   String get comingSoon => 'Coming soon';
 
   @override

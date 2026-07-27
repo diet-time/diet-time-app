@@ -83,7 +83,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
     if (!mounted) return;
     if (succeeded) {
-      context.go(AppRoutes.home);
+      context.go(AppRoutes.postLogin, extra: AppRoutes.home);
       return;
     }
     final error = ref.read(loginControllerProvider).error;

@@ -98,6 +98,38 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeScreen => 'الشاشة الرئيسية';
 
   @override
+  String get postLoginWelcomeLabel => 'مرحباً بك في دايت تايم';
+
+  @override
+  String get postLoginAccountReady => 'حسابك جاهز';
+
+  @override
+  String get postLoginTitleLead => 'خطتك تبدأ';
+
+  @override
+  String get postLoginTitleAccent => 'منك';
+
+  @override
+  String get postLoginSupporting =>
+      'أخبرنا قليلاً عن روتينك وأهدافك وتفضيلاتك الغذائية.';
+
+  @override
+  String get postLoginSecondary =>
+      'سنستخدم إجاباتك لبناء خطة عملية ومتوازنة وسهلة الاتباع.';
+
+  @override
+  String get postLoginCta => 'خصّص خطتي';
+
+  @override
+  String get postLoginMealBalanced => 'وجبات متوازنة';
+
+  @override
+  String get postLoginMealFlexible => 'خيارات مرنة';
+
+  @override
+  String get postLoginMealGoals => 'مصممة حول أهدافك';
+
+  @override
   String get comingSoon => 'قريباً';
 
   @override

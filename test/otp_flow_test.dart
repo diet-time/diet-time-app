@@ -6,6 +6,7 @@ import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/authentication/presentation/otp_verification_page.dart';
 import 'package:diet_time/features/authentication/presentation/phone_login_page.dart';
+import 'package:diet_time/features/personalization/presentation/post_login_landing_screen.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -186,9 +187,19 @@ void main() {
 
     await tester.ensureVisible(verify);
     await tester.tap(verify);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(auth.markAuthenticatedCount, 1);
+    expect(find.byType(PostLoginLandingScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('otpDestination')), findsNothing);
+
+    final personalize = find.byKey(const ValueKey('postLoginCta'));
+    await tester.ensureVisible(personalize);
+    await tester.tap(personalize);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
     expect(find.byKey(const ValueKey('otpDestination')), findsOneWidget);
     expect(container.read(otpAuthControllerProvider).otpCode, isEmpty);
   });
@@ -371,6 +382,15 @@ Widget _app({
       GoRoute(
         path: '/otp-verification',
         builder: (context, state) => const OtpVerificationPage(),
+      ),
+      GoRoute(
+        path: '/post-login',
+        builder: (context, state) {
+          final nextRoute = state.extra! as String;
+          return PostLoginLandingScreen(
+            onContinue: () => context.go(nextRoute),
+          );
+        },
       ),
       GoRoute(
         path: '/destination',

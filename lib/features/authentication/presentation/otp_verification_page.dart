@@ -109,7 +109,10 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
     if (!mounted || !succeeded) return;
     _setCells('');
     final destination = ref.read(otpAuthControllerProvider).pendingDestination;
-    context.go(destination?.route ?? AppRoutes.plans);
+    context.go(
+      AppRoutes.postLogin,
+      extra: destination?.route ?? AppRoutes.plans,
+    );
   }
 
   Future<void> _resend() async {

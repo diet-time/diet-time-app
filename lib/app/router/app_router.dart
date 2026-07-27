@@ -8,6 +8,7 @@ import 'package:diet_time/features/language/presentation/language_selection_scre
 import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
+import 'package:diet_time/features/personalization/presentation/post_login_landing_screen.dart';
 import 'package:diet_time/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +24,7 @@ abstract final class AppRoutes {
   static const phoneLogin = '/phone-login';
   static const otp = '/otp-verification';
   static const plans = '/plans';
+  static const postLogin = '/post-login';
   static const register = '/register';
   static const home = '/home';
 }
@@ -102,6 +104,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.plans,
         pageBuilder: (context, state) =>
             _slidePage(state: state, child: const MealPlanScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.postLogin,
+        pageBuilder: (context, state) {
+          final nextRoute = state.extra as String? ?? AppRoutes.home;
+          return _slidePage(
+            state: state,
+            child: PostLoginLandingScreen(
+              onContinue: () => context.go(nextRoute),
+            ),
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.register,

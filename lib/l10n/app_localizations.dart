@@ -272,6 +272,66 @@ abstract class AppLocalizations {
   /// **'Home Screen'**
   String get homeScreen;
 
+  /// No description provided for @postLoginWelcomeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Diet Time'**
+  String get postLoginWelcomeLabel;
+
+  /// No description provided for @postLoginAccountReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is ready'**
+  String get postLoginAccountReady;
+
+  /// No description provided for @postLoginTitleLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Your plan starts'**
+  String get postLoginTitleLead;
+
+  /// No description provided for @postLoginTitleAccent.
+  ///
+  /// In en, this message translates to:
+  /// **'with you'**
+  String get postLoginTitleAccent;
+
+  /// No description provided for @postLoginSupporting.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us a little about your routine, goals, and food preferences.'**
+  String get postLoginSupporting;
+
+  /// No description provided for @postLoginSecondary.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll use your answers to shape a plan that feels practical, balanced, and easy to follow.'**
+  String get postLoginSecondary;
+
+  /// No description provided for @postLoginCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Personalize My Plan'**
+  String get postLoginCta;
+
+  /// No description provided for @postLoginMealBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced meals'**
+  String get postLoginMealBalanced;
+
+  /// No description provided for @postLoginMealFlexible.
+  ///
+  /// In en, this message translates to:
+  /// **'Flexible choices'**
+  String get postLoginMealFlexible;
+
+  /// No description provided for @postLoginMealGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Built around your goals'**
+  String get postLoginMealGoals;
+
   /// No description provided for @comingSoon.
   ///
   /// In en, this message translates to:
