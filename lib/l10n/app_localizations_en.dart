@@ -70,6 +70,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueWithGoogle => 'Continue with Google';
 
   @override
+  String get orSignInWith => 'or sign in with';
+
+  @override
   String get noAccount => 'Don\'t have an account?';
 
   @override
@@ -295,6 +298,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get otpCodeSubtitle => 'A 6-digit verification code was sent to:';
 
   @override
+  String get otpCodeSentTo => 'Code sent to';
+
+  @override
+  String get otpCodeEntryHelper =>
+      'Please enter the code automatically detected or type it manually';
+
+  @override
+  String get otpEditPhone => 'Edit';
+
+  @override
+  String get otpDidntGetCode => 'Didn\'t get the code?';
+
+  @override
   String get otpVerifyCode => 'Verify Code';
 
   @override
@@ -310,6 +326,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get otpSendViaWhatsapp => 'Send via WhatsApp';
+
+  @override
+  String get otpResendViaWhatsapp => 'Resend via WhatsApp';
 
   @override
   String otpDevelopmentCode(String code) {

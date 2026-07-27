@@ -152,5 +152,11 @@
     "placeholders": {
       "value": {"type": "String"}
     }
-  }
+  },
+  "orSignInWith": "أو سجل الدخول باستخدام",
+  "otpCodeEntryHelper": "أدخل الرمز المكتشف تلقائياً أو اكتبه يدوياً",
+  "otpCodeSentTo": "تم إرسال الرمز إلى",
+  "otpEditPhone": "تعديل",
+  "otpDidntGetCode": "لم يصلك الرمز؟",
+  "otpResendViaWhatsapp": "إعادة الإرسال عبر واتساب"
 }

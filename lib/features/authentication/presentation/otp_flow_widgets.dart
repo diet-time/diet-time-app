@@ -7,6 +7,62 @@ import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+class AuthFlowBackground extends StatelessWidget {
+  const AuthFlowBackground({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(color: Color(0xFFFAF8F1)),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          const Positioned(
+            top: 72,
+            right: -110,
+            child: _AuthGlow(size: 310, color: Color(0x1AFFF1A7)),
+          ),
+          const Positioned(
+            top: 260,
+            left: -130,
+            child: _AuthGlow(size: 340, color: Color(0x143CA78D)),
+          ),
+          const Positioned(
+            bottom: -120,
+            right: -90,
+            child: _AuthGlow(size: 310, color: Color(0x123CA78D)),
+          ),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _AuthGlow extends StatelessWidget {
+  const _AuthGlow({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: SizedBox.square(
+        dimension: size,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(colors: [color, AppColors.transparent]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class OtpFlowHeader extends ConsumerWidget {
   const OtpFlowHeader({required this.onBack, super.key});
 
@@ -19,14 +75,21 @@ class OtpFlowHeader extends ConsumerWidget {
     return Row(
       children: [
         if (onBack != null)
-          IconButton.filledTonal(
-            key: const ValueKey('otpFlowBack'),
-            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-            onPressed: onBack,
-            icon: const Icon(Icons.arrow_back_rounded),
+          SizedBox.square(
+            dimension: 52,
+            child: IconButton.filled(
+              key: const ValueKey('otpFlowBack'),
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              onPressed: onBack,
+              style: IconButton.styleFrom(
+                backgroundColor: const Color(0xFFD8EEE6),
+                foregroundColor: AppColors.darkGreen,
+              ),
+              icon: const Icon(Icons.arrow_back_rounded, size: 23),
+            ),
           )
         else
-          const SizedBox(width: 48),
+          const SizedBox(width: 52),
         const Spacer(),
         PopupMenuButton<String>(
           key: const ValueKey('otpLanguageSelector'),
@@ -43,9 +106,10 @@ class OtpFlowHeader extends ConsumerWidget {
             PopupMenuItem(value: 'ar', child: Text(l10n.arabic)),
           ],
           child: Container(
+            constraints: const BoxConstraints(minHeight: 48),
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
+              vertical: 10,
             ),
             decoration: BoxDecoration(
               color: AppColors.white,
@@ -53,6 +117,13 @@ class OtpFlowHeader extends ConsumerWidget {
               border: Border.all(
                 color: AppColors.darkGreen.withValues(alpha: .08),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.darkGreen.withValues(alpha: .04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -84,10 +155,12 @@ class OtpBrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).height < 700;
+    final size = compact ? 112.0 : 132.0;
     return Container(
-      width: 104,
-      height: 104,
-      padding: const EdgeInsets.all(AppSpacing.md),
+      width: size,
+      height: size,
+      padding: EdgeInsets.all(compact ? 16 : 18),
       decoration: BoxDecoration(
         color: AppColors.white,
         shape: BoxShape.circle,
@@ -100,7 +173,7 @@ class OtpBrandMark extends StatelessWidget {
           ),
         ],
       ),
-      child: const Center(child: AppLogo(width: 76)),
+      child: Center(child: AppLogo(width: compact ? 80 : 94)),
     );
   }
 }
@@ -119,51 +192,98 @@ class OtpFlowButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final disabled = onPressed == null && !isLoading;
     return SizedBox(
-      height: 58,
+      height: 60,
       width: double.infinity,
-      child: FilledButton(
-        onPressed: isLoading ? null : onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: AppColors.emeraldGreen,
-          foregroundColor: AppColors.white,
-          disabledBackgroundColor: AppColors.darkGreen.withValues(alpha: .25),
-          disabledForegroundColor: AppColors.white.withValues(alpha: .86),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.pill),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: disabled
+                ? const [Color(0xFFA4CDBF), Color(0xFF87BFAF)]
+                : const [Color(0xFF55A696), Color(0xFF2D837F)],
           ),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        ),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 180),
-          child: isLoading
-              ? const SizedBox.square(
-                  key: ValueKey('otpButtonLoading'),
-                  dimension: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.2,
-                    color: AppColors.white,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          boxShadow: disabled
+              ? null
+              : [
+                  BoxShadow(
+                    color: const Color(0xFF2D837F).withValues(alpha: .18),
+                    blurRadius: 16,
+                    offset: const Offset(0, 7),
                   ),
-                )
-              : Row(
-                  key: const ValueKey('otpButtonLabel'),
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const SizedBox(width: 22),
-                    Flexible(
-                      child: Text(
-                        label,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
+                ],
+        ),
+        child: FilledButton(
+          onPressed: isLoading ? null : onPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.transparent,
+            disabledBackgroundColor: AppColors.transparent,
+            foregroundColor: AppColors.white,
+            disabledForegroundColor: AppColors.white.withValues(alpha: .58),
+            shadowColor: AppColors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          ),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: isLoading
+                ? const SizedBox.square(
+                    key: ValueKey('otpButtonLoading'),
+                    dimension: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: AppColors.white,
+                    ),
+                  )
+                : Row(
+                    key: const ValueKey('otpButtonLabel'),
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const SizedBox(width: 30),
+                      Flexible(
+                        child: Text(
+                          label,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
-                    ),
-                    const Icon(Icons.arrow_forward_rounded, size: 22),
-                  ],
-                ),
+                      const _ButtonSparkleArrow(),
+                    ],
+                  ),
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _ButtonSparkleArrow extends StatelessWidget {
+  const _ButtonSparkleArrow();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 30,
+      height: 24,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            right: 0,
+            child: Icon(Icons.arrow_forward_rounded, size: 22),
+          ),
+          Positioned(
+            left: 0,
+            top: 0,
+            child: Icon(Icons.auto_awesome, size: 13),
+          ),
+        ],
       ),
     );
   }

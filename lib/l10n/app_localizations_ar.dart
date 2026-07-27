@@ -70,6 +70,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get continueWithGoogle => 'المتابعة باستخدام Google';
 
   @override
+  String get orSignInWith => 'أو سجل الدخول باستخدام';
+
+  @override
   String get noAccount => 'ليس لديك حساب؟';
 
   @override
@@ -293,6 +296,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get otpCodeSubtitle => 'تم إرسال رمز تحقق مكوّن من 6 أرقام إلى:';
 
   @override
+  String get otpCodeSentTo => 'تم إرسال الرمز إلى';
+
+  @override
+  String get otpCodeEntryHelper =>
+      'أدخل الرمز المكتشف تلقائياً أو اكتبه يدوياً';
+
+  @override
+  String get otpEditPhone => 'تعديل';
+
+  @override
+  String get otpDidntGetCode => 'لم يصلك الرمز؟';
+
+  @override
   String get otpVerifyCode => 'تحقق من الرمز';
 
   @override
@@ -308,6 +324,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get otpSendViaWhatsapp => 'الإرسال عبر واتساب';
+
+  @override
+  String get otpResendViaWhatsapp => 'إعادة الإرسال عبر واتساب';
 
   @override
   String otpDevelopmentCode(String code) {

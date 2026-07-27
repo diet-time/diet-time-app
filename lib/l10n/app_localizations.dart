@@ -218,6 +218,12 @@ abstract class AppLocalizations {
   /// **'Continue with Google'**
   String get continueWithGoogle;
 
+  /// No description provided for @orSignInWith.
+  ///
+  /// In en, this message translates to:
+  /// **'or sign in with'**
+  String get orSignInWith;
+
   /// No description provided for @noAccount.
   ///
   /// In en, this message translates to:
@@ -620,6 +626,30 @@ abstract class AppLocalizations {
   /// **'A 6-digit verification code was sent to:'**
   String get otpCodeSubtitle;
 
+  /// No description provided for @otpCodeSentTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Code sent to'**
+  String get otpCodeSentTo;
+
+  /// No description provided for @otpCodeEntryHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the code automatically detected or type it manually'**
+  String get otpCodeEntryHelper;
+
+  /// No description provided for @otpEditPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get otpEditPhone;
+
+  /// No description provided for @otpDidntGetCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Didn\'t get the code?'**
+  String get otpDidntGetCode;
+
   /// No description provided for @otpVerifyCode.
   ///
   /// In en, this message translates to:
@@ -649,6 +679,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Send via WhatsApp'**
   String get otpSendViaWhatsapp;
+
+  /// No description provided for @otpResendViaWhatsapp.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend via WhatsApp'**
+  String get otpResendViaWhatsapp;
 
   /// No description provided for @otpDevelopmentCode.
   ///

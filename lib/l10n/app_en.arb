@@ -20,6 +20,7 @@
   "orContinueWith": "OR CONTINUE WITH",
   "continueWithApple": "Continue with Apple",
   "continueWithGoogle": "Continue with Google",
+  "orSignInWith": "or sign in with",
   "noAccount": "Don't have an account?",
   "createAccount": "Create Account",
   "english": "English",
@@ -108,6 +109,10 @@
   "otpRequestFailed": "Unable to send the verification code. Please try again.",
   "otpCodeTitle": "Enter the Code",
   "otpCodeSubtitle": "A 6-digit verification code was sent to:",
+  "otpCodeSentTo": "Code sent to",
+  "otpCodeEntryHelper": "Please enter the code automatically detected or type it manually",
+  "otpEditPhone": "Edit",
+  "otpDidntGetCode": "Didn't get the code?",
   "otpVerifyCode": "Verify Code",
   "otpResendCode": "Resend code",
   "otpResendCountdown": "Resend code in {time}",
@@ -118,6 +123,7 @@
   },
   "otpSendViaSms": "Send via SMS",
   "otpSendViaWhatsapp": "Send via WhatsApp",
+  "otpResendViaWhatsapp": "Resend via WhatsApp",
   "otpDevelopmentCode": "Development code: {code}",
   "@otpDevelopmentCode": {
     "placeholders": {

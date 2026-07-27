@@ -142,6 +142,24 @@ void main() {
     );
   });
 
+  testWidgets('returning from OTP keeps phone and re-enables Continue', (
+    tester,
+  ) async {
+    final otp = _FakeOtpService();
+    await tester.pumpWidget(_app(otp: otp));
+    await _openOtp(tester);
+
+    await tester.tap(find.byKey(const ValueKey('otpFlowBack')));
+    await tester.pumpAndSettle();
+
+    final input = find.byKey(const ValueKey('phoneNumberInput'));
+    final button = find.byKey(const ValueKey('phoneContinueButton'));
+    expect(find.byType(PhoneLoginPage), findsOneWidget);
+    expect(tester.widget<TextField>(input).controller?.text, '74452435');
+    expect(_isButtonEnabled(tester, button), isTrue);
+    expect(otp.requestCount, 1);
+  });
+
   testWidgets('six digit mock code verifies and keeps pending destination', (
     tester,
   ) async {
@@ -240,6 +258,51 @@ void main() {
       ),
       TextDirection.ltr,
     );
+  });
+
+  testWidgets('phone and OTP screens avoid overflow on a small device', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(otp: _FakeOtpService()));
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('googleSignInButton')), findsOneWidget);
+    expect(find.byKey(const ValueKey('appleSignInButton')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('phoneNumberInput')),
+      '74452435',
+    );
+    await tester.pump();
+    final continueButton = find.byKey(const ValueKey('phoneContinueButton'));
+    await tester.ensureVisible(continueButton);
+    await tester.tap(continueButton);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OtpVerificationPage), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('OTP layout remains scrollable with keyboard inset', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(otp: _FakeOtpService()));
+    await _openOtp(tester);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 260);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pump();
+
+    await tester.tap(find.byKey(const ValueKey('otpCell0')));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const ValueKey('verifyOtpButton')));
+
+    expect(find.byType(OtpVerificationPage), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('authenticated user skips phone login from plan continuation', (
