@@ -89,6 +89,7 @@ class MealDetailData {
   const MealDetailData({
     required this.ingredients,
     required this.allergens,
+    this.allergenLevels = const {},
     this.fullDescription,
     this.primaryImageUrl,
     this.fiberGrams,
@@ -97,6 +98,19 @@ class MealDetailData {
 
   factory MealDetailData.fromJson(Map<String, dynamic> json) {
     final nutrition = _map(json['nutrition']);
+    final allergenItems = _list(
+      json['allergens'],
+    ).map(_map).toList(growable: false);
+    final allergenLevels = <String, String>{};
+    for (final item in allergenItems) {
+      final name = _string(item['name']);
+      if (name == null) continue;
+      allergenLevels[name] =
+          _string(
+            item['level'] ?? item['severity'] ?? item['type'] ?? item['status'],
+          ) ??
+          'CONTAINS';
+    }
     return MealDetailData(
       fullDescription: _string(json['fullDescription']),
       primaryImageUrl: _string(json['primaryImageUrl']),
@@ -105,11 +119,12 @@ class MealDetailData {
       ingredients: _list(json['ingredients'])
           .map((item) => MealDetailIngredient.fromJson(_map(item)))
           .toList(growable: false),
-      allergens: _list(json['allergens'])
-          .map((item) => _string(_map(item)['name']))
+      allergens: allergenItems
+          .map((item) => _string(item['name']))
           .whereType<String>()
           .where((name) => name.isNotEmpty)
           .toList(growable: false),
+      allergenLevels: allergenLevels,
     );
   }
 
@@ -119,6 +134,7 @@ class MealDetailData {
   final double? sodiumMg;
   final List<MealDetailIngredient> ingredients;
   final List<String> allergens;
+  final Map<String, String> allergenLevels;
 }
 
 class MealDetailIngredient {

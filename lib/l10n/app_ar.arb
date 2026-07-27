@@ -156,6 +156,21 @@
   "fatLabel": "الدهون",
   "mealIngredientsTitle": "المكونات",
   "mealAllergensTitle": "مسببات الحساسية",
+  "showAllIngredients": "عرض جميع المكونات",
+  "noAllergensListed": "لا توجد مسببات حساسية مسجلة",
+  "allergenContains": "يحتوي على {name}",
+  "@allergenContains": {"placeholders": {"name": {"type": "String"}}},
+  "allergenMayContain": "قد يحتوي على {name}",
+  "@allergenMayContain": {"placeholders": {"name": {"type": "String"}}},
+  "allergenTraces": "آثار من {name}",
+  "@allergenTraces": {"placeholders": {"name": {"type": "String"}}},
+  "nutritionItemSemantics": "{label} {value}",
+  "@nutritionItemSemantics": {
+    "placeholders": {
+      "label": {"type": "String"},
+      "value": {"type": "String"}
+    }
+  },
   "mealMicronutrientsTitle": "العناصر الغذائية الدقيقة",
   "fiberLabel": "الألياف",
   "sodiumLabel": "الصوديوم",

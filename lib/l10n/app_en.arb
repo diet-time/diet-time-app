@@ -172,6 +172,21 @@
   "fatLabel": "Fat",
   "mealIngredientsTitle": "Ingredients",
   "mealAllergensTitle": "Allergens",
+  "showAllIngredients": "Show all ingredients",
+  "noAllergensListed": "No allergens listed",
+  "allergenContains": "Contains {name}",
+  "@allergenContains": {"placeholders": {"name": {"type": "String"}}},
+  "allergenMayContain": "May contain {name}",
+  "@allergenMayContain": {"placeholders": {"name": {"type": "String"}}},
+  "allergenTraces": "Traces of {name}",
+  "@allergenTraces": {"placeholders": {"name": {"type": "String"}}},
+  "nutritionItemSemantics": "{label} {value}",
+  "@nutritionItemSemantics": {
+    "placeholders": {
+      "label": {"type": "String"},
+      "value": {"type": "String"}
+    }
+  },
   "mealMicronutrientsTitle": "Micronutrients",
   "fiberLabel": "Fiber",
   "sodiumLabel": "Sodium",

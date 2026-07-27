@@ -914,6 +914,42 @@ abstract class AppLocalizations {
   /// **'Allergens'**
   String get mealAllergensTitle;
 
+  /// No description provided for @showAllIngredients.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all ingredients'**
+  String get showAllIngredients;
+
+  /// No description provided for @noAllergensListed.
+  ///
+  /// In en, this message translates to:
+  /// **'No allergens listed'**
+  String get noAllergensListed;
+
+  /// No description provided for @allergenContains.
+  ///
+  /// In en, this message translates to:
+  /// **'Contains {name}'**
+  String allergenContains(String name);
+
+  /// No description provided for @allergenMayContain.
+  ///
+  /// In en, this message translates to:
+  /// **'May contain {name}'**
+  String allergenMayContain(String name);
+
+  /// No description provided for @allergenTraces.
+  ///
+  /// In en, this message translates to:
+  /// **'Traces of {name}'**
+  String allergenTraces(String name);
+
+  /// No description provided for @nutritionItemSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} {value}'**
+  String nutritionItemSemantics(String label, String value);
+
   /// No description provided for @mealMicronutrientsTitle.
   ///
   /// In en, this message translates to:

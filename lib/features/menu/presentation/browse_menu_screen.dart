@@ -830,9 +830,17 @@ class _GuestMenuHeader extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 360;
+        final imageWidth = constraints.maxWidth * (compact ? .40 : .42);
+        final textWidth = constraints.maxWidth * (compact ? .64 : .62);
+        final titleLength = planName.characters.length;
+        final titleSize = titleLength > 34
+            ? (compact ? 18.0 : 20.0)
+            : titleLength > 24
+            ? (compact ? 20.0 : 22.0)
+            : (compact ? 23.0 : 27.0);
         return Container(
           key: const ValueKey('guestMealPlanHeader'),
-          height: compact ? 160 : 170,
+          height: compact ? 180 : 190,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: AppColors.white,
@@ -849,7 +857,7 @@ class _GuestMenuHeader extends StatelessWidget {
                 top: 0,
                 bottom: 0,
                 end: 0,
-                width: compact ? 122 : 165,
+                width: imageWidth,
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 280),
                   switchInCurve: Curves.easeOutCubic,
@@ -859,16 +867,21 @@ class _GuestMenuHeader extends StatelessWidget {
                     child: imageUrl.isEmpty
                         ? Image.asset(
                             'assets/images/onboarding_1.png',
+                            key: const ValueKey('guestHeroImage'),
                             fit: BoxFit.cover,
                             alignment: Alignment.center,
+                            excludeFromSemantics: true,
                           )
                         : Image.network(
                             imageUrl,
+                            key: const ValueKey('guestHeroImage'),
                             fit: BoxFit.cover,
                             alignment: Alignment.center,
+                            excludeFromSemantics: true,
                             errorBuilder: (_, _, _) => Image.asset(
                               'assets/images/onboarding_1.png',
                               fit: BoxFit.cover,
+                              excludeFromSemantics: true,
                             ),
                           ),
                   ),
@@ -889,13 +902,11 @@ class _GuestMenuHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(
-                  compact ? 18 : 22,
-                  16,
-                  compact ? 118 : 150,
-                  16,
-                ),
+              PositionedDirectional(
+                start: 0,
+                top: 0,
+                bottom: 0,
+                width: textWidth,
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 280),
                   switchInCurve: Curves.easeOutCubic,
@@ -910,47 +921,59 @@ class _GuestMenuHeader extends StatelessWidget {
                       child: SlideTransition(position: slide, child: child),
                     );
                   },
-                  child: Column(
+                  child: Padding(
                     key: planKey,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        style: TextStyle(
-                          color: AppColors.emeraldGreen,
-                          fontSize: compact ? 10.5 : 11.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: .4,
+                    padding: EdgeInsetsDirectional.fromSTEB(
+                      compact ? 18 : 22,
+                      14,
+                      8,
+                      14,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: AppColors.emeraldGreen,
+                            fontSize: compact ? 10.5 : 11.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: .4,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        planName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppColors.darkGreen,
-                          fontSize: compact ? 23 : 27,
-                          height: 1.08,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -.6,
+                        const SizedBox(height: 4),
+                        Text(
+                          planName,
+                          key: const ValueKey('guestHeroTitle'),
+                          maxLines: 2,
+                          softWrap: true,
+                          overflow: TextOverflow.visible,
+                          style: TextStyle(
+                            color: AppColors.darkGreen,
+                            fontSize: titleSize,
+                            height: 1.06,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -.5,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 7),
-                      Text(
-                        planDescription,
-                        maxLines: 2,
-                        overflow: TextOverflow.fade,
-                        style: TextStyle(
-                          color: AppColors.darkGreen.withValues(alpha: .68),
-                          fontSize: compact ? 10.5 : 12.5,
-                          height: 1.35,
-                          fontWeight: FontWeight.w500,
+                        const SizedBox(height: 7),
+                        Text(
+                          planDescription,
+                          key: const ValueKey('guestHeroDescription'),
+                          maxLines: 3,
+                          softWrap: true,
+                          overflow: TextOverflow.fade,
+                          style: TextStyle(
+                            color: AppColors.darkGreen.withValues(alpha: .68),
+                            fontSize: compact ? 10.5 : 12.0,
+                            height: 1.35,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1145,7 +1168,7 @@ class _GuestPlanCard extends StatelessWidget {
       textScaler: textScaler,
       maxLines: 1,
     )..layout();
-    final width = (textPainter.width + 98).clamp(118.0, 180.0).toDouble();
+    final width = (textPainter.width + 104).clamp(150.0, 230.0).toDouble();
     final scale = textScaler.scale(1).clamp(1, 1.4).toDouble();
     final height = 60 + ((scale - 1) * 12);
     final foreground = selected ? AppColors.white : AppColors.darkGreen;

@@ -265,7 +265,7 @@ class _MealPageIndicator extends StatelessWidget {
   }
 }
 
-class _MealDetailCard extends StatelessWidget {
+class _MealDetailCard extends StatefulWidget {
   const _MealDetailCard({
     required this.meal,
     required this.detail,
@@ -275,6 +275,17 @@ class _MealDetailCard extends StatelessWidget {
   final GuestMeal meal;
   final MealDetailData? detail;
   final bool detailLoading;
+
+  @override
+  State<_MealDetailCard> createState() => _MealDetailCardState();
+}
+
+class _MealDetailCardState extends State<_MealDetailCard> {
+  bool _showAllIngredients = false;
+
+  GuestMeal get meal => widget.meal;
+  MealDetailData? get detail => widget.detail;
+  bool get detailLoading => widget.detailLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -296,10 +307,25 @@ class _MealDetailCard extends StatelessWidget {
         const <MealDetailIngredient>[];
     final allergens = detail != null
         ? detail!.allergens
+              .map(
+                (name) => _AllergenDisplay(
+                  name: name,
+                  level: detail!.allergenLevels[name],
+                ),
+              )
+              .toList(growable: false)
         : meal.allergens
-              .map((item) => item.name?.trim() ?? '')
-              .where((name) => name.isNotEmpty)
+              .where((item) => (item.name ?? '').trim().isNotEmpty)
+              .map(
+                (item) => _AllergenDisplay(
+                  name: item.name!.trim(),
+                  level: item.level,
+                ),
+              )
               .toList(growable: false);
+    final visibleIngredients = _showAllIngredients
+        ? ingredients
+        : ingredients.take(8).toList(growable: false);
     return Container(
       key: ValueKey('meal-detail-${meal.id}'),
       clipBehavior: Clip.antiAlias,
@@ -337,16 +363,6 @@ class _MealDetailCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    l10n.kcal(meal.nutrition.calories.round()).toUpperCase(),
-                    style: const TextStyle(
-                      color: AppColors.emeraldGreen,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: .5,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Text(
                     meal.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -357,10 +373,29 @@ class _MealDetailCard extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
+                  if (meal.mealTime.name.trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Chip(
+                        visualDensity: VisualDensity.compact,
+                        label: Text(meal.mealTime.name),
+                        backgroundColor: const Color(0xFFEAF4E8),
+                        side: BorderSide.none,
+                        labelStyle: const TextStyle(
+                          color: AppColors.emeraldGreen,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  _NutritionSummary(meal: meal),
                   if ((detail?.fullDescription ?? meal.description ?? '')
                       .trim()
                       .isNotEmpty) ...[
-                    const SizedBox(height: 9),
+                    const SizedBox(height: 18),
                     Text(
                       detail?.fullDescription ?? meal.description!,
                       maxLines: 3,
@@ -372,8 +407,6 @@ class _MealDetailCard extends StatelessWidget {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 20),
-                  _MacroSummary(meal: meal),
                   if (ingredients.isNotEmpty) ...[
                     const SizedBox(height: 22),
                     _SectionTitle(label: l10n.mealIngredientsTitle),
@@ -381,21 +414,32 @@ class _MealDetailCard extends StatelessWidget {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: ingredients
+                      children: visibleIngredients
                           .map(
-                            (ingredient) => Chip(
-                              label: Text(_ingredientLabel(ingredient)),
-                              backgroundColor: const Color(0xFFEAF4E8),
-                              side: BorderSide.none,
-                              labelStyle: const TextStyle(
-                                color: AppColors.darkGreen,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
+                            (ingredient) => Semantics(
+                              label: _ingredientLabel(ingredient),
+                              child: Chip(
+                                label: Text(_ingredientLabel(ingredient)),
+                                backgroundColor: const Color(0xFFEAF4E8),
+                                side: BorderSide.none,
+                                labelStyle: const TextStyle(
+                                  color: AppColors.darkGreen,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           )
                           .toList(growable: false),
                     ),
+                    if (!_showAllIngredients && ingredients.length > 8)
+                      TextButton.icon(
+                        key: const ValueKey('showAllIngredients'),
+                        onPressed: () =>
+                            setState(() => _showAllIngredients = true),
+                        icon: const Icon(Icons.expand_more_rounded),
+                        label: Text(l10n.showAllIngredients),
+                      ),
                   ],
                   if ((fiber != null && fiber > 0) ||
                       (sodium != null && sodium > 0)) ...[
@@ -419,34 +463,19 @@ class _MealDetailCard extends StatelessWidget {
                       ],
                     ),
                   ],
-                  if (allergens.isNotEmpty) ...[
-                    const SizedBox(height: 22),
-                    _SectionTitle(label: l10n.mealAllergensTitle),
-                    const SizedBox(height: 9),
+                  const SizedBox(height: 22),
+                  _SectionTitle(label: l10n.mealAllergensTitle),
+                  const SizedBox(height: 9),
+                  if (allergens.isEmpty)
+                    _NoAllergensState(label: l10n.noAllergensListed)
+                  else
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: allergens
-                          .map(
-                            (name) => Chip(
-                              avatar: const Icon(
-                                Icons.warning_amber_rounded,
-                                size: 16,
-                                color: AppColors.emeraldGreen,
-                              ),
-                              label: Text(name),
-                              backgroundColor: const Color(0xFFEAF4E8),
-                              side: BorderSide.none,
-                              labelStyle: const TextStyle(
-                                color: AppColors.darkGreen,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          )
+                          .map((allergen) => _AllergenChip(allergen: allergen))
                           .toList(growable: false),
                     ),
-                  ],
                 ],
               ),
             ),
@@ -457,32 +486,56 @@ class _MealDetailCard extends StatelessWidget {
   }
 }
 
-class _MacroSummary extends StatelessWidget {
-  const _MacroSummary({required this.meal});
+class _NutritionSummary extends StatelessWidget {
+  const _NutritionSummary({required this.meal});
 
   final GuestMeal meal;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Row(
-      children: [
-        _MacroValue(
-          label: l10n.proteinLabel,
-          value: _grams(l10n, meal.nutrition.protein),
-          color: const Color(0xFFFFC107),
-        ),
-        _MacroValue(
-          label: l10n.carbsLabel,
-          value: _grams(l10n, meal.nutrition.carbs),
-          color: const Color(0xFF41B9D8),
-        ),
-        _MacroValue(
-          label: l10n.fatLabel,
-          value: _grams(l10n, meal.nutrition.fat),
-          color: const Color(0xFFB66BD3),
-        ),
-      ],
+    final values = [
+      (
+        l10n.caloriesLabel,
+        l10n.kcal(meal.nutrition.calories.round()),
+        AppColors.emeraldGreen,
+      ),
+      (
+        l10n.proteinLabel,
+        _grams(l10n, meal.nutrition.protein),
+        const Color(0xFFFFA000),
+      ),
+      (
+        l10n.carbsLabel,
+        _grams(l10n, meal.nutrition.carbs),
+        const Color(0xFF258AA5),
+      ),
+      (
+        l10n.fatLabel,
+        _grams(l10n, meal.nutrition.fat),
+        const Color(0xFF9858B4),
+      ),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final itemWidth = (constraints.maxWidth - 12) / 2;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 10,
+          children: values
+              .map(
+                (item) => SizedBox(
+                  width: itemWidth,
+                  child: _MacroValue(
+                    label: item.$1,
+                    value: item.$2,
+                    color: item.$3,
+                  ),
+                ),
+              )
+              .toList(growable: false),
+        );
+      },
     );
   }
 }
@@ -500,43 +553,167 @@ class _MacroValue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 34,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(99),
+    final semantics = AppLocalizations.of(
+      context,
+    ).nutritionItemSemantics(label, value);
+    return Semantics(
+      label: semantics,
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: .08),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 34,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(99),
+              ),
             ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.darkGreen.withValues(alpha: .52),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: AppColors.darkGreen,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+enum _AllergenLevel { contains, mayContain, traces }
+
+class _AllergenDisplay {
+  const _AllergenDisplay({required this.name, this.level});
+
+  final String name;
+  final String? level;
+
+  _AllergenLevel get normalizedLevel {
+    final normalized = (level ?? '').trim().toUpperCase().replaceAll(
+      RegExp(r'[\s-]+'),
+      '_',
+    );
+    if (normalized == 'MAY_CONTAIN' || normalized == 'MAYCONTAIN') {
+      return _AllergenLevel.mayContain;
+    }
+    if (normalized == 'TRACES' || normalized == 'TRACE') {
+      return _AllergenLevel.traces;
+    }
+    return _AllergenLevel.contains;
+  }
+}
+
+class _AllergenChip extends StatelessWidget {
+  const _AllergenChip({required this.allergen});
+
+  final _AllergenDisplay allergen;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final (
+      label,
+      background,
+      foreground,
+      icon,
+    ) = switch (allergen.normalizedLevel) {
+      _AllergenLevel.contains => (
+        l10n.allergenContains(allergen.name),
+        const Color(0xFFFFE5DF),
+        const Color(0xFF9B2C20),
+        Icons.warning_amber_rounded,
+      ),
+      _AllergenLevel.mayContain => (
+        l10n.allergenMayContain(allergen.name),
+        const Color(0xFFFFF1CF),
+        const Color(0xFF8A5A00),
+        Icons.info_outline_rounded,
+      ),
+      _AllergenLevel.traces => (
+        l10n.allergenTraces(allergen.name),
+        const Color(0xFFFFEADB),
+        const Color(0xFF8A431D),
+        Icons.grain_rounded,
+      ),
+    };
+    return Semantics(
+      label: label,
+      excludeSemantics: true,
+      child: Chip(
+        avatar: Icon(icon, size: 17, color: foreground),
+        label: Text(label),
+        backgroundColor: background,
+        side: BorderSide(color: foreground.withValues(alpha: .16)),
+        labelStyle: TextStyle(
+          color: foreground,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _NoAllergensState extends StatelessWidget {
+  const _NoAllergensState({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2F1EA),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            size: 17,
+            color: Color(0xFF66736A),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.darkGreen.withValues(alpha: .52),
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    color: AppColors.darkGreen,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
+          const SizedBox(width: 7),
+          Flexible(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF526159),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

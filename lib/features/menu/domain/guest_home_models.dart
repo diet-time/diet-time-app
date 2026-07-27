@@ -351,18 +351,22 @@ class GuestMealTag {
 }
 
 class GuestMealAllergen {
-  const GuestMealAllergen({this.id, this.code, this.name});
+  const GuestMealAllergen({this.id, this.code, this.name, this.level});
 
   factory GuestMealAllergen.fromJson(Map<String, dynamic> json) =>
       GuestMealAllergen(
         id: _string(json['id']),
         code: _string(json['code']),
         name: _string(json['name']),
+        level: _string(
+          json['level'] ?? json['severity'] ?? json['type'] ?? json['status'],
+        ),
       );
 
   final String? id;
   final String? code;
   final String? name;
+  final String? level;
 }
 
 class GuestApiError {

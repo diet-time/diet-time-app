@@ -457,6 +457,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mealAllergensTitle => 'Allergens';
 
   @override
+  String get showAllIngredients => 'Show all ingredients';
+
+  @override
+  String get noAllergensListed => 'No allergens listed';
+
+  @override
+  String allergenContains(String name) {
+    return 'Contains $name';
+  }
+
+  @override
+  String allergenMayContain(String name) {
+    return 'May contain $name';
+  }
+
+  @override
+  String allergenTraces(String name) {
+    return 'Traces of $name';
+  }
+
+  @override
+  String nutritionItemSemantics(String label, String value) {
+    return '$label $value';
+  }
+
+  @override
   String get mealMicronutrientsTitle => 'Micronutrients';
 
   @override

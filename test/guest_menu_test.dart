@@ -45,7 +45,7 @@ void main() {
         {'name': 'Olive oil', 'quantity': 10, 'unit': 'ml'},
       ],
       'allergens': [
-        {'code': 'EGG', 'name': 'Egg'},
+        {'code': 'EGG', 'name': 'Egg', 'level': 'MAY_CONTAIN'},
       ],
     });
 
@@ -53,6 +53,7 @@ void main() {
     expect(detail.fiberGrams, 4);
     expect(detail.sodiumMg, 343);
     expect(detail.allergens, ['Egg']);
+    expect(detail.allergenLevels['Egg'], 'MAY_CONTAIN');
   });
 
   test('absolute media URLs are not prefixed', () {
@@ -94,7 +95,7 @@ void main() {
 
     final planChip = find.byKey(const ValueKey('guest-plan-PLN_CLASSIC'));
     final size = tester.getSize(planChip);
-    expect(size.width, lessThanOrEqualTo(180));
+    expect(size.width, inInclusiveRange(150, 230));
     expect(size.height, lessThanOrEqualTo(73));
     expect(find.text('PLN_CLASSIC'), findsOneWidget);
     expect(
@@ -108,6 +109,42 @@ void main() {
     expect(planName.softWrap, isFalse);
     expect(planName.overflow, TextOverflow.ellipsis);
     expect(tester.getSemantics(planChip).label, 'Select Classic meal plan');
+  });
+
+  testWidgets('hero keeps full text and places its image directionally', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = _FakeGuestMenuRepository(_response());
+
+    await tester.pumpWidget(_app(repository: repository));
+    await _load(tester);
+
+    final title = tester.widget<Text>(
+      find.byKey(const ValueKey('guestHeroTitle')),
+    );
+    final description = tester.widget<Text>(
+      find.byKey(const ValueKey('guestHeroDescription')),
+    );
+    final header = find.byKey(const ValueKey('guestMealPlanHeader'));
+    final image = find.byKey(const ValueKey('guestHeroImage'));
+    expect(title.maxLines, 2);
+    expect(title.overflow, TextOverflow.visible);
+    expect(description.maxLines, 3);
+    expect(
+      tester.getCenter(image).dx,
+      greaterThan(tester.getCenter(header).dx),
+    );
+
+    await tester.pumpWidget(
+      _app(repository: repository, locale: const Locale('ar')),
+    );
+    await _load(tester);
+    expect(image, findsOneWidget);
+    expect(tester.getSize(image).width, greaterThan(0));
+    expect(tester.getCenter(image).dx, lessThan(tester.getCenter(header).dx));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('phone layout displays two meal cards in each row', (
@@ -155,8 +192,15 @@ void main() {
       find.byKey(const ValueKey('mealDetailImagePlaceholder')),
       findsWidgets,
     );
-    expect(find.text('ALLERGENS'), findsOneWidget);
-    expect(find.text('Egg'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('meal-detail-meal-2')),
+        matching: find.text('ALLERGENS'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Contains Egg'), findsOneWidget);
+    expect(find.bySemanticsLabel('Contains Egg'), findsOneWidget);
     expect(find.text('MICRONUTRIENTS'), findsOneWidget);
     expect(repository.calls, hasLength(1));
   });
@@ -298,7 +342,14 @@ void main() {
     );
     expect(
       find.descendant(of: firstDetail, matching: find.text('ALLERGENS')),
-      findsNothing,
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: firstDetail,
+        matching: find.text('No allergens listed'),
+      ),
+      findsOneWidget,
     );
 
     await tester.binding.handlePopRoute();
@@ -364,6 +415,12 @@ void main() {
     await _load(tester);
     expect(detailRepository.calls, [meals.first.id]);
     expect(find.text('INGREDIENTS'), findsOneWidget);
+    expect(find.text('Ingredient 9'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('showAllIngredients')));
+    await tester.pumpAndSettle();
+    expect(find.text('Ingredient 9'), findsOneWidget);
+    expect(find.text('May contain Egg'), findsOneWidget);
+    expect(find.bySemanticsLabel('May contain Egg'), findsOneWidget);
 
     await tester.drag(
       find.byKey(const ValueKey('mealDetailPageView')),
@@ -1126,8 +1183,17 @@ class _FakeMealDetailRepository implements MealDetailRepository {
       sodiumMg: 343,
       ingredients: [
         MealDetailIngredient(name: 'Olive oil', quantity: 10, unit: 'ml'),
+        MealDetailIngredient(name: 'Ingredient 2'),
+        MealDetailIngredient(name: 'Ingredient 3'),
+        MealDetailIngredient(name: 'Ingredient 4'),
+        MealDetailIngredient(name: 'Ingredient 5'),
+        MealDetailIngredient(name: 'Ingredient 6'),
+        MealDetailIngredient(name: 'Ingredient 7'),
+        MealDetailIngredient(name: 'Ingredient 8'),
+        MealDetailIngredient(name: 'Ingredient 9'),
       ],
       allergens: ['Egg'],
+      allergenLevels: {'Egg': 'MAY_CONTAIN'},
     );
   }
 }

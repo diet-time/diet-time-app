@@ -451,6 +451,32 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mealAllergensTitle => 'مسببات الحساسية';
 
   @override
+  String get showAllIngredients => 'عرض جميع المكونات';
+
+  @override
+  String get noAllergensListed => 'لا توجد مسببات حساسية مسجلة';
+
+  @override
+  String allergenContains(String name) {
+    return 'يحتوي على $name';
+  }
+
+  @override
+  String allergenMayContain(String name) {
+    return 'قد يحتوي على $name';
+  }
+
+  @override
+  String allergenTraces(String name) {
+    return 'آثار من $name';
+  }
+
+  @override
+  String nutritionItemSemantics(String label, String value) {
+    return '$label $value';
+  }
+
+  @override
   String get mealMicronutrientsTitle => 'العناصر الغذائية الدقيقة';
 
   @override
