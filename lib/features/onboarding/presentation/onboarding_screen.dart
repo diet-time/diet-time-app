@@ -171,11 +171,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     controller: _controller,
                     itemCount: pages.length,
                     onPageChanged: (index) {
+                      final isLastPage = index == pages.length - 1;
+                      if (isLastPage) {
+                        _timer?.cancel();
+                      }
                       setState(() {
                         _index = index;
-                        _showFinalChoice = false;
+                        _showFinalChoice = isLastPage;
                       });
-                      _scheduleAdvance();
+                      if (!isLastPage) _scheduleAdvance();
                     },
                     itemBuilder: (context, index) {
                       final page = pages[index];
@@ -1294,15 +1298,34 @@ class _WelcomeArtwork extends StatelessWidget {
             margin: const EdgeInsets.all(16),
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: const Color(0xFFDDF4EA),
+              color: const Color(0xFF07130E),
               borderRadius: BorderRadius.circular(52),
               boxShadow: _cardShadow(.10),
             ),
-            child: Image.asset(
-              'assets/images/onboarding_1.png',
-              key: const ValueKey('onboardingWelcomeImage'),
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: Transform.scale(
+                    scale: 1.12,
+                    child: Image.asset(
+                      'assets/images/onboarding_1.png',
+                      fit: BoxFit.cover,
+                      excludeFromSemantics: true,
+                    ),
+                  ),
+                ),
+                ColoredBox(
+                  color: const Color(0xFF07130E).withValues(alpha: .42),
+                ),
+                Image.asset(
+                  'assets/images/onboarding_1.png',
+                  key: const ValueKey('onboardingWelcomeImage'),
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
+                ),
+              ],
             ),
           ),
           const PositionedDirectional(

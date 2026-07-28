@@ -46,9 +46,6 @@ void main() {
   ) async {
     await tester.pumpWidget(_localizedApp(const OnboardingScreen()));
     await _reachCarouselEnd(tester);
-    await tester.tap(
-      find.byKey(const ValueKey('onboardingTapArea-4')).hitTestable(),
-    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -67,9 +64,6 @@ void main() {
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
     await _reachCarouselEnd(tester);
-    await tester.tap(
-      find.byKey(const ValueKey('onboardingTapArea-4')).hitTestable(),
-    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.byKey(const ValueKey('onboardingMenuChoice')));
@@ -89,9 +83,6 @@ void main() {
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
     await _reachCarouselEnd(tester);
-    await tester.tap(
-      find.byKey(const ValueKey('onboardingTapArea-4')).hitTestable(),
-    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.byKey(const ValueKey('onboardingPlanChoice')));
@@ -101,6 +92,14 @@ void main() {
     expect(find.byType(PersonalizationScreen), findsOneWidget);
     expect(find.text("Let's shape your plan"), findsOneWidget);
     expect(find.byKey(const ValueKey('personalizationNotNow')), findsOneWidget);
+    expect(
+      tester
+          .widget<Image>(
+            find.byKey(const ValueKey('onboardingWelcomeImage')),
+          )
+          .fit,
+      BoxFit.contain,
+    );
     expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
@@ -140,9 +139,6 @@ void main() {
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
     await _reachCarouselEnd(tester);
-    await tester.tap(
-      find.byKey(const ValueKey('onboardingTapArea-4')).hitTestable(),
-    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.byKey(const ValueKey('onboardingPlanChoice')));
