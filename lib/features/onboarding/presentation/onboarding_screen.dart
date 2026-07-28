@@ -27,39 +27,47 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   static const _pageDuration = Duration(milliseconds: 2800);
+  static const _imageAssets = [
+    'assets/images/onboarding_1.png',
+    'assets/images/onboarding_2.png',
+    'assets/images/onboarding_3.png',
+    'assets/images/onboarding_4.png',
+    'assets/images/onboarding_5.png',
+  ];
   final PageController _controller = PageController();
   Timer? _timer;
   int _index = 0;
   bool _showFinalChoice = false;
+  bool _imagesPrecached = false;
 
   List<({String image, String title, String accent, String description})>
   _pages(AppLocalizations l10n) => [
     (
-      image: 'assets/images/onboarding_1.png',
+      image: _imageAssets[0],
       title: l10n.onboardingHealthyMealsTitle,
       accent: l10n.onboardingHealthyMealsAccent,
       description: l10n.onboardingHealthyMealsDescription,
     ),
     (
-      image: 'assets/images/onboarding_2.png',
+      image: _imageAssets[1],
       title: l10n.onboardingPlansTitle,
       accent: l10n.onboardingPlansAccent,
       description: l10n.onboardingPlansDescription,
     ),
     (
-      image: 'assets/images/onboarding_3.png',
+      image: _imageAssets[2],
       title: l10n.onboardingFreshTitle,
       accent: l10n.onboardingFreshAccent,
       description: l10n.onboardingFreshDescription,
     ),
     (
-      image: 'assets/images/onboarding_4.png',
+      image: _imageAssets[3],
       title: l10n.onboardingTrackTitle,
       accent: l10n.onboardingTrackAccent,
       description: l10n.onboardingTrackDescription,
     ),
     (
-      image: 'assets/images/onboarding_5.png',
+      image: _imageAssets[4],
       title: l10n.onboardingTogetherTitle,
       accent: l10n.onboardingTogetherAccent,
       description: l10n.onboardingTogetherDescription,
@@ -70,6 +78,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void initState() {
     super.initState();
     _scheduleAdvance();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_imagesPrecached) return;
+    _imagesPrecached = true;
+    for (final asset in _imageAssets) {
+      unawaited(precacheImage(AssetImage(asset), context));
+    }
   }
 
   void _scheduleAdvance() {
@@ -233,7 +251,25 @@ class _CarouselPage extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.asset(image, fit: BoxFit.cover),
+                  Image.asset(
+                    image,
+                    key: ValueKey(image),
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    filterQuality: FilterQuality.high,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const ColoredBox(
+                          color: Color(0xFF14231C),
+                          child: Center(
+                            child: Icon(
+                              Icons.restaurant_rounded,
+                              color: Color(0xFF62CE55),
+                              size: 72,
+                            ),
+                          ),
+                        ),
+                  ),
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(

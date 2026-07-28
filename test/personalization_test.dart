@@ -79,8 +79,8 @@ void main() {
     expect(find.byKey(const ValueKey('viewRecommendedPlan')), findsOneWidget);
     expect(find.byKey(const ValueKey('compareAllPlans')), findsOneWidget);
     final preferences = await SharedPreferences.getInstance();
-    expect(preferences.getBool('hasCompletedPersonalization'), isTrue);
-    expect(preferences.getBool('hasCompletedProfile'), isTrue);
+    expect(preferences.getBool('hasCompletedPersonalization'), isNull);
+    expect(preferences.getBool('hasCompletedProfile'), isNull);
   });
 }
 

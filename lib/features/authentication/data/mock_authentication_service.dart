@@ -1,8 +1,7 @@
-import 'package:diet_time/core/storage/secure_storage_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final authenticationServiceProvider = Provider<AuthenticationService>((ref) {
-  return MockAuthenticationService(ref.watch(secureStorageServiceProvider));
+  return MockAuthenticationService();
 });
 
 abstract interface class AuthenticationService {
@@ -14,13 +13,10 @@ abstract interface class AuthenticationService {
 }
 
 class MockAuthenticationService implements AuthenticationService {
-  const MockAuthenticationService(this._storage);
-
-  final SecureStorageService _storage;
+  bool _isAuthenticated = false;
 
   @override
-  Future<bool> isLoggedIn() async =>
-      (await _storage.read('auth_token'))?.isNotEmpty == true;
+  Future<bool> isLoggedIn() async => _isAuthenticated;
 
   @override
   Future<void> signIn({
@@ -32,6 +28,7 @@ class MockAuthenticationService implements AuthenticationService {
   }
 
   @override
-  Future<void> markAuthenticated() =>
-      _storage.write('auth_token', 'mock-session');
+  Future<void> markAuthenticated() async {
+    _isAuthenticated = true;
+  }
 }

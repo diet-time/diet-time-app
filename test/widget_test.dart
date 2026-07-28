@@ -22,6 +22,10 @@ void main() {
 
     expect(find.text('Healthy Meals,'), findsOneWidget);
     expect(find.byKey(const ValueKey('onboardingCarousel')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('assets/images/onboarding_1.png')),
+      findsOneWidget,
+    );
     expect(find.byType(PersonalizationScreen), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('onboardingTapArea-0')));
@@ -75,7 +79,7 @@ void main() {
     expect(find.byType(BrowseMenuScreen), findsOneWidget);
     expect(find.byType(PhoneLoginPage), findsNothing);
     final preferences = await SharedPreferences.getInstance();
-    expect(preferences.getBool('hasCompletedOnboarding'), isTrue);
+    expect(preferences.getBool('hasCompletedOnboarding'), isNull);
   });
 
   testWidgets('Start Your Plan opens personalization introduction', (
@@ -171,7 +175,7 @@ void main() {
   });
 
   testWidgets(
-    'completed onboarding skips carousel on next unauthenticated launch',
+    'stored completion flags are ignored for a repeatable demo launch',
     (tester) async {
       SharedPreferences.setMockInitialValues({
         'preferredLanguage': 'en',
@@ -181,13 +185,8 @@ void main() {
       await tester.pumpWidget(_dietTimeApp());
       await _finishSplash(tester);
 
-      expect(find.byType(OnboardingScreen), findsNothing);
-      expect(find.byType(BrowseMenuScreen), findsOneWidget);
-      expect(find.byKey(const ValueKey('guestStartPlan')), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('guestStartPlan')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(find.byType(PersonalizationScreen), findsOneWidget);
+      expect(find.byType(OnboardingScreen), findsOneWidget);
+      expect(find.byType(BrowseMenuScreen), findsNothing);
     },
   );
 
@@ -210,7 +209,7 @@ void main() {
     expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
-  testWidgets('authenticated user with a completed profile opens home', (
+  testWidgets('stored profile completion does not skip the demo setup', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
@@ -225,9 +224,9 @@ void main() {
     );
     await _finishSplash(tester);
 
-    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.byType(HomeScreen), findsNothing);
     expect(find.byType(OnboardingScreen), findsNothing);
-    expect(find.byType(PersonalizationScreen), findsNothing);
+    expect(find.byType(PersonalizationScreen), findsOneWidget);
   });
 
   testWidgets('Arabic carousel and personalization remain RTL', (tester) async {
