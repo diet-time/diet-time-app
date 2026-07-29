@@ -2377,63 +2377,75 @@ class _BmiScale extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          _wellnessCopy(context, 'BMI Scale', 'مقياس كتلة الجسم'),
-          style: TextStyle(
-            color: AppColors.darkGreen.withValues(alpha: .62),
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 25),
-        SizedBox(
-          height: 15,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Align(
-                alignment: Alignment.center,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  child: const SizedBox(
-                    height: 7,
-                    child: Row(
-                      children: [
-                        Expanded(child: ColoredBox(color: Color(0xFFACE4F2))),
-                        Expanded(child: ColoredBox(color: Color(0xFF86D8B0))),
-                        Expanded(child: ColoredBox(color: Color(0xFFB5D746))),
-                        Expanded(child: ColoredBox(color: Color(0xFFFFD34D))),
-                        Expanded(child: ColoredBox(color: Color(0xFFFF754E))),
-                      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        final markerCenter = marker.clamp(0.0, 1.0) * availableWidth;
+        return Column(
+          children: [
+            Text(
+              _wellnessCopy(context, 'BMI Scale', 'مقياس كتلة الجسم'),
+              style: TextStyle(
+                color: AppColors.darkGreen.withValues(alpha: .62),
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              height: 23,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 2,
+                    height: 9,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                      child: const Row(
+                        children: [
+                          Expanded(child: ColoredBox(color: Color(0xFF8EDCF0))),
+                          Expanded(child: ColoredBox(color: Color(0xFF67CFA1))),
+                          Expanded(child: ColoredBox(color: Color(0xFF9BCB37))),
+                          Expanded(child: ColoredBox(color: Color(0xFFFFCD3C))),
+                          Expanded(child: ColoredBox(color: Color(0xFFFF5F42))),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                  AnimatedPositionedDirectional(
+                    duration: const Duration(milliseconds: 360),
+                    curve: Curves.easeOutCubic,
+                    start: (markerCenter - 9).clamp(
+                      0.0,
+                      math.max(0.0, availableWidth - 18),
+                    ),
+                    top: -1,
+                    child: const Icon(
+                      Icons.arrow_drop_down_rounded,
+                      color: AppColors.emeraldGreen,
+                      size: 18,
+                    ),
+                  ),
+                ],
               ),
-              AnimatedAlign(
-                duration: const Duration(milliseconds: 360),
-                alignment: AlignmentDirectional((marker * 2) - 1, -1),
-                child: const Icon(
-                  Icons.arrow_drop_down_rounded,
-                  color: AppColors.emeraldGreen,
-                  size: 18,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        const Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _ScaleLabel('Underweight', '<18.5'),
-            _ScaleLabel('Normal', '18.5–24.9'),
-            _ScaleLabel('Overweight', '25–29.9'),
-            _ScaleLabel('Obese', '30+'),
+            ),
+            const SizedBox(height: 5),
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _ScaleLabel('Underweight', '<18.5'),
+                _ScaleLabel('Normal', '18.5–24.9'),
+                _ScaleLabel('Overweight', '25–29.9'),
+                _ScaleLabel('Obese', '30+'),
+              ],
+            ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 }
