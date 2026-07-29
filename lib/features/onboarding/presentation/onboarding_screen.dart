@@ -377,6 +377,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   String? _activity;
   final Set<String> _preferences = {};
   final Set<String> _allergies = {};
+  String _allergyQuery = '';
 
   @override
   void dispose() {
@@ -940,31 +941,76 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          TextField(
+            key: const ValueKey('allergySearch'),
+            onChanged: (value) => setState(() => _allergyQuery = value),
+            textInputAction: TextInputAction.search,
+            style: const TextStyle(
+              color: AppColors.darkGreen,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+            decoration: InputDecoration(
+              hintText: _wellnessCopy(
+                context,
+                'Search allergies...',
+                'ابحث عن الحساسية...',
+              ),
+              suffixIcon: const Icon(
+                Icons.search_rounded,
+                color: AppColors.emeraldGreen,
+                size: 24,
+              ),
+              filled: true,
+              fillColor: AppColors.white,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 13,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderSide: BorderSide(
+                  color: AppColors.darkGreen.withValues(alpha: .06),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderSide: const BorderSide(
+                  color: AppColors.emeraldGreen,
+                  width: 1.3,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           _ChoiceWrap(
             leadingIcon: Icons.health_and_safety_outlined,
-            choices: {
-              'milk': l10n.onboardingMilk,
-              'egg': l10n.onboardingEgg,
-              'fish': l10n.onboardingFish,
-              'shellfish': l10n.onboardingShellfish,
-              'treeNuts': l10n.onboardingTreeNuts,
-              'peanuts': l10n.onboardingPeanuts,
-              'soy': l10n.onboardingSoy,
-              'sesame': l10n.onboardingSesame,
-              'gluten': l10n.onboardingGluten,
-              'none': l10n.onboardingNoAllergies,
-            },
+            choices:
+                <String, String>{
+                      'milk': l10n.onboardingMilk,
+                      'egg': l10n.onboardingEgg,
+                      'fish': l10n.onboardingFish,
+                      'shellfish': l10n.onboardingShellfish,
+                      'treeNuts': l10n.onboardingTreeNuts,
+                      'peanuts': l10n.onboardingPeanuts,
+                      'soy': l10n.onboardingSoy,
+                      'sesame': l10n.onboardingSesame,
+                      'gluten': l10n.onboardingGluten,
+                      'none': l10n.onboardingNoAllergies,
+                    }.entries
+                    .where(
+                      (entry) =>
+                          _allergyQuery.trim().isEmpty ||
+                          entry.value.toLowerCase().contains(
+                            _allergyQuery.trim().toLowerCase(),
+                          ),
+                    )
+                    .fold(
+                      <String, String>{},
+                      (values, entry) => values..[entry.key] = entry.value,
+                    ),
             selected: _allergies,
             onSelected: _toggleAllergy,
-          ),
-          const SizedBox(height: 20),
-          Text(
-            l10n.allergySafetyNote,
-            style: TextStyle(
-              color: AppColors.darkGreen.withValues(alpha: .62),
-              fontSize: 12,
-              height: 1.45,
-            ),
           ),
         ],
       ),
@@ -1814,61 +1860,124 @@ class _ChoiceWrap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (leadingIcon != null) {
-      return Column(
-        children: choices.entries
-            .map((entry) {
-              final isSelected = selected.contains(entry.key);
-              return Container(
-                key: ValueKey('choice-${entry.key}'),
-                height: 42,
-                margin: const EdgeInsets.only(bottom: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(11),
-                  border: Border.all(
-                    color: AppColors.darkGreen.withValues(alpha: .06),
-                  ),
-                  boxShadow: _cardShadow(.035),
-                ),
-                child: InkWell(
-                  onTap: () => onSelected(entry.key),
-                  borderRadius: BorderRadius.circular(11),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _choiceIcon(entry.key),
-                          size: 21,
-                          color: AppColors.emeraldGreen,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            entry.value,
-                            style: const TextStyle(
-                              color: AppColors.darkGreen,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                            ),
+      final regularChoices = choices.entries
+          .where((entry) => entry.key != 'none')
+          .toList(growable: false);
+      final noAllergies = choices.entries
+          .where((entry) => entry.key == 'none')
+          .firstOrNull;
+
+      Widget allergyRow(
+        MapEntry<String, String> entry, {
+        required bool showDivider,
+      }) {
+        final isSelected = selected.contains(entry.key);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              key: ValueKey('choice-${entry.key}'),
+              height: 47,
+              child: InkWell(
+                onTap: () => onSelected(entry.key),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 13),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _choiceIcon(entry.key),
+                        size: 22,
+                        color: AppColors.emeraldGreen,
+                      ),
+                      const SizedBox(width: 13),
+                      Expanded(
+                        child: Text(
+                          entry.value,
+                          style: const TextStyle(
+                            color: AppColors.darkGreen,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                        Icon(
-                          isSelected
-                              ? Icons.check_box_rounded
-                              : Icons.check_box_outline_blank_rounded,
-                          size: 20,
-                          color: isSelected
-                              ? AppColors.emeraldGreen
-                              : AppColors.darkGreen.withValues(alpha: .30),
-                        ),
-                      ],
-                    ),
+                      ),
+                      Icon(
+                        isSelected
+                            ? Icons.check_box_rounded
+                            : Icons.check_box_outline_blank_rounded,
+                        size: 21,
+                        color: isSelected
+                            ? AppColors.emeraldGreen
+                            : AppColors.darkGreen.withValues(alpha: .28),
+                      ),
+                    ],
                   ),
                 ),
-              );
-            })
-            .toList(growable: false),
+              ),
+            ),
+            if (showDivider)
+              Divider(
+                height: 1,
+                indent: 47,
+                color: AppColors.darkGreen.withValues(alpha: .075),
+              ),
+          ],
+        );
+      }
+
+      return Column(
+        children: [
+          if (regularChoices.isNotEmpty)
+            Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                  color: AppColors.darkGreen.withValues(alpha: .055),
+                ),
+                boxShadow: _cardShadow(.045),
+              ),
+              child: Column(
+                children: [
+                  for (var index = 0; index < regularChoices.length; index++)
+                    allergyRow(
+                      regularChoices[index],
+                      showDivider: index < regularChoices.length - 1,
+                    ),
+                ],
+              ),
+            ),
+          if (noAllergies != null) ...[
+            if (regularChoices.isNotEmpty) const SizedBox(height: 13),
+            Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                  color: AppColors.darkGreen.withValues(alpha: .055),
+                ),
+                boxShadow: _cardShadow(.045),
+              ),
+              child: allergyRow(noAllergies, showDivider: false),
+            ),
+          ],
+          if (choices.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 22),
+              child: Text(
+                _wellnessCopy(
+                  context,
+                  'No allergies found.',
+                  'لم يتم العثور على حساسية.',
+                ),
+                style: TextStyle(
+                  color: AppColors.darkGreen.withValues(alpha: .55),
+                  fontSize: 12,
+                ),
+              ),
+            ),
+        ],
       );
     }
 
