@@ -362,7 +362,7 @@ class PersonalizationScreen extends ConsumerStatefulWidget {
 }
 
 class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
-  static const _stepCount = 8;
+  static const _stepCount = 9;
   final PageController _controller = PageController();
 
   int _index = 0;
@@ -643,6 +643,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                     index: _index,
                     onPrevious: _previous,
                     onContinue: _continue,
+                    onHome: () => context.go(AppRoutes.home),
                   ),
                 ],
               ),
@@ -972,6 +973,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       l10n: l10n,
       draft: ref.watch(personalizationControllerProvider),
     ),
+    const _AllSetStep(),
   ];
 }
 
@@ -1150,11 +1152,13 @@ class _OnboardingNavigation extends StatelessWidget {
     required this.index,
     required this.onPrevious,
     required this.onContinue,
+    required this.onHome,
   });
 
   final int index;
   final VoidCallback onPrevious;
   final VoidCallback onContinue;
+  final VoidCallback onHome;
 
   @override
   Widget build(BuildContext context) {
@@ -1163,6 +1167,8 @@ class _OnboardingNavigation extends StatelessWidget {
         ? l10n.personalizationBegin
         : index == 7
         ? _wellnessCopy(context, 'See My Meal Plan', 'شاهد خطة وجباتي')
+        : index == 8
+        ? _wellnessCopy(context, 'Explore Meal Plans', 'استكشف خطط الوجبات')
         : l10n.onboardingContinue;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 9, 20, 14),
@@ -1177,6 +1183,31 @@ class _OnboardingNavigation extends StatelessWidget {
               key: const ValueKey('onboardingContinue'),
               label: label,
               onPressed: onContinue,
+            )
+          : index == 8
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppButton(
+                  key: const ValueKey('onboardingContinue'),
+                  label: label,
+                  onPressed: onContinue,
+                ),
+                SizedBox(
+                  height: 36,
+                  child: TextButton(
+                    key: const ValueKey('personalizationGoHome'),
+                    onPressed: onHome,
+                    child: Text(
+                      _wellnessCopy(context, 'Go to Home', 'الذهاب للرئيسية'),
+                      style: const TextStyle(
+                        color: AppColors.darkGreen,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             )
           : Row(
               children: [
@@ -2384,6 +2415,180 @@ BoxDecoration _wellnessCardDecoration() => BoxDecoration(
 
 String _wellnessCopy(BuildContext context, String english, String arabic) =>
     Localizations.localeOf(context).languageCode == 'ar' ? arabic : english;
+
+class _AllSetStep extends StatelessWidget {
+  const _AllSetStep();
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      _wellnessCopy(context, 'Your goals', 'أهدافك'),
+      _wellnessCopy(context, 'Your profile', 'ملفك الشخصي'),
+      _wellnessCopy(context, 'Your lifestyle', 'نمط حياتك'),
+      _wellnessCopy(context, 'Your food preferences', 'تفضيلاتك الغذائية'),
+      _wellnessCopy(context, 'Your health & allergies', 'صحتك والحساسيات'),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 560;
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(22, 4, 22, 14),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: math.max(0, constraints.maxHeight - 18),
+            ),
+            child: Column(
+              children: [
+                _AllSetArtwork(height: compact ? 190 : 230),
+                SizedBox(height: compact ? 9 : 17),
+                Text(
+                  _wellnessCopy(context, "You're all set!", 'أنت جاهز!'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.darkGreen,
+                    fontSize: 30,
+                    height: 1.05,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -.8,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _wellnessCopy(
+                    context,
+                    "We've created your nutrition profile.\n"
+                        "Let's find the perfect plan for you.",
+                    'لقد أنشأنا ملفك الغذائي.\nلنجد الخطة المثالية لك.',
+                  ),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.darkGreen.withValues(alpha: .65),
+                    fontSize: 13,
+                    height: 1.45,
+                  ),
+                ),
+                SizedBox(height: compact ? 17 : 25),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 17),
+                  child: Column(
+                    children: items
+                        .map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 13),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.emeraldGreen,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.check_rounded,
+                                    color: AppColors.white,
+                                    size: 15,
+                                    weight: 900,
+                                  ),
+                                ),
+                                const SizedBox(width: 13),
+                                Expanded(
+                                  child: Text(
+                                    item,
+                                    style: const TextStyle(
+                                      color: AppColors.darkGreen,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                        .toList(growable: false),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _AllSetArtwork extends StatelessWidget {
+  const _AllSetArtwork({required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      width: double.infinity,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: height * .90,
+            height: height * .90,
+            decoration: const BoxDecoration(
+              color: Color(0xFFF0F4E8),
+              shape: BoxShape.circle,
+            ),
+          ),
+          PositionedDirectional(
+            start: 15,
+            bottom: 18,
+            child: Transform.rotate(
+              angle: -.35,
+              child: Icon(
+                Icons.energy_savings_leaf_rounded,
+                size: height * .32,
+                color: const Color(0xFFB9D2AD),
+              ),
+            ),
+          ),
+          ClipOval(
+            child: Container(
+              width: height * .72,
+              height: height * .72,
+              color: const Color(0xFF07130E),
+              child: Image.asset(
+                'assets/images/onboarding_1.png',
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+                excludeFromSemantics: true,
+              ),
+            ),
+          ),
+          PositionedDirectional(
+            end: 31,
+            bottom: 13,
+            child: Container(
+              width: 55,
+              height: 55,
+              decoration: BoxDecoration(
+                color: AppColors.emeraldGreen,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.white, width: 5),
+                boxShadow: _cardShadow(.14),
+              ),
+              child: const Icon(
+                Icons.check_rounded,
+                color: AppColors.white,
+                size: 31,
+                weight: 900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _OrganicBackground extends StatelessWidget {
   const _OrganicBackground();

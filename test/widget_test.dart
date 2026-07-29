@@ -94,9 +94,7 @@ void main() {
     expect(find.byKey(const ValueKey('personalizationNotNow')), findsOneWidget);
     expect(
       tester
-          .widget<Image>(
-            find.byKey(const ValueKey('onboardingWelcomeImage')),
-          )
+          .widget<Image>(find.byKey(const ValueKey('onboardingWelcomeImage')))
           .fit,
       BoxFit.contain,
     );
@@ -163,6 +161,11 @@ void main() {
 
     expect(find.text('Your wellness snapshot'), findsOneWidget);
     expect(find.text('24.2'), findsOneWidget);
+    expect(find.byType(PhoneLoginPage), findsNothing);
+
+    await _continue(tester);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text("You're all set!"), findsOneWidget);
     expect(find.byType(PhoneLoginPage), findsNothing);
 
     await _continue(tester);
