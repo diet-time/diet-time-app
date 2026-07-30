@@ -408,7 +408,9 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     final invalid =
         (_index == 1 && _goal == null) ||
         (_index == 3 && _lifestyle == null) ||
-        (_index == 4 && _activity == null);
+        (_index == 4 && _activity == null) ||
+        (_index == 5 && _preferences.isEmpty) ||
+        (_index == 6 && _allergies.isEmpty);
     if (invalid) {
       setState(() => _validationMessage = l10n.personalizationSelectOption);
       return;
@@ -474,6 +476,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   void _togglePreference(String value) {
     setState(() {
       if (!_preferences.add(value)) _preferences.remove(value);
+      if (_preferences.isNotEmpty) _validationMessage = null;
     });
     ref
         .read(personalizationControllerProvider.notifier)
@@ -490,6 +493,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         _allergies.remove('none');
         if (!_allergies.add(value)) _allergies.remove(value);
       }
+      if (_allergies.isNotEmpty) _validationMessage = null;
     });
     ref
         .read(personalizationControllerProvider.notifier)
@@ -2530,15 +2534,27 @@ class _BmiScale extends StatelessWidget {
                   AnimatedPositionedDirectional(
                     duration: const Duration(milliseconds: 360),
                     curve: Curves.easeOutCubic,
-                    start: (markerCenter - 9).clamp(
+                    start: (markerCenter - 7).clamp(
                       0.0,
-                      math.max(0.0, availableWidth - 18),
+                      math.max(0.0, availableWidth - 14),
                     ),
-                    top: -1,
-                    child: const Icon(
-                      Icons.arrow_drop_down_rounded,
-                      color: AppColors.emeraldGreen,
-                      size: 18,
+                    top: 4,
+                    child: Container(
+                      key: const ValueKey('bmiScaleMarker'),
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: AppColors.emeraldGreen,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.white, width: 2.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.darkGreen.withValues(alpha: .24),
+                            blurRadius: 5,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],

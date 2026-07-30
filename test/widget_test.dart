@@ -155,12 +155,14 @@ void main() {
       find.byKey(const ValueKey('activity-sitting')).hitTestable(),
     );
     await _continue(tester);
+    await tester.tap(find.byKey(const ValueKey('choice-protein')));
     await _continue(tester);
     await tester.tap(find.byKey(const ValueKey('choice-none')));
     await _continue(tester);
 
     expect(find.text('Your wellness snapshot'), findsOneWidget);
     expect(find.text('24.2'), findsOneWidget);
+    expect(find.byKey(const ValueKey('bmiScaleMarker')), findsOneWidget);
     expect(find.byType(PhoneLoginPage), findsNothing);
 
     await _continue(tester);
