@@ -172,7 +172,7 @@ void main() {
   });
 
   testWidgets(
-    'returning guest resumes profile setup instead of replaying marketing',
+    'returning guest still sees the image onboarding before profile setup',
     (tester) async {
       SharedPreferences.setMockInitialValues({
         'preferredLanguage': 'en',
@@ -182,8 +182,8 @@ void main() {
       await tester.pumpWidget(_dietTimeApp());
       await _finishSplash(tester);
 
-      expect(find.byType(PersonalizationScreen), findsOneWidget);
-      expect(find.byType(OnboardingScreen), findsNothing);
+      expect(find.byType(OnboardingScreen), findsOneWidget);
+      expect(find.byType(PersonalizationScreen), findsNothing);
       expect(find.byType(BrowseMenuScreen), findsNothing);
     },
   );

@@ -150,20 +150,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           .read(languageControllerProvider.notifier)
           .selectLanguage(preferredLanguage);
       if (!mounted) return;
-      try {
-        final profile = await ref
-            .read(profilePersistenceControllerProvider.notifier)
-            .load(authenticated: false);
-        if (!mounted) return;
-        context.go(
-          profile?.isCompleted == true
-              ? AppRoutes.recommendation
-              : AppRoutes.personalization,
-        );
-      } on Object {
-        if (!mounted) return;
-        context.go(AppRoutes.personalization);
-      }
+      context.go(AppRoutes.onboarding);
       return;
     }
     context.go(AppRoutes.language);
