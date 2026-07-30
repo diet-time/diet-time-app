@@ -1869,17 +1869,25 @@ class _DynamicAllergenChoices extends StatelessWidget {
         final showNone =
             normalizedQuery.isEmpty ||
             l10n.onboardingNoAllergies.toLowerCase().contains(normalizedQuery);
-        return _ChoiceWrap(
-          leadingIcon: Icons.health_and_safety_outlined,
-          choices: {
-            for (final allergen in filtered) allergen.id: allergen.name,
-            if (showNone) 'none': l10n.onboardingNoAllergies,
-          },
-          choiceCodes: {
-            for (final allergen in filtered) allergen.id: allergen.code,
-          },
-          selected: selected,
-          onSelected: onSelected,
+        return Column(
+          children: [
+            _ChoiceWrap(
+              leadingIcon: Icons.health_and_safety_outlined,
+              choices: {
+                for (final allergen in filtered) allergen.id: allergen.name,
+                if (showNone) 'none': l10n.onboardingNoAllergies,
+              },
+              choiceCodes: {
+                for (final allergen in filtered) allergen.id: allergen.code,
+              },
+              selected: selected,
+              onSelected: onSelected,
+            ),
+            if (normalizedQuery.isEmpty) ...[
+              const SizedBox(height: 14),
+              const _AllergenSafetyCard(),
+            ],
+          ],
         );
       },
       loading: () => Column(
@@ -1956,6 +1964,64 @@ class _DynamicAllergenChoices extends StatelessWidget {
   }
 }
 
+class _AllergenSafetyCard extends StatelessWidget {
+  const _AllergenSafetyCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5EC),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: AppColors.emeraldGreen.withValues(alpha: .055),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.health_and_safety_outlined,
+            color: AppColors.emeraldGreen,
+            size: 31,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: _wellnessCopy(
+                      context,
+                      'Your health & safety is our priority.\n',
+                      'صحتك وسلامتك هي أولويتنا.\n',
+                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  TextSpan(
+                    text: _wellnessCopy(
+                      context,
+                      "We'll always highlight meals that are safe for you.",
+                      'سنوضح لك دائمًا الوجبات الآمنة لك.',
+                    ),
+                  ),
+                ],
+              ),
+              style: const TextStyle(
+                color: AppColors.darkGreen,
+                fontSize: 10,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ChoiceWrap extends StatelessWidget {
   const _ChoiceWrap({
     required this.choices,
@@ -1998,12 +2064,15 @@ class _ChoiceWrap extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 13),
                   child: Row(
                     children: [
-                      Icon(
-                        _choiceIcon(choiceCodes[entry.key] ?? entry.key),
-                        size: 22,
-                        color: AppColors.emeraldGreen,
+                      SizedBox(
+                        width: 25,
+                        child: Text(
+                          _choiceEmoji(choiceCodes[entry.key] ?? entry.key),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 21, height: 1),
+                        ),
                       ),
-                      const SizedBox(width: 13),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           entry.value,
@@ -2193,6 +2262,27 @@ class _ChoiceWrap extends StatelessWidget {
         'none' => Icons.health_and_safety_rounded,
         _ => Icons.restaurant_rounded,
       };
+
+  String _choiceEmoji(String key) =>
+      switch (key.replaceAll('_', '').toLowerCase()) {
+        'celery' => '🥬',
+        'crustaceans' || 'crustacean' => '🦀',
+        'egg' || 'eggs' => '🥚',
+        'fish' => '🐟',
+        'gluten' || 'glutencereals' || 'cerealscontaininggluten' => '🌾',
+        'lupin' => '🪻',
+        'milk' => '🍼',
+        'molluscs' || 'mollusks' => '🐚',
+        'mustard' => '🫙',
+        'peanuts' => '🥜',
+        'sesame' => '🫘',
+        'soy' || 'soybeans' => '🫛',
+        'sulphites' || 'sulfites' => '⚗️',
+        'treenuts' => '🌰',
+        'shellfish' => '🦐',
+        'none' => '🛡️',
+        _ => '🍽️',
+      };
 }
 
 class _BmiSummaryStep extends StatelessWidget {
@@ -2266,14 +2356,16 @@ class _BmiSummaryStep extends StatelessWidget {
               const SizedBox(height: 18),
               Container(
                 key: const ValueKey('bmiRange'),
-                padding: const EdgeInsets.fromLTRB(14, 14, 12, 13),
+                height: 142,
+                padding: const EdgeInsets.fromLTRB(14, 15, 12, 15),
                 decoration: _wellnessCardDecoration(),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     SizedBox(
-                      width: 92,
+                      width: 103,
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
@@ -2295,7 +2387,7 @@ class _BmiSummaryStep extends StatelessWidget {
                             textDirection: TextDirection.ltr,
                             style: const TextStyle(
                               color: AppColors.darkGreen,
-                              fontSize: 31,
+                              fontSize: 34,
                               height: 1,
                               fontWeight: FontWeight.w900,
                             ),
@@ -2324,7 +2416,11 @@ class _BmiSummaryStep extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    Container(
+                      width: 1,
+                      margin: const EdgeInsets.symmetric(horizontal: 10),
+                      color: AppColors.darkGreen.withValues(alpha: .08),
+                    ),
                     Expanded(child: _BmiScale(marker: marker)),
                   ],
                 ),
@@ -2376,9 +2472,10 @@ class _BmiSummaryStep extends StatelessWidget {
               const SizedBox(height: 18),
               Container(
                 width: double.infinity,
+                constraints: const BoxConstraints(minHeight: 94),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 13,
-                  vertical: 11,
+                  horizontal: 14,
+                  vertical: 14,
                 ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5E9),
@@ -2421,6 +2518,15 @@ class _BmiSummaryStep extends StatelessWidget {
                           fontSize: 10,
                           height: 1.35,
                         ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Icon(
+                        Icons.eco_rounded,
+                        color: Color(0xFF58A56B),
+                        size: 42,
                       ),
                     ),
                   ],
@@ -2534,27 +2640,23 @@ class _BmiScale extends StatelessWidget {
                   AnimatedPositionedDirectional(
                     duration: const Duration(milliseconds: 360),
                     curve: Curves.easeOutCubic,
-                    start: (markerCenter - 7).clamp(
+                    start: (markerCenter - 10).clamp(
                       0.0,
-                      math.max(0.0, availableWidth - 14),
+                      math.max(0.0, availableWidth - 20),
                     ),
-                    top: 4,
-                    child: Container(
-                      key: const ValueKey('bmiScaleMarker'),
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: AppColors.emeraldGreen,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.white, width: 2.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.darkGreen.withValues(alpha: .24),
-                            blurRadius: 5,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
+                    top: -3,
+                    child: const Icon(
+                      Icons.location_on_rounded,
+                      key: ValueKey('bmiScaleMarker'),
+                      color: AppColors.emeraldGreen,
+                      size: 20,
+                      shadows: [
+                        Shadow(
+                          color: Color(0x400E3A2C),
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -2612,7 +2714,7 @@ class _WellnessTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 77,
+      height: 82,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: _wellnessCardDecoration(),
       child: Row(
