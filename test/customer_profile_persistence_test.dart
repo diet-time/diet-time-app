@@ -28,8 +28,22 @@ void main() {
       'activityLevelCode': 'MOSTLY_SITTING',
       'preferredLanguage': 'ar',
       'onboardingStatus': 'IN_PROGRESS',
-      'preferenceIds': ['HIGH_PROTEIN'],
-      'allergenIds': ['allergen-id'],
+      'preferencesConfirmed': false,
+      'allergensConfirmed': false,
+      'preferences': [
+        {
+          'preferenceCode': 'HIGH_PROTEIN',
+          'preferenceType': 'DIET_STYLE',
+          'preferencePriority': 5,
+        },
+      ],
+      'allergens': [
+        {
+          'allergenId': 'allergen-id',
+          'medicallyConfirmed': false,
+          'notes': null,
+        },
+      ],
     });
   });
 
@@ -71,6 +85,7 @@ void main() {
       final controller = container.read(
         profilePersistenceControllerProvider.notifier,
       );
+      await controller.load(authenticated: true);
       final firstSave = controller.save(complete: false);
       final duplicateSave = await controller.save(complete: false);
 
@@ -90,9 +105,12 @@ void main() {
         const CustomerProfile(
           goalCode: 'GAIN_WEIGHT',
           dailyRoutineCode: 'OFFICE_WORK',
+          activityLevelCode: 'LIGHT_ACTIVITY',
+          allergensConfirmed: true,
+          preferencesConfirmed: true,
         ),
       ),
-      4,
+      7,
     );
   });
 }

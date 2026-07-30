@@ -48,9 +48,21 @@ class PersonalizationController extends Notifier<CustomerProfile> {
 
   void togglePreference(String value) {
     final values = {...state.preferences};
-    if (!values.add(value)) values.remove(value);
+    if (value == 'NONE') {
+      values
+        ..clear()
+        ..add('NONE');
+    } else {
+      values.remove('NONE');
+      if (!values.add(value)) values.remove(value);
+    }
     state = state.copyWith(preferences: values);
   }
+
+  void confirmPreferences() =>
+      state = state.copyWith(preferencesConfirmed: true);
+
+  void confirmAllergens() => state = state.copyWith(allergensConfirmed: true);
 
   void toggleAllergy(String value) {
     final values = {...state.allergens};

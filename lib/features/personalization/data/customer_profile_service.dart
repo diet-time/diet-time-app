@@ -1,29 +1,64 @@
 import 'package:diet_time/features/personalization/data/customer_profile_repository.dart';
+import 'package:diet_time/features/personalization/data/guest_profile_repository.dart';
 import 'package:diet_time/features/personalization/domain/customer_profile.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final customerProfileServiceProvider = Provider<CustomerProfileService>(
+final customerProfileServiceProvider = Provider<ProfilePersistenceService>(
   (ref) => CustomerProfileService(
-    repository: ref.watch(customerProfileRepositoryProvider),
+    customerRepository: ref.watch(customerProfileRepositoryProvider),
+    guestRepository: ref.watch(guestProfileRepositoryProvider),
   ),
 );
 
-class CustomerProfileService {
-  const CustomerProfileService({required this.repository});
+abstract interface class ProfilePersistenceService {
+  Future<CustomerProfile?> load({required bool authenticated});
 
-  final CustomerProfileRepository repository;
+  Future<CustomerProfile> saveProgress(
+    CustomerProfile profile, {
+    required bool authenticated,
+  });
 
-  Future<CustomerProfile?> load() => repository.getProfile();
+  Future<CustomerProfile> complete(
+    CustomerProfile profile, {
+    required bool authenticated,
+  });
+}
 
-  Future<CustomerProfile> saveProgress(CustomerProfile profile) {
-    return repository.updateProfile(
-      profile.copyWith(onboardingStatus: 'IN_PROGRESS'),
-    );
+class CustomerProfileService implements ProfilePersistenceService {
+  const CustomerProfileService({
+    required this.customerRepository,
+    required this.guestRepository,
+  });
+
+  final CustomerProfileRepository customerRepository;
+  final GuestProfileRepository guestRepository;
+
+  @override
+  Future<CustomerProfile?> load({required bool authenticated}) => authenticated
+      ? customerRepository.getProfile()
+      : guestRepository.getProfile();
+
+  @override
+  Future<CustomerProfile> saveProgress(
+    CustomerProfile profile, {
+    required bool authenticated,
+  }) {
+    final pending = profile.copyWith(onboardingStatus: 'IN_PROGRESS');
+    return authenticated
+        ? customerRepository.updateProfile(pending)
+        : guestRepository.saveProfile(pending);
   }
 
-  Future<CustomerProfile> complete(CustomerProfile profile) {
-    return repository.updateProfile(
-      profile.copyWith(onboardingStatus: 'COMPLETED'),
+  @override
+  Future<CustomerProfile> complete(
+    CustomerProfile profile, {
+    required bool authenticated,
+  }) {
+    final completed = profile.copyWith(
+      onboardingStatus: authenticated ? 'COMPLETED' : 'PROFILE_COMPLETED',
     );
+    return authenticated
+        ? customerRepository.updateProfile(completed)
+        : guestRepository.saveProfile(completed);
   }
 }

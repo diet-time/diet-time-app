@@ -17,10 +17,15 @@ class OtpRequestResult {
 }
 
 class OtpVerificationResult {
-  const OtpVerificationResult({required this.success, this.failure});
+  const OtpVerificationResult({
+    required this.success,
+    this.failure,
+    this.accessToken,
+  });
 
   final bool success;
   final OtpFailure? failure;
+  final String? accessToken;
 }
 
 abstract interface class OtpService {

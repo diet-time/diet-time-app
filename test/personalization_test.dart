@@ -1,5 +1,5 @@
-import 'package:diet_time/features/personalization/data/personalization_services.dart';
-import 'package:diet_time/features/personalization/domain/personalization_draft.dart';
+import 'package:diet_time/features/personalization/data/guest_recommendation_repository.dart';
+import 'package:diet_time/features/personalization/domain/plan_recommendation.dart';
 import 'package:diet_time/features/personalization/presentation/meal_plan_recommendation_screen.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
@@ -34,15 +34,22 @@ void main() {
     expect(draft.bmi, isNull);
   });
 
-  testWidgets('recommendation submits draft and renders returned plan', (
+  testWidgets('guest recommendations render without authentication', (
     tester,
   ) async {
-    final recommendationService = _FakeRecommendationService();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          mealPlanRecommendationServiceProvider.overrideWithValue(
-            recommendationService,
+          guestPlanRecommendationsProvider.overrideWith(
+            (ref, language) async => const [
+              PlanRecommendation(
+                id: 'everyday-id',
+                code: 'EVERYDAY',
+                name: 'Everyday Balance',
+                description: 'Balanced meals for everyday routines.',
+                isRecommended: true,
+              ),
+            ],
           ),
         ],
         child: const MaterialApp(
@@ -60,28 +67,13 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(recommendationService.calls, 1);
     expect(find.text('Everyday Balance'), findsOneWidget);
-    expect(find.byKey(const ValueKey('viewRecommendedPlan')), findsOneWidget);
-    expect(find.byKey(const ValueKey('compareAllPlans')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('selectPlan-everyday-id')),
+      findsOneWidget,
+    );
     final preferences = await SharedPreferences.getInstance();
     expect(preferences.getBool('hasCompletedPersonalization'), isNull);
     expect(preferences.getBool('hasCompletedProfile'), isNull);
   });
-}
-
-class _FakeRecommendationService implements MealPlanRecommendationService {
-  int calls = 0;
-
-  @override
-  Future<MealPlanRecommendation> recommend(PersonalizationDraft draft) async {
-    calls++;
-    return const MealPlanRecommendation(
-      planCode: 'EVERYDAY',
-      planName: 'Everyday Balance',
-      description: 'Balanced meals for everyday routines.',
-      reasonCodes: ['PRIMARY_GOAL'],
-      imageAsset: 'assets/images/onboarding_2.png',
-    );
-  }
 }

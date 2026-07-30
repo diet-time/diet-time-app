@@ -6,9 +6,7 @@ import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
-import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
-import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/features/onboarding/data/journey_state_repository.dart';
 import 'package:diet_time/features/personalization/data/allergen_repository.dart';
@@ -221,20 +219,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     .read(journeyStateRepositoryProvider)
                     .markOnboardingComplete();
                 if (!context.mounted) return;
-                final isAuthenticated = await ref
-                    .read(authenticationServiceProvider)
-                    .isLoggedIn();
-                if (!context.mounted) return;
-                if (isAuthenticated) {
-                  await context.push<void>(AppRoutes.personalization);
-                } else {
-                  await context.push<void>(
-                    AppRoutes.phoneLogin,
-                    extra: const PendingAuthDestination(
-                      route: AppRoutes.personalization,
-                    ),
-                  );
-                }
+                await context.push<void>(AppRoutes.personalization);
               },
             ),
         ],
@@ -414,12 +399,15 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   }
 
   Future<void> _loadProfile() async {
+    final authenticated = await ref
+        .read(authenticationServiceProvider)
+        .isLoggedIn();
     final profile = await ref
         .read(profilePersistenceControllerProvider.notifier)
-        .load();
+        .load(authenticated: authenticated);
     if (!mounted || profile == null) return;
     if (profile.isCompleted) {
-      context.go(AppRoutes.home);
+      context.go(authenticated ? AppRoutes.home : AppRoutes.recommendation);
       return;
     }
     setState(() {
@@ -478,6 +466,12 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     ref
         .read(personalizationControllerProvider.notifier)
         .setPreferredLanguage(Localizations.localeOf(context).languageCode);
+    if (_index == 5) {
+      ref.read(personalizationControllerProvider.notifier).confirmPreferences();
+    }
+    if (_index == 6) {
+      ref.read(personalizationControllerProvider.notifier).confirmAllergens();
+    }
     if (_index != 0 && _index != 7) {
       final saved = await ref
           .read(profilePersistenceControllerProvider.notifier)
@@ -485,21 +479,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       if (!mounted || !saved) return;
     }
     if (_index == _stepCount - 1) {
-      final route = ref.read(otpAuthControllerProvider).isAuthenticated
-          ? AppRoutes.recommendation
-          : AppRoutes.phoneLogin;
-      if (route == AppRoutes.phoneLogin) {
-        unawaited(
-          context.push<void>(
-            route,
-            extra: const PendingAuthDestination(
-              route: AppRoutes.recommendation,
-            ),
-          ),
-        );
-      } else {
-        unawaited(context.push<void>(route));
-      }
+      unawaited(context.push<void>(AppRoutes.recommendation));
       return;
     }
     await _goTo(_index + 1);
@@ -535,12 +515,19 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
 
   void _togglePreference(String value) {
     setState(() {
-      if (!_preferences.add(value)) _preferences.remove(value);
+      if (value == 'NONE') {
+        _preferences
+          ..clear()
+          ..add(value);
+      } else {
+        _preferences.remove('NONE');
+        if (!_preferences.add(value)) _preferences.remove(value);
+      }
       if (_preferences.isNotEmpty) _validationMessage = null;
     });
     ref
         .read(personalizationControllerProvider.notifier)
-        .togglePreference(value.toUpperCase());
+        .togglePreference(value);
   }
 
   void _toggleAllergy(String value) {
@@ -1082,18 +1069,23 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       subtitle: l10n.onboardingPreferencesSubtitle,
       child: _ChoiceWrap(
         choices: {
-          'protein': l10n.onboardingHighProtein,
-          'lowCarb': l10n.onboardingLowCarb,
-          'vegetarian': l10n.onboardingVegetarian,
-          'vegan': l10n.onboardingVegan,
-          'seafood': l10n.onboardingSeafood,
-          'chicken': l10n.onboardingChicken,
-          'beef': l10n.onboardingBeef,
-          'arabic': l10n.onboardingArabicCuisine,
-          'international': l10n.onboardingInternational,
-          'mediterranean': l10n.onboardingMediterranean,
-          'snacks': l10n.onboardingHealthySnacks,
-          'breakfast': l10n.onboardingBreakfastLover,
+          'HIGH_PROTEIN': l10n.onboardingHighProtein,
+          'LOW_CARB': l10n.onboardingLowCarb,
+          'VEGETARIAN': l10n.onboardingVegetarian,
+          'VEGAN': l10n.onboardingVegan,
+          'SEAFOOD': l10n.onboardingSeafood,
+          'CHICKEN': l10n.onboardingChicken,
+          'BEEF': l10n.onboardingBeef,
+          'ARABIC_CUISINE': l10n.onboardingArabicCuisine,
+          'INTERNATIONAL': l10n.onboardingInternational,
+          'MEDITERRANEAN': l10n.onboardingMediterranean,
+          'HEALTHY_SNACKS': l10n.onboardingHealthySnacks,
+          'BREAKFAST_LOVER': l10n.onboardingBreakfastLover,
+          'NONE': _wellnessCopy(
+            context,
+            'No food preferences',
+            'لا توجد تفضيلات غذائية',
+          ),
         },
         selected: _preferences,
         onSelected: _togglePreference,
@@ -2510,7 +2502,7 @@ class _BmiSummaryStep extends StatelessWidget {
               const SizedBox(height: 18),
               Container(
                 key: const ValueKey('bmiRange'),
-                height: 142,
+                height: 154,
                 padding: const EdgeInsets.fromLTRB(14, 15, 12, 15),
                 decoration: _wellnessCardDecoration(),
                 child: Row(

@@ -10,6 +10,7 @@ class ProfilePersistenceState {
     this.hasLoaded = false,
     this.errorMessage,
     this.resumeStep = 0,
+    this.authenticated = false,
   });
 
   final bool isLoading;
@@ -17,6 +18,7 @@ class ProfilePersistenceState {
   final bool hasLoaded;
   final String? errorMessage;
   final int resumeStep;
+  final bool authenticated;
 
   ProfilePersistenceState copyWith({
     bool? isLoading,
@@ -24,6 +26,7 @@ class ProfilePersistenceState {
     bool? hasLoaded,
     Object? errorMessage = _unset,
     int? resumeStep,
+    bool? authenticated,
   }) {
     return ProfilePersistenceState(
       isLoading: isLoading ?? this.isLoading,
@@ -33,6 +36,7 @@ class ProfilePersistenceState {
           ? this.errorMessage
           : errorMessage as String?,
       resumeStep: resumeStep ?? this.resumeStep,
+      authenticated: authenticated ?? this.authenticated,
     );
   }
 }
@@ -48,11 +52,13 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
   @override
   ProfilePersistenceState build() => const ProfilePersistenceState();
 
-  Future<CustomerProfile?> load() async {
+  Future<CustomerProfile?> load({required bool authenticated}) async {
     if (state.isLoading) return null;
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final profile = await ref.read(customerProfileServiceProvider).load();
+      final profile = await ref
+          .read(customerProfileServiceProvider)
+          .load(authenticated: authenticated);
       if (profile != null) {
         ref.read(personalizationControllerProvider.notifier).replace(profile);
       }
@@ -60,6 +66,7 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
         isLoading: false,
         hasLoaded: true,
         resumeStep: profile == null ? 0 : resumeStepFor(profile),
+        authenticated: authenticated,
       );
       return profile;
     } on Object {
@@ -78,10 +85,12 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
     try {
       final profile = ref.read(personalizationControllerProvider);
       final saved = complete
-          ? await ref.read(customerProfileServiceProvider).complete(profile)
+          ? await ref
+                .read(customerProfileServiceProvider)
+                .complete(profile, authenticated: state.authenticated)
           : await ref
                 .read(customerProfileServiceProvider)
-                .saveProgress(profile);
+                .saveProgress(profile, authenticated: state.authenticated);
       ref.read(personalizationControllerProvider.notifier).replace(saved);
       state = state.copyWith(isSaving: false);
       return true;
@@ -102,7 +111,7 @@ int resumeStepFor(CustomerProfile profile) {
   if (profile.goalCode == null) return 1;
   if (profile.dailyRoutineCode == null) return 3;
   if (profile.activityLevelCode == null) return 4;
-  if (profile.preferences.isEmpty) return 5;
-  if (profile.allergens.isEmpty) return 6;
+  if (!profile.preferencesConfirmed) return 5;
+  if (!profile.allergensConfirmed) return 6;
   return 7;
 }

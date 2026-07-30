@@ -13,6 +13,8 @@ class CustomerProfile {
     this.allergens = const {},
     this.bmi,
     this.nutritionTargets,
+    this.allergensConfirmed = false,
+    this.preferencesConfirmed = false,
   });
 
   factory CustomerProfile.fromJson(
@@ -47,6 +49,10 @@ class CustomerProfile {
               json['nutritionTargets'] as Map<String, dynamic>,
             )
           : fallback.nutritionTargets,
+      allergensConfirmed:
+          json['allergensConfirmed'] == true || fallback.allergensConfirmed,
+      preferencesConfirmed:
+          json['preferencesConfirmed'] == true || fallback.preferencesConfirmed,
     );
   }
 
@@ -63,8 +69,12 @@ class CustomerProfile {
   final Set<String> allergens;
   final double? bmi;
   final NutritionTargets? nutritionTargets;
+  final bool allergensConfirmed;
+  final bool preferencesConfirmed;
 
-  bool get isCompleted => onboardingStatus == 'COMPLETED';
+  bool get isCompleted =>
+      onboardingStatus == 'COMPLETED' ||
+      onboardingStatus == 'PROFILE_COMPLETED';
   String? get primaryGoal => goalCode;
   String get gender => genderCode;
   int get age {
@@ -94,10 +104,20 @@ class CustomerProfile {
     if (activityLevelCode != null) 'activityLevelCode': activityLevelCode,
     'preferredLanguage': preferredLanguage,
     'onboardingStatus': onboardingStatus,
-    'preferenceIds': preferences.toList(growable: false),
-    'allergenIds': allergens
-        .where((value) => value != 'NONE')
-        .toList(growable: false),
+    'preferencesConfirmed': preferencesConfirmed,
+    'allergensConfirmed': allergensConfirmed,
+    'preferences': [
+      for (final code in preferences)
+        CustomerPreference(
+          preferenceCode: code,
+          preferenceType: 'DIET_STYLE',
+          preferencePriority: 5,
+        ).toJson(),
+    ],
+    'allergens': [
+      for (final id in allergens.where((value) => value != 'NONE'))
+        CustomerAllergen(allergenId: id).toJson(),
+    ],
   };
 
   CustomerProfile copyWith({
@@ -114,6 +134,8 @@ class CustomerProfile {
     Set<String>? allergens,
     double? bmi,
     NutritionTargets? nutritionTargets,
+    bool? allergensConfirmed,
+    bool? preferencesConfirmed,
   }) {
     return CustomerProfile(
       genderCode: genderCode ?? this.genderCode,
@@ -129,8 +151,49 @@ class CustomerProfile {
       allergens: allergens ?? this.allergens,
       bmi: bmi ?? this.bmi,
       nutritionTargets: nutritionTargets ?? this.nutritionTargets,
+      allergensConfirmed: allergensConfirmed ?? this.allergensConfirmed,
+      preferencesConfirmed: preferencesConfirmed ?? this.preferencesConfirmed,
     );
   }
+}
+
+class CustomerPreference {
+  const CustomerPreference({
+    required this.preferenceCode,
+    required this.preferenceType,
+    required this.preferencePriority,
+  });
+
+  final String preferenceCode;
+  final String preferenceType;
+  final int preferencePriority;
+
+  Map<String, dynamic> toJson() => {
+    'preferenceCode': preferenceCode,
+    'preferenceType': preferenceType,
+    'preferencePriority': preferencePriority,
+  };
+}
+
+class CustomerAllergen {
+  const CustomerAllergen({
+    required this.allergenId,
+    this.severityCode,
+    this.medicallyConfirmed = false,
+    this.notes,
+  });
+
+  final String allergenId;
+  final String? severityCode;
+  final bool medicallyConfirmed;
+  final String? notes;
+
+  Map<String, dynamic> toJson() => {
+    'allergenId': allergenId,
+    if (severityCode != null) 'severityCode': severityCode,
+    'medicallyConfirmed': medicallyConfirmed,
+    'notes': notes,
+  };
 }
 
 class NutritionTargets {
@@ -172,7 +235,12 @@ Set<String> _stringSet(Object? value, Set<String> fallback) {
   return value
       .map((item) {
         if (item is Map<String, dynamic>) {
-          return _string(item['id'] ?? item['code']);
+          return _string(
+            item['allergenId'] ??
+                item['preferenceCode'] ??
+                item['id'] ??
+                item['code'],
+          );
         }
         return _string(item);
       })

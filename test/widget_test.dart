@@ -5,8 +5,11 @@ import 'package:diet_time/features/home/presentation/home_screen.dart';
 import 'package:diet_time/features/language/presentation/language_selection_screen.dart';
 import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
-import 'package:diet_time/features/personalization/data/customer_profile_repository.dart';
+import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
+import 'package:diet_time/features/personalization/data/guest_recommendation_repository.dart';
 import 'package:diet_time/features/personalization/domain/customer_profile.dart';
+import 'package:diet_time/features/personalization/domain/plan_recommendation.dart';
+import 'package:diet_time/features/personalization/presentation/meal_plan_recommendation_screen.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -78,9 +81,7 @@ void main() {
     expect(preferences.getBool('hasCompletedOnboarding'), isNull);
   });
 
-  testWidgets('Start Your Plan authenticates before customer profiling', (
-    tester,
-  ) async {
+  testWidgets('Start Your Plan opens guest profile onboarding', (tester) async {
     await tester.pumpWidget(_dietTimeApp());
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
@@ -91,8 +92,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(PersonalizationScreen), findsNothing);
-    expect(find.byType(PhoneLoginPage), findsOneWidget);
+    expect(find.byType(PersonalizationScreen), findsOneWidget);
+    expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
   testWidgets('goal selection is required and preserved when navigating back', (
@@ -124,14 +125,10 @@ void main() {
     expect(selected.decoration, isNotNull);
   });
 
-  testWidgets('questionnaire reaches BMI before existing phone login', (
+  testWidgets('questionnaire reaches BMI then guest recommendations', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      _dietTimeApp(
-        authenticationService: _OnboardingThenAuthenticatedService(),
-      ),
-    );
+    await tester.pumpWidget(_dietTimeApp());
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
     await _reachCarouselEnd(tester);
@@ -153,7 +150,7 @@ void main() {
       find.byKey(const ValueKey('activity-sitting')).hitTestable(),
     );
     await _continue(tester);
-    await tester.tap(find.byKey(const ValueKey('choice-protein')));
+    await tester.tap(find.byKey(const ValueKey('choice-HIGH_PROTEIN')));
     await _continue(tester);
     await tester.tap(find.byKey(const ValueKey('choice-none')));
     await _continue(tester);
@@ -170,11 +167,12 @@ void main() {
 
     await _continue(tester);
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.byType(PhoneLoginPage), findsOneWidget);
+    expect(find.byType(MealPlanRecommendationScreen), findsOneWidget);
+    expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
   testWidgets(
-    'stored completion flags are ignored for a repeatable demo launch',
+    'returning guest resumes profile setup instead of replaying marketing',
     (tester) async {
       SharedPreferences.setMockInitialValues({
         'preferredLanguage': 'en',
@@ -184,7 +182,8 @@ void main() {
       await tester.pumpWidget(_dietTimeApp());
       await _finishSplash(tester);
 
-      expect(find.byType(OnboardingScreen), findsOneWidget);
+      expect(find.byType(PersonalizationScreen), findsOneWidget);
+      expect(find.byType(OnboardingScreen), findsNothing);
       expect(find.byType(BrowseMenuScreen), findsNothing);
     },
   );
@@ -294,8 +293,11 @@ Future<void> _continue(WidgetTester tester) async {
 Widget _localizedApp(Widget home, {Locale locale = const Locale('en')}) {
   return ProviderScope(
     overrides: [
-      customerProfileRepositoryProvider.overrideWithValue(
-        _FakeCustomerProfileRepository(),
+      customerProfileServiceProvider.overrideWithValue(
+        _FakeProfilePersistenceService(),
+      ),
+      guestPlanRecommendationsProvider.overrideWith(
+        (ref, language) async => _fakeRecommendations,
       ),
     ],
     child: MaterialApp(
@@ -318,22 +320,44 @@ Widget _dietTimeApp({
   return ProviderScope(
     overrides: [
       authenticationServiceProvider.overrideWithValue(authenticationService),
-      customerProfileRepositoryProvider.overrideWithValue(
-        _FakeCustomerProfileRepository(),
+      customerProfileServiceProvider.overrideWithValue(
+        _FakeProfilePersistenceService(),
+      ),
+      guestPlanRecommendationsProvider.overrideWith(
+        (ref, language) async => _fakeRecommendations,
       ),
     ],
     child: const DietTimeApp(),
   );
 }
 
-class _FakeCustomerProfileRepository implements CustomerProfileRepository {
+class _FakeProfilePersistenceService implements ProfilePersistenceService {
   CustomerProfile? profile;
 
   @override
-  Future<CustomerProfile?> getProfile() async => profile;
+  Future<CustomerProfile?> load({required bool authenticated}) async => profile;
 
   @override
-  Future<CustomerProfile> updateProfile(CustomerProfile profile) async {
+  Future<CustomerProfile> saveProgress(
+    CustomerProfile profile, {
+    required bool authenticated,
+  }) async {
+    return _save(profile);
+  }
+
+  @override
+  Future<CustomerProfile> complete(
+    CustomerProfile profile, {
+    required bool authenticated,
+  }) async {
+    return _save(
+      profile.copyWith(
+        onboardingStatus: authenticated ? 'COMPLETED' : 'PROFILE_COMPLETED',
+      ),
+    );
+  }
+
+  CustomerProfile _save(CustomerProfile profile) {
     this.profile = profile.copyWith(
       bmi: 24.2,
       nutritionTargets: const NutritionTargets(
@@ -377,21 +401,15 @@ class _AuthenticatedService implements AuthenticationService {
   }) async {}
 }
 
-class _OnboardingThenAuthenticatedService implements AuthenticationService {
-  int _checks = 0;
-
-  @override
-  Future<bool> isLoggedIn() async {
-    _checks++;
-    return _checks > 1;
-  }
-
-  @override
-  Future<void> markAuthenticated() async {}
-
-  @override
-  Future<void> signIn({
-    required String identity,
-    required String password,
-  }) async {}
-}
+const _fakeRecommendations = [
+  PlanRecommendation(
+    id: 'balanced-id',
+    code: 'BALANCED',
+    name: 'Balanced Living',
+    description: 'Balanced meals selected for your profile.',
+    mealCount: 20,
+    durationDays: 7,
+    isRecommended: true,
+    isAllergenCompatible: true,
+  ),
+];

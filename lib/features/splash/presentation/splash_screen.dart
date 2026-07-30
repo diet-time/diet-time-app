@@ -9,7 +9,7 @@ import 'package:diet_time/core/widgets/app_logo.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
 import 'package:diet_time/features/language/data/language_repository.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
-import 'package:diet_time/features/onboarding/data/journey_state_repository.dart';
+import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -124,18 +124,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final languageSelectionCheck = ref
         .read(languageRepositoryProvider)
         .hasCompletedLanguageSelection();
-    final journeyCheck = ref.read(journeyStateRepositoryProvider).load();
     await Future<void>.delayed(
       reducedMotion ? _reducedMotionDuration : _visualDuration,
     );
     final isLoggedIn = await authCheck;
     final preferredLanguage = await languageCheck;
     final hasCompletedLanguageSelection = await languageSelectionCheck;
-    final journey = await journeyCheck;
     if (!mounted) return;
     if (isLoggedIn) {
+      final profile = await ref
+          .read(profilePersistenceControllerProvider.notifier)
+          .load(authenticated: true);
+      if (!mounted) return;
       context.go(
-        journey.hasCompletedProfile
+        profile?.isCompleted == true
             ? AppRoutes.home
             : AppRoutes.personalization,
       );
@@ -148,9 +150,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           .read(languageControllerProvider.notifier)
           .selectLanguage(preferredLanguage);
       if (!mounted) return;
-      context.go(
-        journey.hasCompletedOnboarding ? AppRoutes.menu : AppRoutes.onboarding,
-      );
+      try {
+        final profile = await ref
+            .read(profilePersistenceControllerProvider.notifier)
+            .load(authenticated: false);
+        if (!mounted) return;
+        context.go(
+          profile?.isCompleted == true
+              ? AppRoutes.recommendation
+              : AppRoutes.personalization,
+        );
+      } on Object {
+        if (!mounted) return;
+        context.go(AppRoutes.personalization);
+      }
       return;
     }
     context.go(AppRoutes.language);

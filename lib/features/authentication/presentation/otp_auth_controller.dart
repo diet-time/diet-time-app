@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
 import 'package:diet_time/features/authentication/data/mock_otp_service.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
+import 'package:diet_time/core/storage/secure_storage_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 enum OtpUiError {
@@ -197,6 +198,14 @@ class OtpAuthController extends Notifier<OtpAuthState> {
           verificationError: _verificationError(result.failure),
         );
         return false;
+      }
+      if (result.accessToken != null && result.accessToken!.trim().isNotEmpty) {
+        await ref
+            .read(secureStorageServiceProvider)
+            .write(
+              SecureStorageService.accessTokenKey,
+              result.accessToken!.trim(),
+            );
       }
       try {
         await ref.read(authenticationServiceProvider).markAuthenticated();
