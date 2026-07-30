@@ -7,12 +7,15 @@ import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
+import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/features/onboarding/data/journey_state_repository.dart';
 import 'package:diet_time/features/personalization/data/allergen_repository.dart';
 import 'package:diet_time/features/personalization/domain/personalization_draft.dart';
+import 'package:diet_time/features/personalization/domain/personalization_options.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
+import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -218,7 +221,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     .read(journeyStateRepositoryProvider)
                     .markOnboardingComplete();
                 if (!context.mounted) return;
-                await context.push<void>(AppRoutes.personalization);
+                final isAuthenticated = await ref
+                    .read(authenticationServiceProvider)
+                    .isLoggedIn();
+                if (!context.mounted) return;
+                if (isAuthenticated) {
+                  await context.push<void>(AppRoutes.personalization);
+                } else {
+                  await context.push<void>(
+                    AppRoutes.phoneLogin,
+                    extra: const PendingAuthDestination(
+                      route: AppRoutes.personalization,
+                    ),
+                  );
+                }
               },
             ),
         ],
@@ -368,6 +384,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
 
   int _index = 0;
   bool _isNavigating = false;
+  bool _profileLoadStarted = false;
   String? _validationMessage;
   String? _goal;
   String _gender = 'female';
@@ -384,6 +401,48 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_profileLoadStarted) return;
+    _profileLoadStarted = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_loadProfile());
+    });
+  }
+
+  Future<void> _loadProfile() async {
+    final profile = await ref
+        .read(profilePersistenceControllerProvider.notifier)
+        .load();
+    if (!mounted || profile == null) return;
+    if (profile.isCompleted) {
+      context.go(AppRoutes.home);
+      return;
+    }
+    setState(() {
+      _goal = profile.goalCode;
+      _gender = profile.genderCode.toLowerCase();
+      _age = profile.age > 0 ? profile.age : _age;
+      _height = profile.heightCm.round();
+      _weight = profile.weightKg.round();
+      _lifestyle = profile.dailyRoutineCode;
+      _activity = profile.activityLevelCode;
+      _preferences
+        ..clear()
+        ..addAll(profile.preferences);
+      _allergies
+        ..clear()
+        ..addAll(profile.allergens);
+    });
+    final resumeStep = ref
+        .read(profilePersistenceControllerProvider)
+        .resumeStep;
+    if (resumeStep > 0 && resumeStep < _stepCount) {
+      await _goTo(resumeStep);
+    }
   }
 
   Future<void> _goTo(int target) async {
@@ -403,20 +462,27 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     }
   }
 
-  void _continue() {
+  Future<void> _continue() async {
     final l10n = AppLocalizations.of(context);
     final invalid =
         (_index == 1 && _goal == null) ||
         (_index == 3 && _lifestyle == null) ||
-        (_index == 4 && _activity == null) ||
-        (_index == 5 && _preferences.isEmpty) ||
-        (_index == 6 && _allergies.isEmpty);
+        (_index == 4 && _activity == null);
     if (invalid) {
       setState(() => _validationMessage = l10n.personalizationSelectOption);
       return;
     }
     if (_validationMessage != null) {
       setState(() => _validationMessage = null);
+    }
+    ref
+        .read(personalizationControllerProvider.notifier)
+        .setPreferredLanguage(Localizations.localeOf(context).languageCode);
+    if (_index != 0 && _index != 7) {
+      final saved = await ref
+          .read(profilePersistenceControllerProvider.notifier)
+          .save(complete: _index == _stepCount - 1);
+      if (!mounted || !saved) return;
     }
     if (_index == _stepCount - 1) {
       final route = ref.read(otpAuthControllerProvider).isAuthenticated
@@ -436,7 +502,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       }
       return;
     }
-    unawaited(_goTo(_index + 1));
+    await _goTo(_index + 1);
   }
 
   void _previous() {
@@ -448,9 +514,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       _goal = value;
       _validationMessage = null;
     });
-    ref
-        .read(personalizationControllerProvider.notifier)
-        .setGoal(value.toUpperCase());
+    ref.read(personalizationControllerProvider.notifier).setGoal(value);
   }
 
   void _selectLifestyle(String value) {
@@ -458,9 +522,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       _lifestyle = value;
       _validationMessage = null;
     });
-    ref
-        .read(personalizationControllerProvider.notifier)
-        .setRoutine(value.toUpperCase());
+    ref.read(personalizationControllerProvider.notifier).setRoutine(value);
   }
 
   void _selectActivity(String value) {
@@ -468,9 +530,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       _activity = value;
       _validationMessage = null;
     });
-    ref
-        .read(personalizationControllerProvider.notifier)
-        .setActivity(value.toUpperCase());
+    ref.read(personalizationControllerProvider.notifier).setActivity(value);
   }
 
   void _togglePreference(String value) {
@@ -587,6 +647,8 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         ? ref.watch(guestAllergensProvider(locale.languageCode))
         : const AsyncValue<List<GuestAllergen>>.loading();
     final steps = _buildSteps(l10n, locale.languageCode, allergenState);
+    final persistence = ref.watch(profilePersistenceControllerProvider);
+    final errorMessage = _validationMessage ?? persistence.errorMessage;
     return PopScope(
       canPop: _index == 0,
       onPopInvokedWithResult: (didPop, _) {
@@ -618,6 +680,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                     child: PageView.builder(
                       key: const ValueKey('onboardingPageView'),
                       controller: _controller,
+                      physics: const NeverScrollableScrollPhysics(),
                       itemCount: _stepCount,
                       onPageChanged: (index) => setState(() => _index = index),
                       itemBuilder: (context, index) => KeyedSubtree(
@@ -626,7 +689,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                       ),
                     ),
                   ),
-                  if (_validationMessage != null)
+                  if (errorMessage != null)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Row(
@@ -639,7 +702,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                           const SizedBox(width: 7),
                           Expanded(
                             child: Text(
-                              _validationMessage!,
+                              errorMessage,
                               key: const ValueKey('personalizationError'),
                               style: const TextStyle(
                                 color: AppColors.darkGreen,
@@ -648,18 +711,48 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                               ),
                             ),
                           ),
+                          if (persistence.errorMessage != null)
+                            TextButton(
+                              key: const ValueKey('retryProfilePersistence'),
+                              onPressed: persistence.isSaving
+                                  ? null
+                                  : () => unawaited(
+                                      _index == 0
+                                          ? _loadProfile()
+                                          : _continue(),
+                                    ),
+                              child: Text(
+                                _wellnessCopy(
+                                  context,
+                                  'Retry',
+                                  'إعادة المحاولة',
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
                   _OnboardingNavigation(
                     index: _index,
                     onPrevious: _previous,
-                    onContinue: _continue,
+                    onContinue: () => unawaited(_continue()),
                     onHome: () => context.go(AppRoutes.home),
+                    isSaving: persistence.isSaving,
                   ),
                 ],
               ),
             ),
+            if (persistence.isLoading)
+              const Positioned.fill(
+                child: ColoredBox(
+                  color: Color(0xEFFFFFFB),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.emeraldGreen,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -680,42 +773,62 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
           _SelectionCard(
             key: const ValueKey('goal-lose'),
             icon: Icons.trending_down_rounded,
-            title: l10n.onboardingLoseWeight,
+            title: personalizationOptionLabel(
+              goalLabels,
+              'LOSE_WEIGHT',
+              language,
+            ),
             description: l10n.onboardingLoseWeightDescription,
-            selected: _goal == 'lose_weight',
-            onTap: () => _selectGoal('lose_weight'),
+            selected: _goal == 'LOSE_WEIGHT',
+            onTap: () => _selectGoal('LOSE_WEIGHT'),
           ),
           _SelectionCard(
             key: const ValueKey('goal-maintain'),
             icon: Icons.balance_rounded,
-            title: l10n.onboardingMaintainWeight,
+            title: personalizationOptionLabel(
+              goalLabels,
+              'MAINTAIN_WEIGHT',
+              language,
+            ),
             description: l10n.onboardingMaintainWeightDescription,
-            selected: _goal == 'maintain_weight',
-            onTap: () => _selectGoal('maintain_weight'),
+            selected: _goal == 'MAINTAIN_WEIGHT',
+            onTap: () => _selectGoal('MAINTAIN_WEIGHT'),
           ),
           _SelectionCard(
             key: const ValueKey('goal-gain'),
             icon: Icons.trending_up_rounded,
-            title: l10n.onboardingGainWeight,
+            title: personalizationOptionLabel(
+              goalLabels,
+              'GAIN_WEIGHT',
+              language,
+            ),
             description: l10n.onboardingGainWeightDescription,
-            selected: _goal == 'gain_weight',
-            onTap: () => _selectGoal('gain_weight'),
+            selected: _goal == 'GAIN_WEIGHT',
+            onTap: () => _selectGoal('GAIN_WEIGHT'),
           ),
           _SelectionCard(
             key: const ValueKey('goal-muscle'),
             icon: Icons.fitness_center_rounded,
-            title: l10n.onboardingBuildMuscle,
+            title: personalizationOptionLabel(
+              goalLabels,
+              'BUILD_MUSCLE',
+              language,
+            ),
             description: l10n.onboardingBuildMuscleDescription,
-            selected: _goal == 'build_muscle',
-            onTap: () => _selectGoal('build_muscle'),
+            selected: _goal == 'BUILD_MUSCLE',
+            onTap: () => _selectGoal('BUILD_MUSCLE'),
           ),
           _SelectionCard(
             key: const ValueKey('goal-healthy'),
             icon: Icons.favorite_rounded,
-            title: l10n.onboardingEatHealthier,
+            title: personalizationOptionLabel(
+              goalLabels,
+              'EAT_HEALTHIER',
+              language,
+            ),
             description: l10n.onboardingEatHealthierDescription,
-            selected: _goal == 'eat_healthier',
-            onTap: () => _selectGoal('eat_healthier'),
+            selected: _goal == 'EAT_HEALTHIER',
+            onTap: () => _selectGoal('EAT_HEALTHIER'),
           ),
         ],
       ),
@@ -864,33 +977,53 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
           _CompactOption(
             key: const ValueKey('lifestyle-office'),
             icon: Icons.apartment_rounded,
-            label: l10n.onboardingOfficeWork,
-            selected: _lifestyle == 'office_work',
-            onTap: () => _selectLifestyle('office_work'),
+            label: personalizationOptionLabel(
+              dailyRoutineLabels,
+              'OFFICE_WORK',
+              language,
+            ),
+            selected: _lifestyle == 'OFFICE_WORK',
+            onTap: () => _selectLifestyle('OFFICE_WORK'),
           ),
           _CompactOption(
             icon: Icons.home_work_outlined,
-            label: l10n.onboardingWorkFromHome,
-            selected: _lifestyle == 'work_from_home',
-            onTap: () => _selectLifestyle('work_from_home'),
+            label: personalizationOptionLabel(
+              dailyRoutineLabels,
+              'WORK_FROM_HOME',
+              language,
+            ),
+            selected: _lifestyle == 'WORK_FROM_HOME',
+            onTap: () => _selectLifestyle('WORK_FROM_HOME'),
           ),
           _CompactOption(
             icon: Icons.school_outlined,
-            label: l10n.onboardingStudent,
-            selected: _lifestyle == 'student',
-            onTap: () => _selectLifestyle('student'),
+            label: personalizationOptionLabel(
+              dailyRoutineLabels,
+              'STUDENT',
+              language,
+            ),
+            selected: _lifestyle == 'STUDENT',
+            onTap: () => _selectLifestyle('STUDENT'),
           ),
           _CompactOption(
             icon: Icons.directions_walk_rounded,
-            label: l10n.onboardingActiveJob,
-            selected: _lifestyle == 'active_job',
-            onTap: () => _selectLifestyle('active_job'),
+            label: personalizationOptionLabel(
+              dailyRoutineLabels,
+              'ACTIVE_JOB',
+              language,
+            ),
+            selected: _lifestyle == 'ACTIVE_JOB',
+            onTap: () => _selectLifestyle('ACTIVE_JOB'),
           ),
           _CompactOption(
             icon: Icons.nightlight_outlined,
-            label: l10n.onboardingShiftWorker,
-            selected: _lifestyle == 'shift_work',
-            onTap: () => _selectLifestyle('shift_work'),
+            label: personalizationOptionLabel(
+              dailyRoutineLabels,
+              'SHIFT_WORKER',
+              language,
+            ),
+            selected: _lifestyle == 'SHIFT_WORKER',
+            onTap: () => _selectLifestyle('SHIFT_WORKER'),
           ),
         ],
       ),
@@ -903,27 +1036,43 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
           _ActivityCard(
             key: const ValueKey('activity-sitting'),
             icon: Icons.weekend_outlined,
-            label: l10n.onboardingMostlySitting,
-            selected: _activity == 'mostly_seated',
-            onTap: () => _selectActivity('mostly_seated'),
+            label: personalizationOptionLabel(
+              activityLevelLabels,
+              'MOSTLY_SITTING',
+              language,
+            ),
+            selected: _activity == 'MOSTLY_SITTING',
+            onTap: () => _selectActivity('MOSTLY_SITTING'),
           ),
           _ActivityCard(
             icon: Icons.directions_walk_rounded,
-            label: l10n.onboardingLightActivity,
-            selected: _activity == 'lightly_active',
-            onTap: () => _selectActivity('lightly_active'),
+            label: personalizationOptionLabel(
+              activityLevelLabels,
+              'LIGHT_ACTIVITY',
+              language,
+            ),
+            selected: _activity == 'LIGHT_ACTIVITY',
+            onTap: () => _selectActivity('LIGHT_ACTIVITY'),
           ),
           _ActivityCard(
             icon: Icons.directions_run_rounded,
-            label: l10n.onboardingActiveLifestyle,
-            selected: _activity == 'moderately_active',
-            onTap: () => _selectActivity('moderately_active'),
+            label: personalizationOptionLabel(
+              activityLevelLabels,
+              'ACTIVE_LIFESTYLE',
+              language,
+            ),
+            selected: _activity == 'ACTIVE_LIFESTYLE',
+            onTap: () => _selectActivity('ACTIVE_LIFESTYLE'),
           ),
           _ActivityCard(
             icon: Icons.sports_gymnastics_rounded,
-            label: l10n.onboardingAthlete,
-            selected: _activity == 'very_active',
-            onTap: () => _selectActivity('very_active'),
+            label: personalizationOptionLabel(
+              activityLevelLabels,
+              'ATHLETE',
+              language,
+            ),
+            selected: _activity == 'ATHLETE',
+            onTap: () => _selectActivity('ATHLETE'),
           ),
         ],
       ),
@@ -1192,12 +1341,14 @@ class _OnboardingNavigation extends StatelessWidget {
     required this.onPrevious,
     required this.onContinue,
     required this.onHome,
+    required this.isSaving,
   });
 
   final int index;
   final VoidCallback onPrevious;
   final VoidCallback onContinue;
   final VoidCallback onHome;
+  final bool isSaving;
 
   @override
   Widget build(BuildContext context) {
@@ -1221,7 +1372,8 @@ class _OnboardingNavigation extends StatelessWidget {
           ? AppButton(
               key: const ValueKey('onboardingContinue'),
               label: label,
-              onPressed: onContinue,
+              onPressed: isSaving ? null : onContinue,
+              isLoading: isSaving,
             )
           : index == 8
           ? Column(
@@ -1230,7 +1382,8 @@ class _OnboardingNavigation extends StatelessWidget {
                 AppButton(
                   key: const ValueKey('onboardingContinue'),
                   label: label,
-                  onPressed: onContinue,
+                  onPressed: isSaving ? null : onContinue,
+                  isLoading: isSaving,
                 ),
                 SizedBox(
                   height: 36,
@@ -1252,7 +1405,7 @@ class _OnboardingNavigation extends StatelessWidget {
               children: [
                 TextButton.icon(
                   key: const ValueKey('onboardingPrevious'),
-                  onPressed: onPrevious,
+                  onPressed: isSaving ? null : onPrevious,
                   icon: const Icon(Icons.arrow_back_rounded, size: 18),
                   label: Text(l10n.onboardingPrevious),
                   style: TextButton.styleFrom(
@@ -1265,7 +1418,8 @@ class _OnboardingNavigation extends StatelessWidget {
                   child: AppButton(
                     key: const ValueKey('onboardingContinue'),
                     label: label,
-                    onPressed: onContinue,
+                    onPressed: isSaving ? null : onContinue,
+                    isLoading: isSaving,
                   ),
                 ),
               ],
@@ -2293,9 +2447,11 @@ class _BmiSummaryStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bmi = draft.bmi;
+    final bmi = draft.bmi ?? 0;
     final marker = ((bmi.clamp(14, 40) - 14) / 26).toDouble();
-    final category = draft.age < 18
+    final category = bmi <= 0
+        ? _wellnessCopy(context, 'Pending', 'قيد الحساب')
+        : draft.age < 18
         ? l10n.bmiYouthNote
         : bmi < 18.5
         ? l10n.bmiBelowRange
@@ -2304,21 +2460,19 @@ class _BmiSummaryStep extends StatelessWidget {
         : bmi < 30
         ? l10n.bmiAboveRange
         : l10n.bmiWellAboveRange;
-    final goal = switch (draft.primaryGoal) {
-      'LOSE_WEIGHT' => l10n.onboardingLoseWeight,
-      'MAINTAIN_WEIGHT' => l10n.onboardingMaintainWeight,
-      'GAIN_WEIGHT' => l10n.onboardingGainWeight,
-      'BUILD_MUSCLE' => l10n.onboardingBuildMuscle,
-      'EAT_HEALTHIER' => l10n.onboardingEatHealthier,
-      _ => l10n.onboardingEatHealthier,
-    };
-    final activity = switch (draft.activityLevel) {
-      'MOSTLY_SEATED' => l10n.onboardingMostlySitting,
-      'LIGHTLY_ACTIVE' => l10n.onboardingLightActivity,
-      'MODERATELY_ACTIVE' => l10n.onboardingActiveLifestyle,
-      'VERY_ACTIVE' => l10n.onboardingAthlete,
-      _ => l10n.onboardingLightActivity,
-    };
+    final language = Localizations.localeOf(context).languageCode;
+    final goal = personalizationOptionLabel(
+      goalLabels,
+      draft.primaryGoal ?? 'EAT_HEALTHIER',
+      language,
+    );
+    final activity = personalizationOptionLabel(
+      activityLevelLabels,
+      draft.activityLevel ?? 'LIGHT_ACTIVITY',
+      language,
+    );
+    final calorieTarget = draft.nutritionTargets?.calories?.round();
+    final proteinTarget = draft.nutritionTargets?.proteinGrams?.round();
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(8, 2, 8, 12),
@@ -2462,7 +2616,9 @@ class _BmiSummaryStep extends StatelessWidget {
                     child: _WellnessTile(
                       icon: Icons.local_fire_department_outlined,
                       label: l10n.caloriesLabel,
-                      value: l10n.dailyCalories(2450),
+                      value: calorieTarget == null
+                          ? '—'
+                          : l10n.dailyCalories(calorieTarget),
                     ),
                   ),
                   const SizedBox(width: 9),
@@ -2470,7 +2626,9 @@ class _BmiSummaryStep extends StatelessWidget {
                     child: _WellnessTile(
                       icon: Icons.fitness_center_rounded,
                       label: '${l10n.proteinLabel} Target',
-                      value: '160 g/day',
+                      value: proteinTarget == null
+                          ? '—'
+                          : '$proteinTarget g/day',
                     ),
                   ),
                 ],

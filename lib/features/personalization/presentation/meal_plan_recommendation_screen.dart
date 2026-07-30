@@ -24,7 +24,6 @@ class _MealPlanRecommendationScreenState
 
   Future<MealPlanRecommendation> _submitAndRecommend() async {
     final draft = ref.read(personalizationControllerProvider);
-    await ref.read(personalizationProfileServiceProvider).submit(draft);
     final result = await ref
         .read(mealPlanRecommendationServiceProvider)
         .recommend(draft);
@@ -32,7 +31,6 @@ class _MealPlanRecommendationScreenState
         .read(journeyStateRepositoryProvider)
         .markPersonalizationComplete();
     await ref.read(journeyStateRepositoryProvider).markProfileComplete();
-    ref.read(personalizationControllerProvider.notifier).clear();
     return result;
   }
 

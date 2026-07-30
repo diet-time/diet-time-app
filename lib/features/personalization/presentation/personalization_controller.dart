@@ -1,50 +1,59 @@
-import 'package:diet_time/features/personalization/domain/personalization_draft.dart';
+import 'package:diet_time/features/personalization/domain/customer_profile.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final personalizationControllerProvider =
-    NotifierProvider<PersonalizationController, PersonalizationDraft>(
+    NotifierProvider<PersonalizationController, CustomerProfile>(
       PersonalizationController.new,
     );
 
-class PersonalizationController extends Notifier<PersonalizationDraft> {
+class PersonalizationController extends Notifier<CustomerProfile> {
   @override
-  PersonalizationDraft build() => const PersonalizationDraft();
+  CustomerProfile build() => const CustomerProfile();
 
-  void setGoal(String value) => state = state.copyWith(primaryGoal: value);
+  void replace(CustomerProfile profile) => state = profile;
 
-  void setGender(String value) => state = state.copyWith(gender: value);
+  void setGoal(String value) => state = state.copyWith(goalCode: value);
 
-  void setAge(int value) => state = state.copyWith(age: value);
+  void setGender(String value) => state = state.copyWith(genderCode: value);
+
+  void setAge(int value) {
+    if (value <= 0) return;
+    final today = DateTime.now();
+    final birthYear = today.year - value;
+    state = state.copyWith(
+      dateOfBirth:
+          '$birthYear-${today.month.toString().padLeft(2, '0')}-'
+          '${today.day.toString().padLeft(2, '0')}',
+    );
+  }
 
   void setHeight(double value) {
     if (value <= 0) return;
-    state = state.copyWith(
-      heightCm: value,
-      bmi: calculateBmi(weightKg: state.weightKg, heightCm: value),
-    );
+    state = state.copyWith(heightCm: value);
   }
 
   void setWeight(double value) {
     if (value <= 0) return;
-    state = state.copyWith(
-      weightKg: value,
-      bmi: calculateBmi(weightKg: value, heightCm: state.heightCm),
-    );
+    state = state.copyWith(weightKg: value);
   }
 
   void setActivity(String value) =>
-      state = state.copyWith(activityLevel: value);
+      state = state.copyWith(activityLevelCode: value);
 
-  void setRoutine(String value) => state = state.copyWith(dailyRoutine: value);
+  void setRoutine(String value) =>
+      state = state.copyWith(dailyRoutineCode: value);
+
+  void setPreferredLanguage(String value) =>
+      state = state.copyWith(preferredLanguage: value);
 
   void togglePreference(String value) {
-    final values = {...state.foodPreferenceIds};
+    final values = {...state.preferences};
     if (!values.add(value)) values.remove(value);
-    state = state.copyWith(foodPreferenceIds: values);
+    state = state.copyWith(preferences: values);
   }
 
   void toggleAllergy(String value) {
-    final values = {...state.allergenIds};
+    final values = {...state.allergens};
     if (value.toUpperCase() == 'NONE') {
       values
         ..clear()
@@ -53,8 +62,8 @@ class PersonalizationController extends Notifier<PersonalizationDraft> {
       values.remove('NONE');
       if (!values.add(value)) values.remove(value);
     }
-    state = state.copyWith(allergenIds: values);
+    state = state.copyWith(allergens: values);
   }
 
-  void clear() => state = const PersonalizationDraft();
+  void clear() => state = const CustomerProfile();
 }

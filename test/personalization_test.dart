@@ -12,20 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  test('BMI calculation uses normalized metric values', () {
-    expect(calculateBmi(weightKg: 80, heightCm: 176), closeTo(25.8, .05));
-    expect(calculateBmi(weightKg: 60, heightCm: 165), closeTo(22.0, .05));
-  });
-
-  test('BMI safely rejects zero or invalid measurements', () {
-    expect(() => calculateBmi(weightKg: 80, heightCm: 0), throwsArgumentError);
-    expect(
-      () => calculateBmi(weightKg: -1, heightCm: 176),
-      throwsArgumentError,
-    );
-  });
-
-  test('Riverpod draft preserves answers and derives BMI on field changes', () {
+  test('Riverpod profile preserves answers without calculating BMI', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     final controller = container.read(
@@ -35,25 +22,25 @@ void main() {
     controller.setGoal('LOSE_WEIGHT');
     controller.setHeight(176);
     controller.setWeight(80);
-    controller.setActivity('MODERATELY_ACTIVE');
+    controller.setRoutine('SHIFT_WORKER');
+    controller.setActivity('ACTIVE_LIFESTYLE');
 
     final draft = container.read(personalizationControllerProvider);
     expect(draft.primaryGoal, 'LOSE_WEIGHT');
-    expect(draft.activityLevel, 'MODERATELY_ACTIVE');
-    expect(draft.bmi, closeTo(25.8, .05));
+    expect(draft.dailyRoutine, 'SHIFT_WORKER');
+    expect(draft.activityLevel, 'ACTIVE_LIFESTYLE');
+    expect(draft.heightCm, 176);
+    expect(draft.weightKg, 80);
+    expect(draft.bmi, isNull);
   });
 
   testWidgets('recommendation submits draft and renders returned plan', (
     tester,
   ) async {
-    final profileService = _FakeProfileService();
     final recommendationService = _FakeRecommendationService();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          personalizationProfileServiceProvider.overrideWithValue(
-            profileService,
-          ),
           mealPlanRecommendationServiceProvider.overrideWithValue(
             recommendationService,
           ),
@@ -73,7 +60,6 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(profileService.submissions, hasLength(1));
     expect(recommendationService.calls, 1);
     expect(find.text('Everyday Balance'), findsOneWidget);
     expect(find.byKey(const ValueKey('viewRecommendedPlan')), findsOneWidget);
@@ -82,15 +68,6 @@ void main() {
     expect(preferences.getBool('hasCompletedPersonalization'), isNull);
     expect(preferences.getBool('hasCompletedProfile'), isNull);
   });
-}
-
-class _FakeProfileService implements PersonalizationProfileService {
-  final submissions = <PersonalizationDraft>[];
-
-  @override
-  Future<void> submit(PersonalizationDraft draft) async {
-    submissions.add(draft);
-  }
 }
 
 class _FakeRecommendationService implements MealPlanRecommendationService {

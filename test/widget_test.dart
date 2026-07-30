@@ -5,6 +5,8 @@ import 'package:diet_time/features/home/presentation/home_screen.dart';
 import 'package:diet_time/features/language/presentation/language_selection_screen.dart';
 import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:diet_time/features/personalization/data/customer_profile_repository.dart';
+import 'package:diet_time/features/personalization/domain/customer_profile.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -76,7 +78,7 @@ void main() {
     expect(preferences.getBool('hasCompletedOnboarding'), isNull);
   });
 
-  testWidgets('Start Your Plan opens personalization introduction', (
+  testWidgets('Start Your Plan authenticates before customer profiling', (
     tester,
   ) async {
     await tester.pumpWidget(_dietTimeApp());
@@ -89,16 +91,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(PersonalizationScreen), findsOneWidget);
-    expect(find.text("Let's shape your plan"), findsOneWidget);
-    expect(find.byKey(const ValueKey('personalizationNotNow')), findsOneWidget);
-    expect(
-      tester
-          .widget<Image>(find.byKey(const ValueKey('onboardingWelcomeImage')))
-          .fit,
-      BoxFit.contain,
-    );
-    expect(find.byType(PhoneLoginPage), findsNothing);
+    expect(find.byType(PersonalizationScreen), findsNothing);
+    expect(find.byType(PhoneLoginPage), findsOneWidget);
   });
 
   testWidgets('goal selection is required and preserved when navigating back', (
@@ -133,7 +127,11 @@ void main() {
   testWidgets('questionnaire reaches BMI before existing phone login', (
     tester,
   ) async {
-    await tester.pumpWidget(_dietTimeApp());
+    await tester.pumpWidget(
+      _dietTimeApp(
+        authenticationService: _OnboardingThenAuthenticatedService(),
+      ),
+    );
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
     await _reachCarouselEnd(tester);
@@ -295,6 +293,11 @@ Future<void> _continue(WidgetTester tester) async {
 
 Widget _localizedApp(Widget home, {Locale locale = const Locale('en')}) {
   return ProviderScope(
+    overrides: [
+      customerProfileRepositoryProvider.overrideWithValue(
+        _FakeCustomerProfileRepository(),
+      ),
+    ],
     child: MaterialApp(
       locale: locale,
       localizationsDelegates: const [
@@ -315,9 +318,31 @@ Widget _dietTimeApp({
   return ProviderScope(
     overrides: [
       authenticationServiceProvider.overrideWithValue(authenticationService),
+      customerProfileRepositoryProvider.overrideWithValue(
+        _FakeCustomerProfileRepository(),
+      ),
     ],
     child: const DietTimeApp(),
   );
+}
+
+class _FakeCustomerProfileRepository implements CustomerProfileRepository {
+  CustomerProfile? profile;
+
+  @override
+  Future<CustomerProfile?> getProfile() async => profile;
+
+  @override
+  Future<CustomerProfile> updateProfile(CustomerProfile profile) async {
+    this.profile = profile.copyWith(
+      bmi: 24.2,
+      nutritionTargets: const NutritionTargets(
+        calories: 2450,
+        proteinGrams: 160,
+      ),
+    );
+    return this.profile!;
+  }
 }
 
 class _UnauthenticatedService implements AuthenticationService {
@@ -341,6 +366,25 @@ class _AuthenticatedService implements AuthenticationService {
 
   @override
   Future<bool> isLoggedIn() async => true;
+
+  @override
+  Future<void> markAuthenticated() async {}
+
+  @override
+  Future<void> signIn({
+    required String identity,
+    required String password,
+  }) async {}
+}
+
+class _OnboardingThenAuthenticatedService implements AuthenticationService {
+  int _checks = 0;
+
+  @override
+  Future<bool> isLoggedIn() async {
+    _checks++;
+    return _checks > 1;
+  }
 
   @override
   Future<void> markAuthenticated() async {}

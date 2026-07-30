@@ -3,11 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 const useMockMealPlanRecommendation = true;
 
-final personalizationProfileServiceProvider =
-    Provider<PersonalizationProfileService>(
-      (ref) => const DeferredPersonalizationProfileService(),
-    );
-
 final mealPlanRecommendationServiceProvider =
     Provider<MealPlanRecommendationService>((ref) {
       assert(
@@ -16,23 +11,6 @@ final mealPlanRecommendationServiceProvider =
       );
       return const MockMealPlanRecommendationService();
     });
-
-abstract interface class PersonalizationProfileService {
-  Future<void> submit(PersonalizationDraft draft);
-}
-
-/// Isolates the profile handoff until the production profile endpoint is
-/// available. Replacing this implementation does not affect the UI or OTP.
-class DeferredPersonalizationProfileService
-    implements PersonalizationProfileService {
-  const DeferredPersonalizationProfileService();
-
-  @override
-  Future<void> submit(PersonalizationDraft draft) async {
-    // The draft remains in memory and is considered submitted by this
-    // development adapter. Production must replace this provider.
-  }
-}
 
 class MealPlanRecommendation {
   const MealPlanRecommendation({
