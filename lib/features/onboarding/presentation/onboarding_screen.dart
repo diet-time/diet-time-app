@@ -10,6 +10,7 @@ import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/features/onboarding/data/journey_state_repository.dart';
+import 'package:diet_time/features/personalization/data/allergen_repository.dart';
 import 'package:diet_time/features/personalization/domain/personalization_draft.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
@@ -387,10 +388,13 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
 
   Future<void> _goTo(int target) async {
     if (_isNavigating || !_controller.hasClients) return;
+    final destination = target.clamp(0, _stepCount - 1);
+    if (destination == _index) return;
     _isNavigating = true;
+    setState(() => _index = destination);
     try {
       await _controller.animateToPage(
-        target.clamp(0, _stepCount - 1),
+        destination,
         duration: const Duration(milliseconds: 360),
         curve: Curves.easeOutCubic,
       );
@@ -489,7 +493,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     });
     ref
         .read(personalizationControllerProvider.notifier)
-        .toggleAllergy(value.toUpperCase());
+        .toggleAllergy(value == 'none' ? 'NONE' : value);
   }
 
   Future<void> _showPicker({
@@ -575,7 +579,10 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context);
-    final steps = _buildSteps(l10n);
+    final allergenState = _index == 6
+        ? ref.watch(guestAllergensProvider(locale.languageCode))
+        : const AsyncValue<List<GuestAllergen>>.loading();
+    final steps = _buildSteps(l10n, locale.languageCode, allergenState);
     return PopScope(
       canPop: _index == 0,
       onPopInvokedWithResult: (didPop, _) {
@@ -655,7 +662,11 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     );
   }
 
-  List<Widget> _buildSteps(AppLocalizations l10n) => [
+  List<Widget> _buildSteps(
+    AppLocalizations l10n,
+    String language,
+    AsyncValue<List<GuestAllergen>> allergenState,
+  ) => [
     _WelcomeStep(l10n: l10n, onNotNow: () => context.go(AppRoutes.menu)),
     _StepFrame(
       title: l10n.onboardingGoalTitle,
@@ -983,34 +994,12 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _ChoiceWrap(
-            leadingIcon: Icons.health_and_safety_outlined,
-            choices:
-                <String, String>{
-                      'milk': l10n.onboardingMilk,
-                      'egg': l10n.onboardingEgg,
-                      'fish': l10n.onboardingFish,
-                      'shellfish': l10n.onboardingShellfish,
-                      'treeNuts': l10n.onboardingTreeNuts,
-                      'peanuts': l10n.onboardingPeanuts,
-                      'soy': l10n.onboardingSoy,
-                      'sesame': l10n.onboardingSesame,
-                      'gluten': l10n.onboardingGluten,
-                      'none': l10n.onboardingNoAllergies,
-                    }.entries
-                    .where(
-                      (entry) =>
-                          _allergyQuery.trim().isEmpty ||
-                          entry.value.toLowerCase().contains(
-                            _allergyQuery.trim().toLowerCase(),
-                          ),
-                    )
-                    .fold(
-                      <String, String>{},
-                      (values, entry) => values..[entry.key] = entry.value,
-                    ),
+          _DynamicAllergenChoices(
+            state: allergenState,
+            query: _allergyQuery,
             selected: _allergies,
             onSelected: _toggleAllergy,
+            onRetry: () => ref.invalidate(guestAllergensProvider(language)),
           ),
         ],
       ),
@@ -1844,15 +1833,136 @@ class _ActivityCard extends StatelessWidget {
   }
 }
 
+class _DynamicAllergenChoices extends StatelessWidget {
+  const _DynamicAllergenChoices({
+    required this.state,
+    required this.query,
+    required this.selected,
+    required this.onSelected,
+    required this.onRetry,
+  });
+
+  final AsyncValue<List<GuestAllergen>> state;
+  final String query;
+  final Set<String> selected;
+  final ValueChanged<String> onSelected;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return state.when(
+      data: (allergens) {
+        final normalizedQuery = query.trim().toLowerCase();
+        final filtered = allergens
+            .where(
+              (allergen) =>
+                  normalizedQuery.isEmpty ||
+                  allergen.name.toLowerCase().contains(normalizedQuery) ||
+                  allergen.code.toLowerCase().contains(normalizedQuery),
+            )
+            .toList(growable: false);
+        final showNone =
+            normalizedQuery.isEmpty ||
+            l10n.onboardingNoAllergies.toLowerCase().contains(normalizedQuery);
+        return _ChoiceWrap(
+          leadingIcon: Icons.health_and_safety_outlined,
+          choices: {
+            for (final allergen in filtered) allergen.id: allergen.name,
+            if (showNone) 'none': l10n.onboardingNoAllergies,
+          },
+          choiceCodes: {
+            for (final allergen in filtered) allergen.id: allergen.code,
+          },
+          selected: selected,
+          onSelected: onSelected,
+        );
+      },
+      loading: () => Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: CircularProgressIndicator(
+              color: AppColors.emeraldGreen,
+              strokeWidth: 2.5,
+            ),
+          ),
+          _ChoiceWrap(
+            leadingIcon: Icons.health_and_safety_outlined,
+            choices: {'none': l10n.onboardingNoAllergies},
+            selected: selected,
+            onSelected: onSelected,
+          ),
+        ],
+      ),
+      error: (error, stackTrace) => Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3EC),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: AppColors.portlandOrange.withValues(alpha: .18),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.cloud_off_rounded,
+                  color: AppColors.portlandOrange,
+                  size: 22,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _wellnessCopy(
+                      context,
+                      'Unable to load allergens.',
+                      'تعذر تحميل مسببات الحساسية.',
+                    ),
+                    style: const TextStyle(
+                      color: AppColors.darkGreen,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  key: const ValueKey('retryAllergens'),
+                  onPressed: onRetry,
+                  child: Text(
+                    _wellnessCopy(context, 'Retry', 'إعادة المحاولة'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _ChoiceWrap(
+            leadingIcon: Icons.health_and_safety_outlined,
+            choices: {'none': l10n.onboardingNoAllergies},
+            selected: selected,
+            onSelected: onSelected,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ChoiceWrap extends StatelessWidget {
   const _ChoiceWrap({
     required this.choices,
     required this.selected,
     required this.onSelected,
     this.leadingIcon,
+    this.choiceCodes = const {},
   });
 
   final Map<String, String> choices;
+  final Map<String, String> choiceCodes;
   final Set<String> selected;
   final ValueChanged<String> onSelected;
   final IconData? leadingIcon;
@@ -1885,7 +1995,7 @@ class _ChoiceWrap extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(
-                        _choiceIcon(entry.key),
+                        _choiceIcon(choiceCodes[entry.key] ?? entry.key),
                         size: 22,
                         color: AppColors.emeraldGreen,
                       ),
@@ -2062,22 +2172,23 @@ class _ChoiceWrap extends StatelessWidget {
     );
   }
 
-  IconData _choiceIcon(String key) => switch (key) {
-    'protein' => Icons.fitness_center_rounded,
-    'lowCarb' => Icons.eco_rounded,
-    'vegetarian' || 'vegan' => Icons.spa_rounded,
-    'seafood' || 'fish' || 'shellfish' => Icons.set_meal_rounded,
-    'chicken' => Icons.dinner_dining_rounded,
-    'beef' => Icons.lunch_dining_rounded,
-    'arabic' || 'international' || 'mediterranean' => Icons.public_rounded,
-    'snacks' => Icons.cookie_rounded,
-    'breakfast' || 'egg' => Icons.egg_alt_rounded,
-    'milk' => Icons.local_drink_rounded,
-    'treeNuts' || 'peanuts' => Icons.grass_rounded,
-    'soy' || 'sesame' || 'gluten' => Icons.grain_rounded,
-    'none' => Icons.health_and_safety_rounded,
-    _ => Icons.restaurant_rounded,
-  };
+  IconData _choiceIcon(String key) =>
+      switch (key.replaceAll('_', '').toLowerCase()) {
+        'protein' => Icons.fitness_center_rounded,
+        'lowcarb' => Icons.eco_rounded,
+        'vegetarian' || 'vegan' => Icons.spa_rounded,
+        'seafood' || 'fish' || 'shellfish' => Icons.set_meal_rounded,
+        'chicken' => Icons.dinner_dining_rounded,
+        'beef' => Icons.lunch_dining_rounded,
+        'arabic' || 'international' || 'mediterranean' => Icons.public_rounded,
+        'snacks' => Icons.cookie_rounded,
+        'breakfast' || 'egg' => Icons.egg_alt_rounded,
+        'milk' => Icons.local_drink_rounded,
+        'treenuts' || 'peanuts' => Icons.grass_rounded,
+        'soy' || 'sesame' || 'gluten' => Icons.grain_rounded,
+        'none' => Icons.health_and_safety_rounded,
+        _ => Icons.restaurant_rounded,
+      };
 }
 
 class _BmiSummaryStep extends StatelessWidget {

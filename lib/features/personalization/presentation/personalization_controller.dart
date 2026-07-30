@@ -45,10 +45,10 @@ class PersonalizationController extends Notifier<PersonalizationDraft> {
 
   void toggleAllergy(String value) {
     final values = {...state.allergenIds};
-    if (value == 'NONE') {
+    if (value.toUpperCase() == 'NONE') {
       values
         ..clear()
-        ..add(value);
+        ..add('NONE');
     } else {
       values.remove('NONE');
       if (!values.add(value)) values.remove(value);
