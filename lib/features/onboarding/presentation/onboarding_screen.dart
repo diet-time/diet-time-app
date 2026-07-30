@@ -365,11 +365,12 @@ class PersonalizationScreen extends ConsumerStatefulWidget {
 
 class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   static const _stepCount = 9;
-  final PageController _controller = PageController();
+  late final PageController _controller;
 
   int _index = 0;
   bool _isNavigating = false;
   bool _profileLoadStarted = false;
+  final List<int> _history = [];
   String? _validationMessage;
   String? _goal;
   String _gender = 'female';
@@ -381,6 +382,14 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   final Set<String> _preferences = {};
   final Set<String> _allergies = {};
   String _allergyQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    final persistence = ref.read(profilePersistenceControllerProvider);
+    _index = persistence.hasLoaded ? persistence.resumeStep : 0;
+    _controller = PageController(initialPage: _index);
+  }
 
   @override
   void dispose() {
@@ -402,20 +411,35 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     final authenticated = await ref
         .read(authenticationServiceProvider)
         .isLoggedIn();
-    final profile = await ref
-        .read(profilePersistenceControllerProvider.notifier)
-        .load(authenticated: authenticated);
+    final existingPersistence = ref.read(profilePersistenceControllerProvider);
+    final profile =
+        existingPersistence.hasLoaded &&
+            existingPersistence.authenticated == authenticated
+        ? ref.read(personalizationControllerProvider)
+        : await ref
+              .read(profilePersistenceControllerProvider.notifier)
+              .load(authenticated: authenticated);
     if (!mounted || profile == null) return;
     if (profile.isCompleted) {
       context.go(authenticated ? AppRoutes.home : AppRoutes.recommendation);
       return;
     }
+    _restoreVisibleValues(profile);
+    final resumeStep = ref
+        .read(profilePersistenceControllerProvider)
+        .resumeStep;
+    if (resumeStep > 0 && resumeStep < _stepCount) {
+      await _goTo(resumeStep, recordHistory: false);
+    }
+  }
+
+  void _restoreVisibleValues(CustomerProfile profile) {
     setState(() {
       _goal = profile.goalCode;
-      _gender = profile.genderCode.toLowerCase();
+      _gender = profile.genderCode?.toLowerCase() ?? _gender;
       _age = profile.age > 0 ? profile.age : _age;
-      _height = profile.heightCm.round();
-      _weight = profile.weightKg.round();
+      _height = profile.heightCm?.round() ?? _height;
+      _weight = profile.weightKg?.round() ?? _weight;
       _lifestyle = profile.dailyRoutineCode;
       _activity = profile.activityLevelCode;
       _preferences
@@ -425,20 +449,17 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         ..clear()
         ..addAll(profile.allergens);
     });
-    final resumeStep = ref
-        .read(profilePersistenceControllerProvider)
-        .resumeStep;
-    if (resumeStep > 0 && resumeStep < _stepCount) {
-      await _goTo(resumeStep);
-    }
   }
 
-  Future<void> _goTo(int target) async {
+  Future<void> _goTo(int target, {bool recordHistory = true}) async {
     if (_isNavigating || !_controller.hasClients) return;
     final destination = target.clamp(0, _stepCount - 1);
     if (destination == _index) return;
     _isNavigating = true;
-    setState(() => _index = destination);
+    setState(() {
+      if (recordHistory) _history.add(_index);
+      _index = destination;
+    });
     try {
       await _controller.animateToPage(
         destination,
@@ -466,27 +487,54 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     ref
         .read(personalizationControllerProvider.notifier)
         .setPreferredLanguage(Localizations.localeOf(context).languageCode);
+    if (_index == 2) {
+      final controller = ref.read(personalizationControllerProvider.notifier);
+      controller
+        ..setGender(_gender.toUpperCase())
+        ..setAge(_age)
+        ..setHeight(_height.toDouble())
+        ..setWeight(_weight.toDouble());
+    }
     if (_index == 5) {
       ref.read(personalizationControllerProvider.notifier).confirmPreferences();
     }
     if (_index == 6) {
       ref.read(personalizationControllerProvider.notifier).confirmAllergens();
     }
-    if (_index != 0 && _index != 7) {
+    if (_index != 0 && _index != 7 && _index != 8) {
       final saved = await ref
           .read(profilePersistenceControllerProvider.notifier)
-          .save(complete: _index == _stepCount - 1);
-      if (!mounted || !saved) return;
+          .save(complete: false);
+      if (!mounted) return;
+      if (!saved) {
+        if (ref.read(profilePersistenceControllerProvider).errorMessage ==
+            'profile_conflict') {
+          _restoreVisibleValues(ref.read(personalizationControllerProvider));
+        }
+        return;
+      }
+      final serverProfile = ref.read(personalizationControllerProvider);
+      if (serverProfile.isCompleted) {
+        context.go(AppRoutes.recommendation);
+        return;
+      }
+      final nextPage = ref
+          .read(profilePersistenceControllerProvider)
+          .resumeStep;
+      await _goTo(nextPage);
+      return;
     }
     if (_index == _stepCount - 1) {
-      unawaited(context.push<void>(AppRoutes.recommendation));
+      context.go(AppRoutes.recommendation);
       return;
     }
     await _goTo(_index + 1);
   }
 
   void _previous() {
-    if (_index > 0) unawaited(_goTo(_index - 1));
+    if (_history.isEmpty) return;
+    final target = _history.removeLast();
+    unawaited(_goTo(target, recordHistory: false));
   }
 
   void _selectGoal(String value) {
@@ -635,11 +683,29 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         : const AsyncValue<List<GuestAllergen>>.loading();
     final steps = _buildSteps(l10n, locale.languageCode, allergenState);
     final persistence = ref.watch(profilePersistenceControllerProvider);
-    final errorMessage = _validationMessage ?? persistence.errorMessage;
+    final persistenceErrorMessage = switch (persistence.errorMessage) {
+      'profile_load' => _wellnessCopy(
+        context,
+        'Unable to load your saved profile.',
+        'تعذر تحميل ملفك المحفوظ.',
+      ),
+      'profile_conflict' => _wellnessCopy(
+        context,
+        'Your profile changed elsewhere. We reloaded it; please review and retry.',
+        'تم تحديث ملفك من مكان آخر. أعدنا تحميله؛ راجعه وحاول مجدداً.',
+      ),
+      'profile_save' => _wellnessCopy(
+        context,
+        'Could not save your progress. Check your connection.',
+        'تعذر حفظ تقدمك. تحقق من اتصالك.',
+      ),
+      _ => null,
+    };
+    final errorMessage = _validationMessage ?? persistenceErrorMessage;
     return PopScope(
-      canPop: _index == 0,
+      canPop: _history.isEmpty,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _index > 0) _previous();
+        if (!didPop && _history.isNotEmpty) _previous();
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F6F2),
@@ -651,7 +717,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
               child: Column(
                 children: [
                   _OnboardingHeader(
-                    showBack: _index > 0,
+                    showBack: _history.isNotEmpty,
                     onBack: _previous,
                     languageCode: locale.languageCode,
                     onLanguageSelected: (languageCode) {
@@ -662,7 +728,13 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                       );
                     },
                   ),
-                  _StepProgress(current: _index, count: _stepCount),
+                  _StepProgress(
+                    current: _index,
+                    count: _stepCount,
+                    completionPercentage: ref
+                        .watch(personalizationControllerProvider)
+                        .completionPercentage,
+                  ),
                   Expanded(
                     child: PageView.builder(
                       key: const ValueKey('onboardingPageView'),
@@ -725,6 +797,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                     onContinue: () => unawaited(_continue()),
                     onHome: () => context.go(AppRoutes.home),
                     isSaving: persistence.isSaving,
+                    canGoBack: _history.isNotEmpty,
                   ),
                 ],
               ),
@@ -1274,10 +1347,15 @@ class _OnboardingHeader extends StatelessWidget {
 }
 
 class _StepProgress extends StatelessWidget {
-  const _StepProgress({required this.current, required this.count});
+  const _StepProgress({
+    required this.current,
+    required this.count,
+    required this.completionPercentage,
+  });
 
   final int current;
   final int count;
+  final int completionPercentage;
 
   @override
   Widget build(BuildContext context) {
@@ -1289,30 +1367,36 @@ class _StepProgress extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: List.generate(
-                count,
-                (index) => Expanded(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 260),
-                    height: 4,
-                    margin: EdgeInsetsDirectional.only(
-                      end: index == count - 1 ? 0 : 5,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+              child: SizedBox(
+                height: 4,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    const ColoredBox(color: Color(0xFFD6E2DC)),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: AnimatedFractionallySizedBox(
+                        key: ValueKey(
+                          'serverCompletionPercentage-$completionPercentage',
+                        ),
+                        duration: const Duration(milliseconds: 320),
+                        curve: Curves.easeOutCubic,
+                        widthFactor: completionPercentage.clamp(0, 100) / 100,
+                        heightFactor: 1,
+                        child: const ColoredBox(color: AppColors.emeraldGreen),
+                      ),
                     ),
-                    decoration: BoxDecoration(
-                      color: index <= current
-                          ? AppColors.emeraldGreen
-                          : const Color(0xFFD6E2DC),
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                    ),
-                  ),
+                  ],
                 ),
               ),
             ),
             if (current > 0) ...[
               const SizedBox(height: 9),
               Text(
-                AppLocalizations.of(context).pageProgress(current, count - 1),
+                '$completionPercentage%',
+                key: const ValueKey('serverCompletionPercentageLabel'),
                 style: const TextStyle(
                   color: AppColors.emeraldGreen,
                   fontSize: 10,
@@ -1334,6 +1418,7 @@ class _OnboardingNavigation extends StatelessWidget {
     required this.onContinue,
     required this.onHome,
     required this.isSaving,
+    required this.canGoBack,
   });
 
   final int index;
@@ -1341,6 +1426,7 @@ class _OnboardingNavigation extends StatelessWidget {
   final VoidCallback onContinue;
   final VoidCallback onHome;
   final bool isSaving;
+  final bool canGoBack;
 
   @override
   Widget build(BuildContext context) {
@@ -1395,17 +1481,19 @@ class _OnboardingNavigation extends StatelessWidget {
             )
           : Row(
               children: [
-                TextButton.icon(
-                  key: const ValueKey('onboardingPrevious'),
-                  onPressed: isSaving ? null : onPrevious,
-                  icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                  label: Text(l10n.onboardingPrevious),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.darkGreen,
-                    minimumSize: const Size(104, AppButton.height),
+                if (canGoBack) ...[
+                  TextButton.icon(
+                    key: const ValueKey('onboardingPrevious'),
+                    onPressed: isSaving ? null : onPrevious,
+                    icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                    label: Text(l10n.onboardingPrevious),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.darkGreen,
+                      minimumSize: const Size(104, AppButton.height),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
+                  const SizedBox(width: 10),
+                ],
                 Expanded(
                   child: AppButton(
                     key: const ValueKey('onboardingContinue'),

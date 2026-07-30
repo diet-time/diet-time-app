@@ -1,5 +1,7 @@
+import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
 import 'package:diet_time/features/personalization/domain/customer_profile.dart';
+import 'package:diet_time/features/personalization/domain/onboarding_route_resolver.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -52,6 +54,17 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
   @override
   ProfilePersistenceState build() => const ProfilePersistenceState();
 
+  void restore(CustomerProfile profile, {required bool authenticated}) {
+    ref.read(personalizationControllerProvider.notifier).replace(profile);
+    state = state.copyWith(
+      isLoading: false,
+      hasLoaded: true,
+      resumeStep: resumeStepFor(profile),
+      authenticated: authenticated,
+      errorMessage: null,
+    );
+  }
+
   Future<CustomerProfile?> load({required bool authenticated}) async {
     if (state.isLoading) return null;
     state = state.copyWith(isLoading: true, errorMessage: null);
@@ -65,7 +78,9 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
       state = state.copyWith(
         isLoading: false,
         hasLoaded: true,
-        resumeStep: profile == null ? 0 : resumeStepFor(profile),
+        resumeStep: profile == null
+            ? OnboardingRouteResolver.pageFor(OnboardingStepCode.basicDetails)
+            : resumeStepFor(profile),
         authenticated: authenticated,
       );
       return profile;
@@ -73,7 +88,7 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
       state = state.copyWith(
         isLoading: false,
         hasLoaded: true,
-        errorMessage: 'Unable to load your saved profile.',
+        errorMessage: 'profile_load',
       );
       return null;
     }
@@ -92,13 +107,24 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
                 .read(customerProfileServiceProvider)
                 .saveProgress(profile, authenticated: state.authenticated);
       ref.read(personalizationControllerProvider.notifier).replace(saved);
-      state = state.copyWith(isSaving: false);
+      state = state.copyWith(isSaving: false, resumeStep: resumeStepFor(saved));
       return true;
-    } on Object {
-      state = state.copyWith(
-        isSaving: false,
-        errorMessage: 'Could not save your progress. Check your connection.',
-      );
+    } on Object catch (error) {
+      if (error is ApiException && error.failure == ApiFailure.conflict) {
+        final latest = await ref
+            .read(customerProfileServiceProvider)
+            .load(authenticated: state.authenticated);
+        if (latest != null) {
+          ref.read(personalizationControllerProvider.notifier).replace(latest);
+        }
+        state = state.copyWith(
+          isSaving: false,
+          resumeStep: latest == null ? state.resumeStep : resumeStepFor(latest),
+          errorMessage: 'profile_conflict',
+        );
+        return false;
+      }
+      state = state.copyWith(isSaving: false, errorMessage: 'profile_save');
       return false;
     }
   }
@@ -107,11 +133,5 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
 }
 
 int resumeStepFor(CustomerProfile profile) {
-  if (profile.isCompleted) return 9;
-  if (profile.goalCode == null) return 1;
-  if (profile.dailyRoutineCode == null) return 3;
-  if (profile.activityLevelCode == null) return 4;
-  if (!profile.preferencesConfirmed) return 5;
-  if (!profile.allergensConfirmed) return 6;
-  return 7;
+  return OnboardingRouteResolver.pageFor(profile.nextStepCode);
 }

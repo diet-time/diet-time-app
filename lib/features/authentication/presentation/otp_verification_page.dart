@@ -7,7 +7,6 @@ import 'package:diet_time/features/authentication/data/mock_otp_service.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/authentication/presentation/otp_flow_widgets.dart';
-import 'package:diet_time/features/personalization/presentation/profile_link_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -109,14 +108,6 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
         .verifyOtp();
     if (!mounted || !succeeded) return;
     _setCells('');
-    await _linkAndContinue();
-  }
-
-  Future<void> _linkAndContinue() async {
-    final linked = await ref
-        .read(profileLinkControllerProvider.notifier)
-        .link();
-    if (!mounted || !linked) return;
     final destination = ref.read(otpAuthControllerProvider).pendingDestination;
     context.go(
       AppRoutes.postLogin,
@@ -155,7 +146,6 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final auth = ref.watch(otpAuthControllerProvider);
-    final profileLink = ref.watch(profileLinkControllerProvider);
     final compact = MediaQuery.sizeOf(context).height < 700;
     if (auth.otpCode.isEmpty && _code.isNotEmpty && !auth.isVerifyingOtp) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -376,41 +366,14 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
                         ),
                         const Spacer(),
                         SizedBox(height: compact ? 10 : 16),
-                        if (profileLink.errorMessage != null) ...[
-                          Text(
-                            profileLink.errorMessage!,
-                            key: const ValueKey('profileLinkError'),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: AppColors.jasper,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          TextButton(
-                            key: const ValueKey('retryProfileLink'),
-                            onPressed: profileLink.isLinking
-                                ? null
-                                : _linkAndContinue,
-                            child: Text(
-                              Localizations.localeOf(context).languageCode ==
-                                      'ar'
-                                  ? 'إعادة المحاولة'
-                                  : 'Retry',
-                            ),
-                          ),
-                        ],
                         OtpFlowButton(
                           key: const ValueKey('verifyOtpButton'),
                           label: l10n.otpVerifyCode,
                           onPressed:
-                              auth.otpCode.length == 6 &&
-                                  !auth.isVerifyingOtp &&
-                                  !profileLink.isLinking
+                              auth.otpCode.length == 6 && !auth.isVerifyingOtp
                               ? _verify
                               : null,
-                          isLoading:
-                              auth.isVerifyingOtp || profileLink.isLinking,
+                          isLoading: auth.isVerifyingOtp,
                         ),
                       ],
                     ),

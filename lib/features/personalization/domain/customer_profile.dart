@@ -1,9 +1,10 @@
 class CustomerProfile {
   const CustomerProfile({
-    this.genderCode = 'FEMALE',
-    this.dateOfBirth = '1998-01-01',
-    this.heightCm = 170,
-    this.weightKg = 70,
+    this.profileId,
+    this.genderCode,
+    this.dateOfBirth,
+    this.heightCm,
+    this.weightKg,
     this.goalCode,
     this.dailyRoutineCode,
     this.activityLevelCode,
@@ -12,16 +13,33 @@ class CustomerProfile {
     this.preferences = const {},
     this.allergens = const {},
     this.bmi,
+    this.bmiCategoryCode,
     this.nutritionTargets,
     this.allergensConfirmed = false,
     this.preferencesConfirmed = false,
+    this.nextStepCode = 'BASIC_DETAILS',
+    this.completionPercentage = 0,
+    this.shouldShowOnboarding = true,
+    this.guestSessionExpiresAt,
+    this.updatedAt,
+    this.rowVersion,
   });
 
   factory CustomerProfile.fromJson(
     Map<String, dynamic> json, {
     CustomerProfile fallback = const CustomerProfile(),
   }) {
+    final nutritionJson = json['nutritionTarget'] ?? json['nutritionTargets'];
+    final onboardingStatus =
+        _string(json['onboardingStatus']) ?? fallback.onboardingStatus;
+    final statusIsComplete =
+        onboardingStatus == 'COMPLETED' ||
+        onboardingStatus == 'PROFILE_COMPLETED';
+    final nextStepCode =
+        _string(json['nextStepCode']) ??
+        (statusIsComplete ? 'PROFILE_COMPLETED' : fallback.nextStepCode);
     return CustomerProfile(
+      profileId: _string(json['profileId']) ?? fallback.profileId,
       genderCode: _string(json['genderCode']) ?? fallback.genderCode,
       dateOfBirth: _string(json['dateOfBirth']) ?? fallback.dateOfBirth,
       heightCm: _decimal(json['heightCm']) ?? fallback.heightCm,
@@ -33,8 +51,7 @@ class CustomerProfile {
           _string(json['activityLevelCode']) ?? fallback.activityLevelCode,
       preferredLanguage:
           _string(json['preferredLanguage']) ?? fallback.preferredLanguage,
-      onboardingStatus:
-          _string(json['onboardingStatus']) ?? fallback.onboardingStatus,
+      onboardingStatus: onboardingStatus,
       preferences: _stringSet(
         json['preferenceIds'] ?? json['preferences'],
         fallback.preferences,
@@ -44,22 +61,39 @@ class CustomerProfile {
         fallback.allergens,
       ),
       bmi: _decimal(json['bmi']) ?? fallback.bmi,
-      nutritionTargets: json['nutritionTargets'] is Map<String, dynamic>
-          ? NutritionTargets.fromJson(
-              json['nutritionTargets'] as Map<String, dynamic>,
-            )
+      bmiCategoryCode:
+          _string(json['bmiCategoryCode']) ?? fallback.bmiCategoryCode,
+      nutritionTargets: nutritionJson is Map<String, dynamic>
+          ? NutritionTargets.fromJson(nutritionJson)
           : fallback.nutritionTargets,
-      allergensConfirmed:
-          json['allergensConfirmed'] == true || fallback.allergensConfirmed,
-      preferencesConfirmed:
-          json['preferencesConfirmed'] == true || fallback.preferencesConfirmed,
+      allergensConfirmed: json.containsKey('allergensConfirmed')
+          ? json['allergensConfirmed'] == true
+          : fallback.allergensConfirmed,
+      preferencesConfirmed: json.containsKey('preferencesConfirmed')
+          ? json['preferencesConfirmed'] == true
+          : fallback.preferencesConfirmed,
+      nextStepCode: nextStepCode,
+      completionPercentage:
+          _integer(json['completionPercentage']) ??
+          fallback.completionPercentage,
+      shouldShowOnboarding: json.containsKey('shouldShowOnboarding')
+          ? json['shouldShowOnboarding'] == true
+          : statusIsComplete
+          ? false
+          : fallback.shouldShowOnboarding,
+      guestSessionExpiresAt:
+          _dateTime(json['guestSessionExpiresAt']) ??
+          fallback.guestSessionExpiresAt,
+      updatedAt: _dateTime(json['updatedAt']) ?? fallback.updatedAt,
+      rowVersion: _integer(json['rowVersion']) ?? fallback.rowVersion,
     );
   }
 
-  final String genderCode;
-  final String dateOfBirth;
-  final double heightCm;
-  final double weightKg;
+  final String? profileId;
+  final String? genderCode;
+  final String? dateOfBirth;
+  final double? heightCm;
+  final double? weightKg;
   final String? goalCode;
   final String? dailyRoutineCode;
   final String? activityLevelCode;
@@ -68,17 +102,23 @@ class CustomerProfile {
   final Set<String> preferences;
   final Set<String> allergens;
   final double? bmi;
+  final String? bmiCategoryCode;
   final NutritionTargets? nutritionTargets;
   final bool allergensConfirmed;
   final bool preferencesConfirmed;
+  final String nextStepCode;
+  final int completionPercentage;
+  final bool shouldShowOnboarding;
+  final DateTime? guestSessionExpiresAt;
+  final DateTime? updatedAt;
+  final int? rowVersion;
 
   bool get isCompleted =>
-      onboardingStatus == 'COMPLETED' ||
-      onboardingStatus == 'PROFILE_COMPLETED';
+      !shouldShowOnboarding || nextStepCode == 'PROFILE_COMPLETED';
   String? get primaryGoal => goalCode;
-  String get gender => genderCode;
+  String get gender => genderCode ?? '';
   int get age {
-    final birthDate = DateTime.tryParse(dateOfBirth);
+    final birthDate = DateTime.tryParse(dateOfBirth ?? '');
     if (birthDate == null) return 0;
     final today = DateTime.now();
     var result = today.year - birthDate.year;
@@ -95,10 +135,10 @@ class CustomerProfile {
   Set<String> get allergenIds => allergens;
 
   Map<String, dynamic> toJson() => {
-    'genderCode': genderCode,
-    'dateOfBirth': dateOfBirth,
-    'heightCm': heightCm,
-    'weightKg': weightKg,
+    if (genderCode != null) 'genderCode': genderCode,
+    if (dateOfBirth != null) 'dateOfBirth': dateOfBirth,
+    if (heightCm != null) 'heightCm': heightCm,
+    if (weightKg != null) 'weightKg': weightKg,
     if (goalCode != null) 'goalCode': goalCode,
     if (dailyRoutineCode != null) 'dailyRoutineCode': dailyRoutineCode,
     if (activityLevelCode != null) 'activityLevelCode': activityLevelCode,
@@ -107,7 +147,7 @@ class CustomerProfile {
     'preferencesConfirmed': preferencesConfirmed,
     'allergensConfirmed': allergensConfirmed,
     'preferences': [
-      for (final code in preferences)
+      for (final code in preferences.where((value) => value != 'NONE'))
         CustomerPreference(
           preferenceCode: code,
           preferenceType: 'DIET_STYLE',
@@ -115,12 +155,16 @@ class CustomerProfile {
         ).toJson(),
     ],
     'allergens': [
-      for (final id in allergens.where((value) => value != 'NONE'))
+      for (final id in allergens.where(
+        (value) => value != 'NONE' && value != 'none',
+      ))
         CustomerAllergen(allergenId: id).toJson(),
     ],
+    if (rowVersion != null) 'rowVersion': rowVersion,
   };
 
   CustomerProfile copyWith({
+    String? profileId,
     String? genderCode,
     String? dateOfBirth,
     double? heightCm,
@@ -133,11 +177,19 @@ class CustomerProfile {
     Set<String>? preferences,
     Set<String>? allergens,
     double? bmi,
+    String? bmiCategoryCode,
     NutritionTargets? nutritionTargets,
     bool? allergensConfirmed,
     bool? preferencesConfirmed,
+    String? nextStepCode,
+    int? completionPercentage,
+    bool? shouldShowOnboarding,
+    DateTime? guestSessionExpiresAt,
+    DateTime? updatedAt,
+    int? rowVersion,
   }) {
     return CustomerProfile(
+      profileId: profileId ?? this.profileId,
       genderCode: genderCode ?? this.genderCode,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       heightCm: heightCm ?? this.heightCm,
@@ -150,11 +202,69 @@ class CustomerProfile {
       preferences: preferences ?? this.preferences,
       allergens: allergens ?? this.allergens,
       bmi: bmi ?? this.bmi,
+      bmiCategoryCode: bmiCategoryCode ?? this.bmiCategoryCode,
       nutritionTargets: nutritionTargets ?? this.nutritionTargets,
       allergensConfirmed: allergensConfirmed ?? this.allergensConfirmed,
       preferencesConfirmed: preferencesConfirmed ?? this.preferencesConfirmed,
+      nextStepCode: nextStepCode ?? this.nextStepCode,
+      completionPercentage: completionPercentage ?? this.completionPercentage,
+      shouldShowOnboarding: shouldShowOnboarding ?? this.shouldShowOnboarding,
+      guestSessionExpiresAt:
+          guestSessionExpiresAt ?? this.guestSessionExpiresAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowVersion: rowVersion ?? this.rowVersion,
     );
   }
+}
+
+class GuestOnboardingProfileResponse {
+  const GuestOnboardingProfileResponse(this.profile);
+
+  factory GuestOnboardingProfileResponse.fromJson(Map<String, dynamic> json) =>
+      GuestOnboardingProfileResponse(CustomerProfile.fromJson(json));
+
+  final CustomerProfile profile;
+
+  String? get profileId => profile.profileId;
+  String? get genderCode => profile.genderCode;
+  DateTime? get dateOfBirth => DateTime.tryParse(profile.dateOfBirth ?? '');
+  double? get heightCm => profile.heightCm;
+  double? get weightKg => profile.weightKg;
+  double? get bmi => profile.bmi;
+  String? get bmiCategoryCode => profile.bmiCategoryCode;
+  String? get goalCode => profile.goalCode;
+  String? get dailyRoutineCode => profile.dailyRoutineCode;
+  String? get activityLevelCode => profile.activityLevelCode;
+  String get preferredLanguage => profile.preferredLanguage;
+  String get onboardingStatus => profile.onboardingStatus;
+  bool get allergensConfirmed => profile.allergensConfirmed;
+  bool get preferencesConfirmed => profile.preferencesConfirmed;
+  List<CustomerPreference> get preferences => [
+    for (final code in profile.preferences)
+      CustomerPreference(
+        preferenceCode: code,
+        preferenceType: 'DIET_STYLE',
+        preferencePriority: 5,
+      ),
+  ];
+  List<CustomerAllergen> get allergens => [
+    for (final id in profile.allergens) CustomerAllergen(allergenId: id),
+  ];
+  NutritionTargets? get nutritionTarget => profile.nutritionTargets;
+  String get nextStepCode => profile.nextStepCode;
+  int get completionPercentage => profile.completionPercentage;
+  bool get shouldShowOnboarding => profile.shouldShowOnboarding;
+  DateTime? get guestSessionExpiresAt => profile.guestSessionExpiresAt;
+  DateTime? get updatedAt => profile.updatedAt;
+  int? get rowVersion => profile.rowVersion;
+}
+
+class UpsertGuestProfileRequest {
+  const UpsertGuestProfileRequest(this.profile);
+
+  final CustomerProfile profile;
+
+  Map<String, dynamic> toJson() => profile.toJson();
 }
 
 class CustomerPreference {
@@ -229,6 +339,12 @@ String? _string(Object? value) {
 
 double? _decimal(Object? value) =>
     value is num ? value.toDouble() : double.tryParse(value?.toString() ?? '');
+
+int? _integer(Object? value) =>
+    value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
+
+DateTime? _dateTime(Object? value) =>
+    DateTime.tryParse(value?.toString() ?? '');
 
 Set<String> _stringSet(Object? value, Set<String> fallback) {
   if (value is! List) return fallback;

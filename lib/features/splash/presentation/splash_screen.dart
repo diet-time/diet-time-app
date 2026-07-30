@@ -9,6 +9,7 @@ import 'package:diet_time/core/widgets/app_logo.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
 import 'package:diet_time/features/language/data/language_repository.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
+import 'package:diet_time/features/personalization/presentation/guest_startup_controller.dart';
 import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +41,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late final Animation<double> _taglineLift;
   late final Animation<double> _progressReveal;
   bool _started = false;
+  bool _startupError = false;
 
   @override
   void initState() {
@@ -150,10 +152,35 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           .read(languageControllerProvider.notifier)
           .selectLanguage(preferredLanguage);
       if (!mounted) return;
-      context.go(AppRoutes.onboarding);
+      final destination = await ref
+          .read(guestStartupControllerProvider.notifier)
+          .resolve(languageCode: preferredLanguage);
+      if (!mounted) return;
+      if (destination == null) {
+        setState(() => _startupError = true);
+        return;
+      }
+      context.go(destination);
       return;
     }
     context.go(AppRoutes.language);
+  }
+
+  Future<void> _retryGuestStartup() async {
+    if (_startupError) setState(() => _startupError = false);
+    final fallbackLanguage = Localizations.localeOf(context).languageCode;
+    final language =
+        await ref.read(languageRepositoryProvider).loadPreferredLanguage() ??
+        fallbackLanguage;
+    final destination = await ref
+        .read(guestStartupControllerProvider.notifier)
+        .resolve(languageCode: language);
+    if (!mounted) return;
+    if (destination == null) {
+      setState(() => _startupError = true);
+      return;
+    }
+    context.go(destination);
   }
 
   @override
@@ -231,7 +258,31 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       const SizedBox(height: AppSpacing.xl),
                       Opacity(
                         opacity: _progressReveal.value,
-                        child: _ProgressPulse(progress: _controller.value),
+                        child: _startupError
+                            ? Column(
+                                children: [
+                                  Text(
+                                    AppLocalizations.of(
+                                      context,
+                                    ).guestPlanLoadError,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: AppColors.white,
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: _retryGuestStartup,
+                                    child: Text(
+                                      AppLocalizations.of(context).retry,
+                                      style: const TextStyle(
+                                        color: AppColors.limeGlow,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : _ProgressPulse(progress: _controller.value),
                       ),
                     ],
                   ),

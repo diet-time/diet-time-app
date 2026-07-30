@@ -7,6 +7,7 @@ import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
 import 'package:diet_time/features/personalization/data/guest_recommendation_repository.dart';
+import 'package:diet_time/features/personalization/data/guest_startup_service.dart';
 import 'package:diet_time/features/personalization/domain/customer_profile.dart';
 import 'package:diet_time/features/personalization/domain/plan_recommendation.dart';
 import 'package:diet_time/features/personalization/presentation/meal_plan_recommendation_screen.dart';
@@ -62,37 +63,15 @@ void main() {
     expect(find.byKey(const ValueKey('onboardingPlanChoice')), findsOneWidget);
   });
 
-  testWidgets('View Menu opens guest menu without authentication', (
+  testWidgets('new guest starts profile onboarding without authentication', (
     tester,
   ) async {
     await tester.pumpWidget(_dietTimeApp());
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
-    await _reachCarouselEnd(tester);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(find.byKey(const ValueKey('onboardingMenuChoice')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(find.byType(BrowseMenuScreen), findsOneWidget);
-    expect(find.byType(PhoneLoginPage), findsNothing);
-    final preferences = await SharedPreferences.getInstance();
-    expect(preferences.getBool('hasCompletedOnboarding'), isNull);
-  });
-
-  testWidgets('Start Your Plan opens guest profile onboarding', (tester) async {
-    await tester.pumpWidget(_dietTimeApp());
-    await _finishSplash(tester);
-    await _chooseLanguage(tester, 'English');
-    await _reachCarouselEnd(tester);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(find.byKey(const ValueKey('onboardingPlanChoice')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byType(PersonalizationScreen), findsOneWidget);
+    expect(find.text("Let's get to know you"), findsOneWidget);
     expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
@@ -125,22 +104,16 @@ void main() {
     expect(selected.decoration, isNotNull);
   });
 
-  testWidgets('questionnaire reaches BMI then guest recommendations', (
+  testWidgets('server completion routes directly to guest recommendations', (
     tester,
   ) async {
     await tester.pumpWidget(_dietTimeApp());
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
-    await _reachCarouselEnd(tester);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(find.byKey(const ValueKey('onboardingPlanChoice')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
 
+    // BASIC_DETAILS and BODY_MEASUREMENTS share the existing profile card.
     await _continue(tester);
     await tester.tap(find.byKey(const ValueKey('goal-lose')).hitTestable());
-    await _continue(tester);
     await _continue(tester);
     await tester.tap(
       find.byKey(const ValueKey('lifestyle-office')).hitTestable(),
@@ -150,43 +123,54 @@ void main() {
       find.byKey(const ValueKey('activity-sitting')).hitTestable(),
     );
     await _continue(tester);
-    await tester.tap(find.byKey(const ValueKey('choice-HIGH_PROTEIN')));
-    await _continue(tester);
     await tester.tap(find.byKey(const ValueKey('choice-none')));
     await _continue(tester);
-
-    expect(find.text('Your wellness snapshot'), findsOneWidget);
-    expect(find.text('24.2'), findsOneWidget);
-    expect(find.byKey(const ValueKey('bmiScaleMarker')), findsOneWidget);
-    expect(find.byType(PhoneLoginPage), findsNothing);
-
-    await _continue(tester);
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text("You're all set!"), findsOneWidget);
-    expect(find.byType(PhoneLoginPage), findsNothing);
-
+    await tester.tap(find.byKey(const ValueKey('choice-HIGH_PROTEIN')));
     await _continue(tester);
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(MealPlanRecommendationScreen), findsOneWidget);
     expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
-  testWidgets(
-    'returning guest still sees the image onboarding before profile setup',
-    (tester) async {
-      SharedPreferences.setMockInitialValues({
-        'preferredLanguage': 'en',
-        'languageSelectionCompletedV2': true,
-        'hasCompletedOnboarding': true,
-      });
-      await tester.pumpWidget(_dietTimeApp());
-      await _finishSplash(tester);
+  testWidgets('returning incomplete guest resumes the server-provided step', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'preferredLanguage': 'en',
+      'languageSelectionCompletedV2': true,
+      'hasCompletedOnboarding': true,
+    });
+    await tester.pumpWidget(_dietTimeApp());
+    await _finishSplash(tester);
 
-      expect(find.byType(OnboardingScreen), findsOneWidget);
-      expect(find.byType(PersonalizationScreen), findsNothing);
-      expect(find.byType(BrowseMenuScreen), findsNothing);
-    },
-  );
+    expect(find.byType(PersonalizationScreen), findsOneWidget);
+    expect(find.text("Let's get to know you"), findsOneWidget);
+    expect(find.byType(OnboardingScreen), findsNothing);
+    expect(find.byType(BrowseMenuScreen), findsNothing);
+  });
+
+  testWidgets('completed guest skips onboarding and clears its route stack', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'preferredLanguage': 'en',
+      'languageSelectionCompletedV2': true,
+    });
+    await tester.pumpWidget(
+      _dietTimeApp(
+        guestStartupProfile: const CustomerProfile(
+          nextStepCode: 'PROFILE_COMPLETED',
+          completionPercentage: 100,
+          shouldShowOnboarding: false,
+        ),
+      ),
+    );
+    await _finishSplash(tester);
+
+    expect(find.byType(MealPlanRecommendationScreen), findsOneWidget);
+    expect(find.byType(PersonalizationScreen), findsNothing);
+    expect(find.byType(OnboardingScreen), findsNothing);
+  });
 
   testWidgets('authenticated user with an incomplete profile resumes setup', (
     tester,
@@ -296,6 +280,9 @@ Widget _localizedApp(Widget home, {Locale locale = const Locale('en')}) {
       customerProfileServiceProvider.overrideWithValue(
         _FakeProfilePersistenceService(),
       ),
+      guestStartupServiceProvider.overrideWithValue(
+        const _FakeGuestStartupService(),
+      ),
       guestPlanRecommendationsProvider.overrideWith(
         (ref, language) async => _fakeRecommendations,
       ),
@@ -316,12 +303,16 @@ Widget _localizedApp(Widget home, {Locale locale = const Locale('en')}) {
 
 Widget _dietTimeApp({
   AuthenticationService authenticationService = const _UnauthenticatedService(),
+  CustomerProfile? guestStartupProfile,
 }) {
   return ProviderScope(
     overrides: [
       authenticationServiceProvider.overrideWithValue(authenticationService),
       customerProfileServiceProvider.overrideWithValue(
         _FakeProfilePersistenceService(),
+      ),
+      guestStartupServiceProvider.overrideWithValue(
+        _FakeGuestStartupService(profile: guestStartupProfile),
       ),
       guestPlanRecommendationsProvider.overrideWith(
         (ref, language) async => _fakeRecommendations,
@@ -358,15 +349,47 @@ class _FakeProfilePersistenceService implements ProfilePersistenceService {
   }
 
   CustomerProfile _save(CustomerProfile profile) {
+    final nextStep = switch ((
+      profile.genderCode,
+      profile.goalCode,
+      profile.dailyRoutineCode,
+      profile.activityLevelCode,
+      profile.allergensConfirmed,
+      profile.preferencesConfirmed,
+    )) {
+      (null, _, _, _, _, _) => 'BASIC_DETAILS',
+      (_, null, _, _, _, _) => 'GOAL',
+      (_, _, null, _, _, _) => 'DAILY_ROUTINE',
+      (_, _, _, null, _, _) => 'ACTIVITY_LEVEL',
+      (_, _, _, _, false, _) => 'ALLERGENS',
+      (_, _, _, _, true, false) => 'PREFERENCES',
+      _ => 'PROFILE_COMPLETED',
+    };
+    final completed = nextStep == 'PROFILE_COMPLETED';
     this.profile = profile.copyWith(
       bmi: 24.2,
       nutritionTargets: const NutritionTargets(
         calories: 2450,
         proteinGrams: 160,
       ),
+      nextStepCode: nextStep,
+      completionPercentage: completed ? 100 : 50,
+      shouldShowOnboarding: !completed,
     );
     return this.profile!;
   }
+}
+
+class _FakeGuestStartupService implements GuestStartupService {
+  const _FakeGuestStartupService({this.profile});
+
+  final CustomerProfile? profile;
+
+  @override
+  Future<void> ensureSession() async {}
+
+  @override
+  Future<CustomerProfile?> getProfile() async => profile;
 }
 
 class _UnauthenticatedService implements AuthenticationService {

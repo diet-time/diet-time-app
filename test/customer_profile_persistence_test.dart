@@ -10,6 +10,10 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('profile JSON contains complete accumulated onboarding state', () {
     final profile = const CustomerProfile().copyWith(
+      genderCode: 'FEMALE',
+      dateOfBirth: '1998-01-01',
+      heightCm: 170,
+      weightKg: 70,
       goalCode: 'LOSE_WEIGHT',
       dailyRoutineCode: 'OFFICE_WORK',
       activityLevelCode: 'MOSTLY_SITTING',
@@ -99,19 +103,47 @@ void main() {
   );
 
   test('resume chooses the first incomplete required step', () {
-    expect(resumeStepFor(const CustomerProfile()), 1);
+    expect(resumeStepFor(const CustomerProfile()), 2);
+    expect(resumeStepFor(const CustomerProfile(nextStepCode: 'ALLERGENS')), 6);
     expect(
-      resumeStepFor(
-        const CustomerProfile(
-          goalCode: 'GAIN_WEIGHT',
-          dailyRoutineCode: 'OFFICE_WORK',
-          activityLevelCode: 'LIGHT_ACTIVITY',
-          allergensConfirmed: true,
-          preferencesConfirmed: true,
-        ),
-      ),
-      7,
+      resumeStepFor(const CustomerProfile(nextStepCode: 'PREFERENCES')),
+      5,
     );
+  });
+
+  test('server completion fields are authoritative', () {
+    expect(
+      const CustomerProfile(
+        onboardingStatus: 'IN_PROGRESS',
+        nextStepCode: 'PROFILE_COMPLETED',
+      ).isCompleted,
+      isTrue,
+    );
+    expect(
+      const CustomerProfile(
+        onboardingStatus: 'PROFILE_COMPLETED',
+        nextStepCode: 'GOAL',
+        shouldShowOnboarding: true,
+      ).isCompleted,
+      isFalse,
+    );
+  });
+
+  test('empty optional selections remain distinct from confirmation', () {
+    const incomplete = CustomerProfile(
+      nextStepCode: 'ALLERGENS',
+      allergens: {},
+      allergensConfirmed: false,
+    );
+    const confirmedEmpty = CustomerProfile(
+      nextStepCode: 'PREFERENCES',
+      allergens: {},
+      allergensConfirmed: true,
+    );
+
+    expect(resumeStepFor(incomplete), 6);
+    expect(resumeStepFor(confirmedEmpty), 5);
+    expect(confirmedEmpty.toJson()['allergens'], isEmpty);
   });
 }
 

@@ -54,11 +54,14 @@ class CustomerProfileService implements ProfilePersistenceService {
     CustomerProfile profile, {
     required bool authenticated,
   }) {
-    final completed = profile.copyWith(
-      onboardingStatus: authenticated ? 'COMPLETED' : 'PROFILE_COMPLETED',
+    if (!authenticated) {
+      // Guest completion is determined exclusively by the API response.
+      return guestRepository.saveProfile(
+        profile.copyWith(onboardingStatus: 'IN_PROGRESS'),
+      );
+    }
+    return customerRepository.updateProfile(
+      profile.copyWith(onboardingStatus: 'COMPLETED'),
     );
-    return authenticated
-        ? customerRepository.updateProfile(completed)
-        : guestRepository.saveProfile(completed);
   }
 }

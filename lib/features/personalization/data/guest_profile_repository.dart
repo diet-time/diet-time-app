@@ -20,7 +20,7 @@ class GuestProfileRepository {
   final ApiClient apiClient;
   final GuestSessionRepository sessions;
 
-  Future<CustomerProfile?> getProfile() {
+  Future<GuestOnboardingProfileResponse?> getGuestProfile() {
     return _withGuestSession((token) async {
       final response = await apiClient.request(
         method: 'GET',
@@ -33,18 +33,26 @@ class GuestProfileRepository {
     });
   }
 
-  Future<CustomerProfile> saveProfile(CustomerProfile profile) {
+  Future<GuestOnboardingProfileResponse> saveGuestProfile(
+    UpsertGuestProfileRequest request,
+  ) {
     return _withGuestSession((token) async {
       final response = await apiClient.request(
         method: 'PUT',
         path: ApiEndpoints.guestProfile,
         headers: {'X-Guest-Token': token},
-        body: profile.toJson(),
+        body: request.toJson(),
       );
       if (!response.isSuccess) throw ApiException.fromResponse(response);
-      return _profileFromResponse(response, fallback: profile) ?? profile;
+      return _profileFromResponse(response, fallback: request.profile)!;
     });
   }
+
+  Future<CustomerProfile?> getProfile() async =>
+      (await getGuestProfile())?.profile;
+
+  Future<CustomerProfile> saveProfile(CustomerProfile profile) async =>
+      (await saveGuestProfile(UpsertGuestProfileRequest(profile))).profile;
 
   Future<T> _withGuestSession<T>(
     Future<T> Function(String token) action,
@@ -61,7 +69,7 @@ class GuestProfileRepository {
   }
 }
 
-CustomerProfile? _profileFromResponse(
+GuestOnboardingProfileResponse? _profileFromResponse(
   ApiResponse response, {
   CustomerProfile fallback = const CustomerProfile(),
 }) {
@@ -70,5 +78,7 @@ CustomerProfile? _profileFromResponse(
   if (data is! Map<String, dynamic>) {
     throw const ApiException(ApiFailure.invalidResponse);
   }
-  return CustomerProfile.fromJson(data, fallback: fallback);
+  return GuestOnboardingProfileResponse(
+    CustomerProfile.fromJson(data, fallback: fallback),
+  );
 }
