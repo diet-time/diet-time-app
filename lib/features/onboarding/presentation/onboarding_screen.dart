@@ -2417,9 +2417,15 @@ class _BmiSummaryStep extends StatelessWidget {
                       ),
                     ),
                     Container(
-                      width: 1,
-                      margin: const EdgeInsets.symmetric(horizontal: 10),
-                      color: AppColors.darkGreen.withValues(alpha: .08),
+                      width: 1.5,
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 11,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFBFD8CB),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
                     ),
                     Expanded(child: _BmiScale(marker: marker)),
                   ],
