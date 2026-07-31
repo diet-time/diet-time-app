@@ -107,7 +107,8 @@ void main() {
   testWidgets('server completion routes directly to guest recommendations', (
     tester,
   ) async {
-    await tester.pumpWidget(_dietTimeApp());
+    final profileService = _FakeProfilePersistenceService();
+    await tester.pumpWidget(_dietTimeApp(profileService: profileService));
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
 
@@ -123,11 +124,22 @@ void main() {
       find.byKey(const ValueKey('activity-sitting')).hitTestable(),
     );
     await _continue(tester);
+    expect(profileService.saveProgressCalls, 0);
+    expect(profileService.completeCalls, 0);
     await tester.tap(find.byKey(const ValueKey('choice-none')));
     await _continue(tester);
+    expect(profileService.saveProgressCalls, 0);
+    expect(profileService.completeCalls, 0);
     await tester.tap(find.byKey(const ValueKey('choice-HIGH_PROTEIN')));
     await _continue(tester);
     await tester.pump(const Duration(milliseconds: 500));
+    expect(profileService.saveProgressCalls, 0);
+    expect(profileService.completeCalls, 1);
+    expect(profileService.lastSubmitted?.goalCode, 'LOSE_WEIGHT');
+    expect(profileService.lastSubmitted?.dailyRoutineCode, 'OFFICE_WORK');
+    expect(profileService.lastSubmitted?.activityLevelCode, 'MOSTLY_SITTING');
+    expect(profileService.lastSubmitted?.preferencesConfirmed, isTrue);
+    expect(profileService.lastSubmitted?.allergensConfirmed, isTrue);
     expect(find.byType(MealPlanRecommendationScreen), findsOneWidget);
     expect(find.byType(PhoneLoginPage), findsNothing);
   });
@@ -304,12 +316,13 @@ Widget _localizedApp(Widget home, {Locale locale = const Locale('en')}) {
 Widget _dietTimeApp({
   AuthenticationService authenticationService = const _UnauthenticatedService(),
   CustomerProfile? guestStartupProfile,
+  ProfilePersistenceService? profileService,
 }) {
   return ProviderScope(
     overrides: [
       authenticationServiceProvider.overrideWithValue(authenticationService),
       customerProfileServiceProvider.overrideWithValue(
-        _FakeProfilePersistenceService(),
+        profileService ?? _FakeProfilePersistenceService(),
       ),
       guestStartupServiceProvider.overrideWithValue(
         _FakeGuestStartupService(profile: guestStartupProfile),
@@ -324,6 +337,9 @@ Widget _dietTimeApp({
 
 class _FakeProfilePersistenceService implements ProfilePersistenceService {
   CustomerProfile? profile;
+  CustomerProfile? lastSubmitted;
+  int saveProgressCalls = 0;
+  int completeCalls = 0;
 
   @override
   Future<CustomerProfile?> load({required bool authenticated}) async => profile;
@@ -333,6 +349,8 @@ class _FakeProfilePersistenceService implements ProfilePersistenceService {
     CustomerProfile profile, {
     required bool authenticated,
   }) async {
+    saveProgressCalls++;
+    lastSubmitted = profile;
     return _save(profile);
   }
 
@@ -341,6 +359,8 @@ class _FakeProfilePersistenceService implements ProfilePersistenceService {
     CustomerProfile profile, {
     required bool authenticated,
   }) async {
+    completeCalls++;
+    lastSubmitted = profile;
     return _save(
       profile.copyWith(
         onboardingStatus: authenticated ? 'COMPLETED' : 'PROFILE_COMPLETED',

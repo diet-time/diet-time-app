@@ -501,10 +501,10 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     if (_index == 6) {
       ref.read(personalizationControllerProvider.notifier).confirmAllergens();
     }
-    if (_index != 0 && _index != 7 && _index != 8) {
+    if (_index == 6) {
       final saved = await ref
           .read(profilePersistenceControllerProvider.notifier)
-          .save(complete: false);
+          .save(complete: true);
       if (!mounted) return;
       if (!saved) {
         if (ref.read(profilePersistenceControllerProvider).errorMessage ==
