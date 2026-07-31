@@ -9,6 +9,7 @@ import 'package:diet_time/core/widgets/app_logo.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
 import 'package:diet_time/features/language/data/language_repository.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
+import 'package:diet_time/features/onboarding/data/journey_state_repository.dart';
 import 'package:diet_time/features/personalization/presentation/guest_startup_controller.dart';
 import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
@@ -126,14 +127,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final languageSelectionCheck = ref
         .read(languageRepositoryProvider)
         .hasCompletedLanguageSelection();
+    final journeyCheck = ref.read(journeyStateRepositoryProvider).load();
     await Future<void>.delayed(
       reducedMotion ? _reducedMotionDuration : _visualDuration,
     );
     final isLoggedIn = await authCheck;
     final preferredLanguage = await languageCheck;
     final hasCompletedLanguageSelection = await languageSelectionCheck;
+    final journey = await journeyCheck;
     if (!mounted) return;
     if (isLoggedIn) {
+      if (!journey.hasCompletedOnboarding) {
+        context.go(AppRoutes.onboarding);
+        return;
+      }
       final profile = await ref
           .read(profilePersistenceControllerProvider.notifier)
           .load(authenticated: true);
@@ -160,7 +167,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         setState(() => _startupError = true);
         return;
       }
-      context.go(destination);
+      context.go(
+        journey.hasCompletedOnboarding ? destination : AppRoutes.onboarding,
+      );
       return;
     }
     context.go(AppRoutes.language);
@@ -180,7 +189,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       setState(() => _startupError = true);
       return;
     }
-    context.go(destination);
+    final journey = await ref.read(journeyStateRepositoryProvider).load();
+    if (!mounted) return;
+    context.go(
+      journey.hasCompletedOnboarding ? destination : AppRoutes.onboarding,
+    );
   }
 
   @override

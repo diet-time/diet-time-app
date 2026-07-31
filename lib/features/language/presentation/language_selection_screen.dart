@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_typography.dart';
 import 'package:diet_time/core/widgets/app_logo.dart';
@@ -79,7 +80,7 @@ class _LanguageSelectionScreenState
         return;
       }
       await _sheetController.reverse();
-      if (mounted) context.go(destination);
+      if (mounted) context.go(AppRoutes.onboarding);
     } catch (_) {
       if (!mounted) return;
       setState(() => _isSaving = false);

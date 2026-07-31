@@ -7,7 +7,7 @@ import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
-import 'package:diet_time/features/language/presentation/language_controller.dart';
+import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/onboarding/data/journey_state_repository.dart';
 import 'package:diet_time/features/personalization/data/allergen_repository.dart';
 import 'package:diet_time/features/personalization/domain/personalization_draft.dart';
@@ -219,7 +219,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     .read(journeyStateRepositoryProvider)
                     .markOnboardingComplete();
                 if (!context.mounted) return;
-                await context.push<void>(AppRoutes.personalization);
+                final profile = ref.read(personalizationControllerProvider);
+                final destination = profile.hasCapturedQuestionnaire
+                    ? AppRoutes.plans
+                    : AppRoutes.personalization;
+                final authenticated = await ref
+                    .read(authenticationServiceProvider)
+                    .isLoggedIn();
+                if (!context.mounted) return;
+                if (authenticated) {
+                  await context.push<void>(destination);
+                  return;
+                }
+                await context.push<void>(
+                  AppRoutes.phoneLogin,
+                  extra: PendingAuthDestination(route: destination),
+                );
               },
             ),
         ],
@@ -736,14 +751,6 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                   _OnboardingHeader(
                     showBack: _history.isNotEmpty,
                     onBack: _previous,
-                    languageCode: locale.languageCode,
-                    onLanguageSelected: (languageCode) {
-                      unawaited(
-                        ref
-                            .read(languageControllerProvider.notifier)
-                            .selectLanguage(languageCode),
-                      );
-                    },
                   ),
                   _StepProgress(
                     current: _index,
@@ -1256,14 +1263,10 @@ class _OnboardingHeader extends StatelessWidget {
   const _OnboardingHeader({
     required this.showBack,
     required this.onBack,
-    required this.languageCode,
-    required this.onLanguageSelected,
   });
 
   final bool showBack;
   final VoidCallback onBack;
-  final String languageCode;
-  final ValueChanged<String> onLanguageSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -1309,56 +1312,6 @@ class _OnboardingHeader extends StatelessWidget {
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
                 letterSpacing: -.3,
-              ),
-            ),
-          ),
-          PopupMenuButton<String>(
-            key: const ValueKey('onboardingLanguageSelector'),
-            initialValue: languageCode,
-            onSelected: onLanguageSelected,
-            color: AppColors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'en', child: Text('English')),
-              PopupMenuItem(value: 'ar', child: Text('العربية')),
-            ],
-            child: Container(
-              constraints: const BoxConstraints(minWidth: 88, minHeight: 38),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: AppColors.white.withValues(alpha: .86),
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-                border: Border.all(
-                  color: AppColors.emeraldGreen.withValues(alpha: .15),
-                ),
-                boxShadow: _cardShadow(.06),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.language_rounded,
-                    size: 16,
-                    color: AppColors.emeraldGreen,
-                  ),
-                  const SizedBox(width: 7),
-                  Text(
-                    languageCode == 'ar' ? 'العربية' : 'English',
-                    style: const TextStyle(
-                      color: AppColors.darkGreen,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(width: 3),
-                  const Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    size: 17,
-                    color: AppColors.emeraldGreen,
-                  ),
-                ],
               ),
             ),
           ),

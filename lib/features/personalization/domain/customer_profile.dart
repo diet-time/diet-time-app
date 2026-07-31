@@ -115,6 +115,16 @@ class CustomerProfile {
 
   bool get isCompleted =>
       !shouldShowOnboarding || nextStepCode == 'PROFILE_COMPLETED';
+  bool get hasCapturedQuestionnaire =>
+      genderCode != null &&
+      dateOfBirth != null &&
+      heightCm != null &&
+      weightKg != null &&
+      goalCode != null &&
+      dailyRoutineCode != null &&
+      activityLevelCode != null &&
+      preferencesConfirmed &&
+      allergensConfirmed;
   String? get primaryGoal => goalCode;
   String get gender => genderCode ?? '';
   int get age {

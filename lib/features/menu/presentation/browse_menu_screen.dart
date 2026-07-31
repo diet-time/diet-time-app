@@ -4,10 +4,13 @@ import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/app/theme/app_spacing.dart';
+import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
+import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/features/menu/data/guest_menu_repository.dart';
 import 'package:diet_time/features/menu/domain/guest_home_models.dart';
 import 'package:diet_time/features/menu/presentation/meal_detail_viewer.dart';
+import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -443,10 +446,30 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
   }
 
+  Future<void> _startPlan() async {
+    final profile = ref.read(personalizationControllerProvider);
+    if (!profile.hasCapturedQuestionnaire) {
+      await context.push<void>(AppRoutes.personalization);
+      return;
+    }
+    final authenticated = await ref
+        .read(authenticationServiceProvider)
+        .isLoggedIn();
+    if (!mounted) return;
+    if (authenticated) {
+      await context.push<void>(AppRoutes.plans);
+      return;
+    }
+    await context.push<void>(
+      AppRoutes.phoneLogin,
+      extra: const PendingAuthDestination(route: AppRoutes.plans),
+    );
+  }
+
   Widget _startPlanButton(AppLocalizations l10n) {
     return FloatingActionButton.extended(
       key: const ValueKey('guestStartPlan'),
-      onPressed: () => context.push(AppRoutes.personalization),
+      onPressed: () => unawaited(_startPlan()),
       backgroundColor: AppColors.emeraldGreen,
       foregroundColor: AppColors.white,
       icon: const Icon(Icons.auto_awesome_rounded),

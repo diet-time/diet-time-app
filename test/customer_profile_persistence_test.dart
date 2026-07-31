@@ -129,6 +129,26 @@ void main() {
     );
   });
 
+  test('captured questionnaire requires every accumulated section', () {
+    const captured = CustomerProfile(
+      genderCode: 'FEMALE',
+      dateOfBirth: '1998-01-01',
+      heightCm: 170,
+      weightKg: 70,
+      goalCode: 'LOSE_WEIGHT',
+      dailyRoutineCode: 'OFFICE_WORK',
+      activityLevelCode: 'MOSTLY_SITTING',
+      preferencesConfirmed: true,
+      allergensConfirmed: true,
+    );
+
+    expect(captured.hasCapturedQuestionnaire, isTrue);
+    expect(
+      captured.copyWith(allergensConfirmed: false).hasCapturedQuestionnaire,
+      isFalse,
+    );
+  });
+
   test('empty optional selections remain distinct from confirmation', () {
     const incomplete = CustomerProfile(
       nextStepCode: 'ALLERGENS',
