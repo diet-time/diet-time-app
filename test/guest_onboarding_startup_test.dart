@@ -96,7 +96,7 @@ void main() {
       await container
           .read(guestStartupControllerProvider.notifier)
           .resolve(languageCode: 'en'),
-      AppRoutes.recommendation,
+      AppRoutes.menu,
     );
   });
 

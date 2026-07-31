@@ -373,10 +373,10 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   final List<int> _history = [];
   String? _validationMessage;
   String? _goal;
-  String _gender = 'female';
-  int _age = 28;
-  int _height = 170;
-  int _weight = 70;
+  String? _gender;
+  int? _age;
+  int? _height;
+  int? _weight;
   String? _lifestyle;
   String? _activity;
   final Set<String> _preferences = {};
@@ -386,9 +386,8 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   @override
   void initState() {
     super.initState();
-    final persistence = ref.read(profilePersistenceControllerProvider);
-    _index = persistence.hasLoaded ? persistence.resumeStep : 0;
-    _controller = PageController(initialPage: _index);
+    // This is a one-shot local flow; legacy server progress must not skip pages.
+    _controller = PageController();
   }
 
   @override
@@ -421,25 +420,44 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
               .load(authenticated: authenticated);
     if (!mounted || profile == null) return;
     if (profile.isCompleted) {
-      context.go(authenticated ? AppRoutes.home : AppRoutes.recommendation);
+      context.go(authenticated ? AppRoutes.home : AppRoutes.menu);
       return;
     }
-    _restoreVisibleValues(profile);
-    final resumeStep = ref
-        .read(profilePersistenceControllerProvider)
-        .resumeStep;
-    if (resumeStep > 0 && resumeStep < _stepCount) {
-      await _goTo(resumeStep, recordHistory: false);
-    }
+    _startFreshDraft(profile);
+  }
+
+  void _startFreshDraft(CustomerProfile profile) {
+    ref
+        .read(personalizationControllerProvider.notifier)
+        .replace(
+          CustomerProfile(
+            profileId: profile.profileId,
+            preferredLanguage: Localizations.localeOf(context).languageCode,
+            guestSessionExpiresAt: profile.guestSessionExpiresAt,
+            updatedAt: profile.updatedAt,
+            rowVersion: profile.rowVersion,
+          ),
+        );
+    setState(() {
+      _goal = null;
+      _gender = null;
+      _age = null;
+      _height = null;
+      _weight = null;
+      _lifestyle = null;
+      _activity = null;
+      _preferences.clear();
+      _allergies.clear();
+    });
   }
 
   void _restoreVisibleValues(CustomerProfile profile) {
     setState(() {
       _goal = profile.goalCode;
-      _gender = profile.genderCode?.toLowerCase() ?? _gender;
-      _age = profile.age > 0 ? profile.age : _age;
-      _height = profile.heightCm?.round() ?? _height;
-      _weight = profile.weightKg?.round() ?? _weight;
+      _gender = profile.genderCode?.toLowerCase();
+      _age = profile.age > 0 ? profile.age : null;
+      _height = profile.heightCm?.round();
+      _weight = profile.weightKg?.round();
       _lifestyle = profile.dailyRoutineCode;
       _activity = profile.activityLevelCode;
       _preferences
@@ -475,6 +493,11 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     final l10n = AppLocalizations.of(context);
     final invalid =
         (_index == 1 && _goal == null) ||
+        (_index == 2 &&
+            (_gender == null ||
+                _age == null ||
+                _height == null ||
+                _weight == null)) ||
         (_index == 3 && _lifestyle == null) ||
         (_index == 4 && _activity == null);
     if (invalid) {
@@ -490,10 +513,10 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     if (_index == 2) {
       final controller = ref.read(personalizationControllerProvider.notifier);
       controller
-        ..setGender(_gender.toUpperCase())
-        ..setAge(_age)
-        ..setHeight(_height.toDouble())
-        ..setWeight(_weight.toDouble());
+        ..setGender(_gender!.toUpperCase())
+        ..setAge(_age!)
+        ..setHeight(_height!.toDouble())
+        ..setWeight(_weight!.toDouble());
     }
     if (_index == 5) {
       ref.read(personalizationControllerProvider.notifier).confirmPreferences();
@@ -513,19 +536,11 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         }
         return;
       }
-      final serverProfile = ref.read(personalizationControllerProvider);
-      if (serverProfile.isCompleted) {
-        context.go(AppRoutes.recommendation);
-        return;
-      }
-      final nextPage = ref
-          .read(profilePersistenceControllerProvider)
-          .resumeStep;
-      await _goTo(nextPage);
+      await _goTo(7);
       return;
     }
     if (_index == _stepCount - 1) {
-      context.go(AppRoutes.recommendation);
+      context.go(AppRoutes.menu);
       return;
     }
     await _goTo(_index + 1);
@@ -683,6 +698,8 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         : const AsyncValue<List<GuestAllergen>>.loading();
     final steps = _buildSteps(l10n, locale.languageCode, allergenState);
     final persistence = ref.watch(profilePersistenceControllerProvider);
+    final localCompletionPercentage =
+        (_index * 100 / (_stepCount - 1)).round();
     final persistenceErrorMessage = switch (persistence.errorMessage) {
       'profile_load' => _wellnessCopy(
         context,
@@ -731,9 +748,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                   _StepProgress(
                     current: _index,
                     count: _stepCount,
-                    completionPercentage: ref
-                        .watch(personalizationControllerProvider)
-                        .completionPercentage,
+                    completionPercentage: localCompletionPercentage,
                   ),
                   Expanded(
                     child: PageView.builder(
@@ -911,7 +926,8 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                     value: switch (_gender) {
                       'male' => l10n.onboardingMale,
                       'female' => l10n.onboardingFemale,
-                      _ => l10n.onboardingPreferNotToSay,
+                      'other' => l10n.onboardingPreferNotToSay,
+                      _ => _wellnessCopy(context, 'Select', 'اختر'),
                     },
                     icon: Icons.person_outline_rounded,
                     onTap: () => _showPicker(
@@ -924,7 +940,8 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                       selectedIndex: switch (_gender) {
                         'female' => 0,
                         'male' => 1,
-                        _ => 2,
+                        'other' => 2,
+                        _ => 0,
                       },
                       onSelected: (index) {
                         final value = ['female', 'male', 'other'][index];
@@ -939,7 +956,8 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                     key: const ValueKey('profileAge'),
                     width: width,
                     label: l10n.onboardingAge,
-                    value: '$_age',
+                    value: _age?.toString() ??
+                        _wellnessCopy(context, 'Select', 'اختر'),
                     icon: Icons.cake_outlined,
                     onTap: () {
                       final values = List.generate(
@@ -950,7 +968,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                         _showPicker(
                           title: l10n.onboardingAge,
                           values: values,
-                          selectedIndex: _age - 16,
+                          selectedIndex: (_age ?? 28) - 16,
                           onSelected: (index) {
                             final value = index + 16;
                             setState(() => _age = value);
@@ -968,7 +986,9 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                     key: const ValueKey('profileHeight'),
                     width: width,
                     label: l10n.onboardingHeight,
-                    value: '$_height cm',
+                    value: _height == null
+                        ? _wellnessCopy(context, 'Select', 'اختر')
+                        : '$_height cm',
                     icon: Icons.height_rounded,
                     onTap: () {
                       final values = List.generate(
@@ -979,7 +999,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                         _showPicker(
                           title: l10n.onboardingHeight,
                           values: values,
-                          selectedIndex: _height - 130,
+                          selectedIndex: (_height ?? 170) - 130,
                           onSelected: (index) {
                             final value = index + 130;
                             setState(() => _height = value);
@@ -997,7 +1017,9 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                     key: const ValueKey('profileWeight'),
                     width: width,
                     label: l10n.onboardingWeight,
-                    value: '$_weight kg',
+                    value: _weight == null
+                        ? _wellnessCopy(context, 'Select', 'اختر')
+                        : '$_weight kg',
                     icon: Icons.monitor_weight_outlined,
                     onTap: () {
                       final values = List.generate(
@@ -1008,7 +1030,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                         _showPicker(
                           title: l10n.onboardingWeight,
                           values: values,
-                          selectedIndex: _weight - 40,
+                          selectedIndex: (_weight ?? 70) - 40,
                           onSelected: (index) {
                             final value = index + 40;
                             setState(() => _weight = value);
@@ -1434,9 +1456,9 @@ class _OnboardingNavigation extends StatelessWidget {
     final label = index == 0
         ? l10n.personalizationBegin
         : index == 7
-        ? _wellnessCopy(context, 'See My Meal Plan', 'شاهد خطة وجباتي')
+        ? l10n.onboardingContinue
         : index == 8
-        ? _wellnessCopy(context, 'Explore Meal Plans', 'استكشف خطط الوجبات')
+        ? _wellnessCopy(context, 'Browse Menu', 'تصفح القائمة')
         : l10n.onboardingContinue;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 9, 20, 14),
@@ -2751,8 +2773,8 @@ class _BmiSummaryStep extends StatelessWidget {
                             TextSpan(
                               text: _wellnessCopy(
                                 context,
-                                'create a personalized meal plan just for you.',
-                                'لإنشاء خطة وجبات مخصصة لك.',
+                                'personalize your Diet Time experience.',
+                                'لتخصيص تجربتك مع دايت تايم.',
                               ),
                             ),
                           ],
@@ -3050,9 +3072,9 @@ class _AllSetStep extends StatelessWidget {
                 Text(
                   _wellnessCopy(
                     context,
-                    "We've created your nutrition profile.\n"
-                        "Let's find the perfect plan for you.",
-                    'لقد أنشأنا ملفك الغذائي.\nلنجد الخطة المثالية لك.',
+                    "We've saved your nutrition profile.\n"
+                        "You can now explore the Diet Time menu.",
+                    'لقد حفظنا ملفك الغذائي.\nيمكنك الآن تصفح قائمة دايت تايم.',
                   ),
                   textAlign: TextAlign.center,
                   style: TextStyle(

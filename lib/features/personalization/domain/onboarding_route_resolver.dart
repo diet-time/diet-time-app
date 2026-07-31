@@ -32,7 +32,7 @@ abstract final class OnboardingRouteResolver {
   }) {
     if (!shouldShowOnboarding ||
         stepCode == OnboardingStepCode.profileCompleted) {
-      return AppRoutes.recommendation;
+      return AppRoutes.menu;
     }
     return AppRoutes.personalization;
   }

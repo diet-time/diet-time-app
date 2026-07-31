@@ -71,7 +71,7 @@ void main() {
     await _chooseLanguage(tester, 'English');
 
     expect(find.byType(PersonalizationScreen), findsOneWidget);
-    expect(find.text("Let's get to know you"), findsOneWidget);
+    expect(find.text("Let's shape your plan"), findsOneWidget);
     expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
@@ -79,15 +79,21 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(_localizedApp(const PersonalizationScreen()));
+    expect(find.text('0%'), findsOneWidget);
     await _continue(tester);
 
     expect(find.text('What would you like to achieve?'), findsOneWidget);
+    expect(find.text('13%'), findsOneWidget);
     await _continue(tester);
     expect(find.text('Choose an option to continue.'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('goal-lose')).hitTestable());
     await tester.pump(const Duration(milliseconds: 250));
     await _continue(tester);
+    expect(find.text("Let's get to know you"), findsOneWidget);
+    expect(find.text('25%'), findsOneWidget);
+    await _continue(tester);
+    expect(find.text('Choose an option to continue.'), findsOneWidget);
     expect(find.text("Let's get to know you"), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('onboardingPrevious')));
@@ -104,7 +110,7 @@ void main() {
     expect(selected.decoration, isNotNull);
   });
 
-  testWidgets('server completion routes directly to guest recommendations', (
+  testWidgets('one final submission shows summary then opens the menu', (
     tester,
   ) async {
     final profileService = _FakeProfilePersistenceService();
@@ -115,6 +121,8 @@ void main() {
     // BASIC_DETAILS and BODY_MEASUREMENTS share the existing profile card.
     await _continue(tester);
     await tester.tap(find.byKey(const ValueKey('goal-lose')).hitTestable());
+    await _continue(tester);
+    await _fillRequiredProfile(tester);
     await _continue(tester);
     await tester.tap(
       find.byKey(const ValueKey('lifestyle-office')).hitTestable(),
@@ -140,11 +148,17 @@ void main() {
     expect(profileService.lastSubmitted?.activityLevelCode, 'MOSTLY_SITTING');
     expect(profileService.lastSubmitted?.preferencesConfirmed, isTrue);
     expect(profileService.lastSubmitted?.allergensConfirmed, isTrue);
-    expect(find.byType(MealPlanRecommendationScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('bmiRange')), findsOneWidget);
+    expect(find.byType(MealPlanRecommendationScreen), findsNothing);
+
+    await _continue(tester);
+    expect(find.text("You're all set!"), findsOneWidget);
+    await _continue(tester);
+    expect(find.byType(BrowseMenuScreen), findsOneWidget);
     expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
-  testWidgets('returning incomplete guest resumes the server-provided step', (
+  testWidgets('returning incomplete guest restarts the complete local flow', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
@@ -156,7 +170,7 @@ void main() {
     await _finishSplash(tester);
 
     expect(find.byType(PersonalizationScreen), findsOneWidget);
-    expect(find.text("Let's get to know you"), findsOneWidget);
+    expect(find.text("Let's shape your plan"), findsOneWidget);
     expect(find.byType(OnboardingScreen), findsNothing);
     expect(find.byType(BrowseMenuScreen), findsNothing);
   });
@@ -179,7 +193,7 @@ void main() {
     );
     await _finishSplash(tester);
 
-    expect(find.byType(MealPlanRecommendationScreen), findsOneWidget);
+    expect(find.byType(BrowseMenuScreen), findsOneWidget);
     expect(find.byType(PersonalizationScreen), findsNothing);
     expect(find.byType(OnboardingScreen), findsNothing);
   });
@@ -284,6 +298,20 @@ Future<void> _continue(WidgetTester tester) async {
   );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
+}
+
+Future<void> _fillRequiredProfile(WidgetTester tester) async {
+  for (final key in const [
+    'profileGender',
+    'profileAge',
+    'profileHeight',
+    'profileWeight',
+  ]) {
+    await tester.tap(find.byKey(ValueKey(key)).hitTestable());
+    await tester.pump();
+    await tester.tap(find.text('Save').last);
+    await tester.pump();
+  }
 }
 
 Widget _localizedApp(Widget home, {Locale locale = const Locale('en')}) {
