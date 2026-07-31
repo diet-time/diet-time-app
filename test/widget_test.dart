@@ -250,25 +250,26 @@ void main() {
     expect(find.byType(PhoneLoginPage), findsOneWidget);
   });
 
-  testWidgets(
-    'returning incomplete guest uses its normal startup destination',
-    (tester) async {
-      SharedPreferences.setMockInitialValues({
-        'preferredLanguage': 'en',
-        'languageSelectionCompletedV2': true,
-        'hasCompletedOnboarding': true,
-      });
-      await tester.pumpWidget(_dietTimeApp());
-      await _finishSplash(tester);
+  testWidgets('returning incomplete guest still sees image onboarding', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'preferredLanguage': 'en',
+      'languageSelectionCompletedV2': true,
+      'hasCompletedOnboarding': true,
+    });
+    await tester.pumpWidget(_dietTimeApp());
+    await _finishSplash(tester);
 
-      expect(find.byType(LanguageSelectionPanel), findsNothing);
-      expect(find.byType(OnboardingCarouselScreen), findsNothing);
-      expect(find.byType(PersonalizationScreen), findsOneWidget);
-      expect(find.byType(BrowseMenuScreen), findsNothing);
-    },
-  );
+    expect(find.byType(LanguageSelectionPanel), findsNothing);
+    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
+    expect(find.byType(PersonalizationScreen), findsNothing);
+    expect(find.byType(BrowseMenuScreen), findsNothing);
+  });
 
-  testWidgets('completed returning guest opens the guest menu', (tester) async {
+  testWidgets('completed returning guest still sees image onboarding', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({
       'preferredLanguage': 'en',
       'languageSelectionCompletedV2': true,
@@ -286,12 +287,12 @@ void main() {
     await _finishSplash(tester);
 
     expect(find.byType(LanguageSelectionPanel), findsNothing);
-    expect(find.byType(OnboardingCarouselScreen), findsNothing);
-    expect(find.byType(BrowseMenuScreen), findsOneWidget);
+    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
+    expect(find.byType(BrowseMenuScreen), findsNothing);
     expect(find.byType(PersonalizationScreen), findsNothing);
   });
 
-  testWidgets('authenticated incomplete user keeps normal profile routing', (
+  testWidgets('authenticated incomplete user still sees image onboarding', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
@@ -306,32 +307,31 @@ void main() {
     await _finishSplash(tester);
 
     expect(find.byType(LanguageSelectionPanel), findsNothing);
-    expect(find.byType(OnboardingCarouselScreen), findsNothing);
-    expect(find.byType(PersonalizationScreen), findsOneWidget);
+    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
+    expect(find.byType(PersonalizationScreen), findsNothing);
     expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
-  testWidgets(
-    'authenticated returning user does not see language after login',
-    (tester) async {
-      SharedPreferences.setMockInitialValues({
-        'preferredLanguage': 'en',
-        'languageSelectionCompletedV2': true,
-        'hasCompletedOnboarding': true,
-        'hasCompletedPersonalization': true,
-        'hasCompletedProfile': true,
-      });
-      await tester.pumpWidget(
-        _dietTimeApp(authenticationService: const _AuthenticatedService()),
-      );
-      await _finishSplash(tester);
+  testWidgets('authenticated returning user still sees image onboarding', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'preferredLanguage': 'en',
+      'languageSelectionCompletedV2': true,
+      'hasCompletedOnboarding': true,
+      'hasCompletedPersonalization': true,
+      'hasCompletedProfile': true,
+    });
+    await tester.pumpWidget(
+      _dietTimeApp(authenticationService: const _AuthenticatedService()),
+    );
+    await _finishSplash(tester);
 
-      expect(find.byType(HomeScreen), findsNothing);
-      expect(find.byType(LanguageSelectionPanel), findsNothing);
-      expect(find.byType(OnboardingCarouselScreen), findsNothing);
-      expect(find.byType(PersonalizationScreen), findsOneWidget);
-    },
-  );
+    expect(find.byType(HomeScreen), findsNothing);
+    expect(find.byType(LanguageSelectionPanel), findsNothing);
+    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
+    expect(find.byType(PersonalizationScreen), findsNothing);
+  });
 
   testWidgets('login excludes language and social sign-in controls', (
     tester,

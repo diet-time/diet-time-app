@@ -9,7 +9,7 @@ import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_carousel_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
-import 'package:diet_time/features/personalization/presentation/post_login_landing_screen.dart';
+import 'package:diet_time/features/personalization/presentation/post_login_name_gate.dart';
 import 'package:diet_time/features/personalization/presentation/meal_plan_recommendation_screen.dart';
 import 'package:diet_time/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
@@ -127,9 +127,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final nextRoute = state.extra as String? ?? AppRoutes.home;
           return _slidePage(
             state: state,
-            child: PostLoginLandingScreen(
-              onContinue: () => context.go(nextRoute),
-            ),
+            child: PostLoginNameGate(onContinue: () => context.go(nextRoute)),
           );
         },
       ),

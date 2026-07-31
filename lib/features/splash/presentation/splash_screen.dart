@@ -6,13 +6,9 @@ import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_spacing.dart';
 import 'package:diet_time/app/theme/app_typography.dart';
 import 'package:diet_time/core/widgets/app_logo.dart';
-import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
 import 'package:diet_time/features/language/data/language_repository.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/features/language/presentation/language_selection_panel.dart';
-import 'package:diet_time/features/onboarding/data/journey_state_repository.dart';
-import 'package:diet_time/features/personalization/presentation/guest_startup_controller.dart';
-import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,7 +39,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late final Animation<double> _taglineLift;
   late final Animation<double> _progressReveal;
   bool _started = false;
-  bool _startupError = false;
 
   @override
   void initState() {
@@ -127,13 +122,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final languageSelectionCheck = ref
         .read(languageRepositoryProvider)
         .hasCompletedLanguageSelection();
-    final journeyCheck = ref.read(journeyStateRepositoryProvider).load();
     await Future<void>.delayed(
       reducedMotion ? _reducedMotionDuration : _visualDuration,
     );
     final preferredLanguage = await languageCheck;
     final hasCompletedLanguageSelection = await languageSelectionCheck;
-    final journey = await journeyCheck;
     if (!mounted) return;
 
     if (!hasCompletedLanguageSelection ||
@@ -176,48 +169,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         .read(languageControllerProvider.notifier)
         .selectLanguage(preferredLanguage);
     if (!mounted) return;
-    if (!journey.hasCompletedOnboarding) {
-      context.go(AppRoutes.onboarding);
-      return;
-    }
-    await _continueNormalStartup(preferredLanguage);
-  }
-
-  Future<void> _continueNormalStartup(String languageCode) async {
-    final isLoggedIn = await ref
-        .read(authenticationServiceProvider)
-        .isLoggedIn();
-    if (!mounted) return;
-    if (isLoggedIn) {
-      final profile = await ref
-          .read(profilePersistenceControllerProvider.notifier)
-          .load(authenticated: true);
-      if (!mounted) return;
-      context.go(
-        profile?.isCompleted == true
-            ? AppRoutes.home
-            : AppRoutes.personalization,
-      );
-      return;
-    }
-    final destination = await ref
-        .read(guestStartupControllerProvider.notifier)
-        .resolve(languageCode: languageCode);
-    if (!mounted) return;
-    if (destination == null) {
-      setState(() => _startupError = true);
-      return;
-    }
-    context.go(destination);
-  }
-
-  Future<void> _retryGuestStartup() async {
-    if (_startupError) setState(() => _startupError = false);
-    final fallbackLanguage = Localizations.localeOf(context).languageCode;
-    final language =
-        await ref.read(languageRepositoryProvider).loadPreferredLanguage() ??
-        fallbackLanguage;
-    await _continueNormalStartup(language);
+    context.go(AppRoutes.onboarding);
   }
 
   @override
@@ -295,31 +247,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       const SizedBox(height: AppSpacing.xl),
                       Opacity(
                         opacity: _progressReveal.value,
-                        child: _startupError
-                            ? Column(
-                                children: [
-                                  Text(
-                                    AppLocalizations.of(
-                                      context,
-                                    ).guestPlanLoadError,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: AppColors.white,
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: _retryGuestStartup,
-                                    child: Text(
-                                      AppLocalizations.of(context).retry,
-                                      style: const TextStyle(
-                                        color: AppColors.limeGlow,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : _ProgressPulse(progress: _controller.value),
+                        child: _ProgressPulse(progress: _controller.value),
                       ),
                     ],
                   ),
