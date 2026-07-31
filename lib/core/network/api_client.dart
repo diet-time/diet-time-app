@@ -30,6 +30,7 @@ class ApiClient {
         'GET' => client.getUrl(uri),
         'POST' => client.postUrl(uri),
         'PUT' => client.putUrl(uri),
+        'PATCH' => client.patchUrl(uri),
         _ => throw ArgumentError.value(method, 'method'),
       }.timeout(const Duration(seconds: 15));
       request.headers

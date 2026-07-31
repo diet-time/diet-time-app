@@ -30,32 +30,45 @@ class _PostLoginNameGateState extends ConsumerState<PostLoginNameGate> {
     final existingName = await repository.load();
     if (!mounted || existingName != null) return;
 
-    final name = await showGeneralDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: AppColors.darkGreen.withValues(alpha: .42),
-      transitionDuration: const Duration(milliseconds: 420),
-      pageBuilder: (_, _, _) => const DisplayNamePanel(),
-      transitionBuilder: (_, animation, _, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-          reverseCurve: Curves.easeInCubic,
-        );
-        return FadeTransition(
-          opacity: curved,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, .45),
-              end: Offset.zero,
-            ).animate(curved),
-            child: child,
+    while (true) {
+      if (!mounted) return;
+      final name = await showGeneralDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: AppColors.darkGreen.withValues(alpha: .42),
+        transitionDuration: const Duration(milliseconds: 420),
+        pageBuilder: (_, _, _) => const DisplayNamePanel(),
+        transitionBuilder: (_, animation, _, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          );
+          return FadeTransition(
+            opacity: curved,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, .45),
+                end: Offset.zero,
+              ).animate(curved),
+              child: child,
+            ),
+          );
+        },
+      );
+      if (!mounted || name == null) return;
+      try {
+        await repository.save(name);
+        return;
+      } on Object {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to save your name. Please try again.'),
           ),
         );
-      },
-    );
-    if (!mounted || name == null) return;
-    await repository.save(name);
+      }
+    }
   }
 
   @override

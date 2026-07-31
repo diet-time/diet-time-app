@@ -1,6 +1,7 @@
 class CustomerProfile {
   const CustomerProfile({
     this.profileId,
+    this.preferredName,
     this.genderCode,
     this.dateOfBirth,
     this.heightCm,
@@ -40,6 +41,7 @@ class CustomerProfile {
         (statusIsComplete ? 'PROFILE_COMPLETED' : fallback.nextStepCode);
     return CustomerProfile(
       profileId: _string(json['profileId']) ?? fallback.profileId,
+      preferredName: _string(json['preferredName']) ?? fallback.preferredName,
       genderCode: _string(json['genderCode']) ?? fallback.genderCode,
       dateOfBirth: _string(json['dateOfBirth']) ?? fallback.dateOfBirth,
       heightCm: _decimal(json['heightCm']) ?? fallback.heightCm,
@@ -90,6 +92,7 @@ class CustomerProfile {
   }
 
   final String? profileId;
+  final String? preferredName;
   final String? genderCode;
   final String? dateOfBirth;
   final double? heightCm;
@@ -174,6 +177,7 @@ class CustomerProfile {
 
   CustomerProfile copyWith({
     String? profileId,
+    String? preferredName,
     String? genderCode,
     String? dateOfBirth,
     double? heightCm,
@@ -199,6 +203,7 @@ class CustomerProfile {
   }) {
     return CustomerProfile(
       profileId: profileId ?? this.profileId,
+      preferredName: preferredName ?? this.preferredName,
       genderCode: genderCode ?? this.genderCode,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       heightCm: heightCm ?? this.heightCm,

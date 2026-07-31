@@ -53,6 +53,7 @@ void main() {
 
   test('backend BMI and nutrition targets populate the shared profile', () {
     final profile = CustomerProfile.fromJson(const {
+      'preferredName': 'Noor',
       'genderCode': 'MALE',
       'dateOfBirth': '1990-04-10',
       'heightCm': 180,
@@ -67,6 +68,7 @@ void main() {
       },
     });
 
+    expect(profile.preferredName, 'Noor');
     expect(profile.bmi, 25.3);
     expect(profile.nutritionTargets?.calories, 2300);
     expect(profile.nutritionTargets?.proteinGrams, 155);
