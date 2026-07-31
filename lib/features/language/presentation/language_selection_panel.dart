@@ -65,31 +65,29 @@ class _LanguageSelectionPanelState extends State<LanguageSelectionPanel> {
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(height: 7),
-                    Text(
-                      isArabic
-                          ? 'يمكنك تغييرها لاحقاً.'
-                          : 'You can change this later.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.darkGreen.withValues(alpha: .62),
-                        fontSize: 13,
-                        height: 1.35,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    _LanguageAction(
-                      key: const ValueKey('languageOption-en'),
-                      label: 'English',
-                      selected: _selectedLanguage == 'en',
-                      onTap: () => setState(() => _selectedLanguage = 'en'),
-                    ),
-                    const SizedBox(height: 10),
-                    _LanguageAction(
-                      key: const ValueKey('languageOption-ar'),
-                      label: 'العربية',
-                      selected: _selectedLanguage == 'ar',
-                      onTap: () => setState(() => _selectedLanguage = 'ar'),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _LanguageAction(
+                            key: const ValueKey('languageOption-en'),
+                            label: 'English',
+                            selected: _selectedLanguage == 'en',
+                            onTap: () =>
+                                setState(() => _selectedLanguage = 'en'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _LanguageAction(
+                            key: const ValueKey('languageOption-ar'),
+                            label: 'العربية',
+                            selected: _selectedLanguage == 'ar',
+                            onTap: () =>
+                                setState(() => _selectedLanguage = 'ar'),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 20),
                     AppButton(
@@ -124,55 +122,47 @@ class _LanguageAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: selected ? const Color(0xFFEAF6EC) : Colors.white,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          constraints: const BoxConstraints(minHeight: 56),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(
-              color: selected
-                  ? AppColors.emeraldGreen
-                  : AppColors.darkGreen.withValues(alpha: .12),
-              width: selected ? 1.5 : 1,
-            ),
+    return SizedBox(
+      height: AppButton.height,
+      child: OutlinedButton(
+        onPressed: onTap,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.darkGreen,
+          backgroundColor: selected ? const Color(0xFFEAF6EC) : Colors.white,
+          side: BorderSide(
+            color: selected
+                ? AppColors.emeraldGreen
+                : AppColors.darkGreen.withValues(alpha: .14),
+            width: selected ? 1.5 : 1,
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: AppColors.darkGreen,
-                    fontSize: 15,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  ),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
                 ),
               ),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 160),
-                child: selected
-                    ? const Icon(
-                        Icons.check_circle_rounded,
-                        key: ValueKey('selected'),
-                        color: AppColors.emeraldGreen,
-                        size: 22,
-                      )
-                    : Icon(
-                        Icons.circle_outlined,
-                        key: const ValueKey('unselected'),
-                        color: AppColors.darkGreen.withValues(alpha: .28),
-                        size: 22,
-                      ),
+            ),
+            if (selected) ...[
+              const SizedBox(width: 7),
+              const Icon(
+                Icons.check_circle_rounded,
+                key: ValueKey('selected'),
+                color: AppColors.emeraldGreen,
+                size: 20,
               ),
             ],
-          ),
+          ],
         ),
       ),
     );
