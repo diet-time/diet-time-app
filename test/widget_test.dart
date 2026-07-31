@@ -382,6 +382,8 @@ void main() {
     expect(find.byType(LanguageSelectionPanel), findsOneWidget);
     expect(find.byType(Dialog), findsNothing);
     expect(find.byType(LanguageSelectionScreen), findsNothing);
+    expect(find.text('Choose your language'), findsOneWidget);
+    expect(find.text('اختر لغتك'), findsOneWidget);
     expect(find.byType(OnboardingCarouselScreen), findsNothing);
   });
 

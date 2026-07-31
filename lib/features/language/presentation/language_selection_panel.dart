@@ -56,13 +56,28 @@ class _LanguageSelectionPanelState extends State<LanguageSelectionPanel> {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    Text(
-                      isArabic ? 'اختر لغتك' : 'Choose your language',
+                    const Text(
+                      'Choose your language',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.darkGreen,
+                        backgroundColor: Colors.transparent,
+                        decoration: TextDecoration.none,
                         fontSize: 23,
                         fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    const Text(
+                      'اختر لغتك',
+                      textAlign: TextAlign.center,
+                      textDirection: TextDirection.rtl,
+                      style: TextStyle(
+                        color: AppColors.darkGreen,
+                        backgroundColor: Colors.transparent,
+                        decoration: TextDecoration.none,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 18),
