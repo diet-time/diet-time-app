@@ -6,6 +6,7 @@ import 'package:diet_time/features/home/presentation/home_screen.dart';
 import 'package:diet_time/features/home/presentation/route_placeholder_screen.dart';
 import 'package:diet_time/features/language/presentation/language_selection_screen.dart';
 import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
+import 'package:diet_time/features/onboarding/presentation/onboarding_carousel_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
 import 'package:diet_time/features/personalization/presentation/post_login_landing_screen.dart';
@@ -43,7 +44,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.onboarding,
         pageBuilder: (context, state) =>
-            _slidePage(state: state, child: const OnboardingScreen()),
+            _slidePage(state: state, child: const OnboardingCarouselScreen()),
       ),
       GoRoute(
         path: AppRoutes.personalization,

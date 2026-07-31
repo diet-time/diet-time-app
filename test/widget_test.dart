@@ -4,6 +4,7 @@ import 'package:diet_time/features/authentication/presentation/phone_login_page.
 import 'package:diet_time/features/home/presentation/home_screen.dart';
 import 'package:diet_time/features/language/presentation/language_selection_screen.dart';
 import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
+import 'package:diet_time/features/onboarding/presentation/onboarding_carousel_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
 import 'package:diet_time/features/personalization/data/guest_recommendation_repository.dart';
@@ -24,7 +25,9 @@ void main() {
   testWidgets('first launch keeps the original onboarding carousel', (
     tester,
   ) async {
-    await tester.pumpWidget(_localizedApp(const OnboardingScreen()));
+    await tester.pumpWidget(
+      _localizedApp(const OnboardingCarouselScreen()),
+    );
 
     expect(find.text('Healthy Meals,'), findsOneWidget);
     expect(find.byKey(const ValueKey('onboardingCarousel')), findsOneWidget);
@@ -47,10 +50,30 @@ void main() {
     expect(find.text('Fresh. Clean.'), findsOneWidget);
   });
 
+  testWidgets('active onboarding image progress fills over time', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _localizedApp(const OnboardingCarouselScreen()),
+    );
+    await tester.pump(const Duration(milliseconds: 1400));
+
+    final progress = tester.widget<FractionallySizedBox>(
+      find.descendant(
+        of: find.byKey(const ValueKey('onboardingImageProgress-0')),
+        matching: find.byType(FractionallySizedBox),
+      ),
+    );
+    expect(progress.widthFactor, greaterThan(.35));
+    expect(progress.widthFactor, lessThan(.65));
+  });
+
   testWidgets('final onboarding page shows menu and start plan actions', (
     tester,
   ) async {
-    await tester.pumpWidget(_localizedApp(const OnboardingScreen()));
+    await tester.pumpWidget(
+      _localizedApp(const OnboardingCarouselScreen()),
+    );
     await _reachCarouselEnd(tester);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -70,7 +93,7 @@ void main() {
     await _finishSplash(tester);
     await _chooseLanguage(tester, 'English');
 
-    expect(find.byType(OnboardingScreen), findsOneWidget);
+    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
     expect(find.byKey(const ValueKey('onboardingCarousel')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('assets/images/onboarding_1.png')),
@@ -90,7 +113,7 @@ void main() {
     await tester.pumpWidget(_dietTimeApp());
     await _finishSplash(tester);
 
-    expect(find.byType(OnboardingScreen), findsOneWidget);
+    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
     expect(find.byKey(const ValueKey('onboardingCarousel')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('assets/images/onboarding_1.png')),
@@ -98,21 +121,23 @@ void main() {
     );
   });
 
-  testWidgets('carousel start plan opens login for an incomplete profile', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_dietTimeApp());
-    await _finishSplash(tester);
-    await _chooseLanguage(tester, 'English');
-    await _reachCarouselEnd(tester);
-    await tester.tap(
-      find.byKey(const ValueKey('onboardingPlanChoice')).hitTestable(),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+  testWidgets(
+    'carousel start plan opens questionnaire for an incomplete guest',
+    (tester) async {
+      await tester.pumpWidget(_dietTimeApp());
+      await _finishSplash(tester);
+      await _chooseLanguage(tester, 'English');
+      await _reachCarouselEnd(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('onboardingPlanChoice')).hitTestable(),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(PhoneLoginPage), findsOneWidget);
-  });
+      expect(find.byType(PersonalizationScreen), findsOneWidget);
+      expect(find.byType(PhoneLoginPage), findsNothing);
+    },
+  );
 
   testWidgets('goal selection is required and preserved when navigating back', (
     tester,
@@ -206,7 +231,7 @@ void main() {
     expect(find.byType(PhoneLoginPage), findsOneWidget);
   });
 
-  testWidgets('returning incomplete guest restarts the complete local flow', (
+  testWidgets('returning incomplete guest still sees image onboarding', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
@@ -217,13 +242,12 @@ void main() {
     await tester.pumpWidget(_dietTimeApp());
     await _finishSplash(tester);
 
-    expect(find.byType(PersonalizationScreen), findsOneWidget);
-    expect(find.text("Let's shape your plan"), findsOneWidget);
-    expect(find.byType(OnboardingScreen), findsNothing);
+    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
+    expect(find.byType(PersonalizationScreen), findsNothing);
     expect(find.byType(BrowseMenuScreen), findsNothing);
   });
 
-  testWidgets('completed guest skips onboarding and clears its route stack', (
+  testWidgets('completed guest still sees image onboarding on launch', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
@@ -242,12 +266,12 @@ void main() {
     );
     await _finishSplash(tester);
 
-    expect(find.byType(BrowseMenuScreen), findsOneWidget);
+    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
+    expect(find.byType(BrowseMenuScreen), findsNothing);
     expect(find.byType(PersonalizationScreen), findsNothing);
-    expect(find.byType(OnboardingScreen), findsNothing);
   });
 
-  testWidgets('authenticated user with an incomplete profile resumes setup', (
+  testWidgets('authenticated incomplete user still sees image onboarding', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
@@ -261,12 +285,12 @@ void main() {
     );
     await _finishSplash(tester);
 
-    expect(find.byType(PersonalizationScreen), findsOneWidget);
-    expect(find.byType(OnboardingScreen), findsNothing);
+    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
+    expect(find.byType(PersonalizationScreen), findsNothing);
     expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
-  testWidgets('stored profile completion does not skip the demo setup', (
+  testWidgets('authenticated returning user always sees image onboarding', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
@@ -282,16 +306,21 @@ void main() {
     await _finishSplash(tester);
 
     expect(find.byType(HomeScreen), findsNothing);
-    expect(find.byType(OnboardingScreen), findsNothing);
-    expect(find.byType(PersonalizationScreen), findsOneWidget);
+    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
+    expect(find.byType(PersonalizationScreen), findsNothing);
   });
 
   testWidgets('Arabic carousel and personalization remain RTL', (tester) async {
     await tester.pumpWidget(
-      _localizedApp(const OnboardingScreen(), locale: const Locale('ar')),
+      _localizedApp(
+        const OnboardingCarouselScreen(),
+        locale: const Locale('ar'),
+      ),
     );
     expect(
-      Directionality.of(tester.element(find.byType(OnboardingScreen))),
+      Directionality.of(
+        tester.element(find.byType(OnboardingCarouselScreen)),
+      ),
       TextDirection.rtl,
     );
     expect(find.text('وجبات صحية،'), findsOneWidget);
@@ -314,7 +343,7 @@ void main() {
     await tester.pumpWidget(_dietTimeApp());
     await _finishSplash(tester);
     expect(find.byType(LanguageSelectionScreen), findsOneWidget);
-    expect(find.byType(OnboardingScreen), findsNothing);
+    expect(find.byType(OnboardingCarouselScreen), findsNothing);
   });
 }
 
@@ -332,7 +361,7 @@ Future<void> _chooseLanguage(WidgetTester tester, String label) async {
 }
 
 Future<void> _reachCarouselEnd(WidgetTester tester) async {
-  for (var index = 0; index < 4; index++) {
+  for (var index = 0; index < 5; index++) {
     await tester.tap(
       find.byKey(ValueKey('onboardingTapArea-$index')).hitTestable(),
     );
@@ -343,7 +372,7 @@ Future<void> _reachCarouselEnd(WidgetTester tester) async {
 
 Future<void> _openQuestionnaireFromFirstRun(WidgetTester tester) async {
   await _chooseLanguage(tester, 'English');
-  expect(find.byType(OnboardingScreen), findsOneWidget);
+  expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
   await _reachCarouselEnd(tester);
   await tester.tap(
     find.byKey(const ValueKey('onboardingMenuChoice')).hitTestable(),
