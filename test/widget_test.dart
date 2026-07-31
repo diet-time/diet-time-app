@@ -380,7 +380,7 @@ void main() {
     await _finishSplash(tester);
 
     expect(find.byType(LanguageSelectionPanel), findsOneWidget);
-    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byType(Dialog), findsOneWidget);
     expect(find.byType(LanguageSelectionScreen), findsNothing);
     expect(find.byType(OnboardingCarouselScreen), findsNothing);
   });

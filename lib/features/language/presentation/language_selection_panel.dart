@@ -20,32 +20,23 @@ class _LanguageSelectionPanelState extends State<LanguageSelectionPanel> {
       textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
       child: PopScope(
         canPop: false,
-        child: Material(
+        child: Dialog(
           key: const ValueKey('languageSelectionPanel'),
-          color: const Color(0xFFFFFEFB),
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.xl),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          backgroundColor: const Color(0xFFFFFEFB),
+          shadowColor: AppColors.darkGreen.withValues(alpha: .18),
+          elevation: 18,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.xl),
           ),
-          clipBehavior: Clip.antiAlias,
-          child: SafeArea(
-            top: false,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(22, 12, 22, 22),
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Align(
-                    child: Container(
-                      width: 42,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.darkGreen.withValues(alpha: .16),
-                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
                   Text(
                     isArabic ? 'اختر لغتك' : 'Choose your language',
                     textAlign: TextAlign.center,

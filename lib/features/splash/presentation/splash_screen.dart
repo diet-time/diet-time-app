@@ -139,12 +139,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (!hasCompletedLanguageSelection ||
         preferredLanguage == null ||
         !LocalizationService.isSupported(preferredLanguage)) {
-      final selectedLanguage = await showModalBottomSheet<String>(
+      final selectedLanguage = await showDialog<String>(
         context: context,
-        isDismissible: false,
-        enableDrag: false,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
+        barrierDismissible: false,
         builder: (_) => const LanguageSelectionPanel(),
       );
       if (!mounted || selectedLanguage == null) return;
