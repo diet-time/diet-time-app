@@ -20,67 +20,87 @@ class _LanguageSelectionPanelState extends State<LanguageSelectionPanel> {
       textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
       child: PopScope(
         canPop: false,
-        child: Dialog(
-          key: const ValueKey('languageSelectionPanel'),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-          backgroundColor: const Color(0xFFFFFEFB),
-          shadowColor: AppColors.darkGreen.withValues(alpha: .18),
-          elevation: 18,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.xl),
-          ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    isArabic ? 'اختر لغتك' : 'Choose your language',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.darkGreen,
-                      fontSize: 23,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Text(
-                    isArabic
-                        ? 'يمكنك تغييرها لاحقاً.'
-                        : 'You can change this later.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.darkGreen.withValues(alpha: .62),
-                      fontSize: 13,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _LanguageAction(
-                    key: const ValueKey('languageOption-en'),
-                    label: 'English',
-                    selected: _selectedLanguage == 'en',
-                    onTap: () => setState(() => _selectedLanguage = 'en'),
-                  ),
-                  const SizedBox(height: 10),
-                  _LanguageAction(
-                    key: const ValueKey('languageOption-ar'),
-                    label: 'العربية',
-                    selected: _selectedLanguage == 'ar',
-                    onTap: () => setState(() => _selectedLanguage = 'ar'),
-                  ),
-                  const SizedBox(height: 20),
-                  AppButton(
-                    key: const ValueKey('languageSelectionContinue'),
-                    label: isArabic ? 'متابعة' : 'Continue',
-                    onPressed: _selectedLanguage == null
-                        ? null
-                        : () => Navigator.of(context).pop(_selectedLanguage),
+        child: SafeArea(
+          top: false,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              key: const ValueKey('languageSelectionPanel'),
+              constraints: const BoxConstraints(maxWidth: 620),
+              margin: const EdgeInsets.fromLTRB(12, 12, 12, 52),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFEFB),
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.darkGreen.withValues(alpha: .18),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
                   ),
                 ],
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Align(
+                      child: Container(
+                        width: 42,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.darkGreen.withValues(alpha: .14),
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      isArabic ? 'اختر لغتك' : 'Choose your language',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.darkGreen,
+                        fontSize: 23,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      isArabic
+                          ? 'يمكنك تغييرها لاحقاً.'
+                          : 'You can change this later.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.darkGreen.withValues(alpha: .62),
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _LanguageAction(
+                      key: const ValueKey('languageOption-en'),
+                      label: 'English',
+                      selected: _selectedLanguage == 'en',
+                      onTap: () => setState(() => _selectedLanguage = 'en'),
+                    ),
+                    const SizedBox(height: 10),
+                    _LanguageAction(
+                      key: const ValueKey('languageOption-ar'),
+                      label: 'العربية',
+                      selected: _selectedLanguage == 'ar',
+                      onTap: () => setState(() => _selectedLanguage = 'ar'),
+                    ),
+                    const SizedBox(height: 20),
+                    AppButton(
+                      key: const ValueKey('languageSelectionContinue'),
+                      label: isArabic ? 'متابعة' : 'Continue',
+                      onPressed: _selectedLanguage == null
+                          ? null
+                          : () => Navigator.of(context).pop(_selectedLanguage),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

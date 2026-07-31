@@ -139,10 +139,29 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (!hasCompletedLanguageSelection ||
         preferredLanguage == null ||
         !LocalizationService.isSupported(preferredLanguage)) {
-      final selectedLanguage = await showDialog<String>(
+      final selectedLanguage = await showGeneralDialog<String>(
         context: context,
         barrierDismissible: false,
-        builder: (_) => const LanguageSelectionPanel(),
+        barrierColor: AppColors.darkGreen.withValues(alpha: .42),
+        transitionDuration: const Duration(milliseconds: 420),
+        pageBuilder: (_, _, _) => const LanguageSelectionPanel(),
+        transitionBuilder: (_, animation, _, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          );
+          return FadeTransition(
+            opacity: curved,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, .45),
+                end: Offset.zero,
+              ).animate(curved),
+              child: child,
+            ),
+          );
+        },
       );
       if (!mounted || selectedLanguage == null) return;
       await ref
