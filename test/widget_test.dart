@@ -235,6 +235,14 @@ void main() {
     expect(profileService.lastSubmitted?.allergensConfirmed, isTrue);
     expect(find.byKey(const ValueKey('bmiRange')), findsOneWidget);
     expect(find.byKey(const ValueKey('bmiScaleMarker')), findsOneWidget);
+    expect(find.byKey(const ValueKey('bmiScaleIndicatorDot')), findsOneWidget);
+    final indicatorRect = tester.getRect(
+      find.byKey(const ValueKey('bmiScaleIndicatorDot')),
+    );
+    final bmiCardRect = tester.getRect(find.byKey(const ValueKey('bmiRange')));
+    expect(indicatorRect.size, const Size(17, 17));
+    expect(bmiCardRect.overlaps(indicatorRect), isTrue);
+    expect(find.text('24.2'), findsWidgets);
     expect(find.byType(MealPlanRecommendationScreen), findsNothing);
 
     await _continue(tester);
@@ -646,7 +654,6 @@ class _FakeProfilePersistenceService implements ProfilePersistenceService {
     };
     final completed = nextStep == 'PROFILE_COMPLETED';
     this.profile = profile.copyWith(
-      bmi: 24.2,
       nutritionTargets: const NutritionTargets(
         calories: 2450,
         proteinGrams: 160,

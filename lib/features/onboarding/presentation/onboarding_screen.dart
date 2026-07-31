@@ -2124,7 +2124,7 @@ class _BmiSummaryStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bmi = draft.bmi ?? 0;
+    final bmi = draft.bmi ?? _bmiFromMeasurements(draft) ?? 0;
     final marker = ((bmi.clamp(14, 40) - 14) / 26).toDouble();
     final category = bmi <= 0
         ? _wellnessCopy(context, 'Pending', 'قيد الحساب')
@@ -2465,7 +2465,7 @@ class _BmiScale extends StatelessWidget {
             const SizedBox(height: 7),
             SizedBox(
               width: double.infinity,
-              height: 43,
+              height: 49,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -2520,8 +2520,22 @@ class _BmiScale extends StatelessWidget {
                           ),
                           Container(
                             width: 2,
-                            height: 12,
+                            height: 7,
                             color: AppColors.emeraldGreen,
+                          ),
+                          Container(
+                            key: const ValueKey('bmiScaleIndicatorDot'),
+                            width: 17,
+                            height: 17,
+                            decoration: BoxDecoration(
+                              color: AppColors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.emeraldGreen,
+                                width: 4,
+                              ),
+                              boxShadow: _cardShadow(.18),
+                            ),
                           ),
                         ],
                       ),
@@ -2532,6 +2546,7 @@ class _BmiScale extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             const Row(
+              textDirection: TextDirection.ltr,
               children: [
                 Expanded(child: _ScaleLabel('Under', '<18.5')),
                 Expanded(child: _ScaleLabel('Normal', '18.5–24.9')),
@@ -2544,6 +2559,16 @@ class _BmiScale extends StatelessWidget {
       },
     );
   }
+}
+
+double? _bmiFromMeasurements(CustomerProfile profile) {
+  final heightCm = profile.heightCm;
+  final weightKg = profile.weightKg;
+  if (heightCm == null || weightKg == null || heightCm <= 0 || weightKg <= 0) {
+    return null;
+  }
+  final heightM = heightCm / 100;
+  return weightKg / (heightM * heightM);
 }
 
 class _ScaleLabel extends StatelessWidget {
