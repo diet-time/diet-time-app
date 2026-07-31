@@ -1,8 +1,11 @@
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
+import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
+import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
+import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,126 +19,108 @@ class MealPlanScreen extends ConsumerStatefulWidget {
 }
 
 class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
-  int _selected = 0;
+  String? _selectedCode;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final authState = ref.watch(otpAuthControllerProvider);
-    final plans = [
-      _Plan(
-        code: 'WEIGHT_LOSS',
-        title: l10n.weightLoss,
-        description: l10n.weightLossDescription,
-        image: 'assets/images/onboarding_1.png',
-        calories: 1500,
-        price: 349,
-      ),
-      _Plan(
-        code: 'KETO',
-        title: l10n.keto,
-        description: l10n.ketoDescription,
-        image: 'assets/images/onboarding_3.png',
-        calories: 1800,
-        price: 399,
-      ),
-      _Plan(
-        code: 'HIGH_PROTEIN',
-        title: l10n.highProtein,
-        description: l10n.highProteinDescription,
-        image: 'assets/images/onboarding_2.png',
-        calories: 2200,
-        price: 429,
-      ),
-      _Plan(
-        code: 'BALANCED',
-        title: l10n.balancedDiet,
-        description: l10n.balancedDietDescription,
-        image: 'assets/images/onboarding_4.png',
-        calories: 2000,
-        price: 379,
-      ),
-    ];
-
+    final language = Localizations.localeOf(context).languageCode;
+    final plans = ref.watch(mealPlansProvider(language));
     return Scaffold(
       backgroundColor: const Color(0xFFF5F3E9),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 26, 20, 16),
-                    sliver: SliverList.list(
-                      children: [
-                        Text(
-                          l10n.choosePlanTitle,
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(
-                                fontSize: 29,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -.55,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          l10n.choosePlanSubtitle,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyLarge?.copyWith(height: 1.4),
-                        ),
-                        const SizedBox(height: 22),
-                        ...List.generate(
-                          plans.length,
-                          (index) => Padding(
-                            padding: const EdgeInsets.only(bottom: 14),
-                            child: _PlanCard(
-                              plan: plans[index],
-                              selected: _selected == index,
-                              calories: l10n.dailyCalories(
-                                plans[index].calories,
-                              ),
-                              price: l10n.weeklyPrice(plans[index].price),
-                              onTap: () => setState(() => _selected = index),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560),
-                child: AppButton(
-                  label: l10n.continueLabel,
-                  onPressed: () {
-                    final plan = plans[_selected];
-                    final destination = PendingAuthDestination(
-                      route: AppRoutes.home,
-                      planCode: plan.code,
-                      planName: plan.title,
-                    );
-                    if (authState.isAuthenticated) {
-                      ref
-                          .read(otpAuthControllerProvider.notifier)
-                          .begin(destination);
-                      context.go(AppRoutes.home);
-                      return;
-                    }
-                    context.push(AppRoutes.phoneLogin, extra: destination);
-                  },
-                ),
-              ),
-            ),
-          ],
+        child: plans.when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.emeraldGreen),
+          ),
+          error: (_, _) => _PlanLoadState(
+            onRetry: () => ref.invalidate(mealPlansProvider(language)),
+          ),
+          data: (items) => items.isEmpty
+              ? _PlanLoadState(
+                  empty: true,
+                  onRetry: () => ref.invalidate(mealPlansProvider(language)),
+                )
+              : _buildPlanList(context, items),
         ),
       ),
+    );
+  }
+
+  Widget _buildPlanList(BuildContext context, List<MealPlanOption> plans) {
+    final l10n = AppLocalizations.of(context);
+    final authState = ref.watch(otpAuthControllerProvider);
+    final selectedCode = plans.any((plan) => plan.code == _selectedCode)
+        ? _selectedCode!
+        : plans.first.code;
+    final selectedPlan = plans.firstWhere((plan) => plan.code == selectedCode);
+    return Column(
+      children: [
+        Expanded(
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 26, 20, 16),
+                sliver: SliverList.list(
+                  children: [
+                    Text(
+                      l10n.choosePlanTitle,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            fontSize: 29,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -.55,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.choosePlanSubtitle,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyLarge?.copyWith(height: 1.4),
+                    ),
+                    const SizedBox(height: 22),
+                    for (final plan in plans)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: _PlanCard(
+                          plan: plan,
+                          selected: selectedCode == plan.code,
+                          onTap: () =>
+                              setState(() => _selectedCode = plan.code),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: AppButton(
+              label: l10n.continueLabel,
+              onPressed: () {
+                final destination = PendingAuthDestination(
+                  route: AppRoutes.home,
+                  planCode: selectedPlan.code,
+                  planName: selectedPlan.name,
+                );
+                if (authState.isAuthenticated) {
+                  ref
+                      .read(otpAuthControllerProvider.notifier)
+                      .begin(destination);
+                  context.go(AppRoutes.home);
+                  return;
+                }
+                context.push(AppRoutes.phoneLogin, extra: destination);
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -144,15 +129,11 @@ class _PlanCard extends StatelessWidget {
   const _PlanCard({
     required this.plan,
     required this.selected,
-    required this.calories,
-    required this.price,
     required this.onTap,
   });
 
-  final _Plan plan;
+  final MealPlanOption plan;
   final bool selected;
-  final String calories;
-  final String price;
   final VoidCallback onTap;
 
   @override
@@ -160,7 +141,9 @@ class _PlanCard extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
+      label: AppLocalizations.of(context).selectMealPlanSemantics(plan.name),
       child: InkWell(
+        key: ValueKey('mealPlan-${plan.code}'),
         onTap: onTap,
         borderRadius: BorderRadius.circular(24),
         child: AnimatedContainer(
@@ -188,15 +171,7 @@ class _PlanCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: Image.asset(
-                  plan.image,
-                  width: 104,
-                  height: 112,
-                  fit: BoxFit.cover,
-                ),
-              ),
+              _PlanImage(imageUrl: plan.imageUrl),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -206,7 +181,7 @@ class _PlanCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            plan.title,
+                            plan.name,
                             style: const TextStyle(
                               color: AppColors.darkGreen,
                               fontSize: 17,
@@ -232,24 +207,32 @@ class _PlanCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      plan.description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.darkGreen.withValues(alpha: .62),
-                        fontSize: 12,
-                        height: 1.3,
+                    if (plan.description case final description?) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.darkGreen.withValues(alpha: .62),
+                          fontSize: 12,
+                          height: 1.3,
+                        ),
                       ),
-                    ),
+                    ],
                     const SizedBox(height: 9),
                     Wrap(
                       spacing: 8,
                       runSpacing: 6,
                       children: [
-                        _Detail(icon: Icons.bolt_rounded, label: calories),
-                        _Detail(icon: Icons.payments_outlined, label: price),
+                        _Detail(
+                          icon: Icons.local_fire_department_outlined,
+                          label: _calorieLabel(plan.dailyCaloriesKcal),
+                        ),
+                        _Detail(
+                          icon: Icons.payments_outlined,
+                          label: _priceLabel(plan),
+                        ),
                       ],
                     ),
                   ],
@@ -257,6 +240,66 @@ class _PlanCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  String _calorieLabel(double? calories) => calories == null
+      ? 'Calories unavailable'
+      : '${calories.round()} kcal / day';
+
+  String _priceLabel(MealPlanOption plan) {
+    final price = plan.startingPrice;
+    if (price == null) return 'Price unavailable';
+    final amount = price == price.roundToDouble()
+        ? price.round().toString()
+        : price.toStringAsFixed(2);
+    final currency = plan.currencyCode ?? 'QAR';
+    final duration = plan.priceDurationDays;
+    return duration == null
+        ? '$currency $amount'
+        : '$currency $amount / $duration days';
+  }
+}
+
+class _PlanImage extends StatelessWidget {
+  const _PlanImage({this.imageUrl});
+
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final image = _resolveImageUrl(imageUrl);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: SizedBox(
+        width: 104,
+        height: 112,
+        child: image.isEmpty
+            ? const _ImagePlaceholder()
+            : Image.network(
+                image,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => const _ImagePlaceholder(),
+              ),
+      ),
+    );
+  }
+}
+
+class _ImagePlaceholder extends StatelessWidget {
+  const _ImagePlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Color(0xFFE9F1E8),
+      child: Center(
+        child: Icon(
+          Icons.restaurant_rounded,
+          color: AppColors.emeraldGreen,
+          size: 34,
         ),
       ),
     );
@@ -289,20 +332,49 @@ class _Detail extends StatelessWidget {
   }
 }
 
-class _Plan {
-  const _Plan({
-    required this.code,
-    required this.title,
-    required this.description,
-    required this.image,
-    required this.calories,
-    required this.price,
-  });
+class _PlanLoadState extends StatelessWidget {
+  const _PlanLoadState({required this.onRetry, this.empty = false});
 
-  final String code;
-  final String title;
-  final String description;
-  final String image;
-  final int calories;
-  final int price;
+  final VoidCallback onRetry;
+  final bool empty;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.restaurant_menu_rounded,
+              size: 46,
+              color: AppColors.emeraldGreen,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              empty
+                  ? 'No meal plans are available yet.'
+                  : 'Unable to load meal plans.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.darkGreen,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _resolveImageUrl(String? value) {
+  final candidate = value?.trim() ?? '';
+  if (candidate.isEmpty) return '';
+  final parsed = Uri.tryParse(candidate);
+  if (parsed != null && parsed.hasScheme) return candidate;
+  return Uri.parse(AppEnvironment.apiBaseUrl).resolve(candidate).toString();
 }

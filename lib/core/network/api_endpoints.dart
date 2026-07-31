@@ -5,6 +5,7 @@ abstract final class ApiEndpoints {
   static const guestSession = '/api/v1/guest/session';
   static const guestProfile = '/api/v1/guest/profile';
   static const guestPlanRecommendations = '/api/v1/guest/plan-recommendations';
+  static const mealPlans = '/api/v1/meal-plan-categories';
   static const linkGuestProfile = '/api/v1/customer/profile/link-guest';
 
   static String guestMealPlanMenu(String planCode) =>

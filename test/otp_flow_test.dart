@@ -7,6 +7,8 @@ import 'package:diet_time/features/authentication/presentation/otp_auth_controll
 import 'package:diet_time/features/authentication/presentation/otp_verification_page.dart';
 import 'package:diet_time/features/authentication/presentation/phone_login_page.dart';
 import 'package:diet_time/features/personalization/presentation/post_login_landing_screen.dart';
+import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
+import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -446,6 +448,20 @@ Widget _planApp(AuthenticationService authentication) {
   return ProviderScope(
     overrides: [
       authenticationServiceProvider.overrideWithValue(authentication),
+      mealPlansProvider.overrideWith(
+        (ref, language) async => const [
+          MealPlanOption(
+            id: 'classic-id',
+            code: 'CLASSIC',
+            name: 'Classic',
+            description: 'Everyday balanced meals.',
+            dailyCaloriesKcal: 1840,
+            startingPrice: 349,
+            currencyCode: 'QAR',
+            priceDurationDays: 7,
+          ),
+        ],
+      ),
     ],
     child: MaterialApp.router(
       theme: AppTheme.light(const Locale('en')),
