@@ -152,7 +152,6 @@ class CustomerProfile {
     if (goalCode != null) 'goalCode': goalCode,
     if (dailyRoutineCode != null) 'dailyRoutineCode': dailyRoutineCode,
     if (activityLevelCode != null) 'activityLevelCode': activityLevelCode,
-    'preferredLanguage': preferredLanguage,
     'onboardingStatus': onboardingStatus,
     'preferencesConfirmed': preferencesConfirmed,
     'allergensConfirmed': allergensConfirmed,

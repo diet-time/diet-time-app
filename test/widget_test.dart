@@ -1,7 +1,10 @@
 import 'package:diet_time/app/app.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
+import 'package:diet_time/features/authentication/presentation/login_screen.dart';
 import 'package:diet_time/features/authentication/presentation/phone_login_page.dart';
 import 'package:diet_time/features/home/presentation/home_screen.dart';
+import 'package:diet_time/features/language/data/language_repository.dart';
+import 'package:diet_time/features/language/presentation/language_selection_panel.dart';
 import 'package:diet_time/features/language/presentation/language_selection_screen.dart';
 import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_carousel_screen.dart';
@@ -25,9 +28,7 @@ void main() {
   testWidgets('first launch keeps the original onboarding carousel', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      _localizedApp(const OnboardingCarouselScreen()),
-    );
+    await tester.pumpWidget(_localizedApp(const OnboardingCarouselScreen()));
 
     expect(find.text('Healthy Meals,'), findsOneWidget);
     expect(find.byKey(const ValueKey('onboardingCarousel')), findsOneWidget);
@@ -53,9 +54,7 @@ void main() {
   testWidgets('active onboarding image progress fills over time', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      _localizedApp(const OnboardingCarouselScreen()),
-    );
+    await tester.pumpWidget(_localizedApp(const OnboardingCarouselScreen()));
     await tester.pump(const Duration(milliseconds: 1400));
 
     final progress = tester.widget<FractionallySizedBox>(
@@ -68,12 +67,29 @@ void main() {
     expect(progress.widthFactor, lessThan(.65));
   });
 
+  testWidgets('all five onboarding image assets remain available', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_localizedApp(const OnboardingCarouselScreen()));
+
+    for (var index = 0; index < 5; index++) {
+      expect(
+        find.byKey(ValueKey('assets/images/onboarding_${index + 1}.png')),
+        findsOneWidget,
+      );
+      if (index == 4) break;
+      await tester.tap(
+        find.byKey(ValueKey('onboardingTapArea-$index')).hitTestable(),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+  });
+
   testWidgets('final onboarding page shows menu and start plan actions', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      _localizedApp(const OnboardingCarouselScreen()),
-    );
+    await tester.pumpWidget(_localizedApp(const OnboardingCarouselScreen()));
     await _reachCarouselEnd(tester);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -91,6 +107,7 @@ void main() {
   ) async {
     await tester.pumpWidget(_dietTimeApp());
     await _finishSplash(tester);
+    expect(find.byType(LanguageSelectionPanel), findsOneWidget);
     await _chooseLanguage(tester, 'English');
 
     expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
@@ -113,6 +130,7 @@ void main() {
     await tester.pumpWidget(_dietTimeApp());
     await _finishSplash(tester);
 
+    expect(find.byType(LanguageSelectionPanel), findsNothing);
     expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
     expect(find.byKey(const ValueKey('onboardingCarousel')), findsOneWidget);
     expect(
@@ -147,7 +165,6 @@ void main() {
       find.byKey(const ValueKey('onboardingLanguageSelector')),
       findsNothing,
     );
-    expect(find.text('0%'), findsOneWidget);
     await _continue(tester);
 
     expect(find.text('What would you like to achieve?'), findsOneWidget);
@@ -202,11 +219,11 @@ void main() {
     await _continue(tester);
     expect(profileService.saveProgressCalls, 0);
     expect(profileService.completeCalls, 0);
-    await tester.tap(find.byKey(const ValueKey('choice-none')));
+    await tester.tap(find.byKey(const ValueKey('choice-HIGH_PROTEIN')));
     await _continue(tester);
     expect(profileService.saveProgressCalls, 0);
     expect(profileService.completeCalls, 0);
-    await tester.tap(find.byKey(const ValueKey('choice-HIGH_PROTEIN')));
+    await tester.tap(find.byKey(const ValueKey('choice-none')));
     await _continue(tester);
     await tester.pump(const Duration(milliseconds: 500));
     expect(profileService.saveProgressCalls, 0);
@@ -225,31 +242,33 @@ void main() {
     expect(find.byType(BrowseMenuScreen), findsOneWidget);
     expect(find.byType(PhoneLoginPage), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('guestStartPlan')).hitTestable());
+    await tester.tap(
+      find.byKey(const ValueKey('guestStartPlan')).hitTestable(),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(PhoneLoginPage), findsOneWidget);
   });
 
-  testWidgets('returning incomplete guest still sees image onboarding', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues({
-      'preferredLanguage': 'en',
-      'languageSelectionCompletedV2': true,
-      'hasCompletedOnboarding': true,
-    });
-    await tester.pumpWidget(_dietTimeApp());
-    await _finishSplash(tester);
+  testWidgets(
+    'returning incomplete guest uses its normal startup destination',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'preferredLanguage': 'en',
+        'languageSelectionCompletedV2': true,
+        'hasCompletedOnboarding': true,
+      });
+      await tester.pumpWidget(_dietTimeApp());
+      await _finishSplash(tester);
 
-    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
-    expect(find.byType(PersonalizationScreen), findsNothing);
-    expect(find.byType(BrowseMenuScreen), findsNothing);
-  });
+      expect(find.byType(LanguageSelectionPanel), findsNothing);
+      expect(find.byType(OnboardingCarouselScreen), findsNothing);
+      expect(find.byType(PersonalizationScreen), findsOneWidget);
+      expect(find.byType(BrowseMenuScreen), findsNothing);
+    },
+  );
 
-  testWidgets('completed guest still sees image onboarding on launch', (
-    tester,
-  ) async {
+  testWidgets('completed returning guest opens the guest menu', (tester) async {
     SharedPreferences.setMockInitialValues({
       'preferredLanguage': 'en',
       'languageSelectionCompletedV2': true,
@@ -266,12 +285,13 @@ void main() {
     );
     await _finishSplash(tester);
 
-    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
-    expect(find.byType(BrowseMenuScreen), findsNothing);
+    expect(find.byType(LanguageSelectionPanel), findsNothing);
+    expect(find.byType(OnboardingCarouselScreen), findsNothing);
+    expect(find.byType(BrowseMenuScreen), findsOneWidget);
     expect(find.byType(PersonalizationScreen), findsNothing);
   });
 
-  testWidgets('authenticated incomplete user still sees image onboarding', (
+  testWidgets('authenticated incomplete user keeps normal profile routing', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
@@ -285,29 +305,47 @@ void main() {
     );
     await _finishSplash(tester);
 
-    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
-    expect(find.byType(PersonalizationScreen), findsNothing);
+    expect(find.byType(LanguageSelectionPanel), findsNothing);
+    expect(find.byType(OnboardingCarouselScreen), findsNothing);
+    expect(find.byType(PersonalizationScreen), findsOneWidget);
     expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
-  testWidgets('authenticated returning user always sees image onboarding', (
+  testWidgets(
+    'authenticated returning user does not see language after login',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'preferredLanguage': 'en',
+        'languageSelectionCompletedV2': true,
+        'hasCompletedOnboarding': true,
+        'hasCompletedPersonalization': true,
+        'hasCompletedProfile': true,
+      });
+      await tester.pumpWidget(
+        _dietTimeApp(authenticationService: const _AuthenticatedService()),
+      );
+      await _finishSplash(tester);
+
+      expect(find.byType(HomeScreen), findsNothing);
+      expect(find.byType(LanguageSelectionPanel), findsNothing);
+      expect(find.byType(OnboardingCarouselScreen), findsNothing);
+      expect(find.byType(PersonalizationScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets('login excludes language and social sign-in controls', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({
-      'preferredLanguage': 'en',
-      'languageSelectionCompletedV2': true,
-      'hasCompletedOnboarding': true,
-      'hasCompletedPersonalization': true,
-      'hasCompletedProfile': true,
-    });
     await tester.pumpWidget(
-      _dietTimeApp(authenticationService: const _AuthenticatedService()),
+      _localizedApp(const LoginScreen(showLoginInitially: true)),
     );
-    await _finishSplash(tester);
+    await tester.pump();
 
-    expect(find.byType(HomeScreen), findsNothing);
-    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
-    expect(find.byType(PersonalizationScreen), findsNothing);
+    expect(find.bySemanticsLabel('Language'), findsNothing);
+    expect(find.byIcon(Icons.apple), findsNothing);
+    expect(find.byIcon(Icons.g_mobiledata_rounded), findsNothing);
+    expect(find.text('Continue with Apple'), findsNothing);
+    expect(find.text('Continue with Google'), findsNothing);
   });
 
   testWidgets('Arabic carousel and personalization remain RTL', (tester) async {
@@ -318,9 +356,7 @@ void main() {
       ),
     );
     expect(
-      Directionality.of(
-        tester.element(find.byType(OnboardingCarouselScreen)),
-      ),
+      Directionality.of(tester.element(find.byType(OnboardingCarouselScreen))),
       TextDirection.rtl,
     );
     expect(find.text('وجبات صحية،'), findsOneWidget);
@@ -337,13 +373,107 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('language selection still precedes first onboarding', (
+  testWidgets('first launch shows a compact language action panel', (
     tester,
   ) async {
     await tester.pumpWidget(_dietTimeApp());
     await _finishSplash(tester);
-    expect(find.byType(LanguageSelectionScreen), findsOneWidget);
+
+    expect(find.byType(LanguageSelectionPanel), findsOneWidget);
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byType(LanguageSelectionScreen), findsNothing);
     expect(find.byType(OnboardingCarouselScreen), findsNothing);
+  });
+
+  testWidgets('authentication does not bypass first-launch language panel', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _dietTimeApp(authenticationService: const _AuthenticatedService()),
+    );
+    await _finishSplash(tester);
+
+    expect(find.byType(LanguageSelectionPanel), findsOneWidget);
+    expect(find.byType(LanguageSelectionScreen), findsNothing);
+    expect(find.byType(HomeScreen), findsNothing);
+    expect(find.byType(PersonalizationScreen), findsNothing);
+  });
+
+  testWidgets('language panel requires a selection and persists English', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_dietTimeApp());
+    await _finishSplash(tester);
+
+    final continueFinder = find.descendant(
+      of: find.byKey(const ValueKey('languageSelectionContinue')),
+      matching: find.byType(FilledButton),
+    );
+    expect(tester.widget<FilledButton>(continueFinder).onPressed, isNull);
+
+    await tester.tap(find.byKey(const ValueKey('languageOption-en')));
+    await tester.pump();
+    expect(tester.widget<FilledButton>(continueFinder).onPressed, isNotNull);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('languageOption-en')),
+        matching: find.byIcon(Icons.check_circle_rounded),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('languageSelectionContinue')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getString(LanguageRepository.preferenceKey), 'en');
+    expect(
+      preferences.getBool(LanguageRepository.selectionCompletedKey),
+      isTrue,
+    );
+    expect(preferences.getBool('hasCompletedOnboarding'), isNot(true));
+    expect(find.byType(LanguageSelectionPanel), findsNothing);
+    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
+    expect(
+      Directionality.of(tester.element(find.byType(OnboardingCarouselScreen))),
+      TextDirection.ltr,
+    );
+  });
+
+  testWidgets('Arabic selection switches panel and onboarding to RTL', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_dietTimeApp());
+    await _finishSplash(tester);
+
+    await tester.tap(find.byKey(const ValueKey('languageOption-ar')));
+    await tester.pump();
+    expect(
+      Directionality.of(
+        tester.element(find.byKey(const ValueKey('languageSelectionPanel'))),
+      ),
+      TextDirection.rtl,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('languageOption-ar')),
+        matching: find.byIcon(Icons.check_circle_rounded),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('languageSelectionContinue')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getString(LanguageRepository.preferenceKey), 'ar');
+    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
+    expect(
+      Directionality.of(tester.element(find.byType(OnboardingCarouselScreen))),
+      TextDirection.rtl,
+    );
   });
 }
 
@@ -355,9 +485,9 @@ Future<void> _finishSplash(WidgetTester tester) async {
 Future<void> _chooseLanguage(WidgetTester tester, String label) async {
   await tester.tap(find.text(label));
   await tester.pump();
-  await tester.pump(const Duration(milliseconds: 300));
-  await tester.pump(const Duration(milliseconds: 400));
-  await tester.pump(const Duration(milliseconds: 400));
+  await tester.tap(find.byKey(const ValueKey('languageSelectionContinue')));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 500));
 }
 
 Future<void> _reachCarouselEnd(WidgetTester tester) async {
@@ -403,8 +533,11 @@ Future<void> _fillRequiredProfile(WidgetTester tester) async {
   ]) {
     await tester.tap(find.byKey(ValueKey(key)).hitTestable());
     await tester.pump();
-    await tester.tap(find.text('Save').last);
-    await tester.pump();
+    final saveButton = tester.widget<TextButton>(
+      find.widgetWithText(TextButton, 'Save'),
+    );
+    saveButton.onPressed!();
+    await tester.pump(const Duration(milliseconds: 250));
   }
 }
 

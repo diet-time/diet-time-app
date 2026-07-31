@@ -9,6 +9,8 @@ import 'package:diet_time/core/widgets/app_logo.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
 import 'package:diet_time/features/language/data/language_repository.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
+import 'package:diet_time/features/language/presentation/language_selection_panel.dart';
+import 'package:diet_time/features/onboarding/data/journey_state_repository.dart';
 import 'package:diet_time/features/personalization/presentation/guest_startup_controller.dart';
 import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
@@ -119,47 +121,78 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _finish(bool reducedMotion) async {
-    final authCheck = ref.read(authenticationServiceProvider).isLoggedIn();
     final languageCheck = ref
         .read(languageRepositoryProvider)
         .loadPreferredLanguage();
     final languageSelectionCheck = ref
         .read(languageRepositoryProvider)
         .hasCompletedLanguageSelection();
+    final journeyCheck = ref.read(journeyStateRepositoryProvider).load();
     await Future<void>.delayed(
       reducedMotion ? _reducedMotionDuration : _visualDuration,
     );
-    final isLoggedIn = await authCheck;
     final preferredLanguage = await languageCheck;
     final hasCompletedLanguageSelection = await languageSelectionCheck;
+    final journey = await journeyCheck;
+    if (!mounted) return;
+
+    if (!hasCompletedLanguageSelection ||
+        preferredLanguage == null ||
+        !LocalizationService.isSupported(preferredLanguage)) {
+      final selectedLanguage = await showModalBottomSheet<String>(
+        context: context,
+        isDismissible: false,
+        enableDrag: false,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => const LanguageSelectionPanel(),
+      );
+      if (!mounted || selectedLanguage == null) return;
+      await ref
+          .read(languageControllerProvider.notifier)
+          .selectLanguage(selectedLanguage);
+      if (!mounted) return;
+      context.go(AppRoutes.onboarding);
+      return;
+    }
+
+    await ref
+        .read(languageControllerProvider.notifier)
+        .selectLanguage(preferredLanguage);
+    if (!mounted) return;
+    if (!journey.hasCompletedOnboarding) {
+      context.go(AppRoutes.onboarding);
+      return;
+    }
+    await _continueNormalStartup(preferredLanguage);
+  }
+
+  Future<void> _continueNormalStartup(String languageCode) async {
+    final isLoggedIn = await ref
+        .read(authenticationServiceProvider)
+        .isLoggedIn();
     if (!mounted) return;
     if (isLoggedIn) {
-      await ref
+      final profile = await ref
           .read(profilePersistenceControllerProvider.notifier)
           .load(authenticated: true);
       if (!mounted) return;
-      context.go(AppRoutes.onboarding);
+      context.go(
+        profile?.isCompleted == true
+            ? AppRoutes.home
+            : AppRoutes.personalization,
+      );
       return;
     }
-    if (hasCompletedLanguageSelection &&
-        preferredLanguage != null &&
-        LocalizationService.isSupported(preferredLanguage)) {
-      await ref
-          .read(languageControllerProvider.notifier)
-          .selectLanguage(preferredLanguage);
-      if (!mounted) return;
-      final destination = await ref
-          .read(guestStartupControllerProvider.notifier)
-          .resolve(languageCode: preferredLanguage);
-      if (!mounted) return;
-      if (destination == null) {
-        setState(() => _startupError = true);
-        return;
-      }
-      context.go(AppRoutes.onboarding);
+    final destination = await ref
+        .read(guestStartupControllerProvider.notifier)
+        .resolve(languageCode: languageCode);
+    if (!mounted) return;
+    if (destination == null) {
+      setState(() => _startupError = true);
       return;
     }
-    context.go(AppRoutes.language);
+    context.go(destination);
   }
 
   Future<void> _retryGuestStartup() async {
@@ -168,15 +201,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final language =
         await ref.read(languageRepositoryProvider).loadPreferredLanguage() ??
         fallbackLanguage;
-    final destination = await ref
-        .read(guestStartupControllerProvider.notifier)
-        .resolve(languageCode: language);
-    if (!mounted) return;
-    if (destination == null) {
-      setState(() => _startupError = true);
-      return;
-    }
-    context.go(AppRoutes.onboarding);
+    await _continueNormalStartup(language);
   }
 
   @override

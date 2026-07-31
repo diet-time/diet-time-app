@@ -9,10 +9,8 @@ import 'package:diet_time/app/theme/app_typography.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/core/widgets/app_logo.dart';
 import 'package:diet_time/core/widgets/app_textfield.dart';
-import 'package:diet_time/core/widgets/social_button.dart';
 import 'package:diet_time/features/authentication/domain/login_credentials.dart';
 import 'package:diet_time/features/authentication/presentation/login_controller.dart';
-import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -120,7 +118,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final locale = ref.watch(languageControllerProvider);
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return Scaffold(
@@ -130,10 +127,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            void onLocaleChanged(Locale value) {
-              ref.read(languageControllerProvider.notifier).setLocale(value);
-            }
-
             if (constraints.maxWidth >= _wideBreakpoint) {
               final panelWidth = (constraints.maxWidth * 0.34).clamp(
                 480.0,
@@ -183,12 +176,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                   ),
-                  _HeroContent(
-                    locale: locale,
-                    onLocaleChanged: onLocaleChanged,
-                    isWide: true,
-                    isLanding: !_showLoginPanel,
-                  ),
+                  _HeroContent(isWide: true, isLanding: !_showLoginPanel),
                 ],
               );
             }
@@ -239,11 +227,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                 ),
-                _HeroContent(
-                  locale: locale,
-                  onLocaleChanged: onLocaleChanged,
-                  isLanding: !_showLoginPanel,
-                ),
+                _HeroContent(isLanding: !_showLoginPanel),
               ],
             );
           },
@@ -471,21 +455,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 onPressed: _submit,
               ),
               const SizedBox(height: AppSpacing.lg),
-              _SectionDivider(label: l10n.orContinueWith),
-              const SizedBox(height: AppSpacing.lg),
-              SocialButton(
-                label: l10n.continueWithApple,
-                icon: Icons.apple,
-                variant: SocialButtonVariant.dark,
-                onPressed: _showComingSoon,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              SocialButton(
-                label: l10n.continueWithGoogle,
-                icon: Icons.g_mobiledata_rounded,
-                onPressed: _showComingSoon,
-              ),
-              const SizedBox(height: AppSpacing.lg),
               Wrap(
                 alignment: WrapAlignment.center,
                 crossAxisAlignment: WrapCrossAlignment.center,
@@ -670,15 +639,8 @@ class _ParticlePainter extends CustomPainter {
 }
 
 class _HeroContent extends StatelessWidget {
-  const _HeroContent({
-    required this.locale,
-    required this.onLocaleChanged,
-    this.isWide = false,
-    this.isLanding = false,
-  });
+  const _HeroContent({this.isWide = false, this.isLanding = false});
 
-  final Locale locale;
-  final ValueChanged<Locale> onLocaleChanged;
   final bool isWide;
   final bool isLanding;
 
@@ -689,11 +651,6 @@ class _HeroContent extends StatelessWidget {
       bottom: false,
       child: Stack(
         children: [
-          PositionedDirectional(
-            top: AppSpacing.xs,
-            end: AppSpacing.md,
-            child: _LanguageSwitch(locale: locale, onChanged: onLocaleChanged),
-          ),
           if (isLanding) ...[
             Align(
               alignment: isWide
@@ -794,83 +751,6 @@ class _HeroContent extends StatelessWidget {
             ),
         ],
       ),
-    );
-  }
-}
-
-class _LanguageSwitch extends StatelessWidget {
-  const _LanguageSwitch({required this.locale, required this.onChanged});
-
-  final Locale locale;
-  final ValueChanged<Locale> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Language',
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppColors.white.withValues(alpha: 0.78),
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          border: Border.all(color: AppColors.white.withValues(alpha: 0.70)),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.black.withValues(alpha: 0.12),
-              blurRadius: 14,
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xxs),
-          child: Directionality(
-            textDirection: TextDirection.ltr,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _LanguageOption(
-                  label: 'EN',
-                  selected: locale.languageCode == 'en',
-                  onTap: () => onChanged(const Locale('en')),
-                ),
-                _LanguageOption(
-                  label: 'العربية',
-                  selected: locale.languageCode == 'ar',
-                  onTap: () => onChanged(const Locale('ar')),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LanguageOption extends StatelessWidget {
-  const _LanguageOption({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onTap,
-      style: TextButton.styleFrom(
-        foregroundColor: selected ? AppColors.white : AppColors.darkGreen,
-        backgroundColor: selected ? AppColors.darkGreen : AppColors.transparent,
-        minimumSize: const Size(42, 42),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-        ),
-      ),
-      child: Text(label),
     );
   }
 }
@@ -1021,31 +901,6 @@ class _LandingOutlineButton extends StatelessWidget {
         ),
         child: Text(label),
       ),
-    );
-  }
-}
-
-class _SectionDivider extends StatelessWidget {
-  const _SectionDivider({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Expanded(child: Divider()),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.darkGreen.withValues(alpha: 0.48),
-            ),
-          ),
-        ),
-        const Expanded(child: Divider()),
-      ],
     );
   }
 }

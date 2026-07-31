@@ -129,17 +129,13 @@ class _OnboardingCarouselScreenState
   }
 
   Future<void> _openMenu() async {
-    await ref
-        .read(journeyStateRepositoryProvider)
-        .markOnboardingComplete();
+    await ref.read(journeyStateRepositoryProvider).markOnboardingComplete();
     if (!mounted) return;
     await context.push<void>(AppRoutes.menu);
   }
 
   Future<void> _startPlan() async {
-    await ref
-        .read(journeyStateRepositoryProvider)
-        .markOnboardingComplete();
+    await ref.read(journeyStateRepositoryProvider).markOnboardingComplete();
     if (!mounted) return;
     final profile = ref.read(personalizationControllerProvider);
     if (!profile.hasCapturedQuestionnaire) {

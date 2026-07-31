@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('profile JSON contains complete accumulated onboarding state', () {
+  test('profile JSON excludes the locally stored language selection', () {
     final profile = const CustomerProfile().copyWith(
       genderCode: 'FEMALE',
       dateOfBirth: '1998-01-01',
@@ -30,7 +30,6 @@ void main() {
       'goalCode': 'LOSE_WEIGHT',
       'dailyRoutineCode': 'OFFICE_WORK',
       'activityLevelCode': 'MOSTLY_SITTING',
-      'preferredLanguage': 'ar',
       'onboardingStatus': 'IN_PROGRESS',
       'preferencesConfirmed': false,
       'allergensConfirmed': false,
@@ -49,6 +48,7 @@ void main() {
         },
       ],
     });
+    expect(profile.toJson(), isNot(contains('preferredLanguage')));
   });
 
   test('backend BMI and nutrition targets populate the shared profile', () {
