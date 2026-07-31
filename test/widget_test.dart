@@ -234,10 +234,12 @@ void main() {
     expect(profileService.lastSubmitted?.preferencesConfirmed, isTrue);
     expect(profileService.lastSubmitted?.allergensConfirmed, isTrue);
     expect(find.byKey(const ValueKey('bmiRange')), findsOneWidget);
+    expect(find.byKey(const ValueKey('bmiScaleMarker')), findsOneWidget);
     expect(find.byType(MealPlanRecommendationScreen), findsNothing);
 
     await _continue(tester);
     expect(find.text("You're all set!"), findsOneWidget);
+    expect(find.byKey(const ValueKey('personalizationGoHome')), findsNothing);
     await _continue(tester);
     expect(find.byType(BrowseMenuScreen), findsOneWidget);
     expect(find.byType(PhoneLoginPage), findsNothing);

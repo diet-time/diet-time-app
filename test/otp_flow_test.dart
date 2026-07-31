@@ -279,8 +279,9 @@ void main() {
     await tester.pumpWidget(_app(otp: _FakeOtpService()));
     await tester.pump();
 
-    expect(find.byKey(const ValueKey('googleSignInButton')), findsOneWidget);
-    expect(find.byKey(const ValueKey('appleSignInButton')), findsOneWidget);
+    expect(find.byKey(const ValueKey('otpLanguageSelector')), findsNothing);
+    expect(find.byKey(const ValueKey('googleSignInButton')), findsNothing);
+    expect(find.byKey(const ValueKey('appleSignInButton')), findsNothing);
     expect(tester.takeException(), isNull);
 
     await tester.enterText(

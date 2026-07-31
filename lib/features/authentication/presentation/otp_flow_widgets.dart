@@ -2,10 +2,7 @@ import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/app/theme/app_spacing.dart';
 import 'package:diet_time/core/widgets/app_logo.dart';
-import 'package:diet_time/features/language/presentation/language_controller.dart';
-import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AuthFlowBackground extends StatelessWidget {
   const AuthFlowBackground({required this.child, super.key});
@@ -63,15 +60,13 @@ class _AuthGlow extends StatelessWidget {
   }
 }
 
-class OtpFlowHeader extends ConsumerWidget {
+class OtpFlowHeader extends StatelessWidget {
   const OtpFlowHeader({required this.onBack, super.key});
 
   final VoidCallback? onBack;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final locale = ref.watch(languageControllerProvider);
-    final l10n = AppLocalizations.of(context);
+  Widget build(BuildContext context) {
     return Row(
       children: [
         if (onBack != null)
@@ -91,60 +86,6 @@ class OtpFlowHeader extends ConsumerWidget {
         else
           const SizedBox(width: 52),
         const Spacer(),
-        PopupMenuButton<String>(
-          key: const ValueKey('otpLanguageSelector'),
-          tooltip: l10n.languageLabel,
-          initialValue: locale.languageCode,
-          onSelected: (value) => ref
-              .read(languageControllerProvider.notifier)
-              .selectLanguage(value),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
-          itemBuilder: (context) => [
-            PopupMenuItem(value: 'en', child: Text(l10n.english)),
-            PopupMenuItem(value: 'ar', child: Text(l10n.arabic)),
-          ],
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: 10,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-              border: Border.all(
-                color: AppColors.darkGreen.withValues(alpha: .08),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.darkGreen.withValues(alpha: .04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.translate_rounded,
-                  size: 18,
-                  color: AppColors.emeraldGreen,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  locale.languageCode == 'ar' ? l10n.arabic : l10n.english,
-                  style: const TextStyle(
-                    color: AppColors.darkGreen,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -253,37 +194,14 @@ class OtpFlowButton extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const _ButtonSparkleArrow(),
+                      const SizedBox(
+                        width: 30,
+                        child: Icon(Icons.arrow_forward_rounded, size: 22),
+                      ),
                     ],
                   ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ButtonSparkleArrow extends StatelessWidget {
-  const _ButtonSparkleArrow();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 30,
-      height: 24,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            right: 0,
-            child: Icon(Icons.arrow_forward_rounded, size: 22),
-          ),
-          Positioned(
-            left: 0,
-            top: 0,
-            child: Icon(Icons.auto_awesome, size: 13),
-          ),
-        ],
       ),
     );
   }

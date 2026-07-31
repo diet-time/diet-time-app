@@ -360,8 +360,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         : const AsyncValue<List<GuestAllergen>>.loading();
     final steps = _buildSteps(l10n, locale.languageCode, allergenState);
     final persistence = ref.watch(profilePersistenceControllerProvider);
-    final localCompletionPercentage =
-        (_index * 100 / (_stepCount - 1)).round();
+    final localCompletionPercentage = (_index * 100 / (_stepCount - 1)).round();
     final persistenceErrorMessage = switch (persistence.errorMessage) {
       'profile_load' => _wellnessCopy(
         context,
@@ -464,7 +463,6 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                     index: _index,
                     onPrevious: _previous,
                     onContinue: () => unawaited(_continue()),
-                    onHome: () => context.go(AppRoutes.home),
                     isSaving: persistence.isSaving,
                     canGoBack: _history.isNotEmpty,
                   ),
@@ -610,7 +608,8 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                     key: const ValueKey('profileAge'),
                     width: width,
                     label: l10n.onboardingAge,
-                    value: _age?.toString() ??
+                    value:
+                        _age?.toString() ??
                         _wellnessCopy(context, 'Select', 'اختر'),
                     icon: Icons.cake_outlined,
                     onTap: () {
@@ -907,10 +906,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
 }
 
 class _OnboardingHeader extends StatelessWidget {
-  const _OnboardingHeader({
-    required this.showBack,
-    required this.onBack,
-  });
+  const _OnboardingHeader({required this.showBack, required this.onBack});
 
   final bool showBack;
   final VoidCallback onBack;
@@ -1038,7 +1034,6 @@ class _OnboardingNavigation extends StatelessWidget {
     required this.index,
     required this.onPrevious,
     required this.onContinue,
-    required this.onHome,
     required this.isSaving,
     required this.canGoBack,
   });
@@ -1046,7 +1041,6 @@ class _OnboardingNavigation extends StatelessWidget {
   final int index;
   final VoidCallback onPrevious;
   final VoidCallback onContinue;
-  final VoidCallback onHome;
   final bool isSaving;
   final bool canGoBack;
 
@@ -1076,30 +1070,11 @@ class _OnboardingNavigation extends StatelessWidget {
               isLoading: isSaving,
             )
           : index == 8
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppButton(
-                  key: const ValueKey('onboardingContinue'),
-                  label: label,
-                  onPressed: isSaving ? null : onContinue,
-                  isLoading: isSaving,
-                ),
-                SizedBox(
-                  height: 36,
-                  child: TextButton(
-                    key: const ValueKey('personalizationGoHome'),
-                    onPressed: onHome,
-                    child: Text(
-                      _wellnessCopy(context, 'Go to Home', 'الذهاب للرئيسية'),
-                      style: const TextStyle(
-                        color: AppColors.darkGreen,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+          ? AppButton(
+              key: const ValueKey('onboardingContinue'),
+              label: label,
+              onPressed: isSaving ? null : onContinue,
+              isLoading: isSaving,
             )
           : Row(
               children: [
@@ -2212,7 +2187,7 @@ class _BmiSummaryStep extends StatelessWidget {
               const SizedBox(height: 18),
               Container(
                 key: const ValueKey('bmiRange'),
-                height: 154,
+                height: 170,
                 padding: const EdgeInsets.fromLTRB(14, 15, 12, 15),
                 decoration: _wellnessCardDecoration(),
                 child: Row(
@@ -2263,7 +2238,7 @@ class _BmiSummaryStep extends StatelessWidget {
                               maxLines: 2,
                               style: const TextStyle(
                                 color: AppColors.emeraldGreen,
-                                fontSize: 8,
+                                fontSize: 9,
                                 height: 1.05,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -2283,7 +2258,9 @@ class _BmiSummaryStep extends StatelessWidget {
                         borderRadius: BorderRadius.circular(AppRadius.pill),
                       ),
                     ),
-                    Expanded(child: _BmiScale(marker: marker)),
+                    Expanded(
+                      child: _BmiScale(marker: marker, bmi: bmi),
+                    ),
                   ],
                 ),
               ),
@@ -2458,44 +2435,50 @@ class _WellnessSuccessBadge extends StatelessWidget {
 }
 
 class _BmiScale extends StatelessWidget {
-  const _BmiScale({required this.marker});
+  const _BmiScale({required this.marker, required this.bmi});
 
   final double marker;
+  final double bmi;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth;
-        final markerCenter = marker.clamp(0.0, 1.0) * availableWidth;
+        const markerWidth = 44.0;
+        final markerLeft =
+            (marker.clamp(0.0, 1.0) * availableWidth - markerWidth / 2)
+                .clamp(0.0, math.max(0.0, availableWidth - markerWidth))
+                .toDouble();
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
               _wellnessCopy(context, 'BMI Scale', 'مقياس كتلة الجسم'),
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.darkGreen.withValues(alpha: .62),
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 7),
             SizedBox(
               width: double.infinity,
-              height: 23,
+              height: 43,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
                   Positioned(
                     left: 0,
                     right: 0,
-                    bottom: 2,
-                    height: 9,
+                    bottom: 3,
+                    height: 11,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(AppRadius.pill),
                       child: const Row(
                         children: [
                           Expanded(child: ColoredBox(color: Color(0xFF8EDCF0))),
-                          Expanded(child: ColoredBox(color: Color(0xFF67CFA1))),
                           Expanded(child: ColoredBox(color: Color(0xFF9BCB37))),
                           Expanded(child: ColoredBox(color: Color(0xFFFFCD3C))),
                           Expanded(child: ColoredBox(color: Color(0xFFFF5F42))),
@@ -2503,39 +2486,57 @@ class _BmiScale extends StatelessWidget {
                       ),
                     ),
                   ),
-                  AnimatedPositionedDirectional(
+                  AnimatedPositioned(
                     duration: const Duration(milliseconds: 360),
                     curve: Curves.easeOutCubic,
-                    start: (markerCenter - 10).clamp(
-                      0.0,
-                      math.max(0.0, availableWidth - 20),
-                    ),
-                    top: -3,
-                    child: const Icon(
-                      Icons.location_on_rounded,
-                      key: ValueKey('bmiScaleMarker'),
-                      color: AppColors.emeraldGreen,
-                      size: 20,
-                      shadows: [
-                        Shadow(
-                          color: Color(0x400E3A2C),
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
+                    left: markerLeft,
+                    top: 0,
+                    child: SizedBox(
+                      key: const ValueKey('bmiScaleMarker'),
+                      width: markerWidth,
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.emeraldGreen,
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.pill,
+                              ),
+                              boxShadow: _cardShadow(.12),
+                            ),
+                            child: Text(
+                              bmi.toStringAsFixed(1),
+                              textDirection: TextDirection.ltr,
+                              style: const TextStyle(
+                                color: AppColors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: 2,
+                            height: 12,
+                            color: AppColors.emeraldGreen,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 6),
             const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _ScaleLabel('Underweight', '<18.5'),
-                _ScaleLabel('Normal', '18.5–24.9'),
-                _ScaleLabel('Overweight', '25–29.9'),
-                _ScaleLabel('Obese', '30+'),
+                Expanded(child: _ScaleLabel('Under', '<18.5')),
+                Expanded(child: _ScaleLabel('Normal', '18.5–24.9')),
+                Expanded(child: _ScaleLabel('Over', '25–29.9')),
+                Expanded(child: _ScaleLabel('Obese', '30+')),
               ],
             ),
           ],
@@ -2558,8 +2559,8 @@ class _ScaleLabel extends StatelessWidget {
       textAlign: TextAlign.center,
       style: const TextStyle(
         color: AppColors.darkGreen,
-        fontSize: 5.8,
-        height: 1.35,
+        fontSize: 6.8,
+        height: 1.25,
         fontWeight: FontWeight.w700,
       ),
     );
@@ -2851,7 +2852,6 @@ class _OrganicBackground extends StatelessWidget {
     );
   }
 }
-
 
 List<BoxShadow> _cardShadow(double opacity) => [
   BoxShadow(

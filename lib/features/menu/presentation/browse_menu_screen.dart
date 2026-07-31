@@ -472,7 +472,6 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       onPressed: () => unawaited(_startPlan()),
       backgroundColor: AppColors.emeraldGreen,
       foregroundColor: AppColors.white,
-      icon: const Icon(Icons.auto_awesome_rounded),
       label: Text(
         l10n.onboardingStartPlan,
         style: const TextStyle(fontWeight: FontWeight.w800),

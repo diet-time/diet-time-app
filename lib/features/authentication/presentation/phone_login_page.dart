@@ -81,12 +81,6 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
     if (mounted) setState(() => _isSubmitting = false);
   }
 
-  void _showComingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context).comingSoon)),
-    );
-  }
-
   void _back() {
     ref.read(otpAuthControllerProvider.notifier).cancel();
     if (context.canPop()) context.pop();
@@ -231,14 +225,6 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
                             style: const TextStyle(color: AppColors.jasper),
                           ),
                         ],
-                        const SizedBox(height: 18),
-                        _SignInDivider(label: l10n.orSignInWith),
-                        const SizedBox(height: 14),
-                        _SocialAuthButtons(
-                          googleLabel: l10n.continueWithGoogle,
-                          appleLabel: l10n.continueWithApple,
-                          onPressed: _showComingSoon,
-                        ),
                         Spacer(flex: compact ? 1 : 3),
                         OtpFlowButton(
                           key: const ValueKey('phoneContinueButton'),
@@ -284,128 +270,6 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
       OtpUiError.resendUnavailable => l10n.otpResendUnavailable,
       _ => l10n.otpRequestFailed,
     };
-  }
-}
-
-class _SignInDivider extends StatelessWidget {
-  const _SignInDivider({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Expanded(child: Divider()),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.darkGreen.withValues(alpha: .72),
-              fontSize: 11,
-            ),
-          ),
-        ),
-        const Expanded(child: Divider()),
-      ],
-    );
-  }
-}
-
-class _SocialAuthButton extends StatelessWidget {
-  const _SocialAuthButton({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-    super.key,
-  });
-
-  final String label;
-  final Widget icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 54,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.black,
-          backgroundColor: AppColors.white.withValues(alpha: .8),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          side: BorderSide(color: AppColors.darkGreen.withValues(alpha: .65)),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(13),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            icon,
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SocialAuthButtons extends StatelessWidget {
-  const _SocialAuthButtons({
-    required this.googleLabel,
-    required this.appleLabel,
-    required this.onPressed,
-  });
-
-  final String googleLabel;
-  final String appleLabel;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final stack = MediaQuery.sizeOf(context).width < 380;
-    final google = _SocialAuthButton(
-      key: const ValueKey('googleSignInButton'),
-      label: googleLabel,
-      icon: const Text(
-        'G',
-        style: TextStyle(
-          color: Color(0xFF4285F4),
-          fontSize: 20,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-      onPressed: onPressed,
-    );
-    final apple = _SocialAuthButton(
-      key: const ValueKey('appleSignInButton'),
-      label: appleLabel,
-      icon: const Icon(Icons.apple, color: AppColors.black, size: 21),
-      onPressed: onPressed,
-    );
-    if (stack) {
-      return Column(children: [google, const SizedBox(height: 10), apple]);
-    }
-    return Row(
-      children: [
-        Expanded(child: google),
-        const SizedBox(width: 10),
-        Expanded(child: apple),
-      ],
-    );
   }
 }
 
