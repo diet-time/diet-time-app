@@ -12,6 +12,9 @@ class SecureStorageService {
   final FlutterSecureStorage _storage;
 
   static const accessTokenKey = 'accessToken';
+  static const refreshTokenKey = 'refreshToken';
+  static const mockAuthPhoneKey = 'mockAuthPhone';
+  static const mockAuthPasswordKey = 'mockAuthPassword';
 
   Future<void> write(String key, String value) =>
       _storage.write(key: key, value: value);
