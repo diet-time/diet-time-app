@@ -10,7 +10,6 @@ import 'package:diet_time/features/onboarding/presentation/onboarding_carousel_s
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
 import 'package:diet_time/features/personalization/presentation/post_login_name_gate.dart';
-import 'package:diet_time/features/personalization/presentation/meal_plan_recommendation_screen.dart';
 import 'package:diet_time/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,7 +20,6 @@ abstract final class AppRoutes {
   static const landing = '/landing';
   static const onboarding = '/onboarding';
   static const personalization = '/personalization';
-  static const recommendation = '/recommendation';
   static const menu = '/menu';
   static const language = '/language';
   static const login = '/login';
@@ -50,13 +48,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.personalization,
         pageBuilder: (context, state) =>
             _slidePage(state: state, child: const PersonalizationScreen()),
-      ),
-      GoRoute(
-        path: AppRoutes.recommendation,
-        pageBuilder: (context, state) => _slidePage(
-          state: state,
-          child: const MealPlanRecommendationScreen(),
-        ),
       ),
       GoRoute(
         path: AppRoutes.language,

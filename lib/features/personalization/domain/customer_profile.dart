@@ -21,7 +21,6 @@ class CustomerProfile {
     this.nextStepCode = 'BASIC_DETAILS',
     this.completionPercentage = 0,
     this.shouldShowOnboarding = true,
-    this.guestSessionExpiresAt,
     this.updatedAt,
     this.rowVersion,
   });
@@ -83,9 +82,6 @@ class CustomerProfile {
           : statusIsComplete
           ? false
           : fallback.shouldShowOnboarding,
-      guestSessionExpiresAt:
-          _dateTime(json['guestSessionExpiresAt']) ??
-          fallback.guestSessionExpiresAt,
       updatedAt: _dateTime(json['updatedAt']) ?? fallback.updatedAt,
       rowVersion: _integer(json['rowVersion']) ?? fallback.rowVersion,
     );
@@ -112,7 +108,6 @@ class CustomerProfile {
   final String nextStepCode;
   final int completionPercentage;
   final bool shouldShowOnboarding;
-  final DateTime? guestSessionExpiresAt;
   final DateTime? updatedAt;
   final int? rowVersion;
 
@@ -197,7 +192,6 @@ class CustomerProfile {
     String? nextStepCode,
     int? completionPercentage,
     bool? shouldShowOnboarding,
-    DateTime? guestSessionExpiresAt,
     DateTime? updatedAt,
     int? rowVersion,
   }) {
@@ -223,62 +217,10 @@ class CustomerProfile {
       nextStepCode: nextStepCode ?? this.nextStepCode,
       completionPercentage: completionPercentage ?? this.completionPercentage,
       shouldShowOnboarding: shouldShowOnboarding ?? this.shouldShowOnboarding,
-      guestSessionExpiresAt:
-          guestSessionExpiresAt ?? this.guestSessionExpiresAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowVersion: rowVersion ?? this.rowVersion,
     );
   }
-}
-
-class GuestOnboardingProfileResponse {
-  const GuestOnboardingProfileResponse(this.profile);
-
-  factory GuestOnboardingProfileResponse.fromJson(Map<String, dynamic> json) =>
-      GuestOnboardingProfileResponse(CustomerProfile.fromJson(json));
-
-  final CustomerProfile profile;
-
-  String? get profileId => profile.profileId;
-  String? get genderCode => profile.genderCode;
-  DateTime? get dateOfBirth => DateTime.tryParse(profile.dateOfBirth ?? '');
-  double? get heightCm => profile.heightCm;
-  double? get weightKg => profile.weightKg;
-  double? get bmi => profile.bmi;
-  String? get bmiCategoryCode => profile.bmiCategoryCode;
-  String? get goalCode => profile.goalCode;
-  String? get dailyRoutineCode => profile.dailyRoutineCode;
-  String? get activityLevelCode => profile.activityLevelCode;
-  String get preferredLanguage => profile.preferredLanguage;
-  String get onboardingStatus => profile.onboardingStatus;
-  bool get allergensConfirmed => profile.allergensConfirmed;
-  bool get preferencesConfirmed => profile.preferencesConfirmed;
-  List<CustomerPreference> get preferences => [
-    for (final code in profile.preferences)
-      CustomerPreference(
-        preferenceCode: code,
-        preferenceType: 'DIET_STYLE',
-        preferencePriority: 5,
-      ),
-  ];
-  List<CustomerAllergen> get allergens => [
-    for (final id in profile.allergens) CustomerAllergen(allergenId: id),
-  ];
-  NutritionTargets? get nutritionTarget => profile.nutritionTargets;
-  String get nextStepCode => profile.nextStepCode;
-  int get completionPercentage => profile.completionPercentage;
-  bool get shouldShowOnboarding => profile.shouldShowOnboarding;
-  DateTime? get guestSessionExpiresAt => profile.guestSessionExpiresAt;
-  DateTime? get updatedAt => profile.updatedAt;
-  int? get rowVersion => profile.rowVersion;
-}
-
-class UpsertGuestProfileRequest {
-  const UpsertGuestProfileRequest(this.profile);
-
-  final CustomerProfile profile;
-
-  Map<String, dynamic> toJson() => profile.toJson();
 }
 
 class CustomerPreference {

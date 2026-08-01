@@ -6,6 +6,7 @@ import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
+import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/personalization/data/allergen_repository.dart';
 import 'package:diet_time/features/personalization/domain/personalization_draft.dart';
 import 'package:diet_time/features/personalization/domain/personalization_options.dart';
@@ -72,17 +73,21 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     final authenticated = await ref
         .read(authenticationServiceProvider)
         .isLoggedIn();
+    if (!mounted) return;
+    if (!authenticated) {
+      context.go(
+        AppRoutes.phoneLogin,
+        extra: const PendingAuthDestination(route: AppRoutes.personalization),
+      );
+      return;
+    }
     final existingPersistence = ref.read(profilePersistenceControllerProvider);
-    final profile =
-        existingPersistence.hasLoaded &&
-            existingPersistence.authenticated == authenticated
+    final profile = existingPersistence.hasLoaded
         ? ref.read(personalizationControllerProvider)
-        : await ref
-              .read(profilePersistenceControllerProvider.notifier)
-              .load(authenticated: authenticated);
+        : await ref.read(profilePersistenceControllerProvider.notifier).load();
     if (!mounted || profile == null) return;
     if (profile.isCompleted) {
-      context.go(authenticated ? AppRoutes.home : AppRoutes.menu);
+      context.go(AppRoutes.plans);
       return;
     }
     _startFreshDraft(profile);
@@ -95,7 +100,6 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
           CustomerProfile(
             profileId: profile.profileId,
             preferredLanguage: Localizations.localeOf(context).languageCode,
-            guestSessionExpiresAt: profile.guestSessionExpiresAt,
             updatedAt: profile.updatedAt,
             rowVersion: profile.rowVersion,
           ),

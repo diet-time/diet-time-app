@@ -91,7 +91,7 @@ void main() {
       final controller = container.read(
         profilePersistenceControllerProvider.notifier,
       );
-      await controller.load(authenticated: true);
+      await controller.load();
       final firstSave = controller.save(complete: false);
       final duplicateSave = await controller.save(complete: false);
 

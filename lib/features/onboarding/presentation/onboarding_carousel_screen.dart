@@ -137,22 +137,22 @@ class _OnboardingCarouselScreenState
   Future<void> _startPlan() async {
     await ref.read(journeyStateRepositoryProvider).markOnboardingComplete();
     if (!mounted) return;
-    final profile = ref.read(personalizationControllerProvider);
-    if (!profile.hasCapturedQuestionnaire) {
-      await context.push<void>(AppRoutes.personalization);
-      return;
-    }
     final authenticated = await ref
         .read(authenticationServiceProvider)
         .isLoggedIn();
     if (!mounted) return;
-    if (authenticated) {
-      await context.push<void>(AppRoutes.plans);
+    if (!authenticated) {
+      await context.push<void>(
+        AppRoutes.phoneLogin,
+        extra: const PendingAuthDestination(route: AppRoutes.personalization),
+      );
       return;
     }
+    final profile = ref.read(personalizationControllerProvider);
     await context.push<void>(
-      AppRoutes.phoneLogin,
-      extra: const PendingAuthDestination(route: AppRoutes.plans),
+      profile.hasCapturedQuestionnaire
+          ? AppRoutes.plans
+          : AppRoutes.personalization,
     );
   }
 

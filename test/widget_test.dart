@@ -10,11 +10,7 @@ import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_carousel_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
-import 'package:diet_time/features/personalization/data/guest_recommendation_repository.dart';
-import 'package:diet_time/features/personalization/data/guest_startup_service.dart';
 import 'package:diet_time/features/personalization/domain/customer_profile.dart';
-import 'package:diet_time/features/personalization/domain/plan_recommendation.dart';
-import 'package:diet_time/features/personalization/presentation/meal_plan_recommendation_screen.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -139,23 +135,22 @@ void main() {
     );
   });
 
-  testWidgets(
-    'carousel start plan opens questionnaire for an incomplete guest',
-    (tester) async {
-      await tester.pumpWidget(_dietTimeApp());
-      await _finishSplash(tester);
-      await _chooseLanguage(tester, 'English');
-      await _reachCarouselEnd(tester);
-      await tester.tap(
-        find.byKey(const ValueKey('onboardingPlanChoice')).hitTestable(),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+  testWidgets('carousel start plan requires login before the questionnaire', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_dietTimeApp());
+    await _finishSplash(tester);
+    await _chooseLanguage(tester, 'English');
+    await _reachCarouselEnd(tester);
+    await tester.tap(
+      find.byKey(const ValueKey('onboardingPlanChoice')).hitTestable(),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.byType(PersonalizationScreen), findsOneWidget);
-      expect(find.byType(PhoneLoginPage), findsNothing);
-    },
-  );
+    expect(find.byType(PersonalizationScreen), findsNothing);
+    expect(find.byType(PhoneLoginPage), findsOneWidget);
+  });
 
   testWidgets('goal selection is required and preserved when navigating back', (
     tester,
@@ -199,7 +194,12 @@ void main() {
     tester,
   ) async {
     final profileService = _FakeProfilePersistenceService();
-    await tester.pumpWidget(_dietTimeApp(profileService: profileService));
+    await tester.pumpWidget(
+      _dietTimeApp(
+        authenticationService: const _AuthenticatedService(),
+        profileService: profileService,
+      ),
+    );
     await _finishSplash(tester);
     await _openQuestionnaireFromFirstRun(tester);
 
@@ -243,8 +243,6 @@ void main() {
     expect(indicatorRect.size, const Size(17, 17));
     expect(bmiCardRect.overlaps(indicatorRect), isTrue);
     expect(find.text('24.2'), findsWidgets);
-    expect(find.byType(MealPlanRecommendationScreen), findsNothing);
-
     await _continue(tester);
     expect(find.text("You're all set!"), findsOneWidget);
     expect(find.byKey(const ValueKey('personalizationGoHome')), findsNothing);
@@ -257,7 +255,7 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.byType(PhoneLoginPage), findsOneWidget);
+    expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
   testWidgets('returning incomplete guest still sees image onboarding', (
@@ -285,15 +283,7 @@ void main() {
       'languageSelectionCompletedV2': true,
       'hasCompletedOnboarding': true,
     });
-    await tester.pumpWidget(
-      _dietTimeApp(
-        guestStartupProfile: const CustomerProfile(
-          nextStepCode: 'PROFILE_COMPLETED',
-          completionPercentage: 100,
-          shouldShowOnboarding: false,
-        ),
-      ),
-    );
+    await tester.pumpWidget(_dietTimeApp());
     await _finishSplash(tester);
 
     expect(find.byType(LanguageSelectionPanel), findsNothing);
@@ -556,14 +546,11 @@ Future<void> _fillRequiredProfile(WidgetTester tester) async {
 Widget _localizedApp(Widget home, {Locale locale = const Locale('en')}) {
   return ProviderScope(
     overrides: [
+      authenticationServiceProvider.overrideWithValue(
+        const _AuthenticatedService(),
+      ),
       customerProfileServiceProvider.overrideWithValue(
         _FakeProfilePersistenceService(),
-      ),
-      guestStartupServiceProvider.overrideWithValue(
-        const _FakeGuestStartupService(),
-      ),
-      guestPlanRecommendationsProvider.overrideWith(
-        (ref, language) async => _fakeRecommendations,
       ),
     ],
     child: MaterialApp(
@@ -582,7 +569,6 @@ Widget _localizedApp(Widget home, {Locale locale = const Locale('en')}) {
 
 Widget _dietTimeApp({
   AuthenticationService authenticationService = const _UnauthenticatedService(),
-  CustomerProfile? guestStartupProfile,
   ProfilePersistenceService? profileService,
 }) {
   return ProviderScope(
@@ -590,12 +576,6 @@ Widget _dietTimeApp({
       authenticationServiceProvider.overrideWithValue(authenticationService),
       customerProfileServiceProvider.overrideWithValue(
         profileService ?? _FakeProfilePersistenceService(),
-      ),
-      guestStartupServiceProvider.overrideWithValue(
-        _FakeGuestStartupService(profile: guestStartupProfile),
-      ),
-      guestPlanRecommendationsProvider.overrideWith(
-        (ref, language) async => _fakeRecommendations,
       ),
     ],
     child: const DietTimeApp(),
@@ -609,30 +589,20 @@ class _FakeProfilePersistenceService implements ProfilePersistenceService {
   int completeCalls = 0;
 
   @override
-  Future<CustomerProfile?> load({required bool authenticated}) async => profile;
+  Future<CustomerProfile?> load() async => profile;
 
   @override
-  Future<CustomerProfile> saveProgress(
-    CustomerProfile profile, {
-    required bool authenticated,
-  }) async {
+  Future<CustomerProfile> saveProgress(CustomerProfile profile) async {
     saveProgressCalls++;
     lastSubmitted = profile;
     return _save(profile);
   }
 
   @override
-  Future<CustomerProfile> complete(
-    CustomerProfile profile, {
-    required bool authenticated,
-  }) async {
+  Future<CustomerProfile> complete(CustomerProfile profile) async {
     completeCalls++;
     lastSubmitted = profile;
-    return _save(
-      profile.copyWith(
-        onboardingStatus: authenticated ? 'COMPLETED' : 'PROFILE_COMPLETED',
-      ),
-    );
+    return _save(profile.copyWith(onboardingStatus: 'COMPLETED'));
   }
 
   CustomerProfile _save(CustomerProfile profile) {
@@ -666,18 +636,6 @@ class _FakeProfilePersistenceService implements ProfilePersistenceService {
   }
 }
 
-class _FakeGuestStartupService implements GuestStartupService {
-  const _FakeGuestStartupService({this.profile});
-
-  final CustomerProfile? profile;
-
-  @override
-  Future<void> ensureSession() async {}
-
-  @override
-  Future<CustomerProfile?> getProfile() async => profile;
-}
-
 class _UnauthenticatedService implements AuthenticationService {
   const _UnauthenticatedService();
 
@@ -709,16 +667,3 @@ class _AuthenticatedService implements AuthenticationService {
     required String password,
   }) async {}
 }
-
-const _fakeRecommendations = [
-  PlanRecommendation(
-    id: 'balanced-id',
-    code: 'BALANCED',
-    name: 'Balanced Living',
-    description: 'Balanced meals selected for your profile.',
-    mealCount: 20,
-    durationDays: 7,
-    isRecommended: true,
-    isAllergenCompatible: true,
-  ),
-];

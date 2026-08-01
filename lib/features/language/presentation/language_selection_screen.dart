@@ -5,7 +5,6 @@ import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_typography.dart';
 import 'package:diet_time/core/widgets/app_logo.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
-import 'package:diet_time/features/personalization/presentation/guest_startup_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -66,19 +65,6 @@ class _LanguageSelectionScreenState
         Future<void>.delayed(const Duration(milliseconds: 260)),
       ]);
       if (!mounted) return;
-      final destination = await ref
-          .read(guestStartupControllerProvider.notifier)
-          .resolve(languageCode: languageCode);
-      if (!mounted) return;
-      if (destination == null) {
-        setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).guestPlanLoadError),
-          ),
-        );
-        return;
-      }
       await _sheetController.reverse();
       if (mounted) context.go(AppRoutes.onboarding);
     } catch (_) {
