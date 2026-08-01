@@ -187,6 +187,15 @@
       "value": {"type": "int"}
     }
   },
+  "dailyPlanPrice": "{currency} {amount} / يوم",
+  "@dailyPlanPrice": {
+    "placeholders": {
+      "currency": {"type": "String"},
+      "amount": {"type": "String"}
+    }
+  },
+  "dailyPriceLabel": "السعر اليومي",
+  "dailyPriceUnavailable": "السعر اليومي غير متاح",
   "weeklyPrice": "{value} ر.ق / أسبوع",
   "@weeklyPrice": {
     "placeholders": {

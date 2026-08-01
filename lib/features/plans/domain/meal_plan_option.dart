@@ -9,9 +9,39 @@ class MealPlanOption {
     this.startingPrice,
     this.currencyCode,
     this.priceDurationDays,
+    this.dailyPrice,
+    this.hasActivePrice = false,
+    this.pricingRecordId,
+    this.sourcePackageCode,
+    this.sourceDurationDays,
+    this.isPriceLoading = false,
   });
 
   factory MealPlanOption.fromJson(Map<String, dynamic> json) {
+    final packageAmount = _number(json['startingPrice'] ?? json['amount']);
+    final sourceDurationDays = _integer(
+      json['serviceDays'] ??
+          json['sourceDurationDays'] ??
+          json['priceDurationDays'] ??
+          json['durationDays'],
+    );
+    final apiDailyPrice = _number(
+      json['displayDailyPrice'] ??
+          json['pricePerServiceDay'] ??
+          json['startingPricePerDay'],
+    );
+    final calculatedDailyPrice =
+        packageAmount != null &&
+            sourceDurationDays != null &&
+            sourceDurationDays > 0
+        ? packageAmount / sourceDurationDays
+        : null;
+    final dailyPrice = apiDailyPrice ?? calculatedDailyPrice;
+    final currencyCode = _optionalText(json['currencyCode']);
+    final apiHasActivePrice = json['hasActivePrice'];
+    final hasActivePrice = apiHasActivePrice is bool
+        ? apiHasActivePrice && dailyPrice != null && currencyCode != null
+        : dailyPrice != null && currencyCode != null;
     return MealPlanOption(
       id: _text(json['id']),
       code: _text(json['code']),
@@ -19,9 +49,15 @@ class MealPlanOption {
       description: _optionalText(json['description']),
       imageUrl: _optionalText(json['imageUrl']),
       dailyCaloriesKcal: _number(json['dailyCaloriesKcal']),
-      startingPrice: _number(json['startingPrice']),
-      currencyCode: _optionalText(json['currencyCode']),
+      startingPrice: packageAmount,
+      currencyCode: currencyCode,
       priceDurationDays: _integer(json['priceDurationDays']),
+      dailyPrice: dailyPrice,
+      hasActivePrice: hasActivePrice,
+      pricingRecordId: _optionalText(json['pricingRecordId']),
+      sourcePackageCode: _optionalText(json['sourcePackageCode']),
+      sourceDurationDays: sourceDurationDays,
+      isPriceLoading: json['isPriceLoading'] == true,
     );
   }
 
@@ -34,6 +70,14 @@ class MealPlanOption {
   final double? startingPrice;
   final String? currencyCode;
   final int? priceDurationDays;
+  final double? dailyPrice;
+  final bool hasActivePrice;
+  final String? pricingRecordId;
+  final String? sourcePackageCode;
+  final int? sourceDurationDays;
+  final bool isPriceLoading;
+
+  double? get estimatedDailyCalories => dailyCaloriesKcal;
 }
 
 String _text(Object? value) => value?.toString().trim() ?? '';

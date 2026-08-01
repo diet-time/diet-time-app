@@ -595,6 +595,17 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String dailyPlanPrice(String currency, String amount) {
+    return '$currency $amount / يوم';
+  }
+
+  @override
+  String get dailyPriceLabel => 'السعر اليومي';
+
+  @override
+  String get dailyPriceUnavailable => 'السعر اليومي غير متاح';
+
+  @override
   String weeklyPrice(int value) {
     return '$value ر.ق / أسبوع';
   }

@@ -198,6 +198,15 @@
       "value": {"type": "int"}
     }
   },
+  "dailyPlanPrice": "{currency} {amount} / day",
+  "@dailyPlanPrice": {
+    "placeholders": {
+      "currency": {"type": "String"},
+      "amount": {"type": "String"}
+    }
+  },
+  "dailyPriceLabel": "Daily price",
+  "dailyPriceUnavailable": "Daily price unavailable",
   "weeklyPrice": "QAR {value} / week",
   "@weeklyPrice": {
     "placeholders": {

@@ -6,6 +6,7 @@ import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
+import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -227,12 +228,9 @@ class _PlanCard extends StatelessWidget {
                       children: [
                         _Detail(
                           icon: Icons.local_fire_department_outlined,
-                          label: _calorieLabel(plan.dailyCaloriesKcal),
+                          label: _calorieLabel(context, plan.dailyCaloriesKcal),
                         ),
-                        _Detail(
-                          icon: Icons.payments_outlined,
-                          label: _priceLabel(plan),
-                        ),
+                        _PlanPriceDetail(plan: plan),
                       ],
                     ),
                   ],
@@ -245,22 +243,10 @@ class _PlanCard extends StatelessWidget {
     );
   }
 
-  String _calorieLabel(double? calories) => calories == null
+  String _calorieLabel(BuildContext context, double? calories) =>
+      calories == null
       ? 'Calories unavailable'
-      : '${calories.round()} kcal / day';
-
-  String _priceLabel(MealPlanOption plan) {
-    final price = plan.startingPrice;
-    if (price == null) return 'Price unavailable';
-    final amount = price == price.roundToDouble()
-        ? price.round().toString()
-        : price.toStringAsFixed(2);
-    final currency = plan.currencyCode ?? 'QAR';
-    final duration = plan.priceDurationDays;
-    return duration == null
-        ? '$currency $amount'
-        : '$currency $amount / $duration days';
-  }
+      : AppLocalizations.of(context).dailyCalories(calories.round());
 }
 
 class _PlanImage extends StatelessWidget {
@@ -307,27 +293,97 @@ class _ImagePlaceholder extends StatelessWidget {
 }
 
 class _Detail extends StatelessWidget {
-  const _Detail({required this.icon, required this.label});
+  const _Detail({
+    required this.icon,
+    required this.label,
+    this.muted = false,
+    this.forceLtr = false,
+    super.key,
+  });
 
   final IconData icon;
   final String label;
+  final bool muted;
+  final bool forceLtr;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: AppColors.emeraldGreen),
+        Icon(
+          icon,
+          size: 14,
+          color: muted
+              ? AppColors.darkGreen.withValues(alpha: .42)
+              : AppColors.emeraldGreen,
+        ),
         const SizedBox(width: 3),
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.emeraldGreen,
+          textDirection: forceLtr ? TextDirection.ltr : null,
+          style: TextStyle(
+            color: muted
+                ? AppColors.darkGreen.withValues(alpha: .52)
+                : AppColors.emeraldGreen,
             fontSize: 11,
             fontWeight: FontWeight.w700,
           ),
         ),
       ],
+    );
+  }
+}
+
+class _PlanPriceDetail extends StatelessWidget {
+  const _PlanPriceDetail({required this.plan});
+
+  final MealPlanOption plan;
+
+  @override
+  Widget build(BuildContext context) {
+    if (plan.isPriceLoading) {
+      return Row(
+        key: ValueKey('mealPlanPriceLoading-${plan.code}'),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.payments_outlined,
+            size: 14,
+            color: AppColors.emeraldGreen,
+          ),
+          const SizedBox(width: 4),
+          Container(
+            width: 86,
+            height: 11,
+            decoration: BoxDecoration(
+              color: AppColors.darkGreen.withValues(alpha: .10),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final l10n = AppLocalizations.of(context);
+    final price = plan.dailyPrice;
+    final currency = plan.currencyCode;
+    final hasPrice = plan.hasActivePrice && price != null && currency != null;
+    final label = hasPrice
+        ? l10n.dailyPlanPrice(
+            currency,
+            formatMealPlanPriceAmount(
+              price,
+              Localizations.localeOf(context).toLanguageTag(),
+            ),
+          )
+        : l10n.dailyPriceUnavailable;
+    return _Detail(
+      key: ValueKey('mealPlanDailyPrice-${plan.code}'),
+      icon: Icons.payments_outlined,
+      label: label,
+      muted: !hasPrice,
+      forceLtr: hasPrice,
     );
   }
 }

@@ -599,6 +599,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String dailyPlanPrice(String currency, String amount) {
+    return '$currency $amount / day';
+  }
+
+  @override
+  String get dailyPriceLabel => 'Daily price';
+
+  @override
+  String get dailyPriceUnavailable => 'Daily price unavailable';
+
+  @override
   String weeklyPrice(int value) {
     return 'QAR $value / week';
   }

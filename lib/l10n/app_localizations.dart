@@ -1190,6 +1190,24 @@ abstract class AppLocalizations {
   /// **'{value} kcal / day'**
   String dailyCalories(int value);
 
+  /// No description provided for @dailyPlanPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'{currency} {amount} / day'**
+  String dailyPlanPrice(String currency, String amount);
+
+  /// No description provided for @dailyPriceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily price'**
+  String get dailyPriceLabel;
+
+  /// No description provided for @dailyPriceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily price unavailable'**
+  String get dailyPriceUnavailable;
+
   /// No description provided for @weeklyPrice.
   ///
   /// In en, this message translates to:
