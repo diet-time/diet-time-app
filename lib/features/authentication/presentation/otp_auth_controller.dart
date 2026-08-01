@@ -206,6 +206,13 @@ class OtpAuthController extends Notifier<OtpAuthState> {
               SecureStorageService.accessTokenKey,
               result.accessToken!.trim(),
             );
+      } else {
+        await ref
+            .read(secureStorageServiceProvider)
+            .write(
+              SecureStorageService.temporaryCustomerPhoneKey,
+              state.phoneNumber.trim(),
+            );
       }
       try {
         await ref.read(authenticationServiceProvider).markAuthenticated();

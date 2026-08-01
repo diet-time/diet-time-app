@@ -1,5 +1,6 @@
 import 'package:diet_time/app/theme/app_theme.dart';
 import 'package:diet_time/core/config/app_environment.dart';
+import 'package:diet_time/core/storage/secure_storage_service.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
 import 'package:diet_time/features/authentication/data/mock_otp_service.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
@@ -14,12 +15,16 @@ import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    FlutterSecureStorage.setMockInitialValues({});
+  });
 
   test('mock service accepts only the development code', () async {
     const service = MockOtpService(
@@ -193,6 +198,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(auth.markAuthenticatedCount, 1);
+    expect(
+      await const FlutterSecureStorage().read(
+        key: SecureStorageService.temporaryCustomerPhoneKey,
+      ),
+      '+97474452435',
+    );
     expect(find.byType(PostLoginLandingScreen), findsOneWidget);
     expect(find.byKey(const ValueKey('otpDestination')), findsNothing);
 

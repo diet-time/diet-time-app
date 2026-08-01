@@ -9,13 +9,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final customerProfileRepositoryProvider = Provider<CustomerProfileRepository>(
-  (ref) => AppEnvironment.useMockOtp
-      ? LocalCustomerProfileRepository()
-      : HttpCustomerProfileRepository(
-          accessTokenProvider: () => ref
-              .read(secureStorageServiceProvider)
-              .read(SecureStorageService.accessTokenKey),
-        ),
+  (ref) => HttpCustomerProfileRepository(
+    accessTokenProvider: () => ref
+        .read(secureStorageServiceProvider)
+        .read(SecureStorageService.accessTokenKey),
+    temporaryPhoneProvider: () => ref
+        .read(secureStorageServiceProvider)
+        .read(SecureStorageService.temporaryCustomerPhoneKey),
+  ),
 );
 
 abstract interface class CustomerProfileRepository {
@@ -24,53 +25,18 @@ abstract interface class CustomerProfileRepository {
   Future<CustomerProfile> updateProfile(CustomerProfile profile);
 }
 
-class LocalCustomerProfileRepository implements CustomerProfileRepository {
-  CustomerProfile? _profile;
-
-  @override
-  Future<CustomerProfile?> getProfile() async => _profile;
-
-  @override
-  Future<CustomerProfile> updateProfile(CustomerProfile profile) async {
-    final isComplete = profile.onboardingStatus == 'COMPLETED';
-    final bmi = _calculateBmi(profile.heightCm, profile.weightKg);
-    _profile = profile.copyWith(
-      bmi: bmi,
-      bmiCategoryCode: _bmiCategory(bmi),
-      nextStepCode: isComplete ? 'PROFILE_COMPLETED' : profile.nextStepCode,
-      completionPercentage: isComplete ? 100 : profile.completionPercentage,
-      shouldShowOnboarding: !isComplete,
-      updatedAt: DateTime.now().toUtc(),
-    );
-    return _profile!;
-  }
-}
-
-double? _calculateBmi(double? heightCm, double? weightKg) {
-  if (heightCm == null || weightKg == null || heightCm <= 0 || weightKg <= 0) {
-    return null;
-  }
-  final heightM = heightCm / 100;
-  return weightKg / (heightM * heightM);
-}
-
-String? _bmiCategory(double? bmi) {
-  if (bmi == null) return null;
-  if (bmi < 18.5) return 'UNDERWEIGHT';
-  if (bmi < 25) return 'NORMAL';
-  if (bmi < 30) return 'OVERWEIGHT';
-  return 'OBESE';
-}
-
 class HttpCustomerProfileRepository implements CustomerProfileRepository {
   HttpCustomerProfileRepository({
     HttpClient Function()? clientFactory,
     Future<String?> Function()? accessTokenProvider,
+    Future<String?> Function()? temporaryPhoneProvider,
   }) : _clientFactory = clientFactory ?? HttpClient.new,
-       _accessTokenProvider = accessTokenProvider;
+       _accessTokenProvider = accessTokenProvider,
+       _temporaryPhoneProvider = temporaryPhoneProvider;
 
   final HttpClient Function() _clientFactory;
   final Future<String?> Function()? _accessTokenProvider;
+  final Future<String?> Function()? _temporaryPhoneProvider;
 
   @override
   Future<CustomerProfile?> getProfile() async {
@@ -114,6 +80,14 @@ class HttpCustomerProfileRepository implements CustomerProfileRepository {
           HttpHeaders.authorizationHeader,
           'Bearer ${accessToken.trim()}',
         );
+      } else {
+        final temporaryPhone = await _temporaryPhoneProvider?.call();
+        if (temporaryPhone != null && temporaryPhone.trim().isNotEmpty) {
+          request.headers.set(
+            'X-Temporary-Customer-Phone',
+            temporaryPhone.trim(),
+          );
+        }
       }
       if (body != null) request.write(jsonEncode(body));
       final response = await request.close().timeout(

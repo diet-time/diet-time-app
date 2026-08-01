@@ -73,8 +73,16 @@ class DisplayNameRepository {
     final token = await _secureStorage.read(
       SecureStorageService.accessTokenKey,
     );
-    if (token == null || token.trim().isEmpty) return const {};
-    return {'Authorization': 'Bearer ${token.trim()}'};
+    if (token != null && token.trim().isNotEmpty) {
+      return {'Authorization': 'Bearer ${token.trim()}'};
+    }
+    final temporaryPhone = await _secureStorage.read(
+      SecureStorageService.temporaryCustomerPhoneKey,
+    );
+    if (temporaryPhone == null || temporaryPhone.trim().isEmpty) {
+      return const {};
+    }
+    return {'X-Temporary-Customer-Phone': temporaryPhone.trim()};
   }
 
   Future<String?> _loadLocally() async {
