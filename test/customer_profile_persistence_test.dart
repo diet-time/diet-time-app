@@ -167,6 +167,25 @@ void main() {
     expect(resumeStepFor(confirmedEmpty), 5);
     expect(confirmedEmpty.toJson()['allergens'], isEmpty);
   });
+
+  test('dummy OTP mode keeps questionnaire persistence local', () async {
+    final repository = LocalCustomerProfileRepository();
+
+    expect(await repository.getProfile(), isNull);
+    final saved = await repository.updateProfile(
+      const CustomerProfile(
+        heightCm: 170,
+        weightKg: 70,
+        onboardingStatus: 'COMPLETED',
+      ),
+    );
+
+    expect(saved.nextStepCode, 'PROFILE_COMPLETED');
+    expect(saved.completionPercentage, 100);
+    expect(saved.shouldShowOnboarding, isFalse);
+    expect(saved.bmi, closeTo(24.22, .01));
+    expect(await repository.getProfile(), same(saved));
+  });
 }
 
 class _BlockingProfileRepository implements CustomerProfileRepository {

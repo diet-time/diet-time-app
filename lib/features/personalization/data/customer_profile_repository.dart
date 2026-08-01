@@ -9,17 +9,57 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final customerProfileRepositoryProvider = Provider<CustomerProfileRepository>(
-  (ref) => HttpCustomerProfileRepository(
-    accessTokenProvider: () => ref
-        .read(secureStorageServiceProvider)
-        .read(SecureStorageService.accessTokenKey),
-  ),
+  (ref) => AppEnvironment.useMockOtp
+      ? LocalCustomerProfileRepository()
+      : HttpCustomerProfileRepository(
+          accessTokenProvider: () => ref
+              .read(secureStorageServiceProvider)
+              .read(SecureStorageService.accessTokenKey),
+        ),
 );
 
 abstract interface class CustomerProfileRepository {
   Future<CustomerProfile?> getProfile();
 
   Future<CustomerProfile> updateProfile(CustomerProfile profile);
+}
+
+class LocalCustomerProfileRepository implements CustomerProfileRepository {
+  CustomerProfile? _profile;
+
+  @override
+  Future<CustomerProfile?> getProfile() async => _profile;
+
+  @override
+  Future<CustomerProfile> updateProfile(CustomerProfile profile) async {
+    final isComplete = profile.onboardingStatus == 'COMPLETED';
+    final bmi = _calculateBmi(profile.heightCm, profile.weightKg);
+    _profile = profile.copyWith(
+      bmi: bmi,
+      bmiCategoryCode: _bmiCategory(bmi),
+      nextStepCode: isComplete ? 'PROFILE_COMPLETED' : profile.nextStepCode,
+      completionPercentage: isComplete ? 100 : profile.completionPercentage,
+      shouldShowOnboarding: !isComplete,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    return _profile!;
+  }
+}
+
+double? _calculateBmi(double? heightCm, double? weightKg) {
+  if (heightCm == null || weightKg == null || heightCm <= 0 || weightKg <= 0) {
+    return null;
+  }
+  final heightM = heightCm / 100;
+  return weightKg / (heightM * heightM);
+}
+
+String? _bmiCategory(double? bmi) {
+  if (bmi == null) return null;
+  if (bmi < 18.5) return 'UNDERWEIGHT';
+  if (bmi < 25) return 'NORMAL';
+  if (bmi < 30) return 'OVERWEIGHT';
+  return 'OBESE';
 }
 
 class HttpCustomerProfileRepository implements CustomerProfileRepository {
