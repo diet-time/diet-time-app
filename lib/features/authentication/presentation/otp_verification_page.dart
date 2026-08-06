@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/config/app_environment.dart';
-import 'package:diet_time/features/authentication/data/mock_otp_service.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/authentication/presentation/otp_flow_widgets.dart';
@@ -109,10 +108,7 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
     if (!mounted || !succeeded) return;
     _setCells('');
     final destination = ref.read(otpAuthControllerProvider).pendingDestination;
-    context.go(
-      AppRoutes.postLogin,
-      extra: destination?.route ?? AppRoutes.plans,
-    );
+    context.go(destination?.route ?? AppRoutes.home);
   }
 
   Future<void> _resend() async {
@@ -274,12 +270,10 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
                                 ),
                           ),
                         ),
-                        if (AppEnvironment.useMockOtp) ...[
+                        if (AppEnvironment.enableTestOtp) ...[
                           const SizedBox(height: 6),
                           Text(
-                            l10n.otpDevelopmentCode(
-                              MockOtpService.developmentCode,
-                            ),
+                            l10n.otpDevelopmentCode(AppEnvironment.testOtp),
                             key: const ValueKey('developmentOtpHint'),
                             style: TextStyle(
                               color: AppColors.emeraldGreen.withValues(
@@ -300,70 +294,78 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
                           ),
                         ],
                         SizedBox(height: compact ? 8 : 14),
-                        Text(
-                          l10n.otpDidntGetCode,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: AppColors.darkGreen.withValues(
-                                  alpha: .7,
-                                ),
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                        Wrap(
-                          alignment: WrapAlignment.center,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: 4,
-                          children: [
-                            TextButton(
-                              key: const ValueKey('resendOtpButton'),
-                              onPressed:
-                                  auth.resendSecondsRemaining == 0 &&
-                                      !auth.isRequestingOtp
-                                  ? _resend
-                                  : null,
-                              child: Text(
-                                l10n.otpSendViaSms,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              key: const ValueKey('whatsappOtpChannel'),
-                              onPressed:
-                                  auth.isRequestingOtp ||
-                                      auth.otpChannel == OtpChannel.whatsapp
-                                  ? null
-                                  : () => _selectChannel(OtpChannel.whatsapp),
-                              child: Text(
-                                l10n.otpResendViaWhatsapp,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (auth.resendConfirmation)
+                        if (AppEnvironment.enableRequestOtpApi) ...[
                           Text(
-                            AppEnvironment.useMockOtp &&
-                                    auth.otpChannel == OtpChannel.whatsapp
-                                ? l10n.otpWhatsappTestGenerated
-                                : l10n.otpResendConfirmation,
+                            l10n.otpDidntGetCode,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Color(0xFF3A9088),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: AppColors.darkGreen.withValues(
+                                    alpha: .7,
+                                  ),
+                                  fontWeight: FontWeight.w600,
+                                ),
                           ),
-                        SizedBox(height: compact ? 4 : 8),
-                        _CountdownRing(
-                          seconds: auth.resendSecondsRemaining,
-                          compact: compact,
-                        ),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 4,
+                            children: [
+                              TextButton(
+                                key: const ValueKey('resendOtpButton'),
+                                onPressed:
+                                    auth.resendSecondsRemaining == 0 &&
+                                        !auth.isRequestingOtp
+                                    ? _resend
+                                    : null,
+                                child: Text(
+                                  l10n.otpSendViaSms,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                key: const ValueKey('whatsappOtpChannel'),
+                                onPressed:
+                                    auth.isRequestingOtp ||
+                                        auth.otpChannel == OtpChannel.whatsapp
+                                    ? null
+                                    : () => _selectChannel(OtpChannel.whatsapp),
+                                child: Text(
+                                  l10n.otpResendViaWhatsapp,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (auth.resendConfirmation)
+                            Text(
+                              AppEnvironment.enableTestOtp &&
+                                      auth.otpChannel == OtpChannel.whatsapp
+                                  ? l10n.otpWhatsappTestGenerated
+                                  : l10n.otpResendConfirmation,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Color(0xFF3A9088),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          SizedBox(height: compact ? 4 : 8),
+                          _CountdownRing(
+                            seconds: auth.resendSecondsRemaining,
+                            compact: compact,
+                          ),
+                        ] else ...[
+                          TextButton(
+                            key: const ValueKey('resendOtpButton'),
+                            onPressed: null,
+                            child: Text(l10n.otpResendTestUnavailable),
+                          ),
+                        ],
                         const Spacer(),
                         SizedBox(height: compact ? 10 : 16),
                         OtpFlowButton(
@@ -389,9 +391,16 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
 
   String _verificationError(AppLocalizations l10n, OtpUiError error) {
     return switch (error) {
-      OtpUiError.expiredCode => l10n.otpExpiredCode,
+      OtpUiError.validation =>
+        ref.read(otpAuthControllerProvider).verificationMessage ??
+            l10n.otpInvalidPhone,
+      OtpUiError.incorrectCode => l10n.otpInvalidCode,
+      OtpUiError.accountConflict => l10n.otpAccountConflict,
       OtpUiError.tooManyAttempts => l10n.otpTooManyAttempts,
-      _ => l10n.otpIncorrectCode,
+      OtpUiError.unavailable => l10n.otpPhoneLoginUnavailable,
+      OtpUiError.connection => l10n.otpConnectionError,
+      OtpUiError.server => l10n.otpServerError,
+      _ => l10n.otpServerError,
     };
   }
 }

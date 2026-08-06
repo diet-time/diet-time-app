@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:diet_time/app/theme/app_theme.dart';
-import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/core/storage/secure_storage_service.dart';
+import 'package:diet_time/features/authentication/data/authentication_repository.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
-import 'package:diet_time/features/authentication/data/mock_otp_service.dart';
+import 'package:diet_time/features/authentication/data/otp_service_provider.dart';
+import 'package:diet_time/features/authentication/domain/auth_models.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/authentication/presentation/otp_verification_page.dart';
@@ -20,67 +23,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+final _testOtp = List.generate(6, (index) => (index + 1).toString()).join();
+final _invalidOtp = List.filled(6, '9').join();
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     FlutterSecureStorage.setMockInitialValues({});
-  });
-
-  test('mock service accepts only the development code', () async {
-    const service = MockOtpService(
-      requestDelay: Duration.zero,
-      verificationDelay: Duration.zero,
-    );
-
-    expect(
-      (await service.verifyOtp(
-        phoneNumber: '+97474452435',
-        code: '123456',
-      )).success,
-      isTrue,
-    );
-    expect(
-      (await service.verifyOtp(
-        phoneNumber: '+97474452435',
-        code: '654321',
-      )).success,
-      isFalse,
-    );
-  });
-
-  test('service factory selects mock and API implementations', () {
-    expect(createOtpService(useMockOtp: true), isA<MockOtpService>());
-    expect(createOtpService(useMockOtp: false), isA<ApiOtpService>());
-  });
-
-  test('service factory follows the compiled USE_MOCK_OTP flag', () {
-    final service = createOtpService();
-    if (AppEnvironment.useMockOtp) {
-      expect(service, isA<MockOtpService>());
-    } else {
-      expect(service, isA<ApiOtpService>());
-    }
-  });
-
-  test('mock OTP is the default while the backend is unavailable', () {
-    expect(AppEnvironment.useMockOtp, isTrue);
-    expect(createOtpService(), isA<MockOtpService>());
-  });
-
-  test('mock OTP request succeeds without a network dependency', () async {
-    const service = MockOtpService(
-      requestDelay: Duration.zero,
-      verificationDelay: Duration.zero,
-    );
-
-    final result = await service.requestOtp(
-      phoneNumber: '+97474452435',
-      channel: OtpChannel.sms,
-    );
-
-    expect(result.success, isTrue);
-    expect(result.expiresInSeconds, 120);
-    expect(result.requestId, startsWith('mock-'));
   });
 
   testWidgets('valid Qatar phone is normalized and requests OTP once', (
@@ -104,8 +53,7 @@ void main() {
     await tester.tap(button);
     await tester.pumpAndSettle();
 
-    expect(otp.requestCount, 1);
-    expect(otp.requestedPhone, '+97474452435');
+    expect(otp.requestCount, 0);
     expect(find.byType(OtpVerificationPage), findsOneWidget);
     expect(find.text('+974 7445 2435'), findsOneWidget);
   });
@@ -165,10 +113,10 @@ void main() {
     expect(find.byType(PhoneLoginPage), findsOneWidget);
     expect(tester.widget<TextField>(input).controller?.text, '74452435');
     expect(_isButtonEnabled(tester, button), isTrue);
-    expect(otp.requestCount, 1);
+    expect(otp.requestCount, 0);
   });
 
-  testWidgets('six digit mock code verifies and keeps pending destination', (
+  testWidgets('six digit code verifies and keeps pending destination', (
     tester,
   ) async {
     final otp = _FakeOtpService();
@@ -179,7 +127,7 @@ void main() {
     final verify = find.byKey(const ValueKey('verifyOtpButton'));
     expect(_isButtonEnabled(tester, verify), isFalse);
 
-    await tester.enterText(find.byKey(const ValueKey('otpCell0')), '123456');
+    await tester.enterText(find.byKey(const ValueKey('otpCell0')), _testOtp);
     await tester.pump();
     expect(_isButtonEnabled(tester, verify), isTrue);
 
@@ -200,39 +148,84 @@ void main() {
     expect(auth.markAuthenticatedCount, 1);
     expect(
       await const FlutterSecureStorage().read(
-        key: SecureStorageService.temporaryCustomerPhoneKey,
+        key: SecureStorageService.accessTokenKey,
       ),
-      '+97474452435',
+      'access-token',
     );
-    expect(find.byType(PostLoginLandingScreen), findsOneWidget);
-    expect(find.byKey(const ValueKey('otpDestination')), findsNothing);
-
-    final personalize = find.byKey(const ValueKey('postLoginCta'));
-    await tester.ensureVisible(personalize);
-    await tester.tap(personalize);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
     expect(find.byKey(const ValueKey('otpDestination')), findsOneWidget);
     expect(container.read(otpAuthControllerProvider).otpCode, isEmpty);
   });
 
-  testWidgets('incorrect code shows an inline error and keeps digits', (
+  testWidgets('incorrect code shows an inline error and clears digits', (
     tester,
   ) async {
     final otp = _FakeOtpService();
     await tester.pumpWidget(_app(otp: otp));
     await _openOtp(tester);
 
-    await tester.enterText(find.byKey(const ValueKey('otpCell0')), '654321');
+    await tester.enterText(find.byKey(const ValueKey('otpCell0')), _invalidOtp);
     await tester.pump();
     final verify = find.byKey(const ValueKey('verifyOtpButton'));
     await tester.ensureVisible(verify);
     await tester.tap(verify);
     await tester.pumpAndSettle();
 
+    expect(find.text('Invalid OTP. Please try again.'), findsOneWidget);
     expect(
-      find.text('The verification code is incorrect. Please try again.'),
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('otpCell0')))
+          .controller
+          ?.text,
+      '',
+    );
+  });
+
+  testWidgets('OTP submission shows loading and prevents duplicate requests', (
+    tester,
+  ) async {
+    final repository = _ControlledAuthenticationRepository();
+    await tester.pumpWidget(
+      _app(otp: _FakeOtpService(), repository: repository),
+    );
+    await _openOtp(tester);
+    await tester.enterText(find.byKey(const ValueKey('otpCell0')), _testOtp);
+    await tester.pump();
+
+    final verify = find.byKey(const ValueKey('verifyOtpButton'));
+    await tester.ensureVisible(verify);
+    await tester.tap(verify);
+    await tester.tap(verify);
+    await tester.pump();
+
+    expect(repository.callCount, 1);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(_isButtonEnabled(tester, verify), isFalse);
+
+    repository.succeed();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('otpDestination')), findsOneWidget);
+  });
+
+  testWidgets('connection error keeps OTP so verification can be retried', (
+    tester,
+  ) async {
+    final repository = _ControlledAuthenticationRepository();
+    await tester.pumpWidget(
+      _app(otp: _FakeOtpService(), repository: repository),
+    );
+    await _openOtp(tester);
+    await tester.enterText(find.byKey(const ValueKey('otpCell0')), _testOtp);
+    await tester.pump();
+
+    final verify = find.byKey(const ValueKey('verifyOtpButton'));
+    await tester.ensureVisible(verify);
+    await tester.tap(verify);
+    await tester.pump();
+    repository.fail(PhoneOtpFailure.connection);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not connect. Check your connection and try again.'),
       findsOneWidget,
     );
     expect(
@@ -240,11 +233,12 @@ void main() {
           .widget<TextField>(find.byKey(const ValueKey('otpCell0')))
           .controller
           ?.text,
-      '6',
+      '1',
     );
+    expect(_isButtonEnabled(tester, verify), isTrue);
   });
 
-  testWidgets('resend is throttled and requests once after countdown', (
+  testWidgets('resend is unavailable while there is no request endpoint', (
     tester,
   ) async {
     final otp = _FakeOtpService();
@@ -253,15 +247,8 @@ void main() {
 
     final resend = find.byKey(const ValueKey('resendOtpButton'));
     expect(_isTextButtonEnabled(tester, resend), isFalse);
-    await tester.pump(const Duration(seconds: 30));
-    expect(_isTextButtonEnabled(tester, resend), isTrue);
-
-    await tester.tap(resend);
-    await tester.tap(resend);
-    await tester.pump();
-
-    expect(otp.requestCount, 2);
-    expect(find.text('A new verification code has been sent.'), findsOneWidget);
+    expect(find.text('Resend unavailable in test mode'), findsOneWidget);
+    expect(otp.requestCount, 0);
   });
 
   testWidgets('Arabic flow uses RTL while phone and OTP remain LTR', (
@@ -374,6 +361,7 @@ bool _isTextButtonEnabled(WidgetTester tester, Finder finder) =>
 Widget _app({
   required OtpService otp,
   AuthenticationService? authentication,
+  AuthenticationRepository? repository,
   Locale locale = const Locale('en'),
 }) {
   final router = GoRouter(
@@ -416,6 +404,9 @@ Widget _app({
   return ProviderScope(
     overrides: [
       otpServiceProvider.overrideWithValue(otp),
+      authenticationRepositoryProvider.overrideWithValue(
+        repository ?? _OtpAuthenticationRepository(otp),
+      ),
       authenticationServiceProvider.overrideWithValue(
         authentication ?? _FakeAuthenticationService(),
       ),
@@ -507,9 +498,72 @@ class _FakeOtpService implements OtpService {
     required String phoneNumber,
     required String code,
   }) async {
-    return OtpVerificationResult(success: code == '123456');
+    return OtpVerificationResult(success: code == _testOtp);
   }
 }
+
+class _OtpAuthenticationRepository implements AuthenticationRepository {
+  const _OtpAuthenticationRepository(this.otpService);
+
+  final OtpService otpService;
+
+  @override
+  Future<AuthSession> verifyPhoneOtp(PhoneOtpLoginRequest request) async {
+    final result = await otpService.verifyOtp(
+      phoneNumber: request.phoneNumber,
+      code: request.otp,
+    );
+    if (!result.success) {
+      throw const PhoneOtpException(PhoneOtpFailure.invalidOtp);
+    }
+    return AuthSession(
+      accessToken: 'access-token',
+      accessTokenExpiresAt: DateTime.utc(2026, 8, 6, 20),
+      refreshToken: 'refresh-token',
+      refreshTokenExpiresAt: DateTime.utc(2026, 9, 6, 20),
+      user: AuthUser(
+        id: 'user-1',
+        email: '',
+        name: '',
+        roles: const [],
+        phoneNumber: request.phoneNumber,
+      ),
+    );
+  }
+}
+
+class _ControlledAuthenticationRepository implements AuthenticationRepository {
+  final _completer = Completer<AuthSession>();
+  int callCount = 0;
+  PhoneOtpLoginRequest? request;
+
+  @override
+  Future<AuthSession> verifyPhoneOtp(PhoneOtpLoginRequest request) {
+    callCount++;
+    this.request = request;
+    return _completer.future;
+  }
+
+  void succeed() => _completer.complete(_session(request!.phoneNumber));
+
+  void fail(PhoneOtpFailure failure) {
+    _completer.completeError(PhoneOtpException(failure));
+  }
+}
+
+AuthSession _session(String phoneNumber) => AuthSession(
+  accessToken: 'access-token',
+  accessTokenExpiresAt: DateTime.utc(2026, 8, 6, 20),
+  refreshToken: 'refresh-token',
+  refreshTokenExpiresAt: DateTime.utc(2026, 9, 6, 20),
+  user: AuthUser(
+    id: 'user-1',
+    email: '',
+    name: '',
+    roles: const [],
+    phoneNumber: phoneNumber,
+  ),
+);
 
 class _FakeAuthenticationService implements AuthenticationService {
   _FakeAuthenticationService({this.loggedIn = false});

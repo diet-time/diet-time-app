@@ -1573,6 +1573,13 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{value}g'**
   String gramsValue(String value);
+
+  String get otpInvalidCode;
+  String get otpAccountConflict;
+  String get otpPhoneLoginUnavailable;
+  String get otpConnectionError;
+  String get otpServerError;
+  String get otpResendTestUnavailable;
 }
 
 class _AppLocalizationsDelegate

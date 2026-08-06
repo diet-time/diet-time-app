@@ -12,6 +12,9 @@ class SecureStorageService {
   final FlutterSecureStorage _storage;
 
   static const accessTokenKey = 'accessToken';
+  static const accessTokenExpiresAtKey = 'accessTokenExpiresAt';
+  static const refreshTokenKey = 'refreshToken';
+  static const refreshTokenExpiresAtKey = 'refreshTokenExpiresAt';
   static const temporaryCustomerPhoneKey = 'temporaryCustomerPhone';
 
   Future<void> write(String key, String value) =>

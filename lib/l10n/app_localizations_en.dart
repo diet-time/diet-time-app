@@ -817,4 +817,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String gramsValue(String value) {
     return '${value}g';
   }
+
+  @override
+  String get otpInvalidCode => 'Invalid OTP. Please try again.';
+
+  @override
+  String get otpAccountConflict => 'Unable to create or access this account.';
+
+  @override
+  String get otpPhoneLoginUnavailable =>
+      'Phone login is currently unavailable.';
+
+  @override
+  String get otpConnectionError =>
+      'Could not connect. Check your connection and try again.';
+
+  @override
+  String get otpServerError => 'Something went wrong. Please try again.';
+
+  @override
+  String get otpResendTestUnavailable => 'Resend unavailable in test mode';
 }

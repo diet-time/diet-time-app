@@ -1,7 +1,10 @@
 import 'dart:async';
 
+import 'package:diet_time/core/config/app_environment.dart';
+import 'package:diet_time/features/authentication/data/authentication_repository.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
-import 'package:diet_time/features/authentication/data/mock_otp_service.dart';
+import 'package:diet_time/features/authentication/data/otp_service_provider.dart';
+import 'package:diet_time/features/authentication/domain/auth_models.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/core/storage/secure_storage_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,8 +12,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 enum OtpUiError {
   requestFailed,
   incorrectCode,
-  expiredCode,
+  validation,
+  accountConflict,
   tooManyAttempts,
+  unavailable,
+  connection,
+  server,
   resendUnavailable,
 }
 
@@ -27,6 +34,8 @@ class OtpAuthState {
     this.isVerifyingOtp = false,
     this.requestError,
     this.verificationError,
+    this.verificationMessage,
+    this.session,
     this.pendingDestination,
     this.resendConfirmation = false,
   });
@@ -42,6 +51,9 @@ class OtpAuthState {
   final bool isVerifyingOtp;
   final OtpUiError? requestError;
   final OtpUiError? verificationError;
+  final String? verificationMessage;
+  final AuthSession? session;
+  AuthUser? get user => session?.user;
   final PendingAuthDestination? pendingDestination;
   final bool resendConfirmation;
 
@@ -57,6 +69,8 @@ class OtpAuthState {
     bool? isVerifyingOtp,
     Object? requestError = _unset,
     Object? verificationError = _unset,
+    Object? verificationMessage = _unset,
+    Object? session = _unset,
     Object? pendingDestination = _unset,
     bool? resendConfirmation,
   }) {
@@ -79,6 +93,12 @@ class OtpAuthState {
       verificationError: identical(verificationError, _unset)
           ? this.verificationError
           : verificationError as OtpUiError?,
+      verificationMessage: identical(verificationMessage, _unset)
+          ? this.verificationMessage
+          : verificationMessage as String?,
+      session: identical(session, _unset)
+          ? this.session
+          : session as AuthSession?,
       pendingDestination: identical(pendingDestination, _unset)
           ? this.pendingDestination
           : pendingDestination as PendingAuthDestination?,
@@ -94,7 +114,6 @@ final otpAuthControllerProvider =
 
 class OtpAuthController extends Notifier<OtpAuthState> {
   Timer? _resendTimer;
-  DateTime? _expiresAt;
 
   @override
   OtpAuthState build() {
@@ -134,7 +153,11 @@ class OtpAuthController extends Notifier<OtpAuthState> {
   }
 
   void setOtpCode(String code) {
-    state = state.copyWith(otpCode: code, verificationError: null);
+    state = state.copyWith(
+      otpCode: code,
+      verificationError: code.isEmpty ? state.verificationError : null,
+      verificationMessage: code.isEmpty ? state.verificationMessage : null,
+    );
   }
 
   Future<bool> requestOtp({
@@ -149,6 +172,15 @@ class OtpAuthController extends Notifier<OtpAuthState> {
       verificationError: null,
       resendConfirmation: false,
     );
+    if (!AppEnvironment.enableRequestOtpApi) {
+      state = state.copyWith(
+        isRequestingOtp: false,
+        requestId: 'local-verification',
+        expiresInSeconds: 0,
+        resendSecondsRemaining: 0,
+      );
+      return true;
+    }
     try {
       final result = await ref
           .read(otpServiceProvider)
@@ -160,9 +192,6 @@ class OtpAuthController extends Notifier<OtpAuthState> {
         );
         return false;
       }
-      _expiresAt = DateTime.now().add(
-        Duration(seconds: result.expiresInSeconds),
-      );
       state = state.copyWith(
         isRequestingOtp: false,
         requestId: result.requestId,
@@ -183,37 +212,36 @@ class OtpAuthController extends Notifier<OtpAuthState> {
 
   Future<bool> verifyOtp() async {
     if (state.isVerifyingOtp || state.otpCode.length != 6) return false;
-    if (_expiresAt != null && DateTime.now().isAfter(_expiresAt!)) {
-      state = state.copyWith(verificationError: OtpUiError.expiredCode);
-      return false;
-    }
-    state = state.copyWith(isVerifyingOtp: true, verificationError: null);
+    state = state.copyWith(
+      isVerifyingOtp: true,
+      verificationError: null,
+      verificationMessage: null,
+    );
     try {
-      final result = await ref
-          .read(otpServiceProvider)
-          .verifyOtp(phoneNumber: state.phoneNumber, code: state.otpCode);
-      if (!result.success) {
-        state = state.copyWith(
-          isVerifyingOtp: false,
-          verificationError: _verificationError(result.failure),
-        );
-        return false;
-      }
-      if (result.accessToken != null && result.accessToken!.trim().isNotEmpty) {
-        await ref
-            .read(secureStorageServiceProvider)
-            .write(
-              SecureStorageService.accessTokenKey,
-              result.accessToken!.trim(),
-            );
-      } else {
-        await ref
-            .read(secureStorageServiceProvider)
-            .write(
-              SecureStorageService.temporaryCustomerPhoneKey,
-              state.phoneNumber.trim(),
-            );
-      }
+      final session = await ref
+          .read(authenticationRepositoryProvider)
+          .verifyPhoneOtp(
+            PhoneOtpLoginRequest(
+              phoneNumber: state.phoneNumber,
+              otp: state.otpCode,
+            ),
+          );
+      final storage = ref.read(secureStorageServiceProvider);
+      await Future.wait([
+        storage.write(SecureStorageService.accessTokenKey, session.accessToken),
+        storage.write(
+          SecureStorageService.accessTokenExpiresAtKey,
+          session.accessTokenExpiresAt.toIso8601String(),
+        ),
+        storage.write(
+          SecureStorageService.refreshTokenKey,
+          session.refreshToken,
+        ),
+        storage.write(
+          SecureStorageService.refreshTokenExpiresAtKey,
+          session.refreshTokenExpiresAt.toIso8601String(),
+        ),
+      ]);
       try {
         await ref.read(authenticationServiceProvider).markAuthenticated();
       } catch (_) {
@@ -225,20 +253,36 @@ class OtpAuthController extends Notifier<OtpAuthState> {
         otpCode: '',
         isVerifyingOtp: false,
         verificationError: null,
+        verificationMessage: null,
+        session: session,
       );
       return true;
+    } on PhoneOtpException catch (error) {
+      final uiError = _verificationError(error.failure);
+      state = state.copyWith(
+        isVerifyingOtp: false,
+        otpCode: uiError == OtpUiError.incorrectCode ? '' : state.otpCode,
+        verificationError: uiError,
+        verificationMessage: error.failure == PhoneOtpFailure.validation
+            ? error.message
+            : null,
+      );
+      return false;
     } catch (_) {
       state = state.copyWith(
         isVerifyingOtp: false,
-        verificationError: OtpUiError.incorrectCode,
+        verificationError: OtpUiError.server,
       );
       return false;
     }
   }
 
   Future<bool> resendOtp() async {
+    if (!AppEnvironment.enableRequestOtpApi) {
+      state = state.copyWith(requestError: OtpUiError.resendUnavailable);
+      return false;
+    }
     if (state.resendSecondsRemaining > 0 || state.isRequestingOtp) return false;
-    setOtpCode('');
     return requestOtp(channel: state.otpChannel, showConfirmation: true);
   }
 
@@ -248,7 +292,6 @@ class OtpAuthController extends Notifier<OtpAuthState> {
 
   void cancel() {
     _resendTimer?.cancel();
-    _expiresAt = null;
     state = OtpAuthState(isAuthenticated: state.isAuthenticated);
   }
 
@@ -273,11 +316,16 @@ class OtpAuthController extends Notifier<OtpAuthState> {
     };
   }
 
-  OtpUiError _verificationError(OtpFailure? failure) {
+  OtpUiError _verificationError(PhoneOtpFailure failure) {
     return switch (failure) {
-      OtpFailure.expired => OtpUiError.expiredCode,
-      OtpFailure.tooManyAttempts => OtpUiError.tooManyAttempts,
-      _ => OtpUiError.incorrectCode,
+      PhoneOtpFailure.validation => OtpUiError.validation,
+      PhoneOtpFailure.invalidOtp => OtpUiError.incorrectCode,
+      PhoneOtpFailure.accountConflict => OtpUiError.accountConflict,
+      PhoneOtpFailure.tooManyAttempts => OtpUiError.tooManyAttempts,
+      PhoneOtpFailure.unavailable => OtpUiError.unavailable,
+      PhoneOtpFailure.connection => OtpUiError.connection,
+      PhoneOtpFailure.server ||
+      PhoneOtpFailure.invalidResponse => OtpUiError.server,
     };
   }
 }

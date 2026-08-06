@@ -806,6 +806,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sodiumLabel => 'الصوديوم';
 
   @override
+  String get otpInvalidCode => 'رمز التحقق غير صحيح. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get otpAccountConflict => 'تعذر إنشاء هذا الحساب أو الوصول إليه.';
+
+  @override
+  String get otpPhoneLoginUnavailable =>
+      'تسجيل الدخول بالهاتف غير متاح حالياً.';
+
+  @override
+  String get otpConnectionError =>
+      'تعذر الاتصال. تحقق من اتصالك وحاول مرة أخرى.';
+
+  @override
+  String get otpServerError => 'حدث خطأ ما. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get otpResendTestUnavailable =>
+      'إعادة الإرسال غير متاحة في وضع الاختبار';
+
+  @override
   String gramsValue(String value) {
     return '$valueغ';
   }

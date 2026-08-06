@@ -1,5 +1,11 @@
 {
   "@@locale": "ar",
+  "otpInvalidCode": "رمز التحقق غير صحيح. يرجى المحاولة مرة أخرى.",
+  "otpAccountConflict": "تعذر إنشاء هذا الحساب أو الوصول إليه.",
+  "otpPhoneLoginUnavailable": "تسجيل الدخول بالهاتف غير متاح حالياً.",
+  "otpConnectionError": "تعذر الاتصال. تحقق من اتصالك وحاول مرة أخرى.",
+  "otpServerError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+  "otpResendTestUnavailable": "إعادة الإرسال غير متاحة في وضع الاختبار",
   "landingTitle": "كل جيد، اشعر رائع",
   "landingSubtitle": "اكتشف خطط وجبات مخصصة للمذاق والصحة. ابنِ عادات تدوم، وجبة لذيذة في كل مرة.",
   "viewPlans": "الخطط",

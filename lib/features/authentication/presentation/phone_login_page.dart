@@ -22,17 +22,18 @@ class PhoneLoginPage extends ConsumerStatefulWidget {
 class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
   final _phoneController = TextEditingController();
   final _phoneFocusNode = FocusNode();
+  _CountryOption _country = _countries.first;
   bool _hasInteracted = false;
   bool _isSubmitting = false;
 
-  bool get _isValidPhone =>
-      RegExp(r'^[3567]\d{7}$').hasMatch(_phoneController.text);
+  bool get _isValidPhone => _country.isValid(_phoneController.text);
 
   @override
   void initState() {
     super.initState();
     final auth = ref.read(otpAuthControllerProvider);
-    _phoneController.text = _localNumber(auth.phoneNumber);
+    _country = _countryFor(auth.phoneNumber);
+    _phoneController.text = _localNumber(auth.phoneNumber, _country);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref
@@ -49,16 +50,37 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
     super.dispose();
   }
 
-  String _localNumber(String number) {
+  _CountryOption _countryFor(String number) => _countries.firstWhere(
+    (country) => number.startsWith(country.dialCode),
+    orElse: () => _countries.first,
+  );
+
+  String _localNumber(String number, _CountryOption country) {
     final digits = number.replaceAll(RegExp(r'\D'), '');
-    return digits.startsWith('974') ? digits.substring(3) : digits;
+    final dialCode = country.dialCode.substring(1);
+    return digits.startsWith(dialCode)
+        ? digits.substring(dialCode.length)
+        : digits;
   }
 
   void _onChanged(String value) {
     setState(() => _hasInteracted = true);
     ref
         .read(otpAuthControllerProvider.notifier)
-        .setPhoneNumber(value.length == 8 ? '+974$value' : '');
+        .setPhoneNumber(
+          _country.isValid(value) ? '${_country.dialCode}$value' : '',
+        );
+  }
+
+  void _selectCountry(_CountryOption? country) {
+    if (country == null || country == _country) return;
+    setState(() {
+      _country = country;
+      _phoneController.clear();
+      _hasInteracted = false;
+    });
+    ref.read(otpAuthControllerProvider.notifier).setPhoneNumber('');
+    _phoneFocusNode.requestFocus();
   }
 
   Future<void> _continue() async {
@@ -70,7 +92,7 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
     setState(() => _isSubmitting = true);
     FocusManager.instance.primaryFocus?.unfocus();
     final controller = ref.read(otpAuthControllerProvider.notifier);
-    controller.setPhoneNumber('+974${_phoneController.text}');
+    controller.setPhoneNumber('${_country.dialCode}${_phoneController.text}');
     final succeeded = await controller.requestOtp();
     if (!mounted) return;
     if (!succeeded) {
@@ -159,27 +181,43 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                height: 58,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                ),
-                                decoration: _fieldDecoration(),
-                                child: const Row(
-                                  children: [
-                                    Text(
-                                      '🇶🇦',
-                                      style: TextStyle(fontSize: 20),
-                                    ),
-                                    SizedBox(width: 9),
-                                    Text(
-                                      '+974',
-                                      style: TextStyle(
-                                        color: AppColors.darkGreen,
-                                        fontWeight: FontWeight.w800,
+                              PopupMenuButton<_CountryOption>(
+                                key: const ValueKey('countryCodeSelector'),
+                                onSelected: _selectCountry,
+                                itemBuilder: (context) => _countries
+                                    .map(
+                                      (country) => PopupMenuItem(
+                                        value: country,
+                                        child: Text(
+                                          '${country.isoCode} ${country.dialCode}',
+                                          textDirection: TextDirection.ltr,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    )
+                                    .toList(),
+                                child: Container(
+                                  height: 58,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                  ),
+                                  decoration: _fieldDecoration(),
+                                  child: Row(
+                                    children: [
+                                      if (_country.isoCode == 'QA')
+                                        Text(
+                                          '🇶🇦',
+                                          style: TextStyle(fontSize: 20),
+                                        ),
+                                      SizedBox(width: 9),
+                                      Text(
+                                        '${_country.isoCode} ${_country.dialCode}',
+                                        style: TextStyle(
+                                          color: AppColors.darkGreen,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -196,7 +234,7 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
                                       AutofillHints.telephoneNumberNational,
                                     ],
                                     inputFormatters: [
-                                      _QatarPhoneInputFormatter(),
+                                      _PhoneInputFormatter(_country),
                                     ],
                                     onChanged: _onChanged,
                                     onSubmitted: (_) => _continue(),
@@ -273,18 +311,23 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
   }
 }
 
-class _QatarPhoneInputFormatter extends TextInputFormatter {
+class _PhoneInputFormatter extends TextInputFormatter {
+  const _PhoneInputFormatter(this.country);
+
+  final _CountryOption country;
+
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
     var digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    if (digits.startsWith('974') && digits.length > 8) {
-      digits = digits.substring(3);
+    final dialCode = country.dialCode.substring(1);
+    if (digits.startsWith(dialCode) && digits.length > country.nationalLength) {
+      digits = digits.substring(dialCode.length);
     }
-    if (digits.length > 8) {
-      digits = digits.substring(0, 8);
+    if (digits.length > country.nationalLength) {
+      digits = digits.substring(0, country.nationalLength);
     }
     return TextEditingValue(
       text: digits,
@@ -292,3 +335,37 @@ class _QatarPhoneInputFormatter extends TextInputFormatter {
     );
   }
 }
+
+class _CountryOption {
+  const _CountryOption({
+    required this.isoCode,
+    required this.dialCode,
+    required this.nationalLength,
+    this.allowedStartDigits,
+  });
+
+  final String isoCode;
+  final String dialCode;
+  final int nationalLength;
+  final String? allowedStartDigits;
+
+  bool isValid(String number) {
+    if (!RegExp('^\\d{$nationalLength}\$').hasMatch(number)) return false;
+    return allowedStartDigits == null ||
+        allowedStartDigits!.contains(number[0]);
+  }
+}
+
+const _countries = [
+  _CountryOption(
+    isoCode: 'QA',
+    dialCode: '+974',
+    nationalLength: 8,
+    allowedStartDigits: '3567',
+  ),
+  _CountryOption(isoCode: 'SA', dialCode: '+966', nationalLength: 9),
+  _CountryOption(isoCode: 'AE', dialCode: '+971', nationalLength: 9),
+  _CountryOption(isoCode: 'KW', dialCode: '+965', nationalLength: 8),
+  _CountryOption(isoCode: 'BH', dialCode: '+973', nationalLength: 8),
+  _CountryOption(isoCode: 'OM', dialCode: '+968', nationalLength: 8),
+];
