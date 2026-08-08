@@ -62,7 +62,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
       orElse: () => configurations.first,
     );
     final package = configuration.packages.firstWhere(
-      (item) => item.mealPlanPriceId == _priceId,
+      (item) => item.selectionKey == _priceId,
       orElse: () => configuration.packages.first,
     );
     final profile = ref.watch(personalizationControllerProvider);
@@ -114,10 +114,10 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                               _configurationId = item.id;
                               final keepsDuration = item.packages.any(
                                 (candidate) =>
-                                    candidate.mealPlanPriceId == _priceId,
+                                    candidate.selectionKey == _priceId,
                               );
                               if (!keepsDuration) {
-                                _priceId = item.packages.first.mealPlanPriceId;
+                                _priceId = item.packages.first.selectionKey;
                               }
                             }),
                           );
@@ -143,7 +143,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                             if (index > 0) const SizedBox(width: 10),
                             _ChoiceCard(
                               key: ValueKey(
-                                'duration-${configuration.packages[index].mealPlanPriceId}',
+                                'duration-${configuration.packages[index].selectionKey}',
                               ),
                               title: configuration.packages[index].name,
                               subtitle: _serviceDaysLabel(
@@ -151,15 +151,12 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                                 configuration.packages[index].serviceDays,
                               ),
                               selected:
-                                  configuration
-                                      .packages[index]
-                                      .mealPlanPriceId ==
-                                  package.mealPlanPriceId,
+                                  configuration.packages[index].selectionKey ==
+                                  package.selectionKey,
                               compact: true,
                               onTap: () => setState(
-                                () => _priceId = configuration
-                                    .packages[index]
-                                    .mealPlanPriceId,
+                                () => _priceId =
+                                    configuration.packages[index].selectionKey,
                               ),
                             ),
                           ],

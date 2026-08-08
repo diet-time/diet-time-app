@@ -84,8 +84,10 @@ class MealPlanPackage {
   final double dailyPrice;
   final String currencyCode;
 
+  String get selectionKey =>
+      mealPlanPriceId.isNotEmpty ? mealPlanPriceId : 'duration-$serviceDays';
+
   bool get isValid =>
-      mealPlanPriceId.isNotEmpty &&
       name.isNotEmpty &&
       serviceDays > 0 &&
       totalPrice > 0 &&

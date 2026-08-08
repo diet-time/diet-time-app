@@ -27,6 +27,61 @@ void main() {
     );
   });
 
+  test(
+    'flat meal-plan prices are grouped into API-supported configurations',
+    () {
+      final configurations = parseMealPlanConfigurations(const {
+        'prices': [
+          {
+            'durationDays': 1,
+            'mealsPerDay': 3,
+            'snacksPerDay': 1,
+            'amount': 135.0,
+            'currencyCode': 'QAR',
+          },
+          {
+            'durationDays': 6,
+            'mealsPerDay': 3,
+            'snacksPerDay': 1,
+            'amount': 900.0,
+            'currencyCode': 'QAR',
+          },
+          {
+            'durationDays': 24,
+            'mealsPerDay': 3,
+            'snacksPerDay': 1,
+            'amount': 2800.0,
+            'currencyCode': 'QAR',
+          },
+        ],
+        'supportedMealTypes': [
+          {'code': 'BREAKFAST', 'name': 'Breakfast'},
+          {'code': 'LUNCH', 'name': 'Lunch'},
+          {'code': 'DINNER', 'name': 'Dinner'},
+          {'code': 'SNACK_DESSERT', 'name': 'Snack / Dessert'},
+        ],
+      }, language: 'en');
+
+      expect(configurations, hasLength(1));
+      expect(configurations.single.name, '3 Meals + 1 Snack');
+      expect(
+        configurations.single.description,
+        'Breakfast · Lunch · Dinner · 1 Snack',
+      );
+      expect(configurations.single.packages.map((item) => item.name), [
+        '1 Day',
+        '1 Week',
+        '1 Month',
+      ]);
+      expect(configurations.single.packages[1].dailyPrice, 150);
+      expect(
+        configurations.single.packages.last.dailyPrice,
+        closeTo(116.67, .01),
+      );
+      expect(configurations.single.packages.first.mealPlanPriceId, isEmpty);
+    },
+  );
+
   testWidgets('selected plan hero uses a constrained, non-stretched image', (
     tester,
   ) async {
