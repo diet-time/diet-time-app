@@ -82,7 +82,7 @@ void main() {
     },
   );
 
-  testWidgets('selected plan hero uses a constrained, non-stretched image', (
+  testWidgets('selected plan image is a contained hero background', (
     tester,
   ) async {
     await tester.pumpWidget(_app(plan: _plan));
@@ -90,11 +90,12 @@ void main() {
 
     expect(find.text('Complete Balance'), findsOneWidget);
     final image = tester.widget<Image>(find.byKey(const ValueKey('heroImage')));
-    expect(image.fit, BoxFit.cover);
+    expect(image.fit, BoxFit.contain);
     expect(image.fit, isNot(BoxFit.fill));
-    expect(image.width, 220);
-    expect(image.height, 192);
     expect(find.byKey(const ValueKey('heroImageClip')), findsOneWidget);
+    expect(find.byKey(const ValueKey('detailsBackground')), findsOneWidget);
+    expect(find.byKey(const ValueKey('detailsBackgroundImage')), findsNothing);
+    expect(find.text('Your plan'), findsNothing);
     expect(find.textContaining('RECOMMENDED'), findsNothing);
     expect(find.textContaining('Recommended'), findsNothing);
   });
@@ -123,7 +124,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('1 Month'), findsOneWidget);
 
-    await _scrollTo(tester, const ValueKey('priceSummary'));
     expect(find.text('QAR 120 / day'), findsOneWidget);
     expect(find.text('QAR 720'), findsOneWidget);
     expect(find.textContaining('6 service days'), findsWidgets);

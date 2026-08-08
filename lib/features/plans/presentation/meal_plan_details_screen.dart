@@ -1,6 +1,5 @@
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
-import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
@@ -39,19 +38,21 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
     final language = Localizations.localeOf(context).languageCode;
     final request = (plan: widget.plan, language: language);
     final configurations = ref.watch(mealPlanConfigurationsProvider(request));
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F3E9),
-      appBar: _DetailsHeader(languageCode: language),
-      body: configurations.when(
-        loading: () => _LoadingBody(plan: widget.plan),
-        error: (_, _) => _PricingError(
-          plan: widget.plan,
-          onRetry: () =>
-              ref.invalidate(mealPlanConfigurationsProvider(request)),
+    return _PageBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: _DetailsHeader(languageCode: language),
+        body: configurations.when(
+          loading: () => _LoadingBody(plan: widget.plan),
+          error: (_, _) => _PricingError(
+            plan: widget.plan,
+            onRetry: () =>
+                ref.invalidate(mealPlanConfigurationsProvider(request)),
+          ),
+          data: (items) => items.isEmpty
+              ? _EmptyPackages(plan: widget.plan)
+              : _buildContent(items),
         ),
-        data: (items) => items.isEmpty
-            ? _EmptyPackages(plan: widget.plan)
-            : _buildContent(items),
       ),
     );
   }
@@ -76,7 +77,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
         Expanded(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsetsDirectional.fromSTEB(20, 16, 20, 24),
+            padding: const EdgeInsetsDirectional.fromSTEB(20, 10, 20, 20),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 680),
@@ -87,7 +88,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                       plan: widget.plan,
                       startingPrice: _lowestPrice(configurations),
                     ),
-                    const SizedBox(height: 26),
+                    const SizedBox(height: 16),
                     const _SectionTitle(
                       titleEn: 'Choose your daily meals',
                       titleAr: 'اختر وجباتك اليومية',
@@ -95,9 +96,9 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                           'Select the meal combination that works for you.',
                       subtitleAr: 'اختر مجموعة الوجبات التي تناسبك.',
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     SizedBox(
-                      height: 100,
+                      height: 74,
                       child: ListView.separated(
                         key: const ValueKey('mealConfigurations'),
                         scrollDirection: Axis.horizontal,
@@ -124,12 +125,12 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                         },
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     const _SectionTitle(
                       titleEn: 'Choose duration',
                       titleAr: 'اختر المدة',
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
@@ -163,13 +164,8 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    _PriceSummary(
-                      configuration: configuration,
-                      package: package,
-                    ),
                     if (hasRecordedAllergens) ...[
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       const _AllergenInformation(),
                     ],
                   ],
@@ -213,12 +209,12 @@ class _DetailsHeader extends ConsumerWidget implements PreferredSizeWidget {
   final String languageCode;
 
   @override
-  Size get preferredSize => const Size.fromHeight(66);
+  Size get preferredSize => const Size.fromHeight(58);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return AppBar(
-      backgroundColor: const Color(0xFFF5F3E9),
+      backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       leading: IconButton(
         key: const ValueKey('detailsBack'),
@@ -260,6 +256,21 @@ class _DetailsHeader extends ConsumerWidget implements PreferredSizeWidget {
   }
 }
 
+class _PageBackground extends StatelessWidget {
+  const _PageBackground({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      key: const ValueKey('detailsBackground'),
+      color: const Color(0xFFF5F3E9),
+      child: child,
+    );
+  }
+}
+
 class _PlanHero extends StatelessWidget {
   const _PlanHero({required this.plan, this.startingPrice});
 
@@ -271,72 +282,100 @@ class _PlanHero extends StatelessWidget {
     final isArabic = Directionality.of(context) == TextDirection.rtl;
     return Container(
       key: const ValueKey('planHero'),
-      height: 224,
+      height: 176,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: const Color(0xFFEAF3E8),
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        border: Border.all(color: AppColors.teaGreen.withValues(alpha: .6)),
+        color: const Color(0xFFF3F7EF),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: AppColors.emeraldGreen.withValues(alpha: .55),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.darkGreen.withValues(alpha: .08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      child: Row(
+      child: Stack(
         children: [
-          Expanded(
-            flex: 6,
-            child: Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(20, 20, 12, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    plan.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.darkGreen,
-                      fontSize: 25,
-                      fontWeight: FontWeight.w900,
-                      height: 1.05,
-                    ),
-                  ),
-                  if (plan.description case final description?) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      description,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.darkGreen.withValues(alpha: .68),
-                        height: 1.35,
-                      ),
-                    ),
+          PositionedDirectional(
+            top: 0,
+            bottom: 0,
+            end: 0,
+            width: 205,
+            child: _HeroImage(imageUrl: plan.imageUrl),
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: AlignmentDirectional.centerStart,
+                  end: AlignmentDirectional.centerEnd,
+                  colors: const [
+                    Color(0xFFF7F8EE),
+                    Color(0xF2F0F5E9),
+                    Color(0x1AF0F5E9),
                   ],
-                  const Spacer(),
-                  if (plan.dailyCaloriesKcal case final calories?)
-                    _HeroFact(
-                      key: const ValueKey('heroCalories'),
-                      icon: Icons.local_fire_department_outlined,
-                      label: isArabic
-                          ? 'تقريباً ${calories.round()} سعرة / يوم'
-                          : 'Approx. ${calories.round()} kcal/day',
-                    ),
-                  if (startingPrice case final price?) ...[
-                    const SizedBox(height: 7),
-                    _HeroFact(
-                      icon: Icons.payments_outlined,
-                      label: isArabic
-                          ? 'ابتداءً من ${price.currencyCode} ${_amount(context, price.dailyPrice)} / يوم'
-                          : 'From ${price.currencyCode} ${_amount(context, price.dailyPrice)}/day',
-                    ),
-                  ],
-                ],
+                  stops: const [0, .56, 1],
+                ),
               ),
             ),
           ),
-          Expanded(
-            flex: 4,
-            child: Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(0, 16, 16, 16),
-              child: _HeroImage(imageUrl: plan.imageUrl),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: FractionallySizedBox(
+              widthFactor: .68,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 15, 10, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      plan.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.darkGreen,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w900,
+                        height: 1.05,
+                      ),
+                    ),
+                    if (plan.description case final description?) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.darkGreen.withValues(alpha: .68),
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    if (plan.dailyCaloriesKcal case final calories?)
+                      _HeroFact(
+                        key: const ValueKey('heroCalories'),
+                        icon: Icons.local_fire_department_outlined,
+                        label: isArabic
+                            ? 'تقريباً ${calories.round()} سعرة / يوم'
+                            : 'Approx. ${calories.round()} kcal/day',
+                      ),
+                    if (startingPrice case final price?) ...[
+                      const SizedBox(height: 5),
+                      _HeroFact(
+                        icon: Icons.payments_outlined,
+                        label: isArabic
+                            ? 'ابتداءً من ${price.currencyCode} ${_amount(context, price.dailyPrice)} / يوم'
+                            : 'From ${price.currencyCode} ${_amount(context, price.dailyPrice)}/day',
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -355,16 +394,14 @@ class _HeroImage extends StatelessWidget {
     final url = _resolveImageUrl(imageUrl);
     return ClipRRect(
       key: const ValueKey('heroImageClip'),
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(21),
       child: SizedBox.expand(
         child: url.isEmpty
             ? const _MealImagePlaceholder()
             : Image.network(
                 url,
                 key: const ValueKey('heroImage'),
-                width: 220,
-                height: 192,
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
                 frameBuilder: (context, child, frame, _) => AnimatedOpacity(
                   opacity: frame == null ? 0 : 1,
                   duration: const Duration(milliseconds: 240),
@@ -424,7 +461,7 @@ class _SectionTitle extends StatelessWidget {
           isArabic ? titleAr : titleEn,
           style: const TextStyle(
             color: AppColors.darkGreen,
-            fontSize: 19,
+            fontSize: 17,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -432,7 +469,10 @@ class _SectionTitle extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: TextStyle(color: AppColors.darkGreen.withValues(alpha: .62)),
+            style: TextStyle(
+              color: AppColors.darkGreen.withValues(alpha: .62),
+              fontSize: 12,
+            ),
           ),
         ],
       ],
@@ -458,14 +498,14 @@ class _ChoiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: onTap,
-    borderRadius: BorderRadius.circular(18),
+    borderRadius: BorderRadius.circular(15),
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 180),
-      constraints: BoxConstraints(minWidth: compact ? 132 : 180, maxWidth: 240),
-      padding: const EdgeInsetsDirectional.fromSTEB(15, 13, 15, 12),
+      constraints: BoxConstraints(minWidth: compact ? 116 : 168, maxWidth: 220),
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 9, 12, 8),
       decoration: BoxDecoration(
         color: selected ? const Color(0xFFE7F4E8) : AppColors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(
           color: selected
               ? AppColors.emeraldGreen
@@ -479,10 +519,10 @@ class _ChoiceCard extends StatelessWidget {
           if (selected) ...[
             const Icon(
               Icons.check_circle_rounded,
-              size: 19,
+              size: 17,
               color: AppColors.emeraldGreen,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
           ],
           Flexible(
             child: Column(
@@ -499,10 +539,10 @@ class _ChoiceCard extends StatelessWidget {
                   ),
                 ),
                 if (subtitle case final value?) ...[
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 3),
                   Text(
                     value,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: AppColors.darkGreen.withValues(alpha: .58),
@@ -520,6 +560,8 @@ class _ChoiceCard extends StatelessWidget {
   );
 }
 
+// Kept temporarily for compatibility with older golden-test branches.
+// ignore: unused_element
 class _PriceSummary extends StatelessWidget {
   const _PriceSummary({required this.configuration, required this.package});
   final MealPlanConfiguration configuration;
@@ -672,13 +714,8 @@ class _BottomAction extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 16),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFFEFB),
-          border: Border(
-            top: BorderSide(color: AppColors.darkGreen.withValues(alpha: .08)),
-          ),
-        ),
+        padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 20, 12),
+        color: const Color(0xE6F5F3E9),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 680),
@@ -686,18 +723,49 @@ class _BottomAction extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Row(
+                  children: [
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(
+                        '${package.currencyCode} ${_amount(context, package.dailyPrice)} / ${isArabic ? 'يوم' : 'day'}',
+                        key: const ValueKey('dailyPrice'),
+                        style: const TextStyle(
+                          color: AppColors.emeraldGreen,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(
+                        '${package.currencyCode} ${_amount(context, package.totalPrice)}',
+                        key: const ValueKey('packageTotal'),
+                        style: const TextStyle(
+                          color: AppColors.darkGreen,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
                 Text(
-                  '${package.currencyCode} ${_amount(context, package.totalPrice)} ${isArabic ? 'الإجمالي' : 'total'}  ·  ${package.name} · ${configuration.name}',
+                  '${package.name} · ${_serviceDaysLabel(context, package.serviceDays)} · ${configuration.name}',
+                  key: const ValueKey('summaryServiceDays'),
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: AppColors.darkGreen.withValues(alpha: .66),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    color: AppColors.darkGreen.withValues(alpha: .58),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 9),
+                const SizedBox(height: 7),
                 AppButton(
                   key: const ValueKey('detailsContinue'),
                   label: isArabic ? 'متابعة ←' : 'Continue →',
