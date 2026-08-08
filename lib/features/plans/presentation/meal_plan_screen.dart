@@ -2,8 +2,6 @@ import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
-import 'package:diet_time/features/authentication/domain/otp_service.dart';
-import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
@@ -49,7 +47,6 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
 
   Widget _buildPlanList(BuildContext context, List<MealPlanOption> plans) {
     final l10n = AppLocalizations.of(context);
-    final authState = ref.watch(otpAuthControllerProvider);
     final selectedCode = plans.any((plan) => plan.code == _selectedCode)
         ? _selectedCode!
         : plans.first.code;
@@ -103,21 +100,8 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
             constraints: const BoxConstraints(maxWidth: 560),
             child: AppButton(
               label: l10n.continueLabel,
-              onPressed: () {
-                final destination = PendingAuthDestination(
-                  route: AppRoutes.home,
-                  planCode: selectedPlan.code,
-                  planName: selectedPlan.name,
-                );
-                if (authState.isAuthenticated) {
-                  ref
-                      .read(otpAuthControllerProvider.notifier)
-                      .begin(destination);
-                  context.go(AppRoutes.home);
-                  return;
-                }
-                context.push(AppRoutes.phoneLogin, extra: destination);
-              },
+              onPressed: () =>
+                  context.push(AppRoutes.planDetails, extra: selectedPlan),
             ),
           ),
         ),

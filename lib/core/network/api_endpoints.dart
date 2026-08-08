@@ -5,6 +5,9 @@ abstract final class ApiEndpoints {
   static const customerProfile = '/api/v1/customer/profile';
   static const mealPlans = '/api/v1/meal-plan-categories';
 
+  static String mealPlanDetails(String mealPlanTemplateId) =>
+      '$mealPlans/${Uri.encodeComponent(mealPlanTemplateId)}';
+
   static String guestMealPlanMenu(String planCode) =>
       '/api/v1/guest/meal-plans/${Uri.encodeComponent(planCode)}/menu';
 

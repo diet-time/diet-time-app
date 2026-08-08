@@ -47,6 +47,8 @@ class PendingAuthDestination {
     this.planName,
     this.selectedDate,
     this.mealTimePreference,
+    this.mealPlanTemplateId,
+    this.mealPlanPriceId,
   });
 
   final String route;
@@ -54,4 +56,6 @@ class PendingAuthDestination {
   final String? planName;
   final DateTime? selectedDate;
   final String? mealTimePreference;
+  final String? mealPlanTemplateId;
+  final String? mealPlanPriceId;
 }

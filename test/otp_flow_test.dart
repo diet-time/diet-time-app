@@ -13,6 +13,8 @@ import 'package:diet_time/features/authentication/presentation/phone_login_page.
 import 'package:diet_time/features/personalization/presentation/post_login_landing_screen.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
+import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
+import 'package:diet_time/features/plans/presentation/meal_plan_details_screen.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -330,6 +332,10 @@ void main() {
     await tester.tap(continueButton);
     await tester.pumpAndSettle();
 
+    expect(find.byType(MealPlanDetailsScreen), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('detailsContinue')));
+    await tester.pumpAndSettle();
+
     expect(find.byType(PhoneLoginPage), findsNothing);
     expect(
       find.byKey(const ValueKey('authenticatedDestination')),
@@ -435,6 +441,11 @@ Widget _planApp(AuthenticationService authentication) {
         builder: (context, state) => const MealPlanScreen(),
       ),
       GoRoute(
+        path: '/plan-details',
+        builder: (context, state) =>
+            MealPlanDetailsScreen(plan: state.extra! as MealPlanOption),
+      ),
+      GoRoute(
         path: '/home',
         builder: (context, state) =>
             const SizedBox(key: ValueKey('authenticatedDestination')),
@@ -461,6 +472,22 @@ Widget _planApp(AuthenticationService authentication) {
             startingPrice: 349,
             currencyCode: 'QAR',
             priceDurationDays: 7,
+            mealConfigurations: [
+              MealPlanConfiguration(
+                id: 'three-meals',
+                name: '3 Meals',
+                packages: [
+                  MealPlanPackage(
+                    mealPlanPriceId: 'classic-week',
+                    name: '1 Week',
+                    serviceDays: 6,
+                    totalPrice: 600,
+                    dailyPrice: 100,
+                    currencyCode: 'QAR',
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
       ),

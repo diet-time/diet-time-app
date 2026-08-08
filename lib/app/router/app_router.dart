@@ -9,6 +9,8 @@ import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_carousel_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
+import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
+import 'package:diet_time/features/plans/presentation/meal_plan_details_screen.dart';
 import 'package:diet_time/features/personalization/presentation/post_login_name_gate.dart';
 import 'package:diet_time/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +28,7 @@ abstract final class AppRoutes {
   static const phoneLogin = '/phone-login';
   static const otp = '/otp-verification';
   static const plans = '/plans';
+  static const planDetails = '/plan-details';
   static const postLogin = '/post-login';
   static const register = '/register';
   static const home = '/home';
@@ -111,6 +114,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.plans,
         pageBuilder: (context, state) =>
             _slidePage(state: state, child: const MealPlanScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.planDetails,
+        pageBuilder: (context, state) {
+          final plan = state.extra;
+          if (plan is! MealPlanOption) {
+            return _slidePage(state: state, child: const MealPlanScreen());
+          }
+          return _slidePage(
+            state: state,
+            child: MealPlanDetailsScreen(plan: plan),
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.postLogin,

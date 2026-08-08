@@ -1,3 +1,5 @@
+import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
+
 class MealPlanOption {
   const MealPlanOption({
     required this.id,
@@ -15,6 +17,7 @@ class MealPlanOption {
     this.sourcePackageCode,
     this.sourceDurationDays,
     this.isPriceLoading = false,
+    this.mealConfigurations = const [],
   });
 
   factory MealPlanOption.fromJson(Map<String, dynamic> json) {
@@ -58,6 +61,15 @@ class MealPlanOption {
       sourcePackageCode: _optionalText(json['sourcePackageCode']),
       sourceDurationDays: sourceDurationDays,
       isPriceLoading: json['isPriceLoading'] == true,
+      mealConfigurations:
+          _mapList(
+                json['mealConfigurations'] ??
+                    json['configurations'] ??
+                    json['mealQuantityConfigurations'],
+              )
+              .map(MealPlanConfiguration.fromJson)
+              .where((item) => item.isValid)
+              .toList(growable: false),
     );
   }
 
@@ -76,6 +88,7 @@ class MealPlanOption {
   final String? sourcePackageCode;
   final int? sourceDurationDays;
   final bool isPriceLoading;
+  final List<MealPlanConfiguration> mealConfigurations;
 
   double? get estimatedDailyCalories => dailyCaloriesKcal;
 }
@@ -92,3 +105,7 @@ double? _number(Object? value) =>
 
 int? _integer(Object? value) =>
     value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
+
+List<Map<String, dynamic>> _mapList(Object? value) => value is List
+    ? value.whereType<Map<String, dynamic>>().toList(growable: false)
+    : const [];
