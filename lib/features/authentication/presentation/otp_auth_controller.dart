@@ -114,15 +114,23 @@ final otpAuthControllerProvider =
 
 class OtpAuthController extends Notifier<OtpAuthState> {
   Timer? _resendTimer;
+  Future<bool>? _sessionRestore;
 
   @override
   OtpAuthState build() {
     ref.onDispose(() => _resendTimer?.cancel());
-    unawaited(_restoreSession());
+    unawaited(Future<bool>.microtask(restoreSession));
     return const OtpAuthState();
   }
 
-  Future<void> _restoreSession() async {
+  Future<bool> restoreSession() {
+    if (state.isAuthenticated) return Future.value(true);
+    return _sessionRestore ??= _restoreSession().whenComplete(() {
+      _sessionRestore = null;
+    });
+  }
+
+  Future<bool> _restoreSession() async {
     try {
       final authenticated = await ref
           .read(authenticationServiceProvider)
@@ -130,8 +138,10 @@ class OtpAuthController extends Notifier<OtpAuthState> {
       if (authenticated) {
         state = state.copyWith(isAuthenticated: true);
       }
+      return authenticated;
     } catch (_) {
       // A missing platform storage implementation must not block guest use.
+      return false;
     }
   }
 

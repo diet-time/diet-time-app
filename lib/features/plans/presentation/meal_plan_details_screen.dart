@@ -183,9 +183,13 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
     );
   }
 
-  void _continue(String mealPlanPriceId) {
+  Future<void> _continue(String mealPlanPriceId) async {
     widget.onContinue?.call(widget.plan.id, mealPlanPriceId);
     if (widget.onContinue != null) return;
+    final authenticated = await ref
+        .read(otpAuthControllerProvider.notifier)
+        .restoreSession();
+    if (!mounted) return;
     final destination = PendingAuthDestination(
       route: AppRoutes.home,
       planCode: widget.plan.code,
@@ -193,8 +197,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
       mealPlanTemplateId: widget.plan.id,
       mealPlanPriceId: mealPlanPriceId,
     );
-    final authState = ref.read(otpAuthControllerProvider);
-    if (authState.isAuthenticated) {
+    if (authenticated) {
       ref.read(otpAuthControllerProvider.notifier).begin(destination);
       context.go(AppRoutes.home);
     } else {

@@ -34,6 +34,35 @@ void main() {
     FlutterSecureStorage.setMockInitialValues({});
   });
 
+  test('secure session restores while the access token is valid', () async {
+    final storage = SecureStorageService(storage: const FlutterSecureStorage());
+    await storage.write(SecureStorageService.accessTokenKey, 'access-token');
+    await storage.write(
+      SecureStorageService.accessTokenExpiresAtKey,
+      DateTime.now().toUtc().add(const Duration(hours: 1)).toIso8601String(),
+    );
+
+    final service = SecureStorageAuthenticationService(storage);
+
+    expect(await service.isLoggedIn(), isTrue);
+  });
+
+  test('expired secure access token does not restore a session', () async {
+    final storage = SecureStorageService(storage: const FlutterSecureStorage());
+    await storage.write(SecureStorageService.accessTokenKey, 'access-token');
+    await storage.write(
+      SecureStorageService.accessTokenExpiresAtKey,
+      DateTime.now()
+          .toUtc()
+          .subtract(const Duration(minutes: 1))
+          .toIso8601String(),
+    );
+
+    final service = SecureStorageAuthenticationService(storage);
+
+    expect(await service.isLoggedIn(), isFalse);
+  });
+
   testWidgets('valid Qatar phone is normalized and requests OTP once', (
     tester,
   ) async {
