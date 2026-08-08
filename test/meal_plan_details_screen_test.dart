@@ -1,3 +1,4 @@
+import 'package:diet_time/core/network/api_endpoints.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
@@ -9,6 +10,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('meal plan details use the meal-plans endpoint', () {
+    expect(
+      ApiEndpoints.mealPlanDetails('6b5b71bd-baf7-46b6-abf0-2bc457a5ab6d'),
+      '/api/v1/meal-plans/6b5b71bd-baf7-46b6-abf0-2bc457a5ab6d',
+    );
+  });
+
   test('API configuration parser preserves package order and price IDs', () {
     final plan = MealPlanOption.fromJson(_planJson);
 
