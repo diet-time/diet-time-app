@@ -520,6 +520,9 @@ Widget _planApp(AuthenticationService authentication) {
           ),
         ],
       ),
+      mealPlanConfigurationsProvider.overrideWith(
+        (ref, request) async => request.plan.mealConfigurations,
+      ),
     ],
     child: MaterialApp.router(
       theme: AppTheme.light(const Locale('en')),

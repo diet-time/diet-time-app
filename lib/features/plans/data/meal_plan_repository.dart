@@ -20,9 +20,6 @@ final mealPlanConfigurationsProvider =
       ref,
       request,
     ) async {
-      if (request.plan.mealConfigurations.isNotEmpty) {
-        return request.plan.mealConfigurations;
-      }
       return ref
           .watch(mealPlanRepositoryProvider)
           .getMealPlanConfigurations(
@@ -174,7 +171,10 @@ String? _configurationDescription(
         return !code.contains('SNACK') && !code.contains('DESSERT');
       })
       .take(meals)
-      .map((item) => item['name']?.toString().trim() ?? '');
+      .map((item) {
+        final name = item['name']?.toString().trim() ?? '';
+        return name.isEmpty ? '' : '1 $name';
+      });
   final names = regular.where((name) => name.isNotEmpty).toList();
   if (snacks > 0) {
     names.add(

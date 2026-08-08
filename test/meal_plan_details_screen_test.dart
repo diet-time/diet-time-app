@@ -1,4 +1,5 @@
 import 'package:diet_time/core/network/api_endpoints.dart';
+import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
@@ -15,6 +16,34 @@ void main() {
       ApiEndpoints.mealPlanDetails('6b5b71bd-baf7-46b6-abf0-2bc457a5ab6d'),
       '/api/v1/meal-plans/6b5b71bd-baf7-46b6-abf0-2bc457a5ab6d',
     );
+  });
+
+  test('selected plan always loads its own details from the API', () async {
+    final repository = _RecordingMealPlanRepository();
+    final container = ProviderContainer(
+      overrides: [mealPlanRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    const plan = MealPlanOption(
+      id: 'complete-balance-id',
+      code: 'COMPLETE_BALANCE',
+      name: 'Complete Balance',
+      mealConfigurations: [
+        MealPlanConfiguration(
+          id: 'embedded',
+          name: 'Embedded configuration',
+          packages: [],
+        ),
+      ],
+    );
+
+    await container.read(
+      mealPlanConfigurationsProvider((plan: plan, language: 'en')).future,
+    );
+
+    expect(repository.requestedPlanId, 'complete-balance-id');
+    expect(repository.requestedLanguage, 'en');
+    expect(repository.callCount, 1);
   });
 
   test('API configuration parser preserves package order and price IDs', () {
@@ -66,7 +95,7 @@ void main() {
       expect(configurations.single.name, '3 Meals + 1 Snack');
       expect(
         configurations.single.description,
-        'Breakfast · Lunch · Dinner · 1 Snack',
+        '1 Breakfast · 1 Lunch · 1 Dinner · 1 Snack',
       );
       expect(configurations.single.packages.map((item) => item.name), [
         '1 Day',
@@ -96,6 +125,11 @@ void main() {
     expect(find.byKey(const ValueKey('detailsBackground')), findsOneWidget);
     expect(find.byKey(const ValueKey('detailsBackgroundImage')), findsNothing);
     expect(find.text('Your plan'), findsNothing);
+    expect(find.byKey(const ValueKey('detailsLanguageSelector')), findsNothing);
+    final description = tester.widget<Text>(
+      find.text('Balanced meals, fresh ingredients and daily variety.'),
+    );
+    expect(description.maxLines, 3);
     expect(find.textContaining('RECOMMENDED'), findsNothing);
     expect(find.textContaining('Recommended'), findsNothing);
   });
@@ -212,6 +246,50 @@ void main() {
     expect(find.byKey(const ValueKey('detailsContinue')), findsNothing);
   });
 
+  testWidgets(
+    'hero uses the one-day price instead of the cheapest daily rate',
+    (tester) async {
+      const configurations = [
+        MealPlanConfiguration(
+          id: 'daily-meals',
+          name: '3 Meals + 1 Snack',
+          packages: [
+            MealPlanPackage(
+              mealPlanPriceId: 'month-price',
+              name: '1 Month',
+              serviceDays: 24,
+              totalPrice: 80,
+              dailyPrice: 3.33,
+              currencyCode: 'QAR',
+            ),
+            MealPlanPackage(
+              mealPlanPriceId: 'day-price',
+              name: '1 Day',
+              serviceDays: 1,
+              totalPrice: 135,
+              dailyPrice: 135,
+              currencyCode: 'QAR',
+            ),
+          ],
+        ),
+      ];
+      await tester.pumpWidget(
+        _app(
+          plan: const MealPlanOption(
+            id: 'complete-balance',
+            code: 'COMPLETE_BALANCE',
+            name: 'Complete Balance',
+            mealConfigurations: configurations,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('From QAR 135/day'), findsOneWidget);
+      expect(find.textContaining('3.33/day'), findsNothing);
+    },
+  );
+
   testWidgets('Arabic uses RTL while retaining the same image URL', (
     tester,
   ) async {
@@ -253,8 +331,10 @@ Widget _app({
 }) {
   return ProviderScope(
     overrides: [
-      if (configurationsOverride != null)
-        mealPlanConfigurationsProvider.overrideWith(configurationsOverride),
+      mealPlanConfigurationsProvider.overrideWith(
+        configurationsOverride ??
+            (ref, request) async => request.plan.mealConfigurations,
+      ),
     ],
     child: MaterialApp(
       locale: locale,
@@ -283,7 +363,7 @@ const _planJson = <String, dynamic>{
     {
       'id': 'three',
       'name': '3 Meals',
-      'description': 'Breakfast · Lunch · Dinner',
+      'description': '1 Breakfast · 1 Lunch · 1 Dinner',
       'packages': [
         {
           'mealPlanPriceId': 'three-week',
@@ -298,7 +378,7 @@ const _planJson = <String, dynamic>{
     {
       'id': 'plus',
       'name': '3 Meals + 1 Snack',
-      'description': 'Breakfast · Lunch · Dinner · 1 Snack',
+      'description': '1 Breakfast · 1 Lunch · 1 Dinner · 1 Snack',
       'packages': [
         {
           'mealPlanPriceId': 'plus-week',
@@ -320,3 +400,22 @@ const _planJson = <String, dynamic>{
     },
   ],
 };
+
+class _RecordingMealPlanRepository extends MealPlanRepository {
+  _RecordingMealPlanRepository() : super(ApiClient());
+
+  int callCount = 0;
+  String? requestedPlanId;
+  String? requestedLanguage;
+
+  @override
+  Future<List<MealPlanConfiguration>> getMealPlanConfigurations({
+    required String mealPlanTemplateId,
+    required String language,
+  }) async {
+    callCount++;
+    requestedPlanId = mealPlanTemplateId;
+    requestedLanguage = language;
+    return const [];
+  }
+}

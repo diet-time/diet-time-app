@@ -4,7 +4,6 @@ import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
-import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
@@ -41,7 +40,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
     return _PageBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: _DetailsHeader(languageCode: language),
+        appBar: const _DetailsHeader(),
         body: configurations.when(
           loading: () => _LoadingBody(plan: widget.plan),
           error: (_, _) => _PricingError(
@@ -86,7 +85,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                   children: [
                     _PlanHero(
                       plan: widget.plan,
-                      startingPrice: _lowestPrice(configurations),
+                      startingPrice: _heroPrice(configurations),
                     ),
                     const SizedBox(height: 16),
                     const _SectionTitle(
@@ -98,7 +97,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                     ),
                     const SizedBox(height: 8),
                     SizedBox(
-                      height: 74,
+                      height: 94,
                       child: ListView.separated(
                         key: const ValueKey('mealConfigurations'),
                         scrollDirection: Axis.horizontal,
@@ -206,16 +205,14 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
   }
 }
 
-class _DetailsHeader extends ConsumerWidget implements PreferredSizeWidget {
-  const _DetailsHeader({required this.languageCode});
-
-  final String languageCode;
+class _DetailsHeader extends StatelessWidget implements PreferredSizeWidget {
+  const _DetailsHeader();
 
   @override
   Size get preferredSize => const Size.fromHeight(58);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return AppBar(
       backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
@@ -236,25 +233,6 @@ class _DetailsHeader extends ConsumerWidget implements PreferredSizeWidget {
           fontWeight: FontWeight.w900,
         ),
       ),
-      actions: [
-        PopupMenuButton<String>(
-          key: const ValueKey('detailsLanguageSelector'),
-          initialValue: languageCode,
-          tooltip: 'Language',
-          onSelected: (value) => ref
-              .read(languageControllerProvider.notifier)
-              .selectLanguage(value),
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'en', child: Text('English')),
-            PopupMenuItem(value: 'ar', child: Text('العربية')),
-          ],
-          icon: const Icon(
-            Icons.language_rounded,
-            color: AppColors.emeraldGreen,
-          ),
-        ),
-        const SizedBox(width: 8),
-      ],
     );
   }
 }
@@ -285,7 +263,7 @@ class _PlanHero extends StatelessWidget {
     final isArabic = Directionality.of(context) == TextDirection.rtl;
     return Container(
       key: const ValueKey('planHero'),
-      height: 176,
+      height: 190,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: const Color(0xFFF3F7EF),
@@ -350,7 +328,7 @@ class _PlanHero extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text(
                         description,
-                        maxLines: 2,
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: AppColors.darkGreen.withValues(alpha: .68),
@@ -504,7 +482,10 @@ class _ChoiceCard extends StatelessWidget {
     borderRadius: BorderRadius.circular(15),
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 180),
-      constraints: BoxConstraints(minWidth: compact ? 116 : 168, maxWidth: 220),
+      constraints: BoxConstraints(
+        minWidth: compact ? 116 : 270,
+        maxWidth: compact ? 160 : 320,
+      ),
       padding: const EdgeInsetsDirectional.fromSTEB(12, 9, 12, 8),
       decoration: BoxDecoration(
         color: selected ? const Color(0xFFE7F4E8) : AppColors.white,
@@ -545,7 +526,7 @@ class _ChoiceCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     value,
-                    maxLines: 1,
+                    maxLines: compact ? 1 : 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: AppColors.darkGreen.withValues(alpha: .58),
@@ -919,10 +900,13 @@ class _Skeleton extends StatelessWidget {
   );
 }
 
-MealPlanPackage? _lowestPrice(List<MealPlanConfiguration> configurations) {
+MealPlanPackage? _heroPrice(List<MealPlanConfiguration> configurations) {
   final packages = [for (final item in configurations) ...item.packages];
   if (packages.isEmpty) return null;
-  return packages.reduce((a, b) => a.dailyPrice <= b.dailyPrice ? a : b);
+  for (final package in packages) {
+    if (package.serviceDays == 1) return package;
+  }
+  return packages.first;
 }
 
 String _serviceDaysLabel(BuildContext context, int days) =>
