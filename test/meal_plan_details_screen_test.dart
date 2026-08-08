@@ -67,6 +67,7 @@ void main() {
             'snacksPerDay': 1,
             'amount': 135.0,
             'currencyCode': 'QAR',
+            'name': '1 Day Plan',
           },
           {
             'durationDays': 6,
@@ -74,6 +75,7 @@ void main() {
             'snacksPerDay': 1,
             'amount': 900.0,
             'currencyCode': 'QAR',
+            'name': 'Weekly Plan',
           },
           {
             'durationDays': 24,
@@ -81,6 +83,7 @@ void main() {
             'snacksPerDay': 1,
             'amount': 2800.0,
             'currencyCode': 'QAR',
+            'name': 'Monthly Plan',
           },
         ],
         'supportedMealTypes': [
@@ -98,9 +101,9 @@ void main() {
         '1 Breakfast · 1 Lunch · 1 Dinner · 1 Snack',
       );
       expect(configurations.single.packages.map((item) => item.name), [
-        '1 Day',
-        '1 Week',
-        '1 Month',
+        '1 Day Plan',
+        'Weekly Plan',
+        'Monthly Plan',
       ]);
       expect(configurations.single.packages[1].dailyPrice, 150);
       expect(
@@ -110,6 +113,22 @@ void main() {
       expect(configurations.single.packages.first.mealPlanPriceId, isEmpty);
     },
   );
+
+  test('duration labels are never inferred from service-day counts', () {
+    final configurations = parseMealPlanConfigurations(const {
+      'prices': [
+        {
+          'durationDays': 6,
+          'mealsPerDay': 3,
+          'snacksPerDay': 1,
+          'amount': 900.0,
+          'currencyCode': 'QAR',
+        },
+      ],
+    }, language: 'en');
+
+    expect(configurations, isEmpty);
+  });
 
   testWidgets('selected plan image is a contained hero background', (
     tester,

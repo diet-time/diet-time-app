@@ -66,6 +66,7 @@ class MealPlanPackage {
       ),
       name: _text(
         json['name'] ??
+            json['durationName'] ??
             json['displayName'] ??
             json['durationLabel'] ??
             json['label'],

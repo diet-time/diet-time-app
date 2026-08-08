@@ -127,12 +127,6 @@ List<MealPlanConfiguration> parseMealPlanConfigurations(
                   ...price,
                   'serviceDays': price['serviceDays'] ?? price['durationDays'],
                   'totalPrice': price['totalPrice'] ?? price['amount'],
-                  'name':
-                      price['name'] ??
-                      _durationName(
-                        _integer(price['durationDays']) ?? 0,
-                        language,
-                      ),
                 }),
               )
               .where((item) => item.isValid)
@@ -184,25 +178,6 @@ String? _configurationDescription(
     );
   }
   return names.isEmpty ? null : names.join(' · ');
-}
-
-String _durationName(int days, String language) {
-  if (language == 'ar') {
-    return switch (days) {
-      1 => 'يوم واحد',
-      6 => 'أسبوع واحد',
-      12 => 'أسبوعان',
-      24 => 'شهر واحد',
-      _ => '$days أيام',
-    };
-  }
-  return switch (days) {
-    1 => '1 Day',
-    6 => '1 Week',
-    12 => '2 Weeks',
-    24 => '1 Month',
-    _ => '$days Days',
-  };
 }
 
 int? _integer(Object? value) =>
