@@ -137,13 +137,78 @@ class OtpAuthController extends Notifier<OtpAuthState> {
           .isLoggedIn();
       if (authenticated) {
         state = state.copyWith(isAuthenticated: true);
+        return true;
       }
-      return authenticated;
+      return _refreshStoredSession();
     } catch (_) {
       // A missing platform storage implementation must not block guest use.
       return false;
     }
   }
+
+  Future<bool> _refreshStoredSession() async {
+    final storage = ref.read(secureStorageServiceProvider);
+    final values = await Future.wait([
+      storage.read(SecureStorageService.refreshTokenKey),
+      storage.read(SecureStorageService.refreshTokenExpiresAtKey),
+    ]);
+    final refreshToken = values[0]?.trim() ?? '';
+    final refreshExpiresAt = DateTime.tryParse(values[1] ?? '');
+    if (refreshToken.isEmpty ||
+        refreshExpiresAt == null ||
+        !refreshExpiresAt.isAfter(DateTime.now().toUtc())) {
+      return false;
+    }
+
+    try {
+      final repository = ref.read(authenticationRepositoryProvider);
+      if (repository is! SessionRefreshRepository) return false;
+      final refreshRepository = repository as SessionRefreshRepository;
+      final refreshed = await refreshRepository.refreshSession(
+        refreshToken: refreshToken,
+        refreshTokenExpiresAt: refreshExpiresAt,
+      );
+      await Future.wait([
+        storage.write(
+          SecureStorageService.accessTokenKey,
+          refreshed.accessToken,
+        ),
+        storage.write(
+          SecureStorageService.accessTokenExpiresAtKey,
+          refreshed.accessTokenExpiresAt.toIso8601String(),
+        ),
+        storage.write(
+          SecureStorageService.refreshTokenKey,
+          refreshed.refreshToken,
+        ),
+        storage.write(
+          SecureStorageService.refreshTokenExpiresAtKey,
+          refreshed.refreshTokenExpiresAt.toIso8601String(),
+        ),
+      ]);
+      await ref.read(authenticationServiceProvider).markAuthenticated();
+      state = state.copyWith(isAuthenticated: true);
+      return true;
+    } on PhoneOtpException catch (error) {
+      if (error.failure == PhoneOtpFailure.invalidOtp ||
+          error.failure == PhoneOtpFailure.invalidResponse) {
+        await _clearStoredSession(storage);
+        return false;
+      }
+      // A valid, unexpired refresh token still represents a resumable session
+      // when the network or API is temporarily unavailable.
+      state = state.copyWith(isAuthenticated: true);
+      return true;
+    }
+  }
+
+  Future<void> _clearStoredSession(SecureStorageService storage) =>
+      Future.wait([
+        storage.delete(SecureStorageService.accessTokenKey),
+        storage.delete(SecureStorageService.accessTokenExpiresAtKey),
+        storage.delete(SecureStorageService.refreshTokenKey),
+        storage.delete(SecureStorageService.refreshTokenExpiresAtKey),
+      ]);
 
   void begin(PendingAuthDestination destination) {
     state = state.copyWith(

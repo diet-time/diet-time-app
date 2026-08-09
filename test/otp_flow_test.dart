@@ -63,6 +63,42 @@ void main() {
     expect(await service.isLoggedIn(), isFalse);
   });
 
+  test('controller refreshes an expired access token on app restore', () async {
+    final storage = SecureStorageService(storage: const FlutterSecureStorage());
+    await storage.write(SecureStorageService.accessTokenKey, 'expired-access');
+    await storage.write(
+      SecureStorageService.accessTokenExpiresAtKey,
+      DateTime.now()
+          .toUtc()
+          .subtract(const Duration(minutes: 1))
+          .toIso8601String(),
+    );
+    await storage.write(SecureStorageService.refreshTokenKey, 'refresh-token');
+    await storage.write(
+      SecureStorageService.refreshTokenExpiresAtKey,
+      DateTime.now().toUtc().add(const Duration(days: 30)).toIso8601String(),
+    );
+    final repository = _RefreshAuthenticationRepository();
+    final container = ProviderContainer(
+      overrides: [
+        secureStorageServiceProvider.overrideWithValue(storage),
+        authenticationRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final restored = await container
+        .read(otpAuthControllerProvider.notifier)
+        .restoreSession();
+
+    expect(restored, isTrue);
+    expect(repository.refreshCount, 1);
+    expect(
+      await storage.read(SecureStorageService.accessTokenKey),
+      'renewed-access',
+    );
+  });
+
   testWidgets('valid Qatar phone is normalized and requests OTP once', (
     tester,
   ) async {
@@ -608,6 +644,33 @@ class _ControlledAuthenticationRepository implements AuthenticationRepository {
   void fail(PhoneOtpFailure failure) {
     _completer.completeError(PhoneOtpException(failure));
   }
+}
+
+class _RefreshAuthenticationRepository
+    implements AuthenticationRepository, SessionRefreshRepository {
+  int refreshCount = 0;
+
+  @override
+  Future<RefreshedAuthTokens> refreshSession({
+    required String refreshToken,
+    required DateTime refreshTokenExpiresAt,
+  }) async {
+    refreshCount++;
+    return RefreshedAuthTokens(
+      accessToken: 'renewed-access',
+      accessTokenExpiresAt: DateTime.now().toUtc().add(
+        const Duration(minutes: 15),
+      ),
+      refreshToken: 'rotated-refresh',
+      refreshTokenExpiresAt: DateTime.now().toUtc().add(
+        const Duration(days: 30),
+      ),
+    );
+  }
+
+  @override
+  Future<AuthSession> verifyPhoneOtp(PhoneOtpLoginRequest request) =>
+      throw UnimplementedError();
 }
 
 AuthSession _session(String phoneNumber) => AuthSession(

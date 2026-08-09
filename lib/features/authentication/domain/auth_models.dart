@@ -45,6 +45,40 @@ class AuthSession {
   final AuthUser user;
 }
 
+class RefreshedAuthTokens {
+  const RefreshedAuthTokens({
+    required this.accessToken,
+    required this.accessTokenExpiresAt,
+    required this.refreshToken,
+    required this.refreshTokenExpiresAt,
+  });
+
+  factory RefreshedAuthTokens.fromJson(
+    Map<String, dynamic> json, {
+    required String currentRefreshToken,
+    required DateTime currentRefreshTokenExpiresAt,
+  }) {
+    final replacementRefreshToken = json['refreshToken']?.toString().trim();
+    final replacementRefreshExpiry = DateTime.tryParse(
+      json['refreshTokenExpiresAt']?.toString() ?? '',
+    );
+    return RefreshedAuthTokens(
+      accessToken: _requiredString(json, 'accessToken'),
+      accessTokenExpiresAt: _requiredDate(json, 'accessTokenExpiresAt'),
+      refreshToken: replacementRefreshToken?.isNotEmpty == true
+          ? replacementRefreshToken!
+          : currentRefreshToken,
+      refreshTokenExpiresAt:
+          replacementRefreshExpiry ?? currentRefreshTokenExpiresAt,
+    );
+  }
+
+  final String accessToken;
+  final DateTime accessTokenExpiresAt;
+  final String refreshToken;
+  final DateTime refreshTokenExpiresAt;
+}
+
 class AuthUser {
   const AuthUser({
     required this.id,

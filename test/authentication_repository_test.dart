@@ -47,6 +47,39 @@ void main() {
     );
   });
 
+  test(
+    'refreshes an expired access token with the stored refresh token',
+    () async {
+      final response = ApiResponse(
+        statusCode: 200,
+        body: {
+          'data': {
+            'accessToken': 'renewed-access-token',
+            'accessTokenExpiresAt': DateTime.now()
+                .toUtc()
+                .add(const Duration(minutes: 15))
+                .toIso8601String(),
+          },
+        },
+      );
+      final client = _FakeApiClient(response);
+      final refreshExpiry = DateTime.now().toUtc().add(
+        const Duration(days: 30),
+      );
+
+      final tokens = await ApiAuthenticationRepository(client).refreshSession(
+        refreshToken: 'stored-refresh-token',
+        refreshTokenExpiresAt: refreshExpiry,
+      );
+
+      expect(client.lastPath, '/api/v1/auth/refresh');
+      expect(client.lastBody, {'refreshToken': 'stored-refresh-token'});
+      expect(tokens.accessToken, 'renewed-access-token');
+      expect(tokens.refreshToken, 'stored-refresh-token');
+      expect(tokens.refreshTokenExpiresAt, refreshExpiry);
+    },
+  );
+
   for (final entry in {
     400: PhoneOtpFailure.validation,
     401: PhoneOtpFailure.invalidOtp,

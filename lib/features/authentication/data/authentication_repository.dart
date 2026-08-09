@@ -11,6 +11,13 @@ abstract interface class AuthenticationRepository {
   Future<AuthSession> verifyPhoneOtp(PhoneOtpLoginRequest request);
 }
 
+abstract interface class SessionRefreshRepository {
+  Future<RefreshedAuthTokens> refreshSession({
+    required String refreshToken,
+    required DateTime refreshTokenExpiresAt,
+  });
+}
+
 enum PhoneOtpFailure {
   validation,
   invalidOtp,
@@ -29,7 +36,8 @@ class PhoneOtpException implements Exception {
   final String? message;
 }
 
-class ApiAuthenticationRepository implements AuthenticationRepository {
+class ApiAuthenticationRepository
+    implements AuthenticationRepository, SessionRefreshRepository {
   const ApiAuthenticationRepository(this._client);
 
   final ApiClient _client;
@@ -49,6 +57,40 @@ class ApiAuthenticationRepository implements AuthenticationRepository {
       }
       try {
         return AuthSession.fromJson(data);
+      } on FormatException {
+        throw const PhoneOtpException(PhoneOtpFailure.invalidResponse);
+      }
+    } on ApiException catch (error) {
+      final failure = switch (error.failure) {
+        ApiFailure.network || ApiFailure.timeout => PhoneOtpFailure.connection,
+        _ => PhoneOtpFailure.invalidResponse,
+      };
+      throw PhoneOtpException(failure, message: error.message);
+    }
+  }
+
+  @override
+  Future<RefreshedAuthTokens> refreshSession({
+    required String refreshToken,
+    required DateTime refreshTokenExpiresAt,
+  }) async {
+    try {
+      final response = await _client.request(
+        method: 'POST',
+        path: ApiEndpoints.refreshSession,
+        body: {'refreshToken': refreshToken},
+      );
+      if (!response.isSuccess) throw _exceptionFor(response);
+      final data = response.body['data'];
+      if (data is! Map<String, dynamic>) {
+        throw const PhoneOtpException(PhoneOtpFailure.invalidResponse);
+      }
+      try {
+        return RefreshedAuthTokens.fromJson(
+          data,
+          currentRefreshToken: refreshToken,
+          currentRefreshTokenExpiresAt: refreshTokenExpiresAt,
+        );
       } on FormatException {
         throw const PhoneOtpException(PhoneOtpFailure.invalidResponse);
       }
