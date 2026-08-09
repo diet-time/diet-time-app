@@ -44,7 +44,7 @@ class MealPlanPackage {
     this.nonDeliveryWeekdays = const {DateTime.friday, DateTime.saturday},
     this.unavailableDates = const [],
     this.earliestStartDate,
-    this.startDateLeadTimeDays = 2,
+    this.startDateLeadTimeDays = 0,
   });
 
   factory MealPlanPackage.fromJson(Map<String, dynamic> json) {
@@ -85,13 +85,15 @@ class MealPlanPackage {
             json['unavailableWeekdays'],
       ),
       unavailableDates: _dates(
-        json['unavailableDates'] ?? json['nonDeliveryDates'] ?? json['holidays'],
+        json['unavailableDates'] ??
+            json['nonDeliveryDates'] ??
+            json['holidays'],
       ),
       earliestStartDate: _date(
         json['earliestStartDate'] ?? json['minimumStartDate'],
       ),
       startDateLeadTimeDays:
-          _integer(json['startDateLeadTimeDays'] ?? json['leadTimeDays']) ?? 2,
+          _integer(json['startDateLeadTimeDays'] ?? json['leadTimeDays']) ?? 0,
     );
   }
 
@@ -136,7 +138,9 @@ int? _integer(Object? value) =>
 
 DateTime? _date(Object? value) {
   final parsed = DateTime.tryParse(value?.toString() ?? '');
-  return parsed == null ? null : DateTime(parsed.year, parsed.month, parsed.day);
+  return parsed == null
+      ? null
+      : DateTime(parsed.year, parsed.month, parsed.day);
 }
 
 List<DateTime> _dates(Object? value) => value is List

@@ -80,6 +80,38 @@ class _MealPlanStartDateScreenState
     });
   }
 
+  DateTime get _firstSelectableDate {
+    var candidate = _earliestStartDate;
+    while (_isUnavailable(candidate)) {
+      candidate = candidate.add(const Duration(days: 1));
+    }
+    return candidate;
+  }
+
+  Future<void> _openStartDatePicker() async {
+    final firstDate = _firstSelectableDate;
+    final selected = await showDatePicker(
+      context: context,
+      helpText: 'Choose your start date',
+      initialDate: _schedule?.startDate ?? firstDate,
+      firstDate: firstDate,
+      lastDate: DateTime(firstDate.year + 2, firstDate.month, firstDate.day),
+      selectableDayPredicate: _isValidStart,
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: Theme.of(context).colorScheme.copyWith(
+            primary: AppColors.emeraldGreen,
+            onPrimary: AppColors.white,
+            surface: const Color(0xFFF5F3E9),
+            onSurface: AppColors.darkGreen,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (selected != null) _selectStartDate(selected);
+  }
+
   Future<void> _continue() async {
     final schedule = _schedule;
     if (schedule == null) return;
@@ -153,8 +185,25 @@ class _MealPlanStartDateScreenState
                           ),
                         ),
                         const SizedBox(height: 20),
-                        _DateFields(schedule: _schedule),
-                        const SizedBox(height: 16),
+                        _DateFields(
+                          schedule: _schedule,
+                          onChooseStartDate: _openStartDatePicker,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _schedule == null
+                              ? 'Tap an available day below to choose your start date.'
+                              : 'Tap another available day to change your start date.',
+                          key: const ValueKey('calendarInstruction'),
+                          style: TextStyle(
+                            color: AppColors.emeraldGreen.withValues(
+                              alpha: .82,
+                            ),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         _ServiceCalendar(
                           visibleMonth: _visibleMonth,
                           earliestStartDate: _earliestStartDate,
@@ -237,8 +286,9 @@ class _MealPlanStartDateScreenState
 }
 
 class _DateFields extends StatelessWidget {
-  const _DateFields({required this.schedule});
+  const _DateFields({required this.schedule, required this.onChooseStartDate});
   final MealPlanServiceSchedule? schedule;
+  final VoidCallback onChooseStartDate;
 
   @override
   Widget build(BuildContext context) {
@@ -253,6 +303,7 @@ class _DateFields extends StatelessWidget {
                 : formatter.format(schedule!.startDate),
             active: schedule != null,
             fieldKey: const ValueKey('startDateField'),
+            onTap: onChooseStartDate,
           ),
         ),
         const SizedBox(width: 12),
@@ -276,11 +327,13 @@ class _ReadOnlyDateField extends StatelessWidget {
     required this.value,
     required this.fieldKey,
     this.active = false,
+    this.onTap,
   });
   final String label;
   final String value;
   final Key fieldKey;
   final bool active;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -295,27 +348,50 @@ class _ReadOnlyDateField extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 5),
-      Container(
+      Material(
         key: fieldKey,
-        height: 52,
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFFE7F4E8) : AppColors.white,
+        color: active ? const Color(0xFFE7F4E8) : AppColors.white,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
+          side: BorderSide(
             color: active
                 ? AppColors.emeraldGreen
                 : AppColors.darkGreen.withValues(alpha: .1),
           ),
         ),
-        child: Text(
-          value,
-          maxLines: 2,
-          style: TextStyle(
-            color: AppColors.darkGreen.withValues(alpha: active ? 1 : .5),
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: SizedBox(
+            height: 52,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      value,
+                      maxLines: 2,
+                      style: TextStyle(
+                        color: AppColors.darkGreen.withValues(
+                          alpha: active ? 1 : .5,
+                        ),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  if (onTap != null) ...[
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.calendar_month_rounded,
+                      size: 18,
+                      color: AppColors.emeraldGreen,
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
