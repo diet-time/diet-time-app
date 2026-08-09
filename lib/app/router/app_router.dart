@@ -10,7 +10,9 @@ import 'package:diet_time/features/onboarding/presentation/onboarding_carousel_s
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
+import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_details_screen.dart';
+import 'package:diet_time/features/plans/presentation/meal_plan_start_date_screen.dart';
 import 'package:diet_time/features/personalization/presentation/post_login_name_gate.dart';
 import 'package:diet_time/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
@@ -29,6 +31,7 @@ abstract final class AppRoutes {
   static const otp = '/otp-verification';
   static const plans = '/plans';
   static const planDetails = '/plan-details';
+  static const planStartDate = '/plan-start-date';
   static const postLogin = '/post-login';
   static const register = '/register';
   static const home = '/home';
@@ -125,6 +128,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return _slidePage(
             state: state,
             child: MealPlanDetailsScreen(plan: plan),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.planStartDate,
+        pageBuilder: (context, state) {
+          final selection = state.extra;
+          if (selection is! MealPlanPurchaseSelection) {
+            return _slidePage(state: state, child: const MealPlanScreen());
+          }
+          return _slidePage(
+            state: state,
+            child: MealPlanStartDateScreen(selection: selection),
           );
         },
       ),

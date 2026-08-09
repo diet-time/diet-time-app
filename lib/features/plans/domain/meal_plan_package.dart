@@ -41,6 +41,10 @@ class MealPlanPackage {
     required this.totalPrice,
     required this.dailyPrice,
     required this.currencyCode,
+    this.nonDeliveryWeekdays = const {DateTime.friday, DateTime.saturday},
+    this.unavailableDates = const [],
+    this.earliestStartDate,
+    this.startDateLeadTimeDays = 2,
   });
 
   factory MealPlanPackage.fromJson(Map<String, dynamic> json) {
@@ -75,6 +79,19 @@ class MealPlanPackage {
       totalPrice: total,
       dailyPrice: explicitDaily ?? (serviceDays > 0 ? total / serviceDays : 0),
       currencyCode: _text(json['currencyCode'] ?? json['currency']),
+      nonDeliveryWeekdays: _weekdays(
+        json['nonDeliveryWeekdays'] ??
+            json['nonDeliveryDays'] ??
+            json['unavailableWeekdays'],
+      ),
+      unavailableDates: _dates(
+        json['unavailableDates'] ?? json['nonDeliveryDates'] ?? json['holidays'],
+      ),
+      earliestStartDate: _date(
+        json['earliestStartDate'] ?? json['minimumStartDate'],
+      ),
+      startDateLeadTimeDays:
+          _integer(json['startDateLeadTimeDays'] ?? json['leadTimeDays']) ?? 2,
     );
   }
 
@@ -84,6 +101,10 @@ class MealPlanPackage {
   final double totalPrice;
   final double dailyPrice;
   final String currencyCode;
+  final Set<int> nonDeliveryWeekdays;
+  final List<DateTime> unavailableDates;
+  final DateTime? earliestStartDate;
+  final int startDateLeadTimeDays;
 
   String get selectionKey =>
       mealPlanPriceId.isNotEmpty ? mealPlanPriceId : 'duration-$serviceDays';
@@ -112,3 +133,32 @@ double? _number(Object? value) =>
 
 int? _integer(Object? value) =>
     value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
+
+DateTime? _date(Object? value) {
+  final parsed = DateTime.tryParse(value?.toString() ?? '');
+  return parsed == null ? null : DateTime(parsed.year, parsed.month, parsed.day);
+}
+
+List<DateTime> _dates(Object? value) => value is List
+    ? value.map(_date).whereType<DateTime>().toList(growable: false)
+    : const [];
+
+Set<int> _weekdays(Object? value) {
+  if (value is! List) return const {DateTime.friday, DateTime.saturday};
+  final result = value.map(_weekday).whereType<int>().toSet();
+  return result;
+}
+
+int? _weekday(Object? value) {
+  if (value is num && value >= 1 && value <= 7) return value.toInt();
+  const names = {
+    'monday': DateTime.monday,
+    'tuesday': DateTime.tuesday,
+    'wednesday': DateTime.wednesday,
+    'thursday': DateTime.thursday,
+    'friday': DateTime.friday,
+    'saturday': DateTime.saturday,
+    'sunday': DateTime.sunday,
+  };
+  return names[value?.toString().trim().toLowerCase()];
+}
