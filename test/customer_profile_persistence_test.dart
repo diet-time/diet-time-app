@@ -74,6 +74,19 @@ void main() {
     expect(profile.nutritionTargets?.proteinGrams, 155);
   });
 
+  test('customer profile ID accepts backend ID aliases', () {
+    expect(
+      CustomerProfile.fromJson(const {'id': 'profile-from-id'}).profileId,
+      'profile-from-id',
+    );
+    expect(
+      CustomerProfile.fromJson(const {
+        'customerProfileId': 'profile-from-alias',
+      }).profileId,
+      'profile-from-alias',
+    );
+  });
+
   test(
     'save prevents duplicate requests and keeps returned backend state',
     () async {

@@ -1,7 +1,9 @@
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/checkout/data/checkout_repository.dart';
 import 'package:diet_time/features/checkout/domain/checkout_models.dart';
+import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/personalization/data/customer_profile_repository.dart';
+import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -54,12 +56,25 @@ class CheckoutController extends Notifier<CheckoutState> {
     if (state.isLoadingAddresses) return;
     state = state.copyWith(isLoadingAddresses: true, addressError: null);
     try {
-      var profileId = state.customerProfileId;
+      final inMemoryProfile = ref.read(personalizationControllerProvider);
+      final authUser = ref.read(otpAuthControllerProvider).user;
+      var profileId =
+          state.customerProfileId ??
+          inMemoryProfile.profileId ??
+          authUser?.customerProfileId;
       if (profileId == null || profileId.isEmpty) {
         final profile = await ref
             .read(customerProfileRepositoryProvider)
             .getProfile();
         profileId = profile?.profileId;
+        if (profile != null) {
+          ref.read(personalizationControllerProvider.notifier).replace(profile);
+        }
+      }
+      if ((profileId == null || profileId.isEmpty) && authUser != null) {
+        // Some authentication payloads use the customer profile identifier as
+        // the user ID and omit the explicit customerProfileId alias.
+        profileId = authUser.id;
       }
       if (profileId == null || profileId.isEmpty) {
         throw const _CheckoutException(

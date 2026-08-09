@@ -86,6 +86,7 @@ class AuthUser {
     required this.name,
     required this.roles,
     required this.phoneNumber,
+    this.customerProfileId,
   });
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
@@ -97,6 +98,9 @@ class AuthUser {
       name: json['name']?.toString() ?? '',
       roles: List.unmodifiable(roles.map((role) => role.toString())),
       phoneNumber: _requiredString(json, 'phoneNumber'),
+      customerProfileId: _optionalString(
+        json['customerProfileId'] ?? json['profileId'],
+      ),
     );
   }
 
@@ -105,6 +109,12 @@ class AuthUser {
   final String name;
   final List<String> roles;
   final String phoneNumber;
+  final String? customerProfileId;
+}
+
+String? _optionalString(Object? value) {
+  final text = value?.toString().trim();
+  return text == null || text.isEmpty ? null : text;
 }
 
 String _requiredString(Map<String, dynamic> json, String key) {

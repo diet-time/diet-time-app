@@ -119,7 +119,9 @@ CustomerProfile? _profileFromEnvelope(
   if (data is! Map<String, dynamic>) {
     throw const CustomerProfileException();
   }
-  return CustomerProfile.fromJson(data, fallback: fallback);
+  final nested = data['customerProfile'] ?? data['profile'];
+  final profileJson = nested is Map<String, dynamic> ? nested : data;
+  return CustomerProfile.fromJson(profileJson, fallback: fallback);
 }
 
 class CustomerProfileException implements Exception {

@@ -39,7 +39,11 @@ class CustomerProfile {
         _string(json['nextStepCode']) ??
         (statusIsComplete ? 'PROFILE_COMPLETED' : fallback.nextStepCode);
     return CustomerProfile(
-      profileId: _string(json['profileId']) ?? fallback.profileId,
+      profileId:
+          _string(
+            json['profileId'] ?? json['customerProfileId'] ?? json['id'],
+          ) ??
+          fallback.profileId,
       preferredName: _string(json['preferredName']) ?? fallback.preferredName,
       genderCode: _string(json['genderCode']) ?? fallback.genderCode,
       dateOfBirth: _string(json['dateOfBirth']) ?? fallback.dateOfBirth,
