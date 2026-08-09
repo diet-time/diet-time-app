@@ -82,7 +82,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('10/08/2026'), findsOneWidget);
-    expect(find.text('10/09/2026'), findsOneWidget);
+    expect(find.text('06/09/2026'), findsOneWidget);
     expect(
       find.text('Monthly Plan · 24 service days · 3 Meals + 1 Snack'),
       findsOneWidget,

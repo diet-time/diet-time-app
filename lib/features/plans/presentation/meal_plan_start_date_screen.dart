@@ -3,6 +3,7 @@ import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
+import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
 import 'package:flutter/material.dart';
@@ -102,6 +103,9 @@ class _MealPlanStartDateScreenState
   Future<void> _continue() async {
     final schedule = _schedule;
     if (schedule == null) return;
+    ref
+        .read(checkoutControllerProvider.notifier)
+        .begin(widget.selection, schedule);
     if (widget.onContinue case final callback?) {
       callback(widget.selection, schedule);
       return;
@@ -112,7 +116,7 @@ class _MealPlanStartDateScreenState
     if (!mounted) return;
     final plan = widget.selection.mealPlan;
     final destination = PendingAuthDestination(
-      route: AppRoutes.home,
+      route: AppRoutes.planSummary,
       planCode: plan.code,
       planName: plan.name,
       mealPlanTemplateId: plan.id,
@@ -120,7 +124,7 @@ class _MealPlanStartDateScreenState
     );
     if (authenticated) {
       ref.read(otpAuthControllerProvider.notifier).begin(destination);
-      context.go(AppRoutes.home);
+      context.push(AppRoutes.planSummary);
     } else {
       context.push(AppRoutes.phoneLogin, extra: destination);
     }

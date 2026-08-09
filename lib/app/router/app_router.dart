@@ -2,6 +2,8 @@ import 'package:diet_time/features/authentication/presentation/login_screen.dart
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_verification_page.dart';
 import 'package:diet_time/features/authentication/presentation/phone_login_page.dart';
+import 'package:diet_time/features/checkout/presentation/customer_address_screen.dart';
+import 'package:diet_time/features/checkout/presentation/plan_summary_screen.dart';
 import 'package:diet_time/features/home/presentation/home_screen.dart';
 import 'package:diet_time/features/home/presentation/route_placeholder_screen.dart';
 import 'package:diet_time/features/language/presentation/language_selection_screen.dart';
@@ -32,6 +34,9 @@ abstract final class AppRoutes {
   static const plans = '/plans';
   static const planDetails = '/plan-details';
   static const planStartDate = '/plan-start-date';
+  static const planSummary = '/plan-summary';
+  static const customerAddress = '/customer-address';
+  static const planCheckoutReady = '/plan-checkout-ready';
   static const postLogin = '/post-login';
   static const register = '/register';
   static const home = '/home';
@@ -143,6 +148,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             child: MealPlanStartDateScreen(selection: selection),
           );
         },
+      ),
+      GoRoute(
+        path: AppRoutes.planSummary,
+        pageBuilder: (context, state) =>
+            _slidePage(state: state, child: const PlanSummaryScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.customerAddress,
+        pageBuilder: (context, state) =>
+            _slidePage(state: state, child: const CustomerAddressScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.planCheckoutReady,
+        pageBuilder: (context, state) => _slidePage(
+          state: state,
+          child: const RoutePlaceholderScreen(title: 'Plan details are ready'),
+        ),
       ),
       GoRoute(
         path: AppRoutes.postLogin,

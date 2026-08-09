@@ -6,14 +6,25 @@ class MealPlanPurchaseSelection {
     required this.mealPlan,
     required this.mealCombination,
     required this.pricingOption,
+    this.deliveryDaysPerWeek,
+    this.selectedWeekdays,
   });
 
   final MealPlanOption mealPlan;
   final MealPlanConfiguration mealCombination;
   final MealPlanPackage pricingOption;
+  final int? deliveryDaysPerWeek;
+  final Set<int>? selectedWeekdays;
 
   int get serviceDays => pricingOption.serviceDays;
   double get totalPrice => pricingOption.totalPrice;
+  Set<int> get deliveryWeekdays =>
+      selectedWeekdays ??
+      {
+        for (var day = DateTime.monday; day <= DateTime.sunday; day++)
+          if (!pricingOption.nonDeliveryWeekdays.contains(day)) day,
+      };
+  int get deliveriesPerWeek => deliveryDaysPerWeek ?? deliveryWeekdays.length;
 }
 
 class MealPlanServiceSchedule {
@@ -44,9 +55,11 @@ MealPlanServiceSchedule? calculateMealPlanServiceSchedule({
   // The upper bound prevents malformed configuration from causing an endless
   // loop (for example, all seven weekdays marked as unavailable).
   final maximumIterations = serviceDays * 14 + 366;
-  for (var attempts = 0;
-      dates.length < serviceDays && attempts < maximumIterations;
-      attempts++) {
+  for (
+    var attempts = 0;
+    dates.length < serviceDays && attempts < maximumIterations;
+    attempts++
+  ) {
     if (!nonDeliveryWeekdays.contains(candidate.weekday) &&
         !unavailable.contains(dateKey(candidate))) {
       dates.add(candidate);
@@ -58,6 +71,8 @@ MealPlanServiceSchedule? calculateMealPlanServiceSchedule({
       : null;
 }
 
-DateTime dateOnly(DateTime value) => DateTime(value.year, value.month, value.day);
+DateTime dateOnly(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
 
-int dateKey(DateTime value) => value.year * 10000 + value.month * 100 + value.day;
+int dateKey(DateTime value) =>
+    value.year * 10000 + value.month * 100 + value.day;

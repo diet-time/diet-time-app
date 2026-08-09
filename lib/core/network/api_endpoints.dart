@@ -5,6 +5,13 @@ abstract final class ApiEndpoints {
   static const guestAllergens = '/api/v1/guest/allergens';
   static const customerProfile = '/api/v1/customer/profile';
   static const mealPlans = '/api/v1/meal-plan-categories';
+  static const deliveryTimeSlots = '/api/v1/delivery-time-slots';
+
+  static String customerAddresses(String customerProfileId) =>
+      '/api/v1/customer-profiles/${Uri.encodeComponent(customerProfileId)}/addresses';
+
+  static String customerAddress(String customerProfileId, String addressId) =>
+      '${customerAddresses(customerProfileId)}/${Uri.encodeComponent(addressId)}';
 
   static String mealPlanDetails(String mealPlanTemplateId) =>
       '/api/v1/meal-plans/${Uri.encodeComponent(mealPlanTemplateId)}';
