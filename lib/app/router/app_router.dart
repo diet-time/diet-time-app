@@ -4,6 +4,7 @@ import 'package:diet_time/features/authentication/presentation/otp_verification_
 import 'package:diet_time/features/authentication/presentation/phone_login_page.dart';
 import 'package:diet_time/features/checkout/presentation/customer_address_screen.dart';
 import 'package:diet_time/features/checkout/presentation/plan_summary_screen.dart';
+import 'package:diet_time/features/checkout/presentation/order_placed_screen.dart';
 import 'package:diet_time/features/home/presentation/home_screen.dart';
 import 'package:diet_time/features/home/presentation/route_placeholder_screen.dart';
 import 'package:diet_time/features/language/presentation/language_selection_screen.dart';
@@ -37,6 +38,7 @@ abstract final class AppRoutes {
   static const planSummary = '/plan-summary';
   static const customerAddress = '/customer-address';
   static const planCheckoutReady = '/plan-checkout-ready';
+  static const orderPlaced = '/order-placed';
   static const postLogin = '/post-login';
   static const register = '/register';
   static const home = '/home';
@@ -165,6 +167,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           state: state,
           child: const RoutePlaceholderScreen(title: 'Plan details are ready'),
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.orderPlaced,
+        pageBuilder: (context, state) =>
+            _slidePage(state: state, child: const OrderPlacedScreen()),
       ),
       GoRoute(
         path: AppRoutes.postLogin,

@@ -70,6 +70,11 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   }
 
   Future<void> _loadProfile() async {
+    final cachedProfile = ref.read(personalizationControllerProvider);
+    if (cachedProfile.isCompleted || cachedProfile.hasCapturedQuestionnaire) {
+      if (mounted) context.go(AppRoutes.plans);
+      return;
+    }
     final authenticated = await ref
         .read(authenticationServiceProvider)
         .isLoggedIn();

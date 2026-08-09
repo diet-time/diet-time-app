@@ -103,9 +103,9 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 680),
                   child: AppButton(
-                    key: const ValueKey('planSummaryContinue'),
-                    label: 'Continue',
-                    onPressed: _continue,
+                    key: const ValueKey('placeOrder'),
+                    label: 'Place Order',
+                    onPressed: checkout.isReadyToContinue ? _placeOrder : null,
                   ),
                 ),
               ),
@@ -116,7 +116,7 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
     );
   }
 
-  void _continue() {
+  void _placeOrder() {
     final checkout = ref.read(checkoutControllerProvider);
     final message = checkout.selectedAddress == null
         ? 'Please select a delivery address to continue.'
@@ -124,7 +124,7 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
         ? 'Please select a delivery time slot to continue.'
         : null;
     setState(() => _validationMessage = message);
-    if (message == null) context.push(AppRoutes.planCheckoutReady);
+    if (message == null) context.pushReplacement(AppRoutes.orderPlaced);
   }
 }
 

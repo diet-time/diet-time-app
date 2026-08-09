@@ -9,6 +9,7 @@ import 'package:diet_time/features/authentication/data/mock_authentication_servi
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/onboarding/data/journey_state_repository.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
+import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -148,9 +149,17 @@ class _OnboardingCarouselScreenState
       );
       return;
     }
-    final profile = ref.read(personalizationControllerProvider);
+    var profile = ref.read(personalizationControllerProvider);
+    if (!profile.isCompleted && !profile.hasCapturedQuestionnaire) {
+      profile =
+          await ref
+              .read(profilePersistenceControllerProvider.notifier)
+              .load() ??
+          profile;
+      if (!mounted) return;
+    }
     await context.push<void>(
-      profile.hasCapturedQuestionnaire
+      profile.isCompleted || profile.hasCapturedQuestionnaire
           ? AppRoutes.plans
           : AppRoutes.personalization,
     );

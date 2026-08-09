@@ -168,7 +168,10 @@ class CheckoutState {
   final String? saveAddressError;
 
   bool get isReadyToContinue =>
-      selectedAddressId != null && selectedDeliveryTimeSlotId != null;
+      selectedAddress != null &&
+      selectedAddressId?.trim().isNotEmpty == true &&
+      selectedDeliveryTimeSlot != null &&
+      selectedDeliveryTimeSlotId?.trim().isNotEmpty == true;
 
   CheckoutState copyWith({
     MealPlanPurchaseSelection? selection,

@@ -6,6 +6,8 @@ import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/authentication/presentation/otp_flow_widgets.dart';
+import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
+import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,6 +26,7 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
   final _controllers = List.generate(6, (_) => TextEditingController());
   final _focusNodes = List.generate(6, (_) => FocusNode());
   bool _syncingCells = false;
+  bool _isResolvingDestination = false;
 
   @override
   void initState() {
@@ -108,7 +111,24 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
     if (!mounted || !succeeded) return;
     _setCells('');
     final destination = ref.read(otpAuthControllerProvider).pendingDestination;
-    context.go(destination?.route ?? AppRoutes.home);
+    var route = destination?.route ?? AppRoutes.home;
+    if (route == AppRoutes.personalization) {
+      setState(() => _isResolvingDestination = true);
+      try {
+        final profile = await ref.read(customerProfileServiceProvider).load();
+        if (profile != null) {
+          ref.read(personalizationControllerProvider.notifier).replace(profile);
+          if (profile.isCompleted || profile.hasCapturedQuestionnaire) {
+            route = AppRoutes.plans;
+          }
+        }
+      } on Object {
+        // Fall back to personalization, which has its own retry/error state.
+      }
+    }
+    if (!mounted) return;
+    setState(() => _isResolvingDestination = false);
+    context.go(route);
   }
 
   Future<void> _resend() async {
@@ -372,10 +392,13 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
                           key: const ValueKey('verifyOtpButton'),
                           label: l10n.otpVerifyCode,
                           onPressed:
-                              auth.otpCode.length == 6 && !auth.isVerifyingOtp
+                              auth.otpCode.length == 6 &&
+                                  !auth.isVerifyingOtp &&
+                                  !_isResolvingDestination
                               ? _verify
                               : null,
-                          isLoading: auth.isVerifyingOtp,
+                          isLoading:
+                              auth.isVerifyingOtp || _isResolvingDestination,
                         ),
                       ],
                     ),
