@@ -137,13 +137,45 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('calendarDay-20260815')));
     await tester.pump();
     expect(find.byKey(const ValueKey('serviceCalendar')), findsOneWidget);
-    expect(find.text('15/08/2026'), findsOneWidget);
+    expect(find.text('15/08/2026'), findsNothing);
 
     await tester.ensureVisible(find.byKey(const ValueKey('confirmCalendar')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('confirmCalendar')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('serviceCalendar')), findsNothing);
+    expect(find.text('15/08/2026'), findsOneWidget);
+  });
+
+  testWidgets('calculated end date has a distinct highlighted state', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: MealPlanStartDateScreen(
+            selection: _selection,
+            today: DateTime(2026, 8, 8),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('startDateField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('calendarDay-20260810')));
+    await tester.pump();
+
+    final endDateContainer = tester.widget<Container>(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('calendarDay-20260906')),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    final decoration = endDateContainer.decoration! as BoxDecoration;
+    expect(decoration.color, const Color(0xFF2F8F75));
   });
 }
 

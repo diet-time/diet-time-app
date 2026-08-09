@@ -213,6 +213,20 @@ void main() {
     expect(priceId, 'plus-week');
   });
 
+  testWidgets('Continue opens the calendar panel over plan details', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app(plan: _plan));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const ValueKey('detailsContinue')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MealPlanDetailsScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('serviceCalendar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('startDateTitle')), findsNothing);
+  });
+
   testWidgets('Continue opens the next step when a valid price has no ID', (
     tester,
   ) async {

@@ -17,6 +17,62 @@ typedef MealPlanDateContinue =
       MealPlanServiceSchedule schedule,
     );
 
+Future<MealPlanServiceSchedule?> showMealPlanStartDatePanel({
+  required BuildContext context,
+  required MealPlanPurchaseSelection selection,
+  DateTime? today,
+  MealPlanServiceSchedule? currentSchedule,
+}) {
+  final currentDay = dateOnly(today ?? DateTime.now());
+  final package = selection.pricingOption;
+  final leadDate = currentDay.add(
+    Duration(days: package.startDateLeadTimeDays),
+  );
+  final configured = package.earliestStartDate == null
+      ? null
+      : dateOnly(package.earliestStartDate!);
+  final earliestStartDate = configured != null && configured.isAfter(leadDate)
+      ? configured
+      : leadDate;
+
+  bool isUnavailable(DateTime date) =>
+      package.nonDeliveryWeekdays.contains(date.weekday) ||
+      package.unavailableDates.any((item) => dateKey(item) == dateKey(date));
+
+  var firstSelectableDate = earliestStartDate;
+  while (isUnavailable(firstSelectableDate)) {
+    firstSelectableDate = firstSelectableDate.add(const Duration(days: 1));
+  }
+
+  return showModalBottomSheet<MealPlanServiceSchedule>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: false,
+    enableDrag: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: AppColors.darkGreen.withValues(alpha: .22),
+    builder: (context) => Align(
+      alignment: Alignment.bottomCenter,
+      child: FractionallySizedBox(
+        widthFactor: 1,
+        heightFactor: .78,
+        child: _StartDateBottomSheet(
+          initialMonth: currentSchedule?.startDate ?? firstSelectableDate,
+          earliestStartDate: earliestStartDate,
+          schedule: currentSchedule,
+          isUnavailable: isUnavailable,
+          calculateSchedule: (date) => calculateMealPlanServiceSchedule(
+            startDate: date,
+            serviceDays: selection.serviceDays,
+            nonDeliveryWeekdays: package.nonDeliveryWeekdays,
+            unavailableDates: package.unavailableDates,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class MealPlanStartDateScreen extends ConsumerStatefulWidget {
   const MealPlanStartDateScreen({
     required this.selection,
@@ -38,81 +94,14 @@ class _MealPlanStartDateScreenState
     extends ConsumerState<MealPlanStartDateScreen> {
   MealPlanServiceSchedule? _schedule;
 
-  DateTime get _today => dateOnly(widget.today ?? DateTime.now());
-
-  DateTime get _earliestStartDate {
-    final package = widget.selection.pricingOption;
-    final leadDate = _today.add(Duration(days: package.startDateLeadTimeDays));
-    final configured = package.earliestStartDate;
-    if (configured == null) return leadDate;
-    final normalized = dateOnly(configured);
-    return normalized.isAfter(leadDate) ? normalized : leadDate;
-  }
-
-  bool _isUnavailable(DateTime date) {
-    final package = widget.selection.pricingOption;
-    return package.nonDeliveryWeekdays.contains(date.weekday) ||
-        package.unavailableDates.any((item) => dateKey(item) == dateKey(date));
-  }
-
-  bool _isValidStart(DateTime date) =>
-      !dateOnly(date).isBefore(_earliestStartDate) && !_isUnavailable(date);
-
-  void _selectStartDate(DateTime date) {
-    if (!_isValidStart(date)) return;
-    final package = widget.selection.pricingOption;
-    final schedule = calculateMealPlanServiceSchedule(
-      startDate: date,
-      serviceDays: widget.selection.serviceDays,
-      nonDeliveryWeekdays: package.nonDeliveryWeekdays,
-      unavailableDates: package.unavailableDates,
-    );
-    setState(() {
-      _schedule = schedule;
-    });
-  }
-
-  DateTime get _firstSelectableDate {
-    var candidate = _earliestStartDate;
-    while (_isUnavailable(candidate)) {
-      candidate = candidate.add(const Duration(days: 1));
-    }
-    return candidate;
-  }
-
   Future<void> _openStartDatePicker() async {
-    final firstDate = _firstSelectableDate;
-    await showModalBottomSheet<void>(
+    final schedule = await showMealPlanStartDatePanel(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: false,
-      enableDrag: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: AppColors.darkGreen.withValues(alpha: .22),
-      builder: (context) => Align(
-        alignment: Alignment.bottomCenter,
-        child: FractionallySizedBox(
-          widthFactor: 1,
-          heightFactor: .78,
-          child: _StartDateBottomSheet(
-            initialMonth: _schedule?.startDate ?? firstDate,
-            earliestStartDate: _earliestStartDate,
-            schedule: _schedule,
-            isUnavailable: _isUnavailable,
-            calculateSchedule: (date) {
-              final package = widget.selection.pricingOption;
-              return calculateMealPlanServiceSchedule(
-                startDate: date,
-                serviceDays: widget.selection.serviceDays,
-                nonDeliveryWeekdays: package.nonDeliveryWeekdays,
-                unavailableDates: package.unavailableDates,
-              );
-            },
-            onSelect: _selectStartDate,
-          ),
-        ),
-      ),
+      selection: widget.selection,
+      today: widget.today,
+      currentSchedule: _schedule,
     );
+    if (schedule != null && mounted) setState(() => _schedule = schedule);
   }
 
   Future<void> _showCalendarFromInstruction() => _openStartDatePicker();
@@ -546,6 +535,10 @@ class _ServiceCalendar extends StatelessWidget {
                           label: 'Selected start date',
                         ),
                         const _CalendarLegend(
+                          color: Color(0xFF2F8F75),
+                          label: 'Plan end date',
+                        ),
+                        const _CalendarLegend(
                           color: Color(0xFFDFF1E3),
                           label: 'Plan delivery day',
                         ),
@@ -664,12 +657,14 @@ class _CalendarDay extends StatelessWidget {
     final disabled = beforeEarliest || unavailable;
     final background = start
         ? AppColors.emeraldGreen
-        : service || end
+        : end
+        ? const Color(0xFF2F8F75)
+        : service
         ? const Color(0xFFDFF1E3)
         : disabled
         ? const Color(0xFFE9EAEB)
         : const Color(0xFFF0F8F2);
-    final foreground = start
+    final foreground = start || end
         ? AppColors.white
         : disabled
         ? AppColors.darkGreen.withValues(alpha: .28)
@@ -716,7 +711,6 @@ class _StartDateBottomSheet extends StatefulWidget {
     required this.schedule,
     required this.isUnavailable,
     required this.calculateSchedule,
-    required this.onSelect,
   });
 
   final DateTime initialMonth;
@@ -724,7 +718,6 @@ class _StartDateBottomSheet extends StatefulWidget {
   final MealPlanServiceSchedule? schedule;
   final bool Function(DateTime) isUnavailable;
   final MealPlanServiceSchedule? Function(DateTime) calculateSchedule;
-  final ValueChanged<DateTime> onSelect;
 
   @override
   State<_StartDateBottomSheet> createState() => _StartDateBottomSheetState();
@@ -758,7 +751,9 @@ class _StartDateBottomSheetState extends State<_StartDateBottomSheet> {
       onNextMonth: () => setState(() {
         _month = DateTime(_month.year, _month.month + 1);
       }),
-      onDone: _schedule == null ? null : () => Navigator.of(context).pop(),
+      onDone: _schedule == null
+          ? null
+          : () => Navigator.of(context).pop(_schedule),
     ),
   );
 
@@ -769,7 +764,6 @@ class _StartDateBottomSheetState extends State<_StartDateBottomSheet> {
       _month = DateTime(date.year, date.month);
       _schedule = schedule;
     });
-    widget.onSelect(date);
   }
 
   bool get _isFirstMonth =>

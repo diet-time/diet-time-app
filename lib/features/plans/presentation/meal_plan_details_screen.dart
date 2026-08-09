@@ -2,13 +2,16 @@ import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
+import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
+import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
+import 'package:diet_time/features/plans/presentation/meal_plan_start_date_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -182,17 +185,41 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
     );
   }
 
-  void _continue(MealPlanConfiguration configuration, MealPlanPackage package) {
+  Future<void> _continue(
+    MealPlanConfiguration configuration,
+    MealPlanPackage package,
+  ) async {
     widget.onContinue?.call(widget.plan.id, package.mealPlanPriceId);
     if (widget.onContinue != null) return;
-    context.push(
-      AppRoutes.planStartDate,
-      extra: MealPlanPurchaseSelection(
-        mealPlan: widget.plan,
-        mealCombination: configuration,
-        pricingOption: package,
-      ),
+    final selection = MealPlanPurchaseSelection(
+      mealPlan: widget.plan,
+      mealCombination: configuration,
+      pricingOption: package,
     );
+    final schedule = await showMealPlanStartDatePanel(
+      context: context,
+      selection: selection,
+    );
+    if (schedule == null || !mounted) return;
+    ref.read(checkoutControllerProvider.notifier).begin(selection, schedule);
+
+    final authenticated = await ref
+        .read(otpAuthControllerProvider.notifier)
+        .restoreSession();
+    if (!mounted) return;
+    final destination = PendingAuthDestination(
+      route: AppRoutes.planSummary,
+      planCode: widget.plan.code,
+      planName: widget.plan.name,
+      mealPlanTemplateId: widget.plan.id,
+      mealPlanPriceId: package.mealPlanPriceId,
+    );
+    if (authenticated) {
+      ref.read(otpAuthControllerProvider.notifier).begin(destination);
+      context.push(AppRoutes.planSummary);
+    } else {
+      context.push(AppRoutes.phoneLogin, extra: destination);
+    }
   }
 }
 
