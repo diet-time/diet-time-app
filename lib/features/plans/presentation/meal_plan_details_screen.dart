@@ -299,13 +299,7 @@ class _PlanHero extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          PositionedDirectional(
-            top: 0,
-            bottom: 0,
-            end: 0,
-            width: 205,
-            child: _HeroImage(imageUrl: plan.imageUrl),
-          ),
+          Positioned.fill(child: _HeroImage(imageUrl: plan.imageUrl)),
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -314,10 +308,10 @@ class _PlanHero extends StatelessWidget {
                   end: AlignmentDirectional.centerEnd,
                   colors: const [
                     Color(0xFFF7F8EE),
-                    Color(0xF2F0F5E9),
-                    Color(0x1AF0F5E9),
+                    Color(0xE8F0F5E9),
+                    Color(0x73F0F5E9),
                   ],
-                  stops: const [0, .56, 1],
+                  stops: const [0, .52, 1],
                 ),
               ),
             ),
@@ -400,7 +394,8 @@ class _HeroImage extends StatelessWidget {
             : Image.network(
                 url,
                 key: const ValueKey('heroImage'),
-                fit: BoxFit.contain,
+                fit: BoxFit.cover,
+                alignment: AlignmentDirectional.centerEnd,
                 frameBuilder: (context, child, frame, _) => AnimatedOpacity(
                   opacity: frame == null ? 0 : 1,
                   duration: const Duration(milliseconds: 240),

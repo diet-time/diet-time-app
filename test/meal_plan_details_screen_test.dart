@@ -130,7 +130,7 @@ void main() {
     expect(configurations, isEmpty);
   });
 
-  testWidgets('selected plan image is a contained hero background', (
+  testWidgets('selected plan image is a cropped hero background', (
     tester,
   ) async {
     await tester.pumpWidget(_app(plan: _plan));
@@ -138,7 +138,7 @@ void main() {
 
     expect(find.text('Complete Balance'), findsOneWidget);
     final image = tester.widget<Image>(find.byKey(const ValueKey('heroImage')));
-    expect(image.fit, BoxFit.contain);
+    expect(image.fit, BoxFit.cover);
     expect(image.fit, isNot(BoxFit.fill));
     expect(find.byKey(const ValueKey('heroImageClip')), findsOneWidget);
     expect(find.byKey(const ValueKey('detailsBackground')), findsOneWidget);
