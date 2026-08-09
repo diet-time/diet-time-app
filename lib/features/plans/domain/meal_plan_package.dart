@@ -41,7 +41,7 @@ class MealPlanPackage {
     required this.totalPrice,
     required this.dailyPrice,
     required this.currencyCode,
-    this.nonDeliveryWeekdays = const {DateTime.friday, DateTime.saturday},
+    this.nonDeliveryWeekdays = const {DateTime.friday},
     this.unavailableDates = const [],
     this.earliestStartDate,
     this.startDateLeadTimeDays = 0,
@@ -148,7 +148,7 @@ List<DateTime> _dates(Object? value) => value is List
     : const [];
 
 Set<int> _weekdays(Object? value) {
-  if (value is! List) return const {DateTime.friday, DateTime.saturday};
+  if (value is! List) return const {DateTime.friday};
   final result = value.map(_weekday).whereType<int>().toSet();
   return result;
 }

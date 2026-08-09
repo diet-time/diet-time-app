@@ -72,8 +72,14 @@ void main() {
       isNull,
     );
 
+    expect(find.byKey(const ValueKey('serviceCalendar')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('startDateField')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('serviceCalendar')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('calendarDay-20260810')));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('10/08/2026'), findsOneWidget);
     expect(find.text('10/09/2026'), findsOneWidget);
@@ -92,6 +98,34 @@ void main() {
           .onPressed,
       isNotNull,
     );
+  });
+
+  testWidgets('only Friday is unavailable in the default calendar', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: MealPlanStartDateScreen(
+            selection: _selection,
+            today: DateTime(2026, 8, 8),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('startDateField')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('calendarDay-20260814')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('serviceCalendar')), findsOneWidget);
+    expect(find.text('14/08/2026'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('calendarDay-20260815')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('serviceCalendar')), findsNothing);
+    expect(find.text('15/08/2026'), findsOneWidget);
   });
 }
 
