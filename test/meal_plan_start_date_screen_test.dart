@@ -79,6 +79,18 @@ void main() {
 
     expect(find.byKey(const ValueKey('serviceCalendar')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('calendarDay-20260810')));
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('serviceCalendar')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('selectedDurationSummary')),
+      findsOneWidget,
+    );
+    expect(find.text('24 delivery days selected'), findsOneWidget);
+    expect(find.byKey(const ValueKey('calendarDay-20260906')), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const ValueKey('confirmCalendar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('confirmCalendar')));
     await tester.pumpAndSettle();
 
     expect(find.text('10/08/2026'), findsOneWidget);
@@ -123,9 +135,15 @@ void main() {
     expect(find.text('14/08/2026'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('calendarDay-20260815')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('serviceCalendar')), findsOneWidget);
+    expect(find.text('15/08/2026'), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const ValueKey('confirmCalendar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('confirmCalendar')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('serviceCalendar')), findsNothing);
-    expect(find.text('15/08/2026'), findsOneWidget);
   });
 }
 

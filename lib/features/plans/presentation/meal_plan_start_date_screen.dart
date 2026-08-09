@@ -82,21 +82,37 @@ class _MealPlanStartDateScreenState
 
   Future<void> _openStartDatePicker() async {
     final firstDate = _firstSelectableDate;
-    final selected = await showModalBottomSheet<DateTime>(
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      useSafeArea: true,
+      useSafeArea: false,
+      enableDrag: true,
       backgroundColor: Colors.transparent,
       barrierColor: AppColors.darkGreen.withValues(alpha: .22),
-      builder: (context) => _StartDateBottomSheet(
-        initialMonth: _schedule?.startDate ?? firstDate,
-        earliestStartDate: _earliestStartDate,
-        schedule: _schedule,
-        isUnavailable: _isUnavailable,
-        onSelect: (date) => Navigator.of(context).pop(date),
+      builder: (context) => Align(
+        alignment: Alignment.bottomCenter,
+        child: FractionallySizedBox(
+          widthFactor: 1,
+          heightFactor: .78,
+          child: _StartDateBottomSheet(
+            initialMonth: _schedule?.startDate ?? firstDate,
+            earliestStartDate: _earliestStartDate,
+            schedule: _schedule,
+            isUnavailable: _isUnavailable,
+            calculateSchedule: (date) {
+              final package = widget.selection.pricingOption;
+              return calculateMealPlanServiceSchedule(
+                startDate: date,
+                serviceDays: widget.selection.serviceDays,
+                nonDeliveryWeekdays: package.nonDeliveryWeekdays,
+                unavailableDates: package.unavailableDates,
+              );
+            },
+            onSelect: _selectStartDate,
+          ),
+        ),
       ),
     );
-    if (selected != null && mounted) _selectStartDate(selected);
   }
 
   Future<void> _showCalendarFromInstruction() => _openStartDatePicker();
@@ -398,6 +414,7 @@ class _ServiceCalendar extends StatelessWidget {
     required this.onSelect,
     required this.onPreviousMonth,
     required this.onNextMonth,
+    required this.onDone,
   });
   final DateTime visibleMonth;
   final DateTime earliestStartDate;
@@ -406,9 +423,18 @@ class _ServiceCalendar extends StatelessWidget {
   final ValueChanged<DateTime> onSelect;
   final VoidCallback? onPreviousMonth;
   final VoidCallback onNextMonth;
+  final VoidCallback? onDone;
 
   @override
   Widget build(BuildContext context) {
+    final end = schedule?.endDate;
+    final calculatedMonthCount = end == null
+        ? 1
+        : (end.year - visibleMonth.year) * 12 +
+              end.month -
+              visibleMonth.month +
+              1;
+    final monthCount = calculatedMonthCount < 1 ? 1 : calculatedMonthCount;
     return Container(
       key: const ValueKey('serviceCalendar'),
       decoration: BoxDecoration(
@@ -486,47 +512,60 @@ class _ServiceCalendar extends StatelessWidget {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            child: Row(
-              children: [
-                for (final day in ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'])
-                  Expanded(
-                    child: Text(
-                      day,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFF777B82),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
+          const _CalendarWeekdays(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Column(
+                children: [
+                  for (var index = 0; index < monthCount; index++) ...[
+                    _CalendarMonth(
+                      month: DateTime(
+                        visibleMonth.year,
+                        visibleMonth.month + index,
                       ),
+                      showMonthHeader: index > 0,
+                      earliestStartDate: earliestStartDate,
+                      schedule: schedule,
+                      isUnavailable: isUnavailable,
+                      onSelect: onSelect,
+                    ),
+                    if (index < monthCount - 1)
+                      const Divider(indent: 20, endIndent: 20),
+                  ],
+                  if (schedule case final selectedSchedule?)
+                    _SelectedDurationSummary(schedule: selectedSchedule),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+                    child: Wrap(
+                      spacing: 16,
+                      runSpacing: 7,
+                      children: [
+                        const _CalendarLegend(
+                          color: AppColors.emeraldGreen,
+                          label: 'Selected start date',
+                        ),
+                        const _CalendarLegend(
+                          color: Color(0xFFDFF1E3),
+                          label: 'Plan delivery day',
+                        ),
+                        const _CalendarLegend(
+                          color: Color(0xFFE9EAEB),
+                          label: 'Friday unavailable',
+                        ),
+                      ],
                     ),
                   ),
-              ],
+                ],
+              ),
             ),
           ),
-          _CalendarMonth(
-            month: visibleMonth,
-            earliestStartDate: earliestStartDate,
-            schedule: schedule,
-            isUnavailable: isUnavailable,
-            onSelect: onSelect,
-          ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
-            child: Wrap(
-              spacing: 16,
-              runSpacing: 7,
-              children: [
-                const _CalendarLegend(
-                  color: Color(0xFFDFF1E3),
-                  label: 'Available delivery day',
-                ),
-                const _CalendarLegend(
-                  color: Color(0xFFE9EAEB),
-                  label: 'Friday unavailable',
-                ),
-              ],
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: AppButton(
+              key: const ValueKey('confirmCalendar'),
+              label: schedule == null ? 'Select a start date' : 'Done',
+              onPressed: onDone,
             ),
           ),
         ],
@@ -538,12 +577,14 @@ class _ServiceCalendar extends StatelessWidget {
 class _CalendarMonth extends StatelessWidget {
   const _CalendarMonth({
     required this.month,
+    required this.showMonthHeader,
     required this.earliestStartDate,
     required this.schedule,
     required this.isUnavailable,
     required this.onSelect,
   });
   final DateTime month;
+  final bool showMonthHeader;
   final DateTime earliestStartDate;
   final MealPlanServiceSchedule? schedule;
   final bool Function(DateTime) isUnavailable;
@@ -559,6 +600,19 @@ class _CalendarMonth extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 2, 12, 14),
       child: Column(
         children: [
+          if (showMonthHeader) ...[
+            const SizedBox(height: 10),
+            Text(
+              DateFormat('MMMM yyyy').format(month),
+              style: const TextStyle(
+                color: AppColors.darkGreen,
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 5),
+            const _CalendarWeekdays(),
+          ],
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -661,6 +715,7 @@ class _StartDateBottomSheet extends StatefulWidget {
     required this.earliestStartDate,
     required this.schedule,
     required this.isUnavailable,
+    required this.calculateSchedule,
     required this.onSelect,
   });
 
@@ -668,6 +723,7 @@ class _StartDateBottomSheet extends StatefulWidget {
   final DateTime earliestStartDate;
   final MealPlanServiceSchedule? schedule;
   final bool Function(DateTime) isUnavailable;
+  final MealPlanServiceSchedule? Function(DateTime) calculateSchedule;
   final ValueChanged<DateTime> onSelect;
 
   @override
@@ -676,21 +732,24 @@ class _StartDateBottomSheet extends StatefulWidget {
 
 class _StartDateBottomSheetState extends State<_StartDateBottomSheet> {
   late DateTime _month;
+  MealPlanServiceSchedule? _schedule;
 
   @override
   void initState() {
     super.initState();
     _month = DateTime(widget.initialMonth.year, widget.initialMonth.month);
+    _schedule = widget.schedule;
   }
 
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
+  Widget build(BuildContext context) => SafeArea(
+    top: false,
     child: _ServiceCalendar(
       visibleMonth: _month,
       earliestStartDate: widget.earliestStartDate,
-      schedule: widget.schedule,
+      schedule: _schedule,
       isUnavailable: widget.isUnavailable,
-      onSelect: widget.onSelect,
+      onSelect: _select,
       onPreviousMonth: _isFirstMonth
           ? null
           : () => setState(() {
@@ -699,12 +758,94 @@ class _StartDateBottomSheetState extends State<_StartDateBottomSheet> {
       onNextMonth: () => setState(() {
         _month = DateTime(_month.year, _month.month + 1);
       }),
+      onDone: _schedule == null ? null : () => Navigator.of(context).pop(),
     ),
   );
+
+  void _select(DateTime date) {
+    final schedule = widget.calculateSchedule(date);
+    if (schedule == null) return;
+    setState(() {
+      _month = DateTime(date.year, date.month);
+      _schedule = schedule;
+    });
+    widget.onSelect(date);
+  }
 
   bool get _isFirstMonth =>
       _month.year == widget.earliestStartDate.year &&
       _month.month == widget.earliestStartDate.month;
+}
+
+class _CalendarWeekdays extends StatelessWidget {
+  const _CalendarWeekdays();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+    child: Row(
+      children: [
+        for (final day in ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'])
+          Expanded(
+            child: Text(
+              day,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFF777B82),
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+class _SelectedDurationSummary extends StatelessWidget {
+  const _SelectedDurationSummary({required this.schedule});
+
+  final MealPlanServiceSchedule schedule;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const ValueKey('selectedDurationSummary'),
+    margin: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+    padding: const EdgeInsets.all(13),
+    decoration: BoxDecoration(
+      color: const Color(0xFFE7F4E8),
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.date_range_rounded, color: AppColors.emeraldGreen),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${schedule.serviceDates.length} delivery days selected',
+                style: const TextStyle(
+                  color: AppColors.darkGreen,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${DateFormat('dd MMM yyyy').format(schedule.startDate)} - ${DateFormat('dd MMM yyyy').format(schedule.endDate)}',
+                style: TextStyle(
+                  color: AppColors.darkGreen.withValues(alpha: .65),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _CalendarLegend extends StatelessWidget {
