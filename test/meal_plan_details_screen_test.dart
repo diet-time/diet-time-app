@@ -213,6 +213,50 @@ void main() {
     expect(priceId, 'plus-week');
   });
 
+  testWidgets('Continue opens the next step when a valid price has no ID', (
+    tester,
+  ) async {
+    var continued = false;
+    await tester.pumpWidget(
+      _app(
+        plan: const MealPlanOption(
+          id: 'flat-plan',
+          code: 'FLAT',
+          name: 'Flat pricing plan',
+          mealConfigurations: [
+            MealPlanConfiguration(
+              id: '3-1',
+              name: '3 Meals + 1 Snack',
+              packages: [
+                MealPlanPackage(
+                  mealPlanPriceId: '',
+                  name: '1 Day',
+                  serviceDays: 1,
+                  totalPrice: 120,
+                  dailyPrice: 120,
+                  currencyCode: 'QAR',
+                ),
+              ],
+            ),
+          ],
+        ),
+        onContinue: (_, _) => continued = true,
+      ),
+    );
+    await tester.pump();
+
+    final button = tester.widget<FilledButton>(
+      find.descendant(
+        of: find.byKey(const ValueKey('detailsContinue')),
+        matching: find.byType(FilledButton),
+      ),
+    );
+    expect(button.onPressed, isNotNull);
+
+    await tester.tap(find.byKey(const ValueKey('detailsContinue')));
+    expect(continued, isTrue);
+  });
+
   testWidgets('empty pricing offers navigation back and disables checkout', (
     tester,
   ) async {

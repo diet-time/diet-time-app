@@ -744,9 +744,7 @@ class _BottomAction extends StatelessWidget {
                 AppButton(
                   key: const ValueKey('detailsContinue'),
                   label: isArabic ? 'متابعة ←' : 'Continue →',
-                  onPressed: package.mealPlanPriceId.isEmpty
-                      ? null
-                      : onContinue,
+                  onPressed: onContinue,
                 ),
               ],
             ),
