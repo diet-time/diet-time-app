@@ -3,6 +3,8 @@ import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/checkout/domain/checkout_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -596,7 +598,24 @@ class _MapArea extends StatefulWidget {
 }
 
 class _MapAreaState extends State<_MapArea> {
+  static const _configurationChannel = MethodChannel(
+    'com.diettime.diet_time/google_maps_configuration',
+  );
+
   GoogleMapController? _controller;
+  late final Future<bool> _mapsReady = _checkMapsConfiguration();
+
+  Future<bool> _checkMapsConfiguration() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return true;
+    try {
+      return await _configurationChannel.invokeMethod<bool>('isConfigured') ??
+          false;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
 
   @override
   void didUpdateWidget(covariant _MapArea oldWidget) {
@@ -616,22 +635,39 @@ class _MapAreaState extends State<_MapArea> {
   Widget build(BuildContext context) => Stack(
     children: [
       Positioned.fill(
-        child: GoogleMap(
-          key: const ValueKey('googleMap'),
-          initialCameraPosition: CameraPosition(target: widget.pin, zoom: 14.5),
-          onMapCreated: (controller) => _controller = controller,
-          onTap: widget.onMapTap,
-          compassEnabled: true,
-          mapToolbarEnabled: false,
-          myLocationButtonEnabled: false,
-          zoomControlsEnabled: false,
-          markers: {
-            Marker(
-              markerId: const MarkerId('deliveryLocation'),
-              position: widget.pin,
-              draggable: true,
-              onDragEnd: widget.onMapTap,
-            ),
+        child: FutureBuilder<bool>(
+          future: _mapsReady,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const ColoredBox(
+                color: Color(0xFFE1E9DF),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (snapshot.data != true) {
+              return const _MapConfigurationError();
+            }
+            return GoogleMap(
+              key: const ValueKey('googleMap'),
+              initialCameraPosition: CameraPosition(
+                target: widget.pin,
+                zoom: 14.5,
+              ),
+              onMapCreated: (controller) => _controller = controller,
+              onTap: widget.onMapTap,
+              compassEnabled: true,
+              mapToolbarEnabled: false,
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
+              markers: {
+                Marker(
+                  markerId: const MarkerId('deliveryLocation'),
+                  position: widget.pin,
+                  draggable: true,
+                  onDragEnd: widget.onMapTap,
+                ),
+              },
+            );
           },
         ),
       ),
@@ -707,6 +743,48 @@ class _MapAreaState extends State<_MapArea> {
         ),
       ),
     ],
+  );
+}
+
+class _MapConfigurationError extends StatelessWidget {
+  const _MapConfigurationError();
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: const Color(0xFFE1E9DF),
+    child: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.map_outlined,
+              color: AppColors.darkGreen,
+              size: 40,
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Google Maps is not configured for this iOS build.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.darkGreen,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              'Add the iOS API key, then clean and rebuild the app.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.darkGreen.withValues(alpha: .65),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
   );
 }
 

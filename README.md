@@ -24,15 +24,14 @@ weights in `pubspec.yaml`, and update the family constants in
 
 ## Google Maps setup
 
-Enable **Maps SDK for Android** and **Maps SDK for iOS** in Google Cloud, then
-copy the example secret files and replace the placeholder values:
+Enable **Maps SDK for Android** and **Maps SDK for iOS** in Google Cloud. For
+Android, copy the example secret file and replace its placeholder value:
 
 - `android/local.properties.example` → `android/local.properties`
-- `ios/Flutter/Secrets.xcconfig.example` → `ios/Flutter/Secrets.xcconfig`
-
-The destination files are ignored by Git. Restrict production keys to the
-Android application ID `com.diettime.diet_time` (plus signing SHA-1) and the
-iOS bundle ID `com.diettime.dietTime`.
+The Android destination file is ignored by Git. The current iOS key is embedded
+in `ios/Runner/AppDelegate.swift`, so restrict it in Google Cloud to the iOS
+bundle ID `com.diettime.dietTime`. Restrict the Android key to application ID
+`com.diettime.diet_time` plus its signing SHA-1.
 
 On macOS, install the native iOS dependencies and open the workspace:
 
