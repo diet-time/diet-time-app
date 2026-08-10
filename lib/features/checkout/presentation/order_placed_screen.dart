@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
@@ -86,10 +88,7 @@ class OrderPlacedScreen extends ConsumerWidget {
                       key: const ValueKey('orderPlacedHome'),
                       label: 'GO TO DASHBOARD',
                       backgroundColor: AppColors.black,
-                      onPressed: () {
-                        ref.invalidate(customerDashboardControllerProvider);
-                        context.go(AppRoutes.home);
-                      },
+                      onPressed: () => _goToDashboard(context, ref),
                     ),
                   ),
                 ),
@@ -243,16 +242,26 @@ class _MissingConfirmation extends ConsumerWidget {
             AppButton(
               label: 'GO TO DASHBOARD',
               backgroundColor: AppColors.black,
-              onPressed: () {
-                ref.invalidate(customerDashboardControllerProvider);
-                context.go(AppRoutes.home);
-              },
+              onPressed: () => _goToDashboard(context, ref),
             ),
           ],
         ),
       ),
     ),
   );
+}
+
+void _goToDashboard(BuildContext context, WidgetRef ref) {
+  final profileId = ref.read(checkoutControllerProvider).customerProfileId;
+  ref.invalidate(customerDashboardControllerProvider);
+  if (profileId?.trim().isNotEmpty == true) {
+    unawaited(
+      ref
+          .read(customerDashboardControllerProvider.notifier)
+          .load(profileId!.trim(), force: true),
+    );
+  }
+  context.go(AppRoutes.home);
 }
 
 String _period(DateTime? start, DateTime? end) {

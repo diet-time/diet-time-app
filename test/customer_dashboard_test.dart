@@ -3,11 +3,45 @@ import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_dashboard_controller.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_dashboard_screen.dart';
+import 'package:diet_time/features/dashboard/presentation/order_details_screen.dart';
+import 'package:diet_time/features/personalization/domain/customer_profile.dart';
+import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets(
+    'dashboard loads when profile ID becomes available after first frame',
+    (tester) async {
+      final dashboard = _RecordingDashboardController();
+      final container = ProviderContainer(
+        overrides: [
+          customerDashboardControllerProvider.overrideWith(() => dashboard),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: CustomerDashboardScreen()),
+        ),
+      );
+      await tester.pump();
+      expect(dashboard.loadedProfileId, isNull);
+
+      container
+          .read(personalizationControllerProvider.notifier)
+          .replace(const CustomerProfile(profileId: 'late-profile-id'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(dashboard.loadedProfileId, 'late-profile-id');
+      expect(find.byKey(const ValueKey('noActivePlan')), findsOneWidget);
+    },
+  );
+
   testWidgets('green active-plan dashboard fits a compact phone', (
     tester,
   ) async {
@@ -73,6 +107,70 @@ void main() {
 
     expect(find.byKey(const ValueKey('activePlansCarousel')), findsOneWidget);
     expect(find.text('2 PLANS'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('structured order details fit a compact phone', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final summary = _summary('active', 'CONFIRMED', DateTime(2026, 8, 11));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ordersRepositoryProvider.overrideWithValue(
+            _FakeOrdersRepository([summary]),
+          ),
+        ],
+        child: const MaterialApp(home: OrderDetailsScreen(orderId: 'active')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('orderDetailsHeader')), findsOneWidget);
+    expect(find.text('ORDER NUMBER'), findsOneWidget);
+    expect(find.text('PAYMENT STATUS'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('orders tab filters backend orders by status', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final orders = [
+      _summary('confirmed', 'CONFIRMED', DateTime(2026, 8, 11)),
+      _summary('pending', 'PENDING', DateTime(2026, 8, 15)),
+      _summary('cancelled', 'CANCELLED', DateTime(2026, 8, 20)),
+    ];
+    final state = DashboardWithoutActivePlan(orders);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          customerDashboardControllerProvider.overrideWith(
+            () => _DashboardControllerForTest(state),
+          ),
+          ordersRepositoryProvider.overrideWithValue(
+            _FakeOrdersRepository(orders),
+          ),
+        ],
+        child: const MaterialApp(home: CustomerDashboardScreen()),
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('dashboardOrdersTab')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('All Orders (3)'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('detailedOrder-confirmed')),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Confirmed (1)'));
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('detailedOrder-confirmed')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('detailedOrder-pending')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -210,6 +308,19 @@ class _DashboardControllerForTest extends CustomerDashboardController {
 
   @override
   Future<void> load(String profileId, {bool force = false}) async {}
+}
+
+class _RecordingDashboardController extends CustomerDashboardController {
+  String? loadedProfileId;
+
+  @override
+  CustomerDashboardState build() => const DashboardLoading();
+
+  @override
+  Future<void> load(String profileId, {bool force = false}) async {
+    loadedProfileId = profileId;
+    state = const DashboardWithoutActivePlan([]);
+  }
 }
 
 class _OrderListApiClient extends ApiClient {

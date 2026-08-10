@@ -61,7 +61,12 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
   Future<void> load(String profileId, {bool force = false}) async {
     final normalized = profileId.trim();
     if (normalized.isEmpty || _requestInProgress) return;
-    if (!force && _profileId == normalized && state is! DashboardError) return;
+    if (!force &&
+        _profileId == normalized &&
+        state is! DashboardLoading &&
+        state is! DashboardError) {
+      return;
+    }
     _profileId = normalized;
     _requestInProgress = true;
     state = const DashboardLoading();

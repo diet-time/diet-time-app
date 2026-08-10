@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
@@ -7,6 +5,7 @@ import 'package:diet_time/features/authentication/presentation/otp_auth_controll
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_dashboard_controller.dart';
+import 'package:diet_time/features/dashboard/presentation/order_details_screen.dart';
 import 'package:diet_time/features/personalization/data/display_name_repository.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
@@ -30,39 +29,24 @@ class CustomerDashboardScreen extends ConsumerStatefulWidget {
 class _CustomerDashboardScreenState
     extends ConsumerState<CustomerDashboardScreen> {
   int _tabIndex = 0;
-  bool _loadScheduled = false;
-
-  String? get _profileId {
-    final profile = ref.read(personalizationControllerProvider);
-    final authUser = ref.read(otpAuthControllerProvider).user;
-    final checkout = ref.read(checkoutControllerProvider);
-    return profile.profileId ??
-        authUser?.customerProfileId ??
-        checkout.customerProfileId;
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_loadScheduled) return;
-    _loadScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final profileId = _profileId;
-      if (mounted && profileId != null) {
-        unawaited(
-          ref
-              .read(customerDashboardControllerProvider.notifier)
-              .load(profileId),
-        );
-      }
-    });
-  }
+  String? _loadedProfileId;
+  bool _loadQueued = false;
 
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(personalizationControllerProvider);
+    final authProfileId = ref.watch(
+      otpAuthControllerProvider.select(
+        (state) => state.user?.customerProfileId,
+      ),
+    );
+    final checkoutProfileId = ref.watch(
+      checkoutControllerProvider.select((state) => state.customerProfileId),
+    );
     final storedName = ref.watch(_dashboardDisplayNameProvider).value;
     final state = ref.watch(customerDashboardControllerProvider);
+    final profileId = profile.profileId ?? authProfileId ?? checkoutProfileId;
+    _ensureDashboardLoaded(profileId, state);
     final pages = [
       _DashboardHome(
         state: state,
@@ -105,6 +89,26 @@ class _CustomerDashboardScreenState
       ),
     );
   }
+
+  void _ensureDashboardLoaded(
+    String? profileId,
+    CustomerDashboardState dashboardState,
+  ) {
+    final normalized = profileId?.trim();
+    if (normalized == null || normalized.isEmpty || _loadQueued) return;
+    final needsLoad =
+        _loadedProfileId != normalized || dashboardState is DashboardLoading;
+    if (!needsLoad) return;
+    _loadQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await ref
+          .read(customerDashboardControllerProvider.notifier)
+          .load(normalized);
+      _loadedProfileId = normalized;
+      _loadQueued = false;
+    });
+  }
 }
 
 class _DashboardHome extends ConsumerWidget {
@@ -145,12 +149,15 @@ class _DashboardHome extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
         children: [
-          _DashboardHeader(name: name, subtitle: _dashboardSubtitle(state)),
+          _ReferenceDashboardHeader(
+            name: name,
+            subtitle: _dashboardSubtitle(state),
+          ),
           const SizedBox(height: 18),
           if (single != null) ...[
             const _SectionTitle('YOUR ACTIVE PLAN'),
             const SizedBox(height: 10),
-            _PlanHeroCard(summary: single.order, detail: single.detail),
+            _ReferencePlanCard(summary: single.order),
             if (_nextDelivery(single.detail) case final next?) ...[
               const SizedBox(height: 20),
               Row(
@@ -186,20 +193,30 @@ class _DashboardHome extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 10),
-            _MultiPlanCarousel(
-              orders: multiple.activeOrders,
-              details: multiple.details,
-            ),
+            _MultiPlanCarousel(orders: multiple.activeOrders),
           ] else if (state is DashboardWithoutActivePlan) ...[
             const _NoActivePlanCard(),
           ],
           const SizedBox(height: 22),
           if (state is! DashboardWithoutActivePlan)
-            AppButton(
+            OutlinedButton.icon(
               key: const ValueKey('orderAnotherPlan'),
-              label: '+  ORDER ANOTHER PLAN',
-              backgroundColor: AppColors.black,
               onPressed: () => _startNewOrder(context, ref),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.darkGreen,
+                minimumSize: const Size.fromHeight(46),
+                side: BorderSide(
+                  color: AppColors.emeraldGreen.withValues(alpha: .5),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.add_rounded, size: 17),
+              label: const Text(
+                'ORDER ANOTHER PLAN',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+              ),
             ),
           if (state is! DashboardWithoutActivePlan) ...[
             const SizedBox(height: 24),
@@ -238,6 +255,91 @@ class _DashboardHome extends ConsumerWidget {
   }
 }
 
+class _ReferenceDashboardHeader extends StatelessWidget {
+  const _ReferenceDashboardHeader({required this.name, required this.subtitle});
+
+  final String? name;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Expanded(
+        child: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${_greeting()}, ${_displayName(name)} 👋',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.darkGreen,
+                  fontSize: 20,
+                  letterSpacing: -.35,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: AppColors.darkGreen.withValues(alpha: .5),
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(width: 10),
+      Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.darkGreen.withValues(alpha: .07)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.darkGreen.withValues(alpha: .05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            const Center(
+              child: Icon(
+                Icons.notifications_none_rounded,
+                color: AppColors.darkGreen,
+                size: 21,
+              ),
+            ),
+            PositionedDirectional(
+              end: 7,
+              top: 6,
+              child: Container(
+                width: 7,
+                height: 7,
+                decoration: const BoxDecoration(
+                  color: AppColors.emeraldGreen,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+// ignore: unused_element
 class _DashboardHeader extends StatelessWidget {
   const _DashboardHeader({required this.name, required this.subtitle});
 
@@ -250,22 +352,6 @@ class _DashboardHeader extends StatelessWidget {
     children: [
       Row(
         children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.darkGreen.withValues(alpha: .08),
-              ),
-            ),
-            child: const Icon(
-              Icons.menu_rounded,
-              color: AppColors.darkGreen,
-              size: 21,
-            ),
-          ),
           const Spacer(),
           Stack(
             clipBehavior: Clip.none,
@@ -360,6 +446,149 @@ class _NoActivePlanCard extends ConsumerWidget {
   );
 }
 
+class _ReferencePlanCard extends StatelessWidget {
+  const _ReferencePlanCard({required this.summary});
+
+  final CustomerOrderSummary summary;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: ValueKey('activePlan-${summary.id}'),
+    height: 174,
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF0A7159), Color(0xFF064638)],
+      ),
+      borderRadius: BorderRadius.circular(18),
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.emeraldGreen.withValues(alpha: .2),
+          blurRadius: 20,
+          offset: const Offset(0, 8),
+        ),
+      ],
+    ),
+    child: Stack(
+      children: [
+        PositionedDirectional(
+          end: 0,
+          top: 18,
+          child: Icon(
+            Icons.spa_rounded,
+            color: AppColors.white.withValues(alpha: .1),
+            size: 88,
+          ),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Text(
+                  summary.status == 'ACTIVE' ? 'ACTIVE PLAN' : summary.status,
+                  style: const TextStyle(
+                    color: Color(0xFF9AE2A7),
+                    fontSize: 9,
+                    letterSpacing: .7,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const Spacer(),
+                _HeroStatusPill(summary.status),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              summary.planName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Row(
+              children: [
+                const Icon(
+                  Icons.calendar_today_outlined,
+                  color: Color(0xFFB7D5CA),
+                  size: 13,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _period(summary.startDate, summary.endDate),
+                  style: const TextStyle(
+                    color: Color(0xFFD7E7E1),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            Divider(height: 1, color: AppColors.white.withValues(alpha: .14)),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'TOTAL PRICE',
+                        style: TextStyle(
+                          color: AppColors.white.withValues(alpha: .55),
+                          fontSize: 8,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${formatMealPlanPriceAmount(summary.totalAmount, Localizations.localeOf(context).toLanguageTag())} ${summary.currencyCode}',
+                        style: const TextStyle(
+                          color: AppColors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                FilledButton.icon(
+                  key: ValueKey('viewOrder-${summary.id}'),
+                  onPressed: () =>
+                      context.push(AppRoutes.orderDetails, extra: summary.id),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.white,
+                    foregroundColor: AppColors.darkGreen,
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 13,
+                      vertical: 9,
+                    ),
+                  ),
+                  iconAlignment: IconAlignment.end,
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                  label: const Text(
+                    'VIEW DETAILS',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+// ignore: unused_element
 class _PlanHeroCard extends StatelessWidget {
   const _PlanHeroCard({required this.summary, required this.detail});
 
@@ -589,10 +818,9 @@ class _HeroStatusPill extends StatelessWidget {
 }
 
 class _MultiPlanCarousel extends StatefulWidget {
-  const _MultiPlanCarousel({required this.orders, required this.details});
+  const _MultiPlanCarousel({required this.orders});
 
   final List<CustomerOrderSummary> orders;
-  final Map<String, OrderConfirmation> details;
 
   @override
   State<_MultiPlanCarousel> createState() => _MultiPlanCarouselState();
@@ -612,7 +840,7 @@ class _MultiPlanCarouselState extends State<_MultiPlanCarousel> {
   Widget build(BuildContext context) => Column(
     children: [
       SizedBox(
-        height: 282,
+        height: 174,
         child: PageView.builder(
           key: const ValueKey('activePlansCarousel'),
           controller: _controller,
@@ -625,10 +853,7 @@ class _MultiPlanCarouselState extends State<_MultiPlanCarousel> {
               padding: EdgeInsetsDirectional.only(
                 end: index == widget.orders.length - 1 ? 0 : 10,
               ),
-              child: _CompactPlanCard(
-                summary: order,
-                detail: widget.details[order.id],
-              ),
+              child: _ReferencePlanCard(summary: order),
             );
           },
         ),
@@ -658,6 +883,7 @@ class _MultiPlanCarouselState extends State<_MultiPlanCarousel> {
   );
 }
 
+// ignore: unused_element
 class _CompactPlanCard extends StatelessWidget {
   const _CompactPlanCard({required this.summary, required this.detail});
 
@@ -1057,52 +1283,345 @@ class _OrderRow extends StatelessWidget {
   );
 }
 
-class _CustomerOrders extends ConsumerWidget {
+class _CustomerOrders extends ConsumerStatefulWidget {
   const _CustomerOrders({required this.state});
 
   final CustomerDashboardState state;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_CustomerOrders> createState() => _CustomerOrdersState();
+}
+
+class _CustomerOrdersState extends ConsumerState<_CustomerOrders> {
+  String _filter = 'ALL';
+
+  @override
+  Widget build(BuildContext context) {
+    final state = widget.state;
     if (state is DashboardLoading) return const _DashboardSkeleton();
     if (state is DashboardError) {
       return _DashboardErrorView(
-        message: (state as DashboardError).message,
+        message: state.message,
         onRetry: () =>
             ref.read(customerDashboardControllerProvider.notifier).refresh(),
       );
     }
     final orders = _ordersFrom(state);
+    final filtered = _filter == 'ALL'
+        ? orders
+        : orders.where((order) => order.status == _filter).toList();
     return RefreshIndicator(
       onRefresh: () =>
           ref.read(customerDashboardControllerProvider.notifier).refresh(),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
         children: [
-          const Text(
-            'My Orders',
-            style: TextStyle(
-              color: AppColors.darkGreen,
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
+          Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'My Orders',
+                      style: TextStyle(
+                        color: AppColors.darkGreen,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'All your meal orders in one place',
+                      style: TextStyle(color: Color(0xFF81908B), fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.darkGreen.withValues(alpha: .07),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.filter_list_rounded,
+                  color: AppColors.darkGreen,
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final filter in const [
+                  ('ALL', 'All Orders'),
+                  ('CONFIRMED', 'Confirmed'),
+                  ('PENDING', 'Pending'),
+                  ('CANCELLED', 'Cancelled'),
+                ]) ...[
+                  _OrderFilterChip(
+                    label: filter.$2,
+                    count: filter.$1 == 'ALL'
+                        ? orders.length
+                        : orders
+                              .where((order) => order.status == filter.$1)
+                              .length,
+                    selected: _filter == filter.$1,
+                    onTap: () => setState(() => _filter = filter.$1),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ],
             ),
           ),
-          const SizedBox(height: 20),
-          if (orders.isEmpty)
+          const SizedBox(height: 16),
+          if (filtered.isEmpty)
             const _SurfaceCard(
               child: Text(
-                'No orders yet.',
+                'No orders found for this status.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.darkGreen),
               ),
             )
           else
-            _OrdersCard(orders: orders),
+            for (final order in filtered) ...[
+              _DetailedOrderCard(order: order),
+              const SizedBox(height: 12),
+            ],
         ],
       ),
     );
   }
+}
+
+class _OrderFilterChip extends StatelessWidget {
+  const _OrderFilterChip({
+    required this.label,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(99),
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+      decoration: BoxDecoration(
+        color: selected ? AppColors.emeraldGreen : AppColors.white,
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(
+          color: selected
+              ? AppColors.emeraldGreen
+              : AppColors.darkGreen.withValues(alpha: .08),
+        ),
+      ),
+      child: Text(
+        '$label ($count)',
+        style: TextStyle(
+          color: selected ? AppColors.white : AppColors.darkGreen,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    ),
+  );
+}
+
+class _DetailedOrderCard extends ConsumerWidget {
+  const _DetailedOrderCard({required this.order});
+
+  final CustomerOrderSummary order;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final detail = ref.watch(orderDetailsProvider(order.id)).value;
+    final delivery = detail?.delivery;
+    final mealsPerDay = detail?.meals.fold<int>(
+      0,
+      (total, meal) => total + meal.quantity,
+    );
+    return InkWell(
+      key: ValueKey('detailedOrder-${order.id}'),
+      onTap: () => context.push(AppRoutes.orderDetails, extra: order.id),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.darkGreen.withValues(alpha: .06)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.darkGreen.withValues(alpha: .045),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 45,
+                  height: 45,
+                  decoration: BoxDecoration(
+                    color: AppColors.teaGreen.withValues(alpha: .24),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.assignment_turned_in_outlined,
+                    color: AppColors.emeraldGreen,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        order.orderNumber,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.darkGreen,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        order.planName,
+                        style: const TextStyle(
+                          color: AppColors.darkGreen,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        _period(order.startDate, order.endDate),
+                        style: TextStyle(
+                          color: AppColors.darkGreen.withValues(alpha: .58),
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _StatusPill(order.status),
+                const SizedBox(width: 3),
+                const Icon(Icons.more_horiz_rounded, size: 18),
+              ],
+            ),
+            if (delivery != null || mealsPerDay != null) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 14,
+                runSpacing: 6,
+                children: [
+                  if (delivery != null)
+                    _OrderFact(
+                      icon: Icons.calendar_today_outlined,
+                      text: '${delivery.daysPerWeek} Days / Week',
+                    ),
+                  if (mealsPerDay != null)
+                    _OrderFact(
+                      icon: Icons.restaurant_outlined,
+                      text: '$mealsPerDay Meals / Day',
+                    ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 12),
+            Text(
+              '${formatMealPlanPriceAmount(order.totalAmount, Localizations.localeOf(context).toLanguageTag())} ${order.currencyCode}',
+              style: const TextStyle(
+                color: AppColors.darkGreen,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 11),
+              child: Divider(
+                height: 1,
+                color: AppColors.darkGreen.withValues(alpha: .07),
+              ),
+            ),
+            const SizedBox(height: 9),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    order.placedAt == null
+                        ? 'Order placed'
+                        : 'Ordered on ${DateFormat('dd MMM yyyy').format(order.placedAt!)}',
+                    style: TextStyle(
+                      color: AppColors.darkGreen.withValues(alpha: .54),
+                      fontSize: 9,
+                    ),
+                  ),
+                ),
+                const Text(
+                  'View Details  →',
+                  style: TextStyle(
+                    color: AppColors.emeraldGreen,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderFact extends StatelessWidget {
+  const _OrderFact({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, color: AppColors.darkGreen.withValues(alpha: .55), size: 13),
+      const SizedBox(width: 5),
+      Text(
+        text,
+        style: TextStyle(
+          color: AppColors.darkGreen.withValues(alpha: .72),
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ],
+  );
 }
 
 class _CustomerProfile extends StatelessWidget {
