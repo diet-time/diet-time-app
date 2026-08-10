@@ -150,6 +150,32 @@ void main() {
   });
 
   test(
+    'starting another order clears checkout but preserves profile and addresses',
+    () {
+      final container = ProviderContainer(
+        overrides: [
+          checkoutControllerProvider.overrideWith(
+            () => _CheckoutControllerForTest(_readyCheckout),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(checkoutControllerProvider.notifier).beginNewOrder();
+
+      final checkout = container.read(checkoutControllerProvider);
+      expect(checkout.selection, isNull);
+      expect(checkout.schedule, isNull);
+      expect(checkout.selectedAddressId, isNull);
+      expect(checkout.selectedDeliveryTimeSlotId, isNull);
+      expect(checkout.idempotencyKey, isNull);
+      expect(checkout.orderConfirmation, isNull);
+      expect(checkout.customerProfileId, 'profile-id');
+      expect(checkout.addresses, [_address]);
+    },
+  );
+
+  test(
     'summary resolves a display-only package to its authenticated price ID',
     () async {
       final api = _PurchaseOptionsApiClient();

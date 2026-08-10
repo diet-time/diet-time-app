@@ -292,7 +292,7 @@ void main() {
     expect(find.byType(PersonalizationScreen), findsNothing);
   });
 
-  testWidgets('authenticated incomplete user still sees image onboarding', (
+  testWidgets('authenticated incomplete user resumes personalization', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
@@ -305,14 +305,16 @@ void main() {
       _dietTimeApp(authenticationService: const _AuthenticatedService()),
     );
     await _finishSplash(tester);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byType(LanguageSelectionPanel), findsNothing);
-    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
-    expect(find.byType(PersonalizationScreen), findsNothing);
+    expect(find.byType(OnboardingCarouselScreen), findsNothing);
+    expect(find.byType(PersonalizationScreen), findsOneWidget);
     expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
-  testWidgets('authenticated returning user still sees image onboarding', (
+  testWidgets('authenticated completed customer opens dashboard', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
@@ -323,13 +325,26 @@ void main() {
       'hasCompletedProfile': true,
     });
     await tester.pumpWidget(
-      _dietTimeApp(authenticationService: const _AuthenticatedService()),
+      _dietTimeApp(
+        authenticationService: const _AuthenticatedService(),
+        profileService: _FakeProfilePersistenceService(
+          profile: const CustomerProfile(
+            profileId: 'profile-id',
+            onboardingStatus: 'COMPLETED',
+            nextStepCode: 'PROFILE_COMPLETED',
+            completionPercentage: 100,
+            shouldShowOnboarding: false,
+          ),
+        ),
+      ),
     );
     await _finishSplash(tester);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(HomeScreen), findsNothing);
+    expect(find.byType(HomeScreen), findsOneWidget);
     expect(find.byType(LanguageSelectionPanel), findsNothing);
-    expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
+    expect(find.byType(OnboardingCarouselScreen), findsNothing);
     expect(find.byType(PersonalizationScreen), findsNothing);
   });
 
@@ -583,6 +598,8 @@ Widget _dietTimeApp({
 }
 
 class _FakeProfilePersistenceService implements ProfilePersistenceService {
+  _FakeProfilePersistenceService({this.profile});
+
   CustomerProfile? profile;
   CustomerProfile? lastSubmitted;
   int saveProgressCalls = 0;

@@ -6,6 +6,7 @@ import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_spacing.dart';
 import 'package:diet_time/app/theme/app_typography.dart';
 import 'package:diet_time/core/widgets/app_logo.dart';
+import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
 import 'package:diet_time/features/language/data/language_repository.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/features/language/presentation/language_selection_panel.dart';
@@ -169,7 +170,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         .read(languageControllerProvider.notifier)
         .selectLanguage(preferredLanguage);
     if (!mounted) return;
-    context.go(AppRoutes.onboarding);
+    await _openAuthenticatedDestination();
+  }
+
+  Future<void> _openAuthenticatedDestination() async {
+    final authenticated = await ref
+        .read(authenticationServiceProvider)
+        .isLoggedIn();
+    if (!mounted) return;
+    context.go(
+      authenticated ? AppRoutes.authenticatedLanding : AppRoutes.onboarding,
+    );
   }
 
   @override

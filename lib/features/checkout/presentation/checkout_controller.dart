@@ -20,6 +20,13 @@ class CheckoutController extends Notifier<CheckoutState> {
   @override
   CheckoutState build() => const CheckoutState();
 
+  void beginNewOrder() {
+    state = CheckoutState(
+      customerProfileId: state.customerProfileId,
+      addresses: state.addresses,
+    );
+  }
+
   void begin(
     MealPlanPurchaseSelection selection,
     MealPlanServiceSchedule schedule,

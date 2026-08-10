@@ -49,6 +49,57 @@ class PlaceOrderRequest {
   };
 }
 
+class CustomerOrderSummary {
+  const CustomerOrderSummary({
+    required this.id,
+    required this.orderNumber,
+    required this.planName,
+    required this.planDurationName,
+    required this.status,
+    required this.paymentStatus,
+    required this.totalAmount,
+    required this.currencyCode,
+    required this.startDate,
+    required this.endDate,
+    required this.placedAt,
+  });
+
+  factory CustomerOrderSummary.fromJson(Map<String, dynamic> json) =>
+      CustomerOrderSummary(
+        id: _text(json['id'] ?? json['orderId']),
+        orderNumber: _text(json['orderNumber']),
+        planName: _text(json['planName'] ?? json['name']),
+        planDurationName: _text(
+          json['planDurationName'] ?? json['durationName'],
+        ),
+        status: _text(json['status']).toUpperCase(),
+        paymentStatus: _text(json['paymentStatus']).toUpperCase(),
+        totalAmount: _number(json['totalAmount']),
+        currencyCode: _text(json['currencyCode']),
+        startDate: _dateTime(json['startDate']),
+        endDate: _dateTime(json['endDate']),
+        placedAt: _dateTime(json['placedAt']),
+      );
+
+  final String id;
+  final String orderNumber;
+  final String planName;
+  final String planDurationName;
+  final String status;
+  final String paymentStatus;
+  final double totalAmount;
+  final String currencyCode;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final DateTime? placedAt;
+
+  bool get isValid => id.isNotEmpty && orderNumber.isNotEmpty;
+  bool get isCurrent =>
+      const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(status);
+  bool get isCompleted => status == 'COMPLETED';
+  bool get isCancelled => status == 'CANCELLED';
+}
+
 class OrderConfirmation {
   const OrderConfirmation({
     required this.id,

@@ -49,18 +49,22 @@ class OrdersRepository {
     return confirmation;
   }
 
-  Future<List<OrderConfirmation>> getCustomerOrders(String profileId) async {
+  Future<List<CustomerOrderSummary>> getCustomerOrders(
+    String profileId, {
+    int pageSize = 100,
+  }) async {
     final response = await _request(
       method: 'GET',
       path: ApiEndpoints.customerOrders(profileId),
+      queryParameters: {'pageNumber': '1', 'pageSize': '$pageSize'},
     );
-    final raw = response.body['data'];
+    final raw = response.body['data'] ?? response.body;
     Object? items = raw;
     if (raw is Map<String, dynamic>) items = raw['orders'] ?? raw['items'];
     if (items is! List) return const [];
     return items
         .whereType<Map<String, dynamic>>()
-        .map(OrderConfirmation.fromJson)
+        .map(CustomerOrderSummary.fromJson)
         .where((order) => order.isValid)
         .toList(growable: false);
   }
@@ -79,12 +83,14 @@ class OrdersRepository {
     required String method,
     required String path,
     Map<String, String> headers = const {},
+    Map<String, String> queryParameters = const {},
     Map<String, dynamic>? body,
   }) async {
     final token = await accessTokenProvider();
     final response = await apiClient.request(
       method: method,
       path: path,
+      queryParameters: queryParameters,
       headers: {
         if (token?.trim().isNotEmpty == true)
           'Authorization': 'Bearer ${token!.trim()}',

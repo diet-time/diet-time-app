@@ -118,9 +118,7 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
         final profile = await ref.read(customerProfileServiceProvider).load();
         if (profile != null) {
           ref.read(personalizationControllerProvider.notifier).replace(profile);
-          if (profile.isCompleted || profile.hasCapturedQuestionnaire) {
-            route = AppRoutes.plans;
-          }
+          if (profile.isCompleted) route = AppRoutes.home;
         }
       } on Object {
         // Fall back to personalization, which has its own retry/error state.

@@ -3,6 +3,7 @@ import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
+import 'package:diet_time/features/dashboard/presentation/customer_dashboard_controller.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -85,7 +86,10 @@ class OrderPlacedScreen extends ConsumerWidget {
                       key: const ValueKey('orderPlacedHome'),
                       label: 'GO TO DASHBOARD',
                       backgroundColor: AppColors.black,
-                      onPressed: () => context.go(AppRoutes.home),
+                      onPressed: () {
+                        ref.invalidate(customerDashboardControllerProvider);
+                        context.go(AppRoutes.home);
+                      },
                     ),
                   ),
                 ),
@@ -209,11 +213,11 @@ class _Detail extends StatelessWidget {
   );
 }
 
-class _MissingConfirmation extends StatelessWidget {
+class _MissingConfirmation extends ConsumerWidget {
   const _MissingConfirmation();
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
     backgroundColor: const Color(0xFFF8F6EF),
     body: Center(
       child: Padding(
@@ -239,7 +243,10 @@ class _MissingConfirmation extends StatelessWidget {
             AppButton(
               label: 'GO TO DASHBOARD',
               backgroundColor: AppColors.black,
-              onPressed: () => context.go(AppRoutes.home),
+              onPressed: () {
+                ref.invalidate(customerDashboardControllerProvider);
+                context.go(AppRoutes.home);
+              },
             ),
           ],
         ),

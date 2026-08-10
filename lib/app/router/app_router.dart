@@ -5,6 +5,7 @@ import 'package:diet_time/features/authentication/presentation/phone_login_page.
 import 'package:diet_time/features/checkout/presentation/customer_address_screen.dart';
 import 'package:diet_time/features/checkout/presentation/plan_summary_screen.dart';
 import 'package:diet_time/features/checkout/presentation/order_placed_screen.dart';
+import 'package:diet_time/features/dashboard/presentation/order_details_screen.dart';
 import 'package:diet_time/features/home/presentation/home_screen.dart';
 import 'package:diet_time/features/home/presentation/route_placeholder_screen.dart';
 import 'package:diet_time/features/language/presentation/language_selection_screen.dart';
@@ -17,6 +18,7 @@ import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dar
 import 'package:diet_time/features/plans/presentation/meal_plan_details_screen.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_start_date_screen.dart';
 import 'package:diet_time/features/personalization/presentation/post_login_name_gate.dart';
+import 'package:diet_time/features/personalization/presentation/authenticated_landing_screen.dart';
 import 'package:diet_time/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,8 +42,10 @@ abstract final class AppRoutes {
   static const planCheckoutReady = '/plan-checkout-ready';
   static const orderPlaced = '/order-placed';
   static const postLogin = '/post-login';
+  static const authenticatedLanding = '/authenticated-landing';
   static const register = '/register';
   static const home = '/home';
+  static const orderDetails = '/order-details';
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -176,12 +180,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.postLogin,
         pageBuilder: (context, state) {
-          final nextRoute = state.extra as String? ?? AppRoutes.home;
+          final nextRoute =
+              state.extra as String? ?? AppRoutes.authenticatedLanding;
           return _slidePage(
             state: state,
             child: PostLoginNameGate(onContinue: () => context.go(nextRoute)),
           );
         },
+      ),
+      GoRoute(
+        path: AppRoutes.authenticatedLanding,
+        builder: (context, state) => const AuthenticatedLandingScreen(),
       ),
       GoRoute(
         path: AppRoutes.register,
@@ -191,6 +200,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.home,
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.orderDetails,
+        pageBuilder: (context, state) {
+          final orderId = state.extra as String?;
+          return _slidePage(
+            state: state,
+            child: orderId == null || orderId.isEmpty
+                ? const HomeScreen()
+                : OrderDetailsScreen(orderId: orderId),
+          );
+        },
       ),
     ],
   );

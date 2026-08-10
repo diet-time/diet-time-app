@@ -384,29 +384,27 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('authenticated user skips phone login from plan continuation', (
-    tester,
-  ) async {
-    final authentication = _FakeAuthenticationService(loggedIn: true);
-    await tester.pumpWidget(_planApp(authentication));
-    await tester.pump();
-    await tester.pump();
+  testWidgets(
+    'authenticated user skips phone login and continues to schedule',
+    (tester) async {
+      final authentication = _FakeAuthenticationService(loggedIn: true);
+      await tester.pumpWidget(_planApp(authentication));
+      await tester.pump();
+      await tester.pump();
 
-    final continueButton = find.text('Continue');
-    await tester.ensureVisible(continueButton);
-    await tester.tap(continueButton);
-    await tester.pumpAndSettle();
+      final continueButton = find.text('Continue');
+      await tester.ensureVisible(continueButton);
+      await tester.tap(continueButton);
+      await tester.pumpAndSettle();
 
-    expect(find.byType(MealPlanDetailsScreen), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('detailsContinue')));
-    await tester.pumpAndSettle();
+      expect(find.byType(MealPlanDetailsScreen), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('detailsContinue')));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(PhoneLoginPage), findsNothing);
-    expect(
-      find.byKey(const ValueKey('authenticatedDestination')),
-      findsOneWidget,
-    );
-  });
+      expect(find.byType(PhoneLoginPage), findsNothing);
+      expect(find.byKey(const ValueKey('serviceCalendar')), findsOneWidget);
+    },
+  );
 }
 
 Future<void> _openOtp(WidgetTester tester) async {
