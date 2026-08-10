@@ -75,7 +75,7 @@ class _CustomerDashboardScreenState
         selectedIndex: _tabIndex,
         onDestinationSelected: (index) => setState(() => _tabIndex = index),
         backgroundColor: AppColors.white,
-        indicatorColor: AppColors.jasper.withValues(alpha: .12),
+        indicatorColor: AppColors.emeraldGreen.withValues(alpha: .14),
         destinations: const [
           NavigationDestination(
             key: ValueKey('dashboardHomeTab'),
@@ -137,30 +137,31 @@ class _DashboardHome extends ConsumerWidget {
       child: ListView(
         key: const ValueKey('customerDashboard'),
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
         children: [
-          Text(
-            _welcome(name),
-            style: const TextStyle(
-              color: AppColors.darkGreen,
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 22),
+          _DashboardHeader(name: name),
+          const SizedBox(height: 18),
           if (single != null) ...[
             const _SectionTitle('YOUR ACTIVE PLAN'),
             const SizedBox(height: 10),
-            _ActivePlanCard(
-              summary: single.order,
-              detail: single.detail,
-              prominent: true,
-            ),
+            _PlanHeroCard(summary: single.order, detail: single.detail),
             if (_nextDelivery(single.detail) case final next?) ...[
-              const SizedBox(height: 22),
-              const _SectionTitle('NEXT DELIVERY'),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  const Expanded(child: _SectionTitle('UPCOMING DELIVERY')),
+                  TextButton(
+                    onPressed: () => context.push(AppRoutes.menu),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text('VIEW MENU'),
+                  ),
+                ],
+              ),
               const SizedBox(height: 10),
-              _NextDeliveryCard(date: next, order: single.detail),
+              _UpcomingDeliveryCard(date: next, order: single.detail),
             ],
           ] else if (multiple != null) ...[
             const _SectionTitle('MY ACTIVE PLANS'),
@@ -183,6 +184,21 @@ class _DashboardHome extends ConsumerWidget {
               backgroundColor: AppColors.black,
               onPressed: () => _startNewOrder(context, ref),
             ),
+          if (state is! DashboardWithoutActivePlan) ...[
+            const SizedBox(height: 24),
+            const _SectionTitle('QUICK ACTIONS'),
+            const SizedBox(height: 10),
+            _QuickActions(
+              onPlan: single == null
+                  ? null
+                  : () => context.push(
+                      AppRoutes.orderDetails,
+                      extra: single.order.id,
+                    ),
+              onOrders: onViewAll,
+              onNewPlan: () => _startNewOrder(context, ref),
+            ),
+          ],
           if (orders.isNotEmpty) ...[
             const SizedBox(height: 28),
             Row(
@@ -205,6 +221,82 @@ class _DashboardHome extends ConsumerWidget {
   }
 }
 
+class _DashboardHeader extends StatelessWidget {
+  const _DashboardHeader({required this.name});
+
+  final String? name;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.darkGreen.withValues(alpha: .08),
+              ),
+            ),
+            child: const Icon(
+              Icons.menu_rounded,
+              color: AppColors.darkGreen,
+              size: 21,
+            ),
+          ),
+          const Spacer(),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(8),
+                child: Icon(
+                  Icons.notifications_none_rounded,
+                  color: AppColors.darkGreen,
+                ),
+              ),
+              Positioned(
+                right: 5,
+                top: 4,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: AppColors.emeraldGreen,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      Text(
+        '${_greeting()}, ${_displayName(name)} 👋',
+        style: const TextStyle(
+          color: AppColors.darkGreen,
+          fontSize: 23,
+          letterSpacing: -.4,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        'Your meal plan is ready for you',
+        style: TextStyle(
+          color: AppColors.darkGreen.withValues(alpha: .56),
+          fontSize: 13,
+        ),
+      ),
+    ],
+  );
+}
+
 class _NoActivePlanCard extends ConsumerWidget {
   const _NoActivePlanCard();
 
@@ -216,7 +308,7 @@ class _NoActivePlanCard extends ConsumerWidget {
       children: [
         const Icon(
           Icons.restaurant_menu_rounded,
-          color: AppColors.jasper,
+          color: AppColors.emeraldGreen,
           size: 38,
         ),
         const SizedBox(height: 14),
@@ -250,21 +342,243 @@ class _NoActivePlanCard extends ConsumerWidget {
   );
 }
 
-class _ActivePlanCard extends StatelessWidget {
-  const _ActivePlanCard({
-    required this.summary,
-    required this.detail,
-    this.prominent = false,
+class _PlanHeroCard extends StatelessWidget {
+  const _PlanHeroCard({required this.summary, required this.detail});
+
+  final CustomerOrderSummary summary;
+  final OrderConfirmation detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final next = _nextDelivery(detail);
+    final address = detail.delivery.address;
+    return Container(
+      key: ValueKey('activePlan-${summary.id}'),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF08765D), Color(0xFF064D3E)],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.emeraldGreen.withValues(alpha: .24),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.white.withValues(alpha: .16),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.shopping_bag_outlined,
+                  color: AppColors.white,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      summary.planName,
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      detail.meals
+                          .map((meal) => '${meal.name} x ${meal.quantity}')
+                          .join(' · '),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.white.withValues(alpha: .78),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _HeroStatusPill(summary.status),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            child: Divider(
+              height: 1,
+              color: AppColors.white.withValues(alpha: .18),
+            ),
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _HeroDetail(
+                  icon: Icons.calendar_month_outlined,
+                  value: _period(summary.startDate, summary.endDate),
+                  caption: summary.planDurationName,
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 50,
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                color: AppColors.white.withValues(alpha: .16),
+              ),
+              Expanded(
+                child: _HeroDetail(
+                  icon: Icons.wb_sunny_outlined,
+                  value: next == null
+                      ? 'Schedule ready'
+                      : DateFormat('EEE, dd MMM').format(next),
+                  caption:
+                      '${detail.delivery.timeSlot.name} · ${_timeRange(detail.delivery.timeSlot)}',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          _HeroDetail(
+            icon: Icons.schedule_rounded,
+            value: '${detail.delivery.daysPerWeek} Days / Week',
+            caption: _weekdays(detail.delivery.days),
+          ),
+          const SizedBox(height: 12),
+          _HeroDetail(
+            icon: Icons.location_on_outlined,
+            value: address.displayName,
+            caption: [
+              address.area,
+              address.streetLine,
+            ].where((value) => value.trim().isNotEmpty).join(' · '),
+          ),
+          const SizedBox(height: 16),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: FilledButton.icon(
+              key: ValueKey('viewOrder-${summary.id}'),
+              onPressed: () =>
+                  context.push(AppRoutes.orderDetails, extra: summary.id),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.white,
+                foregroundColor: AppColors.darkGreen,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
+              ),
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(Icons.arrow_forward_rounded, size: 17),
+              label: const Text(
+                'VIEW PLAN',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroDetail extends StatelessWidget {
+  const _HeroDetail({
+    required this.icon,
+    required this.value,
+    required this.caption,
   });
+
+  final IconData icon;
+  final String value;
+  final String caption;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(icon, color: AppColors.white.withValues(alpha: .82), size: 18),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value.isEmpty ? '—' : value,
+              style: const TextStyle(
+                color: AppColors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            if (caption.isNotEmpty) ...[
+              const SizedBox(height: 3),
+              Text(
+                caption,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppColors.white.withValues(alpha: .68),
+                  fontSize: 10,
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+class _HeroStatusPill extends StatelessWidget {
+  const _HeroStatusPill(this.status);
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+    decoration: BoxDecoration(
+      color: const Color(0xFFBFEA92),
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Text(
+      status,
+      style: const TextStyle(
+        color: Color(0xFF205A36),
+        fontSize: 9,
+        fontWeight: FontWeight.w900,
+      ),
+    ),
+  );
+}
+
+class _ActivePlanCard extends StatelessWidget {
+  const _ActivePlanCard({required this.summary, required this.detail});
 
   final CustomerOrderSummary summary;
   final OrderConfirmation? detail;
-  final bool prominent;
 
   @override
   Widget build(BuildContext context) => _SurfaceCard(
     key: ValueKey('activePlan-${summary.id}'),
-    accent: prominent,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -319,15 +633,15 @@ class _ActivePlanCard extends StatelessWidget {
             side: const BorderSide(color: AppColors.darkGreen),
             minimumSize: const Size.fromHeight(48),
           ),
-          child: Text(prominent ? 'VIEW PLAN' : 'VIEW DETAILS'),
+          child: const Text('VIEW DETAILS'),
         ),
       ],
     ),
   );
 }
 
-class _NextDeliveryCard extends StatelessWidget {
-  const _NextDeliveryCard({required this.date, required this.order});
+class _UpcomingDeliveryCard extends StatelessWidget {
+  const _UpcomingDeliveryCard({required this.date, required this.order});
 
   final DateTime date;
   final OrderConfirmation order;
@@ -340,12 +654,12 @@ class _NextDeliveryCard extends StatelessWidget {
           width: 52,
           height: 52,
           decoration: BoxDecoration(
-            color: AppColors.jasper.withValues(alpha: .1),
+            color: AppColors.teaGreen.withValues(alpha: .3),
             borderRadius: BorderRadius.circular(16),
           ),
           child: const Icon(
             Icons.calendar_today_rounded,
-            color: AppColors.jasper,
+            color: AppColors.emeraldGreen,
           ),
         ),
         const SizedBox(width: 14),
@@ -368,10 +682,143 @@ class _NextDeliveryCard extends StatelessWidget {
                   color: AppColors.darkGreen.withValues(alpha: .62),
                 ),
               ),
+              if (order.meals.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                for (final meal in order.meals.take(3))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 7),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 25,
+                          height: 25,
+                          decoration: BoxDecoration(
+                            color: AppColors.emeraldGreen.withValues(alpha: .1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.restaurant_rounded,
+                            color: AppColors.emeraldGreen,
+                            size: 13,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${meal.name}  × ${meal.quantity}',
+                            style: const TextStyle(
+                              color: AppColors.darkGreen,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ],
           ),
         ),
       ],
+    ),
+  );
+}
+
+class _QuickActions extends StatelessWidget {
+  const _QuickActions({
+    required this.onPlan,
+    required this.onOrders,
+    required this.onNewPlan,
+  });
+
+  final VoidCallback? onPlan;
+  final VoidCallback onOrders;
+  final VoidCallback onNewPlan;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: _QuickAction(
+          icon: Icons.badge_outlined,
+          label: 'My Plan',
+          onTap: onPlan,
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: _QuickAction(
+          icon: Icons.local_shipping_outlined,
+          label: 'Orders',
+          onTap: onOrders,
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: _QuickAction(
+          icon: Icons.add_circle_outline_rounded,
+          label: 'New Plan',
+          onTap: onNewPlan,
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: _QuickAction(
+          icon: Icons.support_agent_rounded,
+          label: 'Support',
+          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Support will be available soon.')),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+class _QuickAction extends StatelessWidget {
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: AppColors.white,
+    borderRadius: BorderRadius.circular(16),
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        height: 78,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.darkGreen.withValues(alpha: .08)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: AppColors.emeraldGreen, size: 22),
+            const SizedBox(height: 7),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.darkGreen,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
     ),
   );
 }
@@ -619,13 +1066,11 @@ class _SurfaceCard extends StatelessWidget {
   const _SurfaceCard({
     required this.child,
     this.padding = const EdgeInsets.all(18),
-    this.accent = false,
     super.key,
   });
 
   final Widget child;
   final EdgeInsets padding;
-  final bool accent;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -633,11 +1078,7 @@ class _SurfaceCard extends StatelessWidget {
     decoration: BoxDecoration(
       color: AppColors.white,
       borderRadius: BorderRadius.circular(22),
-      border: Border.all(
-        color: accent
-            ? AppColors.jasper.withValues(alpha: .35)
-            : AppColors.darkGreen.withValues(alpha: .08),
-      ),
+      border: Border.all(color: AppColors.darkGreen.withValues(alpha: .08)),
       boxShadow: [
         BoxShadow(
           color: AppColors.darkGreen.withValues(alpha: .05),
@@ -741,11 +1182,16 @@ List<CustomerOrderSummary> _ordersFrom(CustomerDashboardState state) =>
       _ => const [],
     };
 
-String _welcome(String? name) {
+String _displayName(String? name) {
   final value = name?.trim();
-  return value == null || value.isEmpty
-      ? 'Welcome back'
-      : 'Welcome back, $value';
+  return value == null || value.isEmpty ? 'there' : value;
+}
+
+String _greeting() {
+  final hour = DateTime.now().hour;
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
 String _period(DateTime? start, DateTime? end) {

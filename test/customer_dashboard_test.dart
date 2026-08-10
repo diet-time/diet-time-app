@@ -2,10 +2,48 @@ import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_dashboard_controller.dart';
+import 'package:diet_time/features/dashboard/presentation/customer_dashboard_screen.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('green active-plan dashboard fits a compact phone', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final summary = _summary('active', 'ACTIVE', DateTime(2026, 8, 11));
+    final detail = _detail(summary);
+    final state = DashboardWithActivePlan(
+      order: summary,
+      detail: detail,
+      orders: [summary],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          customerDashboardControllerProvider.overrideWith(
+            () => _DashboardControllerForTest(state),
+          ),
+        ],
+        child: const MaterialApp(home: CustomerDashboardScreen()),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('activePlan-active')), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('QUICK ACTIONS'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('QUICK ACTIONS'), findsOneWidget);
+    expect(find.textContaining('ORDER ANOTHER PLAN'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   test(
     'completed customer with no current orders gets no-active-plan state',
     () async {
@@ -128,6 +166,18 @@ class _FakeOrdersRepository extends OrdersRepository {
   @override
   Future<OrderConfirmation> getOrder(String orderId) async =>
       _detail(orders.singleWhere((order) => order.id == orderId));
+}
+
+class _DashboardControllerForTest extends CustomerDashboardController {
+  _DashboardControllerForTest(this.initialState);
+
+  final CustomerDashboardState initialState;
+
+  @override
+  CustomerDashboardState build() => initialState;
+
+  @override
+  Future<void> load(String profileId, {bool force = false}) async {}
 }
 
 class _OrderListApiClient extends ApiClient {
