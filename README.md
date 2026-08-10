@@ -22,6 +22,18 @@ licensed Bw Surco DEMO and Almarai files under `assets/fonts/`, register the fon
 weights in `pubspec.yaml`, and update the family constants in
 `lib/app/theme/app_typography.dart`. Manrope is the temporary English family.
 
+## Google Maps setup
+
+Enable **Maps SDK for Android** and **Maps SDK for iOS** in Google Cloud, then
+copy the example secret files and replace the placeholder values:
+
+- `android/local.properties.example` → `android/local.properties`
+- `ios/Flutter/Secrets.xcconfig.example` → `ios/Flutter/Secrets.xcconfig`
+
+The destination files are ignored by Git. Restrict production keys to the
+Android application ID `com.diettime.diet_time` (plus signing SHA-1) and the
+iOS bundle ID `com.diettime.dietTime`.
+
 ## Run
 
 ```sh

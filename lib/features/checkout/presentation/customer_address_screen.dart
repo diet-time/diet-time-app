@@ -4,7 +4,10 @@ import 'package:diet_time/features/checkout/domain/checkout_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class CustomerAddressScreen extends ConsumerStatefulWidget {
   const CustomerAddressScreen({super.key});
@@ -27,7 +30,6 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
   bool _editingForm = false;
   CustomerDeliveryAddress? _addressBeingEdited;
   DeliveryAddressType? _addressType;
-  Offset _pin = const Offset(.56, .46);
   double _latitude = 25.285447;
   double _longitude = 51.53104;
   String _formattedAddress = 'Doha, Qatar';
@@ -88,7 +90,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
             bottom: MediaQuery.sizeOf(context).height * .38,
             child: _MapArea(
               searchController: _searchController,
-              pin: _pin,
+              pin: LatLng(_latitude, _longitude),
               locationError: _locationError,
               onSearch: _search,
               onCurrentAddress: _useCurrentAddress,
@@ -399,7 +401,6 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
     _formattedAddress = 'Pinned location, Qatar';
     _latitude = 25.285447;
     _longitude = 51.53104;
-    _pin = const Offset(.56, .46);
   }
 
   Future<void> _saveAddress() async {
@@ -456,46 +457,124 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
     if (error == null) context.pop();
   }
 
-  void _search(String value) {
+  Future<void> _search(String value) async {
     final query = value.trim();
     if (query.isEmpty) {
       setState(() => _locationError = 'Enter a zone or area to search.');
       return;
     }
-    setState(() {
-      _formattedAddress = '$query, Qatar';
-      _locationError = null;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _locationError = 'Searching for $query...');
+    try {
+      final results = await locationFromAddress('$query, Qatar');
+      if (!mounted) return;
+      if (results.isEmpty) {
+        setState(() => _locationError = 'No matching location was found.');
+        return;
+      }
       if (_areaController.text.trim().isEmpty) _areaController.text = query;
-    });
+      final result = results.first;
+      await _movePin(LatLng(result.latitude, result.longitude));
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _locationError =
+              'Location search is unavailable. Try again or move the pin.',
+        );
+      }
+    }
   }
 
-  void _useCurrentAddress() {
-    setState(() {
-      _locationError =
-          'Location permission is unavailable. Search for your zone or move the pin instead.';
-    });
+  Future<void> _useCurrentAddress() async {
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      setState(() => _locationError = 'Turn on location services to continue.');
+      return;
+    }
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (!mounted) return;
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      setState(
+        () => _locationError = permission == LocationPermission.deniedForever
+            ? 'Location access is blocked. Enable it in device settings.'
+            : 'Location permission is needed to find your current address.',
+      );
+      return;
+    }
+    setState(() => _locationError = 'Finding your current location...');
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      await _movePin(LatLng(position.latitude, position.longitude));
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _locationError =
+              'Could not determine your location. Try again or move the pin.',
+        );
+      }
+    }
   }
 
-  void _movePin(Offset relative) {
+  Future<void> _movePin(LatLng position) async {
     setState(() {
-      _pin = relative;
-      _latitude = 24.45 + relative.dy * 2.1;
-      _longitude = 50.72 + relative.dx * 1.18;
-      final area = _areaController.text.trim();
-      _formattedAddress = area.isEmpty
-          ? 'Pinned location, Qatar'
-          : '$area, Qatar';
-      _locationError = area.isEmpty
-          ? 'Pin moved. Add the area below to complete this address.'
-          : null;
+      _latitude = position.latitude;
+      _longitude = position.longitude;
+      _formattedAddress = 'Pinned location';
+      _locationError = null;
     });
+    try {
+      final results = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      if (!mounted ||
+          position.latitude != _latitude ||
+          position.longitude != _longitude) {
+        return;
+      }
+      final place = results.firstOrNull;
+      if (place == null) return;
+      final parts = <String?>[
+        place.street,
+        place.subLocality,
+        place.locality,
+        place.administrativeArea,
+        place.country,
+      ];
+      final addressParts = parts
+          .whereType<String>()
+          .map((part) => part.trim())
+          .where((part) => part.isNotEmpty)
+          .toSet()
+          .toList(growable: false);
+      final area = (place.subLocality?.trim().isNotEmpty ?? false)
+          ? place.subLocality!.trim()
+          : place.locality?.trim();
+      setState(() {
+        _formattedAddress = addressParts.isEmpty
+            ? 'Pinned location'
+            : addressParts.join(', ');
+        if (_areaController.text.trim().isEmpty && area != null) {
+          _areaController.text = area;
+        }
+      });
+    } catch (_) {
+      // The coordinates remain valid when a device geocoder is unavailable.
+    }
   }
 
   String? Function(String?) _required(String label) =>
       (value) => value?.trim().isEmpty ?? true ? '$label is required' : null;
 }
 
-class _MapArea extends StatelessWidget {
+class _MapArea extends StatefulWidget {
   const _MapArea({
     required this.searchController,
     required this.pin,
@@ -506,176 +585,129 @@ class _MapArea extends StatelessWidget {
   });
 
   final TextEditingController searchController;
-  final Offset pin;
+  final LatLng pin;
   final ValueChanged<String> onSearch;
   final VoidCallback onCurrentAddress;
-  final ValueChanged<Offset> onMapTap;
+  final ValueChanged<LatLng> onMapTap;
   final String? locationError;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => Stack(
-      children: [
-        Positioned.fill(
-          child: GestureDetector(
-            onTapDown: (details) => onMapTap(
-              Offset(
-                (details.localPosition.dx / constraints.maxWidth).clamp(0, 1),
-                (details.localPosition.dy / constraints.maxHeight).clamp(0, 1),
-              ),
-            ),
-            child: CustomPaint(
-              painter: _MapPainter(),
-              child: const SizedBox.expand(),
-            ),
-          ),
-        ),
-        Positioned(
-          left: pin.dx * constraints.maxWidth - 22,
-          top: pin.dy * constraints.maxHeight - 44,
-          child: const Icon(
-            Icons.location_pin,
-            size: 46,
-            color: AppColors.emeraldGreen,
-            shadows: [Shadow(color: Colors.black26, blurRadius: 8)],
-          ),
-        ),
-        Positioned(
-          left: 16,
-          right: 16,
-          top: 14,
-          child: Column(
-            children: [
-              Material(
-                elevation: 5,
-                shadowColor: Colors.black12,
-                borderRadius: BorderRadius.circular(15),
-                child: TextField(
-                  key: const ValueKey('zoneSearch'),
-                  controller: searchController,
-                  onSubmitted: onSearch,
-                  textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    hintText: 'Search a Zone',
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    suffixIcon: IconButton(
-                      onPressed: () => onSearch(searchController.text),
-                      icon: const Icon(Icons.arrow_forward_rounded),
-                    ),
-                    filled: true,
-                    fillColor: AppColors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-              ),
-              if (locationError case final error?) ...[
-                const SizedBox(height: 7),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    error,
-                    style: const TextStyle(
-                      color: Color(0xFF9B351F),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        Positioned(
-          right: 16,
-          bottom: 20,
-          child: FilledButton.icon(
-            key: const ValueKey('currentAddress'),
-            onPressed: onCurrentAddress,
-            icon: const Icon(Icons.my_location_rounded, size: 18),
-            label: const Text('Current Address'),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.white,
-              foregroundColor: AppColors.emeraldGreen,
-              elevation: 4,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
+  State<_MapArea> createState() => _MapAreaState();
 }
 
-class _MapPainter extends CustomPainter {
+class _MapAreaState extends State<_MapArea> {
+  GoogleMapController? _controller;
+
   @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = const Color(0xFFE1E9DF),
-    );
-    final road = Paint()
-      ..color = AppColors.white.withValues(alpha: .9)
-      ..strokeWidth = 13
-      ..style = PaintingStyle.stroke;
-    final minor = Paint()
-      ..color = const Color(0xFFC7D5C5)
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
-    final paths = [
-      Path()
-        ..moveTo(-20, size.height * .25)
-        ..cubicTo(
-          size.width * .3,
-          size.height * .08,
-          size.width * .6,
-          size.height * .5,
-          size.width + 20,
-          size.height * .34,
-        ),
-      Path()
-        ..moveTo(size.width * .18, -20)
-        ..quadraticBezierTo(
-          size.width * .48,
-          size.height * .45,
-          size.width * .7,
-          size.height + 20,
-        ),
-      Path()
-        ..moveTo(-10, size.height * .72)
-        ..quadraticBezierTo(
-          size.width * .48,
-          size.height * .52,
-          size.width + 10,
-          size.height * .8,
-        ),
-    ];
-    canvas.drawPath(paths.first, road);
-    for (final path in paths.skip(1)) {
-      canvas.drawPath(path, minor);
-    }
-    final block = Paint()..color = const Color(0xFFD2DDD0);
-    for (var row = 0; row < 4; row++) {
-      for (var column = 0; column < 6; column++) {
-        final rect = RRect.fromRectAndRadius(
-          Rect.fromLTWH(14 + column * size.width / 6, 30 + row * 58, 34, 24),
-          const Radius.circular(4),
-        );
-        canvas.drawRRect(rect, block);
-      }
+  void didUpdateWidget(covariant _MapArea oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pin != widget.pin) {
+      _controller?.animateCamera(CameraUpdate.newLatLng(widget.pin));
     }
   }
 
   @override
-  bool shouldRepaint(covariant _MapPainter oldDelegate) => false;
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    children: [
+      Positioned.fill(
+        child: GoogleMap(
+          key: const ValueKey('googleMap'),
+          initialCameraPosition: CameraPosition(target: widget.pin, zoom: 14.5),
+          onMapCreated: (controller) => _controller = controller,
+          onTap: widget.onMapTap,
+          compassEnabled: true,
+          mapToolbarEnabled: false,
+          myLocationButtonEnabled: false,
+          zoomControlsEnabled: false,
+          markers: {
+            Marker(
+              markerId: const MarkerId('deliveryLocation'),
+              position: widget.pin,
+              draggable: true,
+              onDragEnd: widget.onMapTap,
+            ),
+          },
+        ),
+      ),
+      Positioned(
+        left: 16,
+        right: 16,
+        top: 14,
+        child: Column(
+          children: [
+            Material(
+              elevation: 5,
+              shadowColor: Colors.black12,
+              borderRadius: BorderRadius.circular(15),
+              child: TextField(
+                key: const ValueKey('zoneSearch'),
+                controller: widget.searchController,
+                onSubmitted: widget.onSearch,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: 'Search a Zone',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: IconButton(
+                    onPressed: () =>
+                        widget.onSearch(widget.searchController.text),
+                    icon: const Icon(Icons.arrow_forward_rounded),
+                  ),
+                  filled: true,
+                  fillColor: AppColors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+            if (widget.locationError case final error?) ...[
+              const SizedBox(height: 7),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  error,
+                  style: const TextStyle(
+                    color: Color(0xFF9B351F),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      Positioned(
+        right: 16,
+        bottom: 20,
+        child: FilledButton.icon(
+          key: const ValueKey('currentAddress'),
+          onPressed: widget.onCurrentAddress,
+          icon: const Icon(Icons.my_location_rounded, size: 18),
+          label: const Text('Current Address'),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.white,
+            foregroundColor: AppColors.emeraldGreen,
+            elevation: 4,
+          ),
+        ),
+      ),
+    ],
+  );
 }
 
 class _TimeSlotSection extends ConsumerWidget {
