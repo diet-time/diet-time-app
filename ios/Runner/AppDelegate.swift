@@ -8,12 +8,15 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    guard let apiKey = Bundle.main.object(forInfoDictionaryKey: "GOOGLE_MAPS_API_KEY") as? String,
-          !apiKey.isEmpty,
-          !apiKey.contains("$(") else {
-      fatalError("GOOGLE_MAPS_API_KEY is missing. Add it to ios/Flutter/Secrets.xcconfig.")
+    if let apiKey = Bundle.main.object(forInfoDictionaryKey: "GOOGLE_MAPS_API_KEY") as? String,
+       !apiKey.isEmpty,
+       !apiKey.contains("$(") {
+      GMSServices.provideAPIKey(apiKey)
+    } else {
+      NSLog(
+        "Google Maps is disabled: add GOOGLE_MAPS_API_KEY to ios/Flutter/Secrets.xcconfig."
+      )
     }
-    GMSServices.provideAPIKey(apiKey)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
