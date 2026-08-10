@@ -7,12 +7,17 @@ import 'package:diet_time/features/authentication/presentation/otp_auth_controll
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_dashboard_controller.dart';
+import 'package:diet_time/features/personalization/data/display_name_repository.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+
+final _dashboardDisplayNameProvider = FutureProvider<String?>((ref) {
+  return ref.watch(displayNameRepositoryProvider).load();
+});
 
 class CustomerDashboardScreen extends ConsumerStatefulWidget {
   const CustomerDashboardScreen({super.key});
@@ -56,11 +61,12 @@ class _CustomerDashboardScreenState
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(personalizationControllerProvider);
+    final storedName = ref.watch(_dashboardDisplayNameProvider).value;
     final state = ref.watch(customerDashboardControllerProvider);
     final pages = [
       _DashboardHome(
         state: state,
-        name: profile.preferredName,
+        name: profile.preferredName ?? storedName,
         onViewAll: () => setState(() => _tabIndex = 1),
       ),
       _CustomerOrders(state: state),
@@ -139,7 +145,7 @@ class _DashboardHome extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
         children: [
-          _DashboardHeader(name: name),
+          _DashboardHeader(name: name, subtitle: _dashboardSubtitle(state)),
           const SizedBox(height: 18),
           if (single != null) ...[
             const _SectionTitle('YOUR ACTIVE PLAN'),
@@ -164,15 +170,26 @@ class _DashboardHome extends ConsumerWidget {
               _UpcomingDeliveryCard(date: next, order: single.detail),
             ],
           ] else if (multiple != null) ...[
-            const _SectionTitle('MY ACTIVE PLANS'),
+            Row(
+              children: [
+                const _SectionTitle('MY ACTIVE PLANS'),
+                const Spacer(),
+                Text(
+                  '${multiple.activeOrders.length} PLANS',
+                  style: TextStyle(
+                    color: AppColors.emeraldGreen.withValues(alpha: .75),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: .7,
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
-            for (final order in multiple.activeOrders) ...[
-              _ActivePlanCard(
-                summary: order,
-                detail: multiple.details[order.id],
-              ),
-              const SizedBox(height: 12),
-            ],
+            _MultiPlanCarousel(
+              orders: multiple.activeOrders,
+              details: multiple.details,
+            ),
           ] else if (state is DashboardWithoutActivePlan) ...[
             const _NoActivePlanCard(),
           ],
@@ -222,9 +239,10 @@ class _DashboardHome extends ConsumerWidget {
 }
 
 class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader({required this.name});
+  const _DashboardHeader({required this.name, required this.subtitle});
 
   final String? name;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -287,7 +305,7 @@ class _DashboardHeader extends StatelessWidget {
       ),
       const SizedBox(height: 4),
       Text(
-        'Your meal plan is ready for you',
+        subtitle,
         style: TextStyle(
           color: AppColors.darkGreen.withValues(alpha: .56),
           fontSize: 13,
@@ -570,74 +588,219 @@ class _HeroStatusPill extends StatelessWidget {
   );
 }
 
-class _ActivePlanCard extends StatelessWidget {
-  const _ActivePlanCard({required this.summary, required this.detail});
+class _MultiPlanCarousel extends StatefulWidget {
+  const _MultiPlanCarousel({required this.orders, required this.details});
+
+  final List<CustomerOrderSummary> orders;
+  final Map<String, OrderConfirmation> details;
+
+  @override
+  State<_MultiPlanCarousel> createState() => _MultiPlanCarouselState();
+}
+
+class _MultiPlanCarouselState extends State<_MultiPlanCarousel> {
+  late final PageController _controller = PageController(viewportFraction: .93);
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      SizedBox(
+        height: 282,
+        child: PageView.builder(
+          key: const ValueKey('activePlansCarousel'),
+          controller: _controller,
+          padEnds: false,
+          itemCount: widget.orders.length,
+          onPageChanged: (page) => setState(() => _page = page),
+          itemBuilder: (context, index) {
+            final order = widget.orders[index];
+            return Padding(
+              padding: EdgeInsetsDirectional.only(
+                end: index == widget.orders.length - 1 ? 0 : 10,
+              ),
+              child: _CompactPlanCard(
+                summary: order,
+                detail: widget.details[order.id],
+              ),
+            );
+          },
+        ),
+      ),
+      if (widget.orders.length > 1) ...[
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var index = 0; index < widget.orders.length; index++)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                width: index == _page ? 20 : 6,
+                height: 6,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  color: index == _page
+                      ? AppColors.emeraldGreen
+                      : AppColors.teaGreen,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+          ],
+        ),
+      ],
+    ],
+  );
+}
+
+class _CompactPlanCard extends StatelessWidget {
+  const _CompactPlanCard({required this.summary, required this.detail});
 
   final CustomerOrderSummary summary;
   final OrderConfirmation? detail;
 
   @override
-  Widget build(BuildContext context) => _SurfaceCard(
-    key: ValueKey('activePlan-${summary.id}'),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Text(
-                summary.planName,
-                style: const TextStyle(
-                  color: AppColors.darkGreen,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-            _StatusPill(summary.status),
-          ],
+  Widget build(BuildContext context) {
+    final delivery = detail?.delivery;
+    final meals = detail?.meals ?? const <OrderMeal>[];
+    return Container(
+      key: ValueKey('activePlan-${summary.id}'),
+      padding: const EdgeInsets.all(17),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF08765D), Color(0xFF064D3E)],
         ),
-        const SizedBox(height: 14),
-        _InfoLine('PLAN PERIOD', _period(summary.startDate, summary.endDate)),
-        if (detail != null) ...[
-          _InfoLine(
-            'MEALS',
-            detail!.meals
-                .map((meal) => '${meal.name} x ${meal.quantity}')
-                .join('\n'),
-          ),
-          _InfoLine(
-            'DELIVERY',
-            '${detail!.delivery.daysPerWeek} Days / Week\n${_weekdays(detail!.delivery.days)}',
-          ),
-          _InfoLine(
-            'DELIVERY TIME',
-            '${detail!.delivery.timeSlot.name}\n${_timeRange(detail!.delivery.timeSlot)}',
-          ),
-          _InfoLine(
-            'DELIVERY ADDRESS',
-            [
-              detail!.delivery.address.displayName,
-              detail!.delivery.address.area,
-            ].where((value) => value.isNotEmpty).join('\n'),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.emeraldGreen.withValues(alpha: .2),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
-        const SizedBox(height: 4),
-        OutlinedButton(
-          key: ValueKey('viewOrder-${summary.id}'),
-          onPressed: () =>
-              context.push(AppRoutes.orderDetails, extra: summary.id),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.darkGreen,
-            side: const BorderSide(color: AppColors.darkGreen),
-            minimumSize: const Size.fromHeight(48),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.white.withValues(alpha: .15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.restaurant_menu_rounded,
+                  color: AppColors.white,
+                  size: 19,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  summary.planName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              _HeroStatusPill(summary.status),
+            ],
           ),
-          child: const Text('VIEW DETAILS'),
-        ),
-      ],
-    ),
-  );
+          const SizedBox(height: 10),
+          Text(
+            meals.isEmpty
+                ? summary.planDurationName
+                : meals
+                      .map((meal) => '${meal.name} x ${meal.quantity}')
+                      .join(' · '),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: AppColors.white.withValues(alpha: .74),
+              fontSize: 11,
+              height: 1.35,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Divider(
+              height: 1,
+              color: AppColors.white.withValues(alpha: .16),
+            ),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: _HeroDetail(
+                  icon: Icons.calendar_month_outlined,
+                  value: _period(summary.startDate, summary.endDate),
+                  caption: summary.planDurationName,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _HeroDetail(
+                  icon: Icons.schedule_rounded,
+                  value: delivery == null
+                      ? 'Schedule ready'
+                      : '${delivery.daysPerWeek} Days / Week',
+                  caption: delivery == null ? '' : _weekdays(delivery.days),
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${formatMealPlanPriceAmount(summary.totalAmount, Localizations.localeOf(context).toLanguageTag())} ${summary.currencyCode}',
+                  style: const TextStyle(
+                    color: AppColors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              FilledButton.icon(
+                key: ValueKey('viewOrder-${summary.id}'),
+                onPressed: () =>
+                    context.push(AppRoutes.orderDetails, extra: summary.id),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.white,
+                  foregroundColor: AppColors.darkGreen,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                ),
+                iconAlignment: IconAlignment.end,
+                icon: const Icon(Icons.arrow_forward_rounded, size: 15),
+                label: const Text(
+                  'DETAILS',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _UpcomingDeliveryCard extends StatelessWidget {
@@ -1108,6 +1271,8 @@ class _SectionTitle extends StatelessWidget {
   );
 }
 
+// Kept as a small reusable detail treatment for future dashboard sections.
+// ignore: unused_element
 class _InfoLine extends StatelessWidget {
   const _InfoLine(this.label, this.value);
 
@@ -1193,6 +1358,14 @@ String _greeting() {
   if (hour < 17) return 'Good afternoon';
   return 'Good evening';
 }
+
+String _dashboardSubtitle(CustomerDashboardState state) => switch (state) {
+  DashboardWithMultipleActivePlans(:final activeOrders) =>
+    'You have ${activeOrders.length} active meal plans',
+  DashboardWithActivePlan() => 'Your meal plan is active',
+  DashboardWithoutActivePlan() => 'Ready when you are',
+  _ => 'Your meal plans at a glance',
+};
 
 String _period(DateTime? start, DateTime? end) {
   if (start == null || end == null) return '—';

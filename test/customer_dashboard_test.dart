@@ -44,6 +44,38 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('multiple active plans use a compact swipeable carousel', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final orders = [
+      _summary('active', 'ACTIVE', DateTime(2026, 8, 11)),
+      _summary('confirmed', 'CONFIRMED', DateTime(2026, 9, 1)),
+    ];
+    final state = DashboardWithMultipleActivePlans(
+      activeOrders: orders,
+      details: {for (final order in orders) order.id: _detail(order)},
+      orders: orders,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          customerDashboardControllerProvider.overrideWith(
+            () => _DashboardControllerForTest(state),
+          ),
+        ],
+        child: const MaterialApp(home: CustomerDashboardScreen()),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('activePlansCarousel')), findsOneWidget);
+    expect(find.text('2 PLANS'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   test(
     'completed customer with no current orders gets no-active-plan state',
     () async {
