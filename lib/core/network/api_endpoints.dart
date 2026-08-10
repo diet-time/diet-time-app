@@ -6,12 +6,19 @@ abstract final class ApiEndpoints {
   static const customerProfile = '/api/v1/customer/profile';
   static const mealPlans = '/api/v1/meal-plan-categories';
   static const deliveryTimeSlots = '/api/v1/delivery-time-slots';
+  static const orders = '/api/v1/orders';
 
   static String customerAddresses(String customerProfileId) =>
       '/api/v1/customer-profiles/${Uri.encodeComponent(customerProfileId)}/addresses';
 
   static String customerAddress(String customerProfileId, String addressId) =>
       '${customerAddresses(customerProfileId)}/${Uri.encodeComponent(addressId)}';
+
+  static String customerOrders(String customerProfileId) =>
+      '/api/v1/customer-profiles/${Uri.encodeComponent(customerProfileId)}/orders';
+
+  static String order(String orderId) =>
+      '$orders/${Uri.encodeComponent(orderId)}';
 
   static String mealPlanDetails(String mealPlanTemplateId) =>
       '/api/v1/meal-plans/${Uri.encodeComponent(mealPlanTemplateId)}';

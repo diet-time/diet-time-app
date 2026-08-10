@@ -8,6 +8,8 @@ class AppButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.isLoading = false,
+    this.loadingLabel,
+    this.backgroundColor,
     super.key,
   });
 
@@ -16,6 +18,8 @@ class AppButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool isLoading;
+  final String? loadingLabel;
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -25,11 +29,10 @@ class AppButton extends StatelessWidget {
       child: FilledButton(
         onPressed: isLoading ? null : onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.emeraldGreen,
+          backgroundColor: backgroundColor ?? AppColors.emeraldGreen,
           foregroundColor: AppColors.white,
-          disabledBackgroundColor: AppColors.emeraldGreen.withValues(
-            alpha: 0.65,
-          ),
+          disabledBackgroundColor: (backgroundColor ?? AppColors.emeraldGreen)
+              .withValues(alpha: 0.65),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg),
           ),
@@ -38,13 +41,22 @@ class AppButton extends StatelessWidget {
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 180),
           child: isLoading
-              ? const SizedBox.square(
-                  key: ValueKey('loading'),
-                  dimension: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.2,
-                    color: AppColors.white,
-                  ),
+              ? Row(
+                  key: const ValueKey('loading'),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        color: AppColors.white,
+                      ),
+                    ),
+                    if (loadingLabel case final loadingLabel?) ...[
+                      const SizedBox(width: 10),
+                      Text(loadingLabel),
+                    ],
+                  ],
                 )
               : Text(label, key: const ValueKey('label')),
         ),

@@ -1,9 +1,14 @@
+import 'dart:math';
+
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/checkout/data/checkout_repository.dart';
+import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/checkout_models.dart';
+import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/personalization/data/customer_profile_repository.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
+import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,7 +23,13 @@ class CheckoutController extends Notifier<CheckoutState> {
     MealPlanPurchaseSelection selection,
     MealPlanServiceSchedule schedule,
   ) {
-    state = state.copyWith(selection: selection, schedule: schedule);
+    state = state.copyWith(
+      selection: selection,
+      schedule: schedule,
+      idempotencyKey: null,
+      placementError: null,
+      orderConfirmation: null,
+    );
   }
 
   Future<void> loadDeliveryTimeSlots() async {
@@ -113,6 +124,8 @@ class CheckoutController extends Notifier<CheckoutState> {
     state = state.copyWith(
       selectedAddress: address,
       selectedAddressId: address.id,
+      idempotencyKey: null,
+      placementError: null,
     );
   }
 
@@ -120,6 +133,8 @@ class CheckoutController extends Notifier<CheckoutState> {
     state = state.copyWith(
       selectedDeliveryTimeSlot: slot,
       selectedDeliveryTimeSlotId: slot.id,
+      idempotencyKey: null,
+      placementError: null,
     );
   }
 
@@ -154,6 +169,8 @@ class CheckoutController extends Notifier<CheckoutState> {
         selectedAddress: saved,
         selectedAddressId: saved.id,
         isSavingAddress: false,
+        idempotencyKey: null,
+        placementError: null,
       );
       return true;
     } catch (error) {
@@ -166,6 +183,160 @@ class CheckoutController extends Notifier<CheckoutState> {
       );
       return false;
     }
+  }
+
+  Future<OrderConfirmation?> placeOrder({String language = 'en'}) async {
+    if (state.isPlacingOrder) return null;
+    final validationMessage = state.placeOrderValidationMessage;
+    if (validationMessage != null) {
+      state = state.copyWith(placementError: validationMessage);
+      return null;
+    }
+
+    final idempotencyKey = state.idempotencyKey ?? _uuidV4();
+    state = state.copyWith(
+      isPlacingOrder: true,
+      placementError: null,
+      idempotencyKey: idempotencyKey,
+    );
+    final snapshot = state;
+    final request = PlaceOrderRequest(
+      customerProfileId: snapshot.customerProfileId!,
+      mealPlanTemplateId: snapshot.mealPlanTemplateId!,
+      mealPlanPriceId: snapshot.mealPlanPriceId!,
+      customerAddressId: snapshot.selectedAddressId!,
+      deliveryTimeSlotId: snapshot.selectedDeliveryTimeSlotId!,
+      startDate: snapshot.startDate!,
+      deliveryDays: snapshot.selectedWeekdays.toList()..sort(),
+      meals: snapshot.selectedMeals
+          .map(
+            (meal) => PlaceOrderMealRequest(
+              mealTypeId: meal.mealTypeId,
+              quantity: meal.quantity,
+            ),
+          )
+          .toList(growable: false),
+      couponCode: snapshot.couponCode,
+    );
+
+    try {
+      final confirmation = await ref
+          .read(ordersRepositoryProvider)
+          .placeOrder(request, idempotencyKey);
+      state = state.copyWith(
+        selection: null,
+        schedule: null,
+        selectedAddressId: null,
+        selectedAddress: null,
+        selectedDeliveryTimeSlotId: null,
+        selectedDeliveryTimeSlot: null,
+        couponCode: null,
+        idempotencyKey: null,
+        isPlacingOrder: false,
+        placementError: null,
+        orderConfirmation: confirmation,
+      );
+      return confirmation;
+    } catch (error) {
+      if (_isPriceChange(error)) {
+        await _refreshPricing(snapshot, language: language);
+      }
+      state = state.copyWith(
+        isPlacingOrder: false,
+        placementError: _orderMessage(error),
+      );
+      return null;
+    }
+  }
+
+  void clearPlacementError() => state = state.copyWith(placementError: null);
+
+  bool _isPriceChange(Object error) {
+    if (error is! ApiException || error.failure != ApiFailure.conflict) {
+      return false;
+    }
+    final detail = '${error.code ?? ''} ${error.message ?? ''}'.toLowerCase();
+    return detail.contains('price') &&
+        (detail.contains('change') || detail.contains('stale'));
+  }
+
+  Future<void> _refreshPricing(
+    CheckoutState snapshot, {
+    required String language,
+  }) async {
+    final selection = snapshot.selection;
+    final schedule = snapshot.schedule;
+    if (selection == null || schedule == null) return;
+    try {
+      final configurations = await ref
+          .read(mealPlanRepositoryProvider)
+          .getMealPlanConfigurations(
+            mealPlanTemplateId: selection.mealPlan.id,
+            language: language,
+          );
+      final matchingConfigurations = configurations.where(
+        (configuration) => configuration.id == selection.mealCombination.id,
+      );
+      if (matchingConfigurations.isEmpty) return;
+      final configuration = matchingConfigurations.first;
+      final matchingPackages = configuration.packages.where(
+        (package) =>
+            package.mealPlanPriceId == selection.pricingOption.mealPlanPriceId,
+      );
+      if (matchingPackages.isEmpty) return;
+      final package = matchingPackages.first;
+      final refreshedSchedule = calculateMealPlanServiceSchedule(
+        startDate: schedule.startDate,
+        serviceDays: package.serviceDays,
+        nonDeliveryWeekdays: package.nonDeliveryWeekdays,
+        unavailableDates: package.unavailableDates,
+      );
+      state = state.copyWith(
+        selection: MealPlanPurchaseSelection(
+          mealPlan: selection.mealPlan,
+          mealCombination: configuration,
+          pricingOption: package,
+          deliveryDaysPerWeek: selection.deliveryDaysPerWeek,
+          selectedWeekdays: selection.selectedWeekdays,
+        ),
+        schedule: refreshedSchedule ?? schedule,
+        idempotencyKey: null,
+      );
+    } catch (_) {
+      // Keep the existing summary visible when a refresh is unavailable.
+    }
+  }
+
+  String _orderMessage(Object error) {
+    if (error is! ApiException) {
+      return "We couldn't place your order. Please try again.";
+    }
+    final detail = '${error.code ?? ''} ${error.message ?? ''}'.toLowerCase();
+    if (error.failure == ApiFailure.network ||
+        error.failure == ApiFailure.timeout) {
+      return 'Please check your connection and try again.';
+    }
+    if (error.failure == ApiFailure.conflict) {
+      if (detail.contains('price') &&
+          (detail.contains('change') || detail.contains('stale'))) {
+        return 'The plan price has changed. Please review the updated total before placing your order.';
+      }
+      if (detail.contains('idempoten') || detail.contains('duplicate')) {
+        return 'This order is already being processed. Please try again.';
+      }
+      return 'The selected plan is no longer available. Please choose another plan.';
+    }
+    if (error.failure == ApiFailure.notFound) {
+      if (detail.contains('address')) {
+        return 'The selected delivery address is no longer available.';
+      }
+      return 'A selected checkout option is no longer available. Please review your order.';
+    }
+    if (error.failure == ApiFailure.validation &&
+        error.message?.trim().isNotEmpty == true) {
+      return error.message!;
+    }
+    return "We couldn't place your order. Please try again.";
   }
 
   String _message(Object error, {required String fallback}) {
@@ -184,6 +355,18 @@ class CheckoutController extends Notifier<CheckoutState> {
     }
     return fallback;
   }
+}
+
+String _uuidV4() {
+  final random = Random.secure();
+  final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  final hex = bytes.map((value) => value.toRadixString(16).padLeft(2, '0'));
+  final value = hex.join();
+  return '${value.substring(0, 8)}-${value.substring(8, 12)}-'
+      '${value.substring(12, 16)}-${value.substring(16, 20)}-'
+      '${value.substring(20)}';
 }
 
 class _CheckoutException implements Exception {

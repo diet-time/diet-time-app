@@ -83,17 +83,21 @@ enum ApiFailure {
 }
 
 class ApiException implements Exception {
-  const ApiException(this.failure, {this.statusCode, this.message});
+  const ApiException(this.failure, {this.statusCode, this.message, this.code});
 
   factory ApiException.fromResponse(ApiResponse response) {
     final errors = response.body['errors'];
     String? message;
+    String? code;
     if (errors is List && errors.isNotEmpty) {
       final first = errors.first;
       if (first is Map<String, dynamic>) {
         message = first['message']?.toString();
+        code = first['code']?.toString();
       }
     }
+    message ??= response.body['message']?.toString();
+    code ??= response.body['code']?.toString();
     final failure = switch (response.statusCode) {
       400 => ApiFailure.validation,
       401 => ApiFailure.unauthorized,
@@ -106,10 +110,12 @@ class ApiException implements Exception {
       failure,
       statusCode: response.statusCode,
       message: message,
+      code: code,
     );
   }
 
   final ApiFailure failure;
   final int? statusCode;
   final String? message;
+  final String? code;
 }

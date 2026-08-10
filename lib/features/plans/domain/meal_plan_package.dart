@@ -4,6 +4,7 @@ class MealPlanConfiguration {
     required this.name,
     required this.packages,
     this.description,
+    this.selectedMeals = const [],
   });
 
   factory MealPlanConfiguration.fromJson(Map<String, dynamic> json) {
@@ -21,6 +22,11 @@ class MealPlanConfiguration {
       description: _optionalText(
         json['description'] ?? json['mealSummary'] ?? json['includedMeals'],
       ),
+      selectedMeals:
+          _mapList(json['selectedMeals'] ?? json['meals'] ?? json['mealTypes'])
+              .map(MealPlanMealSelection.fromJson)
+              .where((item) => item.isValid)
+              .toList(growable: false),
       packages: packages,
     );
   }
@@ -28,9 +34,32 @@ class MealPlanConfiguration {
   final String id;
   final String name;
   final String? description;
+  final List<MealPlanMealSelection> selectedMeals;
   final List<MealPlanPackage> packages;
 
   bool get isValid => id.isNotEmpty && name.isNotEmpty && packages.isNotEmpty;
+}
+
+class MealPlanMealSelection {
+  const MealPlanMealSelection({
+    required this.mealTypeId,
+    required this.name,
+    this.quantity = 1,
+  });
+
+  factory MealPlanMealSelection.fromJson(Map<String, dynamic> json) =>
+      MealPlanMealSelection(
+        mealTypeId: _text(json['mealTypeId'] ?? json['id']),
+        name: _text(json['name'] ?? json['mealTypeName'] ?? json['label']),
+        quantity: _integer(json['quantity'] ?? json['count']) ?? 1,
+      );
+
+  final String mealTypeId;
+  final String name;
+  final int quantity;
+
+  bool get isValid => mealTypeId.isNotEmpty && quantity > 0;
+  String get displayName => name.isEmpty ? 'Meal' : name;
 }
 
 class MealPlanPackage {

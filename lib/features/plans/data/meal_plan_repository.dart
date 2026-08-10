@@ -121,6 +121,11 @@ List<MealPlanConfiguration> parseMealPlanConfigurations(
             snacks: snacks,
             language: language,
           ),
+          selectedMeals: _mealSelections(
+            supportedMealTypes,
+            meals: meals,
+            snacks: snacks,
+          ),
           packages: entry.value
               .map(
                 (price) => MealPlanPackage.fromJson({
@@ -135,6 +140,41 @@ List<MealPlanConfiguration> parseMealPlanConfigurations(
       })
       .where((item) => item.isValid)
       .toList(growable: false);
+}
+
+List<MealPlanMealSelection> _mealSelections(
+  List<Map<String, dynamic>> mealTypes, {
+  required int meals,
+  required int snacks,
+}) {
+  bool isSnack(Map<String, dynamic> item) {
+    final code = item['code']?.toString().toUpperCase() ?? '';
+    return code.contains('SNACK') || code.contains('DESSERT');
+  }
+
+  MealPlanMealSelection selection(
+    Map<String, dynamic> item, {
+    int quantity = 1,
+  }) => MealPlanMealSelection(
+    mealTypeId: (item['mealTypeId'] ?? item['id'])?.toString().trim() ?? '',
+    name: (item['name'] ?? item['mealTypeName'])?.toString().trim() ?? 'Meal',
+    quantity: quantity,
+  );
+
+  final selected = mealTypes
+      .where((item) => !isSnack(item))
+      .take(meals)
+      .map(selection)
+      .where((item) => item.isValid)
+      .toList();
+  if (snacks > 0) {
+    final snackTypes = mealTypes.where(isSnack);
+    if (snackTypes.isNotEmpty) {
+      final snack = selection(snackTypes.first, quantity: snacks);
+      if (snack.isValid) selected.add(snack);
+    }
+  }
+  return List.unmodifiable(selected);
 }
 
 String _configurationName({

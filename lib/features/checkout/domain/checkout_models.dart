@@ -1,4 +1,6 @@
 import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dart';
+import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
+import 'package:diet_time/features/checkout/domain/order_models.dart';
 
 enum DeliveryAddressType { home, apartment, office, other }
 
@@ -149,6 +151,11 @@ class CheckoutState {
     this.addressError,
     this.deliveryTimeSlotError,
     this.saveAddressError,
+    this.couponCode,
+    this.idempotencyKey,
+    this.isPlacingOrder = false,
+    this.placementError,
+    this.orderConfirmation,
   });
 
   final MealPlanPurchaseSelection? selection;
@@ -166,6 +173,47 @@ class CheckoutState {
   final String? addressError;
   final String? deliveryTimeSlotError;
   final String? saveAddressError;
+  final String? couponCode;
+  final String? idempotencyKey;
+  final bool isPlacingOrder;
+  final String? placementError;
+  final OrderConfirmation? orderConfirmation;
+
+  String? get mealPlanTemplateId => selection?.mealPlan.id;
+  String? get mealPlanPriceId => selection?.pricingOption.mealPlanPriceId;
+  DateTime? get startDate => schedule?.startDate;
+  Set<int> get selectedWeekdays => selection?.deliveryWeekdays ?? const {};
+  List<MealPlanMealSelection> get selectedMeals =>
+      selection?.mealCombination.selectedMeals ?? const [];
+
+  String? get placeOrderValidationMessage {
+    if (customerProfileId?.trim().isNotEmpty != true) {
+      return 'Your customer profile is unavailable. Please sign in again.';
+    }
+    if (mealPlanTemplateId?.trim().isNotEmpty != true ||
+        mealPlanPriceId?.trim().isNotEmpty != true) {
+      return 'Please choose a meal plan.';
+    }
+    if (startDate == null) return 'Please select a plan start date.';
+    if (selectedMeals.isEmpty || selectedMeals.any((meal) => !meal.isValid)) {
+      return 'Please select at least one meal.';
+    }
+    if (selectedWeekdays.isEmpty) {
+      return 'Please select your delivery days.';
+    }
+    if (selectedAddressId?.trim().isNotEmpty != true ||
+        selectedAddress == null) {
+      return 'Please select a delivery address.';
+    }
+    if (selectedDeliveryTimeSlotId?.trim().isNotEmpty != true ||
+        selectedDeliveryTimeSlot == null) {
+      return 'Please select a delivery time.';
+    }
+    return null;
+  }
+
+  bool get canPlaceOrder =>
+      !isPlacingOrder && placeOrderValidationMessage == null;
 
   bool get isReadyToContinue =>
       selectedAddress != null &&
@@ -174,8 +222,8 @@ class CheckoutState {
       selectedDeliveryTimeSlotId?.trim().isNotEmpty == true;
 
   CheckoutState copyWith({
-    MealPlanPurchaseSelection? selection,
-    MealPlanServiceSchedule? schedule,
+    Object? selection = _unset,
+    Object? schedule = _unset,
     Object? customerProfileId = _unset,
     Object? selectedAddressId = _unset,
     Object? selectedAddress = _unset,
@@ -189,9 +237,18 @@ class CheckoutState {
     Object? addressError = _unset,
     Object? deliveryTimeSlotError = _unset,
     Object? saveAddressError = _unset,
+    Object? couponCode = _unset,
+    Object? idempotencyKey = _unset,
+    bool? isPlacingOrder,
+    Object? placementError = _unset,
+    Object? orderConfirmation = _unset,
   }) => CheckoutState(
-    selection: selection ?? this.selection,
-    schedule: schedule ?? this.schedule,
+    selection: identical(selection, _unset)
+        ? this.selection
+        : selection as MealPlanPurchaseSelection?,
+    schedule: identical(schedule, _unset)
+        ? this.schedule
+        : schedule as MealPlanServiceSchedule?,
     customerProfileId: identical(customerProfileId, _unset)
         ? this.customerProfileId
         : customerProfileId as String?,
@@ -222,6 +279,19 @@ class CheckoutState {
     saveAddressError: identical(saveAddressError, _unset)
         ? this.saveAddressError
         : saveAddressError as String?,
+    couponCode: identical(couponCode, _unset)
+        ? this.couponCode
+        : couponCode as String?,
+    idempotencyKey: identical(idempotencyKey, _unset)
+        ? this.idempotencyKey
+        : idempotencyKey as String?,
+    isPlacingOrder: isPlacingOrder ?? this.isPlacingOrder,
+    placementError: identical(placementError, _unset)
+        ? this.placementError
+        : placementError as String?,
+    orderConfirmation: identical(orderConfirmation, _unset)
+        ? this.orderConfirmation
+        : orderConfirmation as OrderConfirmation?,
   );
 }
 

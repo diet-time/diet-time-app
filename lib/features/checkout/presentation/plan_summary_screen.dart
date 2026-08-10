@@ -17,8 +17,6 @@ class PlanSummaryScreen extends ConsumerStatefulWidget {
 }
 
 class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
-  String? _validationMessage;
-
   @override
   void initState() {
     super.initState();
@@ -36,6 +34,13 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
     if (selection == null || schedule == null) {
       return _MissingCheckout(onBack: () => context.go(AppRoutes.plans));
     }
+    final summaryMessage =
+        checkout.placementError ??
+        (checkout.selectedAddress == null
+            ? 'Please select a delivery address.'
+            : checkout.selectedDeliveryTimeSlot == null
+            ? 'Please select a delivery time.'
+            : checkout.placeOrderValidationMessage);
     return Scaffold(
       backgroundColor: const Color(0xFFF5F3E9),
       appBar: AppBar(
@@ -84,7 +89,7 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                         checkout: checkout,
                         onChange: () => context.push(AppRoutes.customerAddress),
                       ),
-                      if (_validationMessage case final message?) ...[
+                      if (summaryMessage case final message?) ...[
                         const SizedBox(height: 12),
                         _InlineMessage(message: message),
                       ],
@@ -104,8 +109,11 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                   constraints: const BoxConstraints(maxWidth: 680),
                   child: AppButton(
                     key: const ValueKey('placeOrder'),
-                    label: 'Place Order',
-                    onPressed: checkout.isReadyToContinue ? _placeOrder : null,
+                    label: 'PLACE ORDER',
+                    loadingLabel: 'PLACING ORDER...',
+                    isLoading: checkout.isPlacingOrder,
+                    backgroundColor: AppColors.black,
+                    onPressed: checkout.canPlaceOrder ? _placeOrder : null,
                   ),
                 ),
               ),
@@ -116,15 +124,11 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
     );
   }
 
-  void _placeOrder() {
-    final checkout = ref.read(checkoutControllerProvider);
-    final message = checkout.selectedAddress == null
-        ? 'Please select a delivery address to continue.'
-        : checkout.selectedDeliveryTimeSlot == null
-        ? 'Please select a delivery time slot to continue.'
-        : null;
-    setState(() => _validationMessage = message);
-    if (message == null) context.pushReplacement(AppRoutes.orderPlaced);
+  Future<void> _placeOrder() async {
+    final confirmation = await ref
+        .read(checkoutControllerProvider.notifier)
+        .placeOrder(language: Localizations.localeOf(context).toLanguageTag());
+    if (confirmation != null && mounted) context.go(AppRoutes.orderPlaced);
   }
 }
 
@@ -192,7 +196,14 @@ class _PlanSummaryCard extends StatelessWidget {
                 _SummaryItem(label: 'PLAN', value: selection.mealPlan.name),
                 _SummaryItem(
                   label: 'MEALS',
-                  value: selection.mealCombination.name,
+                  value: checkout.selectedMeals.isEmpty
+                      ? selection.mealCombination.name
+                      : checkout.selectedMeals
+                            .map(
+                              (meal) =>
+                                  '${meal.displayName} x ${meal.quantity}',
+                            )
+                            .join('\n'),
                 ),
                 _SummaryItem(
                   label: 'DELIVERY DAYS',
