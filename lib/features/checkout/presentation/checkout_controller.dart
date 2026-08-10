@@ -380,6 +380,7 @@ class CheckoutController extends Notifier<CheckoutState> {
       return "We couldn't place your order. Please try again.";
     }
     final detail = '${error.code ?? ''} ${error.message ?? ''}'.toLowerCase();
+    final code = error.code?.trim().toLowerCase();
     if (error.failure == ApiFailure.network ||
         error.failure == ApiFailure.timeout) {
       return 'Please check your connection and try again.';
@@ -395,15 +396,40 @@ class CheckoutController extends Notifier<CheckoutState> {
       return 'The selected plan is no longer available. Please choose another plan.';
     }
     if (error.failure == ApiFailure.notFound) {
-      if (detail.contains('address')) {
+      if (code == 'customer_not_found') {
+        return 'Your customer profile is unavailable. Please sign in again.';
+      }
+      if (code == 'address_not_found' || detail.contains('address')) {
         return 'The selected delivery address is no longer available.';
       }
+      if (code == 'delivery_time_slot_not_found') {
+        return 'The selected delivery time is no longer available.';
+      }
+      if (code == 'template_not_found' || code == 'price_not_found') {
+        return 'The selected plan is no longer available. Please choose another plan.';
+      }
       return 'A selected checkout option is no longer available. Please review your order.';
+    }
+    if (code == 'invalid_meal_configuration') {
+      return error.message ?? 'Please review your selected meals.';
+    }
+    if (code == 'invalid_delivery_days') {
+      return error.message ?? 'Please review your selected delivery days.';
+    }
+    if (code == 'invalid_start_date') {
+      return error.message ?? 'Please select another plan start date.';
+    }
+    if (code == 'coupon_not_supported') {
+      return 'Coupon codes are not supported yet. Remove the coupon and try again.';
     }
     if (error.failure == ApiFailure.validation &&
         error.message?.trim().isNotEmpty == true) {
       return error.message!;
     }
+    if (error.failure == ApiFailure.invalidResponse) {
+      return 'Your order response could not be confirmed. Please check your orders before trying again.';
+    }
+    if (error.message?.trim().isNotEmpty == true) return error.message!;
     return "We couldn't place your order. Please try again.";
   }
 

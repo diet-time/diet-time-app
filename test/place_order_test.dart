@@ -10,6 +10,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('ProblemDetails preserves the backend order failure explanation', () {
+    final error = ApiException.fromResponse(
+      const ApiResponse(
+        statusCode: 400,
+        body: {
+          'title': 'Invalid request',
+          'detail': 'startDate must fall on a selected delivery weekday.',
+          'code': 'invalid_start_date',
+        },
+      ),
+    );
+
+    expect(error.failure, ApiFailure.validation);
+    expect(error.code, 'invalid_start_date');
+    expect(
+      error.message,
+      'startDate must fall on a selected delivery weekday.',
+    );
+  });
+
   test(
     'placement retries with one idempotency key and clears only draft',
     () async {

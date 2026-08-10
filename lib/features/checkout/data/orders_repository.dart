@@ -41,7 +41,10 @@ class OrdersRepository {
     }
     final confirmation = OrderConfirmation.fromJson(_orderFrom(response.body));
     if (!confirmation.isValid) {
-      throw const ApiException(ApiFailure.invalidResponse);
+      throw const ApiException(
+        ApiFailure.invalidResponse,
+        message: 'The order confirmation response was incomplete.',
+      );
     }
     return confirmation;
   }

@@ -96,7 +96,20 @@ class ApiException implements Exception {
         code = first['code']?.toString();
       }
     }
-    message ??= response.body['message']?.toString();
+    if (message?.trim().isNotEmpty != true && errors is Map) {
+      for (final value in errors.values) {
+        if (value is List && value.isNotEmpty) {
+          message = value.first?.toString();
+        } else if (value != null) {
+          message = value.toString();
+        }
+        if (message?.trim().isNotEmpty == true) break;
+      }
+    }
+    message ??=
+        response.body['detail']?.toString() ??
+        response.body['message']?.toString() ??
+        response.body['title']?.toString();
     code ??= response.body['code']?.toString();
     final failure = switch (response.statusCode) {
       400 => ApiFailure.validation,
