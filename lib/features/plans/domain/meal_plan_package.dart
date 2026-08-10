@@ -15,12 +15,20 @@ class MealPlanConfiguration {
           json['pricingOptions'],
     ).map(MealPlanPackage.fromJson).where((item) => item.isValid).toList();
     return MealPlanConfiguration(
-      id: _text(json['id'] ?? json['mealConfigurationId'] ?? json['code']),
+      id: _text(
+        json['id'] ??
+            json['mealConfigurationId'] ??
+            json['code'] ??
+            _configurationId(json),
+      ),
       name: _text(
         json['name'] ?? json['displayName'] ?? json['title'] ?? json['label'],
       ),
       description: _optionalText(
-        json['description'] ?? json['mealSummary'] ?? json['includedMeals'],
+        json['description'] ??
+            json['mealSummary'] ??
+            json['includedMeals'] ??
+            json['includedText'],
       ),
       selectedMeals:
           _mapList(json['selectedMeals'] ?? json['meals'] ?? json['mealTypes'])
@@ -98,7 +106,8 @@ class MealPlanPackage {
             json['id'],
       ),
       name: _text(
-        json['name'] ??
+        json['packageName'] ??
+            json['name'] ??
             json['durationName'] ??
             json['displayName'] ??
             json['durationLabel'] ??
@@ -164,6 +173,12 @@ double? _number(Object? value) =>
 
 int? _integer(Object? value) =>
     value is num ? value.toInt() : int.tryParse(value?.toString() ?? '');
+
+String? _configurationId(Map<String, dynamic> json) {
+  final meals = _integer(json['mealsPerDay']);
+  final snacks = _integer(json['snacksPerDay']);
+  return meals == null || snacks == null ? null : '$meals-$snacks';
+}
 
 DateTime? _date(Object? value) {
   final parsed = DateTime.tryParse(value?.toString() ?? '');

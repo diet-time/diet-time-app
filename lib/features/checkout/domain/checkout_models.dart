@@ -154,6 +154,7 @@ class CheckoutState {
     this.couponCode,
     this.idempotencyKey,
     this.isPlacingOrder = false,
+    this.isResolvingOrderOptions = false,
     this.placementError,
     this.orderConfirmation,
   });
@@ -176,6 +177,7 @@ class CheckoutState {
   final String? couponCode;
   final String? idempotencyKey;
   final bool isPlacingOrder;
+  final bool isResolvingOrderOptions;
   final String? placementError;
   final OrderConfirmation? orderConfirmation;
 
@@ -213,7 +215,9 @@ class CheckoutState {
   }
 
   bool get canPlaceOrder =>
-      !isPlacingOrder && placeOrderValidationMessage == null;
+      !isPlacingOrder &&
+      !isResolvingOrderOptions &&
+      placeOrderValidationMessage == null;
 
   bool get isReadyToContinue =>
       selectedAddress != null &&
@@ -240,6 +244,7 @@ class CheckoutState {
     Object? couponCode = _unset,
     Object? idempotencyKey = _unset,
     bool? isPlacingOrder,
+    bool? isResolvingOrderOptions,
     Object? placementError = _unset,
     Object? orderConfirmation = _unset,
   }) => CheckoutState(
@@ -286,6 +291,8 @@ class CheckoutState {
         ? this.idempotencyKey
         : idempotencyKey as String?,
     isPlacingOrder: isPlacingOrder ?? this.isPlacingOrder,
+    isResolvingOrderOptions:
+        isResolvingOrderOptions ?? this.isResolvingOrderOptions,
     placementError: identical(placementError, _unset)
         ? this.placementError
         : placementError as String?,

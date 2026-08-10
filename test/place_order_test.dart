@@ -2,6 +2,7 @@ import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/checkout_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
+import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dart';
@@ -127,6 +128,39 @@ void main() {
     expect(api.requests, hasLength(1));
     expect(results.whereType<Object>(), hasLength(1));
   });
+
+  test(
+    'summary resolves a display-only package to its authenticated price ID',
+    () async {
+      final api = _PurchaseOptionsApiClient();
+      final container = ProviderContainer(
+        overrides: [
+          checkoutControllerProvider.overrideWith(
+            () => _CheckoutControllerForTest(_displayOnlyCheckout),
+          ),
+          mealPlanRepositoryProvider.overrideWithValue(
+            MealPlanRepository(
+              api,
+              accessTokenProvider: () async => 'access-token',
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(checkoutControllerProvider.notifier)
+          .prepareForOrder(language: 'en');
+
+      final checkout = container.read(checkoutControllerProvider);
+      expect(checkout.mealPlanPriceId, 'authoritative-price-id');
+      expect(checkout.selection?.pricingOption.name, '1 Month');
+      expect(checkout.selectedMeals, hasLength(3));
+      expect(checkout.canPlaceOrder, isTrue);
+      expect(api.path, '/api/v1/customer/meal-plans/CLASSIC/purchase-options');
+      expect(api.authorization, 'Bearer access-token');
+    },
+  );
 }
 
 class _CheckoutControllerForTest extends CheckoutController {
@@ -170,6 +204,51 @@ class _OrdersApiClient extends ApiClient {
     return ApiResponse(
       statusCode: method == 'POST' ? 201 : 200,
       body: {'data': _confirmationJson},
+    );
+  }
+}
+
+class _PurchaseOptionsApiClient extends ApiClient {
+  String? path;
+  String? authorization;
+
+  @override
+  Future<ApiResponse> request({
+    required String method,
+    required String path,
+    Map<String, String> queryParameters = const {},
+    Map<String, String> headers = const {},
+    Map<String, dynamic>? body,
+  }) async {
+    this.path = path;
+    authorization = headers['Authorization'];
+    return const ApiResponse(
+      statusCode: 200,
+      body: {
+        'data': {
+          'plan': {'id': 'plan-id', 'code': 'CLASSIC', 'name': 'Classic'},
+          'mealConfigurations': [
+            {
+              'mealsPerDay': 3,
+              'snacksPerDay': 1,
+              'displayName': '3 Meals + 1 Snack',
+              'includedText': 'Lunch, Dinner and Snack',
+              'packages': [
+                {
+                  'priceId': 'authoritative-price-id',
+                  'packageId': 'MONTH',
+                  'packageCode': 'MONTH',
+                  'packageName': '1 Month',
+                  'serviceDays': 20,
+                  'currencyCode': 'QAR',
+                  'amount': 1880,
+                  'pricePerServiceDay': 94,
+                },
+              ],
+            },
+          ],
+        },
+      },
     );
   }
 }
@@ -222,6 +301,32 @@ final _readyCheckout = CheckoutState(
   selectedDeliveryTimeSlot: _slot,
   addresses: const [_address],
   deliveryTimeSlots: const [_slot],
+);
+
+final _displayOnlyCheckout = _readyCheckout.copyWith(
+  selection: MealPlanPurchaseSelection(
+    mealPlan: _readyCheckout.selection!.mealPlan,
+    mealCombination: const MealPlanConfiguration(
+      id: '3-1',
+      name: '3 Meals + 1 Snack',
+      packages: [],
+      selectedMeals: [
+        MealPlanMealSelection(mealTypeId: 'lunch-id', name: 'Lunch'),
+        MealPlanMealSelection(mealTypeId: 'dinner-id', name: 'Dinner'),
+        MealPlanMealSelection(mealTypeId: 'snack-id', name: 'Snack'),
+      ],
+    ),
+    pricingOption: const MealPlanPackage(
+      mealPlanPriceId: '',
+      name: 'Monthly Plan',
+      serviceDays: 20,
+      totalPrice: 1880,
+      dailyPrice: 94,
+      currencyCode: 'QAR',
+    ),
+    deliveryDaysPerWeek: 5,
+    selectedWeekdays: const {2, 3, 4, 5, 6},
+  ),
 );
 
 const _address = CustomerDeliveryAddress(

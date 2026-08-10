@@ -1,12 +1,18 @@
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/core/network/api_endpoints.dart';
+import 'package:diet_time/core/storage/secure_storage_service.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final mealPlanRepositoryProvider = Provider<MealPlanRepository>(
-  (ref) => MealPlanRepository(ref.watch(apiClientProvider)),
-);
+final mealPlanRepositoryProvider = Provider<MealPlanRepository>((ref) {
+  final storage = ref.watch(secureStorageServiceProvider);
+  return MealPlanRepository(
+    ref.watch(apiClientProvider),
+    accessTokenProvider: () =>
+        storage.read(SecureStorageService.accessTokenKey),
+  );
+});
 
 final mealPlansProvider = FutureProvider.family<List<MealPlanOption>, String>(
   (ref, language) =>
@@ -29,9 +35,13 @@ final mealPlanConfigurationsProvider =
     }, retry: (_, _) => null);
 
 class MealPlanRepository {
-  const MealPlanRepository(this.apiClient);
+  const MealPlanRepository(
+    this.apiClient, {
+    this.accessTokenProvider = _noAccessToken,
+  });
 
   final ApiClient apiClient;
+  final Future<String?> Function() accessTokenProvider;
 
   Future<List<MealPlanOption>> getMealPlans({required String language}) async {
     final response = await apiClient.request(
@@ -70,7 +80,35 @@ class MealPlanRepository {
     }
     return parseMealPlanConfigurations(raw, language: language);
   }
+
+  Future<List<MealPlanConfiguration>> getPurchaseOptions({
+    required String mealPlanCode,
+    required String language,
+  }) async {
+    final token = await accessTokenProvider();
+    final response = await apiClient.request(
+      method: 'GET',
+      path: ApiEndpoints.mealPlanPurchaseOptions(mealPlanCode),
+      queryParameters: {'language': language},
+      headers: {
+        if (token?.trim().isNotEmpty == true)
+          'Authorization': 'Bearer ${token!.trim()}',
+      },
+    );
+    if (!response.isSuccess) throw ApiException.fromResponse(response);
+    final data = response.body['data'];
+    if (data is! Map<String, dynamic> || data['mealConfigurations'] is! List) {
+      throw const ApiException(ApiFailure.invalidResponse);
+    }
+    return (data['mealConfigurations'] as List)
+        .whereType<Map<String, dynamic>>()
+        .map(MealPlanConfiguration.fromJson)
+        .where((configuration) => configuration.isValid)
+        .toList(growable: false);
+  }
 }
+
+Future<String?> _noAccessToken() async => null;
 
 List<MealPlanConfiguration> parseMealPlanConfigurations(
   Map<String, dynamic> raw, {

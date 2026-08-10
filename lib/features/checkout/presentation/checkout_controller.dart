@@ -9,6 +9,7 @@ import 'package:diet_time/features/authentication/presentation/otp_auth_controll
 import 'package:diet_time/features/personalization/data/customer_profile_repository.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
+import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -29,7 +30,74 @@ class CheckoutController extends Notifier<CheckoutState> {
       idempotencyKey: null,
       placementError: null,
       orderConfirmation: null,
+      isResolvingOrderOptions: false,
     );
+  }
+
+  Future<void> prepareForOrder({required String language}) async {
+    if (state.isResolvingOrderOptions ||
+        state.selection == null ||
+        state.mealPlanPriceId?.trim().isNotEmpty == true) {
+      return;
+    }
+    final snapshot = state;
+    final selection = snapshot.selection!;
+    state = state.copyWith(isResolvingOrderOptions: true, placementError: null);
+    try {
+      final configurations = await ref
+          .read(mealPlanRepositoryProvider)
+          .getPurchaseOptions(
+            mealPlanCode: selection.mealPlan.code,
+            language: language,
+          );
+      final matchingConfigurations = configurations.where(
+        (item) => item.id == selection.mealCombination.id,
+      );
+      if (matchingConfigurations.isEmpty) {
+        throw const _CheckoutException(
+          'The selected meal configuration is no longer available.',
+        );
+      }
+      final configuration = matchingConfigurations.first;
+      final selectedPackage = selection.pricingOption;
+      final matchingPackages = configuration.packages.where(
+        (item) =>
+            item.serviceDays == selectedPackage.serviceDays &&
+            item.currencyCode == selectedPackage.currencyCode,
+      );
+      if (matchingPackages.isEmpty) {
+        throw const _CheckoutException(
+          'The selected plan duration is no longer available.',
+        );
+      }
+      final authoritativePackage = matchingPackages.first;
+      final authoritativeConfiguration = MealPlanConfiguration(
+        id: configuration.id,
+        name: configuration.name,
+        description: configuration.description,
+        packages: configuration.packages,
+        selectedMeals: selection.mealCombination.selectedMeals,
+      );
+      state = state.copyWith(
+        selection: MealPlanPurchaseSelection(
+          mealPlan: selection.mealPlan,
+          mealCombination: authoritativeConfiguration,
+          pricingOption: authoritativePackage,
+          deliveryDaysPerWeek: selection.deliveryDaysPerWeek,
+          selectedWeekdays: selection.selectedWeekdays,
+        ),
+        isResolvingOrderOptions: false,
+        placementError: null,
+        idempotencyKey: null,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        isResolvingOrderOptions: false,
+        placementError: error is _CheckoutException
+            ? error.message
+            : 'We could not verify the selected plan. Please try again.',
+      );
+    }
   }
 
   Future<void> loadDeliveryTimeSlots() async {

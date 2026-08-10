@@ -17,12 +17,27 @@ class PlanSummaryScreen extends ConsumerStatefulWidget {
 }
 
 class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
+  bool _preparedOrderOptions = false;
+
   @override
   void initState() {
     super.initState();
     Future<void>.microtask(
       () =>
           ref.read(checkoutControllerProvider.notifier).loadDeliveryTimeSlots(),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_preparedOrderOptions) return;
+    _preparedOrderOptions = true;
+    final language = Localizations.localeOf(context).toLanguageTag();
+    Future<void>.microtask(
+      () => ref
+          .read(checkoutControllerProvider.notifier)
+          .prepareForOrder(language: language),
     );
   }
 
@@ -34,13 +49,14 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
     if (selection == null || schedule == null) {
       return _MissingCheckout(onBack: () => context.go(AppRoutes.plans));
     }
-    final summaryMessage =
-        checkout.placementError ??
-        (checkout.selectedAddress == null
-            ? 'Please select a delivery address.'
-            : checkout.selectedDeliveryTimeSlot == null
-            ? 'Please select a delivery time.'
-            : checkout.placeOrderValidationMessage);
+    final summaryMessage = checkout.isResolvingOrderOptions
+        ? 'Verifying your selected plan...'
+        : checkout.placementError ??
+              (checkout.selectedAddress == null
+                  ? 'Please select a delivery address.'
+                  : checkout.selectedDeliveryTimeSlot == null
+                  ? 'Please select a delivery time.'
+                  : checkout.placeOrderValidationMessage);
     return Scaffold(
       backgroundColor: const Color(0xFFF5F3E9),
       appBar: AppBar(
@@ -91,7 +107,21 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                       ),
                       if (summaryMessage case final message?) ...[
                         const SizedBox(height: 12),
-                        _InlineMessage(message: message),
+                        _InlineMessage(
+                          message: message,
+                          onRetry:
+                              checkout.mealPlanPriceId?.trim().isNotEmpty !=
+                                      true &&
+                                  !checkout.isResolvingOrderOptions
+                              ? () => ref
+                                    .read(checkoutControllerProvider.notifier)
+                                    .prepareForOrder(
+                                      language: Localizations.localeOf(
+                                        context,
+                                      ).toLanguageTag(),
+                                    )
+                              : null,
+                        ),
                       ],
                     ],
                   ),
@@ -110,8 +140,12 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                   child: AppButton(
                     key: const ValueKey('placeOrder'),
                     label: 'PLACE ORDER',
-                    loadingLabel: 'PLACING ORDER...',
-                    isLoading: checkout.isPlacingOrder,
+                    loadingLabel: checkout.isPlacingOrder
+                        ? 'PLACING ORDER...'
+                        : 'PREPARING ORDER...',
+                    isLoading:
+                        checkout.isPlacingOrder ||
+                        checkout.isResolvingOrderOptions,
                     backgroundColor: AppColors.black,
                     onPressed: checkout.canPlaceOrder ? _placeOrder : null,
                   ),
@@ -447,8 +481,9 @@ class _RoundIcon extends StatelessWidget {
 }
 
 class _InlineMessage extends StatelessWidget {
-  const _InlineMessage({required this.message});
+  const _InlineMessage({required this.message, this.onRetry});
   final String message;
+  final VoidCallback? onRetry;
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(12),
@@ -456,13 +491,21 @@ class _InlineMessage extends StatelessWidget {
       color: const Color(0xFFFFECE8),
       borderRadius: BorderRadius.circular(12),
     ),
-    child: Text(
-      message,
-      style: const TextStyle(
-        color: Color(0xFF9B351F),
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-      ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            message,
+            style: const TextStyle(
+              color: Color(0xFF9B351F),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        if (onRetry case final onRetry?)
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+      ],
     ),
   );
 }

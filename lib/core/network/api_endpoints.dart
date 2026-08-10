@@ -23,6 +23,9 @@ abstract final class ApiEndpoints {
   static String mealPlanDetails(String mealPlanTemplateId) =>
       '/api/v1/meal-plans/${Uri.encodeComponent(mealPlanTemplateId)}';
 
+  static String mealPlanPurchaseOptions(String mealPlanCode) =>
+      '/api/v1/customer/meal-plans/${Uri.encodeComponent(mealPlanCode)}/purchase-options';
+
   static String guestMealPlanMenu(String planCode) =>
       '/api/v1/guest/meal-plans/${Uri.encodeComponent(planCode)}/menu';
 
