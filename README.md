@@ -34,6 +34,14 @@ The destination files are ignored by Git. Restrict production keys to the
 Android application ID `com.diettime.diet_time` (plus signing SHA-1) and the
 iOS bundle ID `com.diettime.dietTime`.
 
+On macOS, install the native iOS dependencies and open the workspace:
+
+```sh
+cd ios
+pod install
+open Runner.xcworkspace
+```
+
 ## Run
 
 ```sh
