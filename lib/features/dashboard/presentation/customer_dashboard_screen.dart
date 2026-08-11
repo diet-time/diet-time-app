@@ -164,12 +164,15 @@ class _DashboardHome extends ConsumerWidget {
                 children: [
                   const Expanded(child: _SectionTitle('UPCOMING DELIVERY')),
                   TextButton(
-                    onPressed: () => context.push(AppRoutes.menu),
+                    onPressed: () => context.push(
+                      AppRoutes.upcomingDeliveries,
+                      extra: single.detail,
+                    ),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       visualDensity: VisualDensity.compact,
                     ),
-                    child: const Text('VIEW MENU'),
+                    child: const Text('VIEW ALL'),
                   ),
                 ],
               ),
@@ -1036,80 +1039,87 @@ class _UpcomingDeliveryCard extends StatelessWidget {
   final OrderConfirmation order;
 
   @override
-  Widget build(BuildContext context) => _SurfaceCard(
-    child: Row(
-      children: [
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: AppColors.teaGreen.withValues(alpha: .3),
-            borderRadius: BorderRadius.circular(16),
+  Widget build(BuildContext context) => InkWell(
+    key: const ValueKey('openUpcomingDeliveries'),
+    onTap: () => context.push(AppRoutes.upcomingDeliveries, extra: order),
+    borderRadius: BorderRadius.circular(18),
+    child: _SurfaceCard(
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: AppColors.teaGreen.withValues(alpha: .3),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.calendar_today_rounded,
+              color: AppColors.emeraldGreen,
+            ),
           ),
-          child: const Icon(
-            Icons.calendar_today_rounded,
-            color: AppColors.emeraldGreen,
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                DateFormat('EEEE, d MMM').format(date),
-                style: const TextStyle(
-                  color: AppColors.darkGreen,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  DateFormat('EEEE, d MMM').format(date),
+                  style: const TextStyle(
+                    color: AppColors.darkGreen,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${order.delivery.timeSlot.name} · ${_timeRange(order.delivery.timeSlot)}',
-                style: TextStyle(
-                  color: AppColors.darkGreen.withValues(alpha: .62),
+                const SizedBox(height: 4),
+                Text(
+                  '${order.delivery.timeSlot.name} · ${_timeRange(order.delivery.timeSlot)}',
+                  style: TextStyle(
+                    color: AppColors.darkGreen.withValues(alpha: .62),
+                  ),
                 ),
-              ),
-              if (order.meals.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                for (final meal in order.meals.take(3))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 7),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 25,
-                          height: 25,
-                          decoration: BoxDecoration(
-                            color: AppColors.emeraldGreen.withValues(alpha: .1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.restaurant_rounded,
-                            color: AppColors.emeraldGreen,
-                            size: 13,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${meal.name}  × ${meal.quantity}',
-                            style: const TextStyle(
-                              color: AppColors.darkGreen,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
+                if (order.meals.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  for (final meal in order.meals.take(3))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 7),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 25,
+                            height: 25,
+                            decoration: BoxDecoration(
+                              color: AppColors.emeraldGreen.withValues(
+                                alpha: .1,
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.restaurant_rounded,
+                              color: AppColors.emeraldGreen,
+                              size: 13,
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${meal.name}  × ${meal.quantity}',
+                              style: const TextStyle(
+                                color: AppColors.darkGreen,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 }

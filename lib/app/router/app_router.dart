@@ -6,6 +6,8 @@ import 'package:diet_time/features/checkout/presentation/customer_address_screen
 import 'package:diet_time/features/checkout/presentation/plan_summary_screen.dart';
 import 'package:diet_time/features/checkout/presentation/order_placed_screen.dart';
 import 'package:diet_time/features/dashboard/presentation/order_details_screen.dart';
+import 'package:diet_time/features/dashboard/presentation/upcoming_deliveries_screen.dart';
+import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/home/presentation/home_screen.dart';
 import 'package:diet_time/features/home/presentation/route_placeholder_screen.dart';
 import 'package:diet_time/features/language/presentation/language_selection_screen.dart';
@@ -46,6 +48,7 @@ abstract final class AppRoutes {
   static const register = '/register';
   static const home = '/home';
   static const orderDetails = '/order-details';
+  static const upcomingDeliveries = '/upcoming-deliveries';
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -210,6 +213,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             child: orderId == null || orderId.isEmpty
                 ? const HomeScreen()
                 : OrderDetailsScreen(orderId: orderId),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.upcomingDeliveries,
+        pageBuilder: (context, state) {
+          final order = state.extra;
+          return _slidePage(
+            state: state,
+            child: order is OrderConfirmation
+                ? UpcomingDeliveriesScreen(order: order)
+                : const HomeScreen(),
           );
         },
       ),
