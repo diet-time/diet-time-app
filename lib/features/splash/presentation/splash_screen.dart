@@ -6,6 +6,7 @@ import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_spacing.dart';
 import 'package:diet_time/app/theme/app_typography.dart';
 import 'package:diet_time/core/widgets/app_logo.dart';
+import 'package:diet_time/core/storage/installation_session_guard.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
 import 'package:diet_time/features/language/data/language_repository.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
@@ -117,6 +118,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _finish(bool reducedMotion) async {
+    await ref.read(installationSessionGuardProvider).prepare();
     final languageCheck = ref
         .read(languageRepositoryProvider)
         .loadPreferredLanguage();
