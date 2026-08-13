@@ -5,6 +5,7 @@ import 'package:diet_time/features/authentication/presentation/otp_auth_controll
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_dashboard_controller.dart';
+import 'package:diet_time/features/dashboard/presentation/customer_profile_tab.dart';
 import 'package:diet_time/features/dashboard/presentation/order_details_screen.dart';
 import 'package:diet_time/features/personalization/data/display_name_repository.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
@@ -43,6 +44,12 @@ class _CustomerDashboardScreenState
     final checkoutProfileId = ref.watch(
       checkoutControllerProvider.select((state) => state.customerProfileId),
     );
+    final checkout = ref.watch(checkoutControllerProvider);
+    final phoneNumber = ref.watch(
+      otpAuthControllerProvider.select(
+        (state) => state.user?.phoneNumber ?? state.phoneNumber,
+      ),
+    );
     final storedName = ref.watch(_dashboardDisplayNameProvider).value;
     final state = ref.watch(customerDashboardControllerProvider);
     final profileId = profile.profileId ?? authProfileId ?? checkoutProfileId;
@@ -54,7 +61,16 @@ class _CustomerDashboardScreenState
         onViewAll: () => setState(() => _tabIndex = 1),
       ),
       _CustomerOrders(state: state),
-      _CustomerProfile(name: profile.preferredName),
+      CustomerProfileTab(
+        profile: profile,
+        phoneNumber: phoneNumber,
+        address:
+            checkout.selectedAddress ??
+            (checkout.addresses.isEmpty ? null : checkout.addresses.first),
+        onBack: () => setState(() => _tabIndex = 0),
+        onEditAddress: () => context.push(AppRoutes.customerAddress),
+        onEditProfile: () => _showProfileEditingMessage(context),
+      ),
     ];
     return Scaffold(
       backgroundColor: const Color(0xFFF8F6EF),
@@ -109,6 +125,14 @@ class _CustomerDashboardScreenState
       _loadQueued = false;
     });
   }
+}
+
+void _showProfileEditingMessage(BuildContext context) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      const SnackBar(content: Text('Profile editing will be available soon.')),
+    );
 }
 
 class _DashboardHome extends ConsumerWidget {
@@ -1628,50 +1652,6 @@ class _OrderFact extends StatelessWidget {
           color: AppColors.darkGreen.withValues(alpha: .72),
           fontSize: 9,
           fontWeight: FontWeight.w700,
-        ),
-      ),
-    ],
-  );
-}
-
-class _CustomerProfile extends StatelessWidget {
-  const _CustomerProfile({required this.name});
-
-  final String? name;
-
-  @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-    children: [
-      const Text(
-        'Profile',
-        style: TextStyle(
-          color: AppColors.darkGreen,
-          fontSize: 28,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-      const SizedBox(height: 20),
-      _SurfaceCard(
-        child: Row(
-          children: [
-            const CircleAvatar(
-              radius: 27,
-              backgroundColor: AppColors.emeraldGreen,
-              child: Icon(Icons.person_rounded, color: AppColors.white),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                name?.trim().isNotEmpty == true ? name!.trim() : 'Customer',
-                style: const TextStyle(
-                  color: AppColors.darkGreen,
-                  fontSize: 19,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     ],
