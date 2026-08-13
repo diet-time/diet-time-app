@@ -126,7 +126,7 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
     }
     if (!mounted) return;
     setState(() => _isResolvingDestination = false);
-    context.go(route);
+    context.go(AppRoutes.postLogin, extra: route);
   }
 
   Future<void> _resend() async {

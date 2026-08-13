@@ -10,7 +10,6 @@ import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/authentication/presentation/otp_verification_page.dart';
 import 'package:diet_time/features/authentication/presentation/phone_login_page.dart';
-import 'package:diet_time/features/personalization/presentation/post_login_landing_screen.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
@@ -219,6 +218,12 @@ void main() {
       ),
       'access-token',
     );
+    expect(
+      find.byKey(const ValueKey('otpPostLoginDestination')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('completePostLogin')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('otpDestination')), findsOneWidget);
     expect(container.read(otpAuthControllerProvider).otpCode, isEmpty);
   });
@@ -270,7 +275,10 @@ void main() {
 
     repository.succeed();
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('otpDestination')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('otpPostLoginDestination')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('connection error keeps OTP so verification can be retried', (
@@ -458,8 +466,13 @@ Widget _app({
         path: '/post-login',
         builder: (context, state) {
           final nextRoute = state.extra! as String;
-          return PostLoginLandingScreen(
-            onContinue: () => context.go(nextRoute),
+          return Scaffold(
+            key: const ValueKey('otpPostLoginDestination'),
+            body: TextButton(
+              key: const ValueKey('completePostLogin'),
+              onPressed: () => context.go(nextRoute),
+              child: const Text('Complete post-login'),
+            ),
           );
         },
       ),

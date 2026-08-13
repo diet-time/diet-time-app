@@ -1,7 +1,6 @@
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/config/app_environment.dart';
-import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
@@ -58,29 +57,38 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
             physics: const BouncingScrollPhysics(),
             slivers: [
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 26, 20, 16),
+                padding: const EdgeInsets.fromLTRB(13, 24, 13, 8),
                 sliver: SliverList.list(
                   children: [
-                    Text(
-                      l10n.choosePlanTitle,
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            fontSize: 29,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -.55,
-                          ),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 300),
+                      child: Text(
+                        l10n.choosePlanTitle,
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              fontSize: 34,
+                              height: 1.05,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -1.05,
+                            ),
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.choosePlanSubtitle,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyLarge?.copyWith(height: 1.4),
+                    const SizedBox(height: 12),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 330),
+                      child: Text(
+                        l10n.choosePlanSubtitle,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontSize: 13,
+                          height: 1.45,
+                          color: AppColors.darkGreen.withValues(alpha: .82),
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 14),
                     for (final plan in plans)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.only(bottom: 9),
                         child: _PlanCard(
                           plan: plan,
                           selected: selectedCode == plan.code,
@@ -95,13 +103,29 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+          padding: const EdgeInsets.fromLTRB(6, 3, 6, 13),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
-            child: AppButton(
-              label: l10n.continueLabel,
-              onPressed: () =>
-                  context.push(AppRoutes.planDetails, extra: selectedPlan),
+            child: SizedBox(
+              height: 47,
+              child: FilledButton(
+                onPressed: () =>
+                    context.push(AppRoutes.planDetails, extra: selectedPlan),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.emeraldGreen,
+                  foregroundColor: AppColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                ),
+                child: Text(
+                  l10n.continueLabel,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -130,94 +154,133 @@ class _PlanCard extends StatelessWidget {
       child: InkWell(
         key: ValueKey('mealPlan-${plan.code}'),
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(15),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 240),
           curve: Curves.easeOut,
-          padding: const EdgeInsets.all(10),
+          height: 153,
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: selected
-                ? AppColors.teaGreen.withValues(alpha: .26)
-                : AppColors.white,
-            borderRadius: BorderRadius.circular(24),
+            color: selected ? const Color(0xFFF1F7ED) : AppColors.white,
+            borderRadius: BorderRadius.circular(15),
             border: Border.all(
               color: selected
                   ? AppColors.emeraldGreen
                   : AppColors.darkGreen.withValues(alpha: .08),
-              width: selected ? 1.6 : 1,
+              width: selected ? 1.4 : 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.darkGreen.withValues(alpha: .07),
-                blurRadius: 18,
-                offset: const Offset(0, 7),
+                color: AppColors.darkGreen.withValues(alpha: .09),
+                blurRadius: 12,
+                offset: const Offset(0, 5),
               ),
             ],
           ),
-          child: Row(
+          child: Stack(
             children: [
-              _PlanImage(imageUrl: plan.imageUrl),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            plan.name,
-                            style: const TextStyle(
-                              color: AppColors.darkGreen,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        AnimatedSwitcher(
+              PositionedDirectional(
+                top: 0,
+                bottom: 0,
+                end: 0,
+                width: 210,
+                child: _PlanImage(imageUrl: plan.imageUrl),
+              ),
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(13, 17, 10, 11),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 1),
+                        child: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 200),
                           child: selected
                               ? const Icon(
                                   Icons.check_circle_rounded,
                                   key: ValueKey('selected'),
                                   color: AppColors.emeraldGreen,
-                                  size: 23,
+                                  size: 22,
                                 )
-                              : const Icon(
+                              : Icon(
                                   Icons.circle_outlined,
-                                  key: ValueKey('unselected'),
-                                  color: Color(0x3320352D),
-                                  size: 23,
+                                  key: const ValueKey('unselected'),
+                                  color: AppColors.darkGreen.withValues(
+                                    alpha: .22,
+                                  ),
+                                  size: 22,
                                 ),
                         ),
-                      ],
-                    ),
-                    if (plan.description case final description?) ...[
-                      const SizedBox(height: 5),
-                      Text(
-                        description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppColors.darkGreen.withValues(alpha: .62),
-                          fontSize: 12,
-                          height: 1.3,
+                      ),
+                      const SizedBox(width: 18),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              plan.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.darkGreen,
+                                fontSize: 16,
+                                height: 1.15,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            if (plan.description case final description?) ...[
+                              const SizedBox(height: 6),
+                              SizedBox(
+                                width: 180,
+                                child: Text(
+                                  description,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: AppColors.darkGreen.withValues(
+                                      alpha: .58,
+                                    ),
+                                    fontSize: 10.5,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            const Spacer(),
+                            SizedBox(
+                              width: 190,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _Detail(
+                                      icon:
+                                          Icons.local_fire_department_outlined,
+                                      label: _calorieLabel(
+                                        context,
+                                        plan.dailyCaloriesKcal,
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 1,
+                                    height: 31,
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                    ),
+                                    color: AppColors.darkGreen.withValues(
+                                      alpha: .14,
+                                    ),
+                                  ),
+                                  Expanded(child: _PlanPriceDetail(plan: plan)),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                    const SizedBox(height: 9),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [
-                        _Detail(
-                          icon: Icons.local_fire_department_outlined,
-                          label: _calorieLabel(context, plan.dailyCaloriesKcal),
-                        ),
-                        _PlanPriceDetail(plan: plan),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],
@@ -241,19 +304,21 @@ class _PlanImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final image = _resolveImageUrl(imageUrl);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: SizedBox(
-        width: 104,
-        height: 112,
-        child: image.isEmpty
-            ? const _ImagePlaceholder()
-            : Image.network(
-                image,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => const _ImagePlaceholder(),
-              ),
-      ),
+    return ShaderMask(
+      blendMode: BlendMode.dstIn,
+      shaderCallback: (bounds) => const LinearGradient(
+        begin: AlignmentDirectional.centerStart,
+        end: AlignmentDirectional.centerEnd,
+        colors: [Colors.transparent, Colors.black, Colors.black],
+        stops: [0, .28, 1],
+      ).createShader(bounds, textDirection: Directionality.of(context)),
+      child: image.isEmpty
+          ? const _ImagePlaceholder()
+          : Image.network(
+              image,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => const _ImagePlaceholder(),
+            ),
     );
   }
 }
@@ -294,24 +359,29 @@ class _Detail extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(
           icon,
-          size: 14,
+          size: 17,
           color: muted
               ? AppColors.darkGreen.withValues(alpha: .42)
               : AppColors.emeraldGreen,
         ),
-        const SizedBox(width: 3),
-        Text(
-          label,
-          textDirection: forceLtr ? TextDirection.ltr : null,
-          style: TextStyle(
-            color: muted
-                ? AppColors.darkGreen.withValues(alpha: .52)
-                : AppColors.emeraldGreen,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
+        const SizedBox(width: 7),
+        Flexible(
+          child: Text(
+            label,
+            textDirection: forceLtr ? TextDirection.ltr : null,
+            maxLines: 2,
+            style: TextStyle(
+              color: muted
+                  ? AppColors.darkGreen.withValues(alpha: .52)
+                  : AppColors.emeraldGreen,
+              fontSize: 9.5,
+              height: 1.25,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
       ],
@@ -338,7 +408,7 @@ class _PlanPriceDetail extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Container(
-            width: 86,
+            width: 48,
             height: 11,
             decoration: BoxDecoration(
               color: AppColors.darkGreen.withValues(alpha: .10),
