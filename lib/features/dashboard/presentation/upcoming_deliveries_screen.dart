@@ -4,9 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class UpcomingDeliveriesScreen extends StatefulWidget {
-  const UpcomingDeliveriesScreen({required this.order, super.key});
+  const UpcomingDeliveriesScreen({
+    required this.order,
+    this.embedded = false,
+    super.key,
+  });
 
   final OrderConfirmation order;
+  final bool embedded;
 
   @override
   State<UpcomingDeliveriesScreen> createState() =>
@@ -29,6 +34,57 @@ class _UpcomingDeliveriesScreenState extends State<UpcomingDeliveriesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final content = ListView(
+      key: const ValueKey('upcomingDeliveriesScreen'),
+      padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
+      children: [
+        if (widget.embedded) ...[
+          const Text(
+            'Delivery Calendar',
+            style: TextStyle(
+              color: AppColors.darkGreen,
+              fontSize: 25,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+        _Calendar(
+          month: _visibleMonth,
+          selectedDate: _selectedDate,
+          isDeliveryDay: _isDeliveryDay,
+          canGoPrevious: _canChangeMonth(-1),
+          canGoNext: _canChangeMonth(1),
+          onPrevious: () => _changeMonth(-1),
+          onNext: () => _changeMonth(1),
+          onSelect: (date) => setState(() => _selectedDate = date),
+        ),
+        const SizedBox(height: 16),
+        const _CalendarLegend(),
+        const SizedBox(height: 18),
+        Divider(color: AppColors.darkGreen.withValues(alpha: .09)),
+        const SizedBox(height: 12),
+        if (_selectedDate case final selected?) ...[
+          Text(
+            'Delivery for ${DateFormat('EEE, d MMM').format(selected)}',
+            key: const ValueKey('selectedDeliveryTitle'),
+            style: const TextStyle(
+              color: AppColors.darkGreen,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _DeliveryDetails(order: widget.order),
+        ] else
+          const _EmptyDelivery(),
+        const SizedBox(height: 14),
+        const _FridayNotice(),
+      ],
+    );
+    if (widget.embedded) {
+      return ColoredBox(color: const Color(0xFFFBFAF7), child: content);
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFFBFAF7),
       appBar: AppBar(
@@ -50,43 +106,7 @@ class _UpcomingDeliveriesScreenState extends State<UpcomingDeliveriesScreen> {
           ),
         ),
       ),
-      body: ListView(
-        key: const ValueKey('upcomingDeliveriesScreen'),
-        padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
-        children: [
-          _Calendar(
-            month: _visibleMonth,
-            selectedDate: _selectedDate,
-            isDeliveryDay: _isDeliveryDay,
-            canGoPrevious: _canChangeMonth(-1),
-            canGoNext: _canChangeMonth(1),
-            onPrevious: () => _changeMonth(-1),
-            onNext: () => _changeMonth(1),
-            onSelect: (date) => setState(() => _selectedDate = date),
-          ),
-          const SizedBox(height: 16),
-          const _CalendarLegend(),
-          const SizedBox(height: 18),
-          Divider(color: AppColors.darkGreen.withValues(alpha: .09)),
-          const SizedBox(height: 12),
-          if (_selectedDate case final selected?) ...[
-            Text(
-              'Delivery for ${DateFormat('EEE, d MMM').format(selected)}',
-              key: const ValueKey('selectedDeliveryTitle'),
-              style: const TextStyle(
-                color: AppColors.darkGreen,
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _DeliveryDetails(order: widget.order),
-          ] else
-            const _EmptyDelivery(),
-          const SizedBox(height: 14),
-          const _FridayNotice(),
-        ],
-      ),
+      body: content,
     );
   }
 
@@ -292,15 +312,29 @@ class _CalendarLegend extends StatelessWidget {
   const _CalendarLegend();
 
   @override
-  Widget build(BuildContext context) => Row(
+  Widget build(BuildContext context) => const Wrap(
+    spacing: 24,
+    runSpacing: 8,
     children: [
-      const _LegendDot(color: AppColors.jasper),
+      _LegendItem(color: AppColors.jasper, label: 'Delivery days'),
+      _LegendItem(color: Color(0xFFE3E3E0), label: 'Non-delivery days'),
+    ],
+  );
+}
+
+class _LegendItem extends StatelessWidget {
+  const _LegendItem({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      _LegendDot(color: color),
       const SizedBox(width: 6),
-      const Text('Delivery days', style: TextStyle(fontSize: 11)),
-      const SizedBox(width: 24),
-      const _LegendDot(color: Color(0xFFE3E3E0)),
-      const SizedBox(width: 6),
-      const Text('Non-delivery days', style: TextStyle(fontSize: 11)),
+      Text(label, style: const TextStyle(fontSize: 11)),
     ],
   );
 }

@@ -10,6 +10,49 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('meal selection shows a working back button when pushed', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mealPlansProvider.overrideWith((ref, language) async => _pricedPlans),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: FilledButton(
+                  key: const ValueKey('openMealPlans'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const MealPlanScreen(),
+                    ),
+                  ),
+                  child: const Text('Open plans'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('openMealPlans')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('mealPlanBackButton')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('mealPlanBackButton')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('openMealPlans')), findsOneWidget);
+  });
+
   test('one-day package amount is used directly', () {
     final plan = _planFromPrice(
       startingPrice: 55,

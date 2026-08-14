@@ -10,6 +10,7 @@ import 'package:diet_time/features/dashboard/domain/customer_account_profile.dar
 import 'package:diet_time/features/dashboard/presentation/customer_profile_tab.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_profile_controller.dart';
 import 'package:diet_time/features/dashboard/presentation/order_details_screen.dart';
+import 'package:diet_time/features/dashboard/presentation/upcoming_deliveries_screen.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
 import 'package:flutter/material.dart';
@@ -75,6 +76,7 @@ class _CustomerDashboardScreenState
         onViewAll: () => setState(() => _tabIndex = 1),
       ),
       _CustomerOrders(state: state),
+      _DashboardCalendar(state: state),
       CustomerProfileTab(
         profile: visibleProfile,
         phoneNumber: account?.mobileNumber.isNotEmpty == true
@@ -123,6 +125,12 @@ class _CustomerDashboardScreenState
             label: 'ORDERS',
           ),
           NavigationDestination(
+            key: ValueKey('dashboardCalendarTab'),
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month_rounded),
+            label: 'CALENDAR',
+          ),
+          NavigationDestination(
             key: ValueKey('dashboardProfileTab'),
             icon: Icon(Icons.person_outline_rounded),
             selectedIcon: Icon(Icons.person_rounded),
@@ -134,7 +142,7 @@ class _CustomerDashboardScreenState
   }
 
   void _ensureProfileLoaded() {
-    if (_tabIndex != 2 || _profileLoadQueued) return;
+    if (_tabIndex != 3 || _profileLoadQueued) return;
     final state = ref.read(customerProfileControllerProvider);
     if (state.hasLoaded || state.isLoading) return;
     _profileLoadQueued = true;
@@ -1409,6 +1417,93 @@ class _CustomerOrders extends ConsumerStatefulWidget {
   ConsumerState<_CustomerOrders> createState() => _CustomerOrdersState();
 }
 
+class _DashboardCalendar extends ConsumerWidget {
+  const _DashboardCalendar({required this.state});
+
+  final CustomerDashboardState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (state is DashboardLoading) return const _DashboardSkeleton();
+    if (state is DashboardError) {
+      return _DashboardErrorView(
+        message: (state as DashboardError).message,
+        onRetry: () =>
+            ref.read(customerDashboardControllerProvider.notifier).refresh(),
+      );
+    }
+    if (state is DashboardAuthenticationFailure) {
+      return _DashboardErrorView(
+        message: 'Your session has expired. Please sign in again.',
+        actionLabel: 'SIGN IN',
+        onRetry: () => context.go(
+          AppRoutes.phoneLogin,
+          extra: const PendingAuthDestination(
+            route: AppRoutes.authenticatedLanding,
+          ),
+        ),
+      );
+    }
+    if (state is DashboardProfileNotFound) {
+      return _DashboardErrorView(
+        message: 'Your customer profile could not be found.',
+        onRetry: () =>
+            ref.read(customerDashboardControllerProvider.notifier).refresh(),
+      );
+    }
+    final order = _calendarOrder(state);
+    if (order != null) {
+      return UpcomingDeliveriesScreen(order: order, embedded: true);
+    }
+    return ListView(
+      key: const ValueKey('emptyDashboardCalendar'),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(18, 24, 18, 32),
+      children: [
+        const Text(
+          'Delivery Calendar',
+          style: TextStyle(
+            color: AppColors.darkGreen,
+            fontSize: 25,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 18),
+        _SurfaceCard(
+          child: Column(
+            children: [
+              const Icon(
+                Icons.calendar_month_outlined,
+                color: AppColors.emeraldGreen,
+                size: 42,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'No active delivery calendar',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.darkGreen,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Your delivery dates will appear here when a meal plan is active.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.darkGreen.withValues(alpha: .58),
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _CustomerOrdersState extends ConsumerState<_CustomerOrders> {
   String _filter = 'ALL';
 
@@ -1962,6 +2057,14 @@ List<CustomerOrderSummary> _ordersFrom(CustomerDashboardState state) =>
       DashboardWithoutActivePlan(:final orders) => orders,
       DashboardNoOrders() => const [],
       _ => const [],
+    };
+
+OrderConfirmation? _calendarOrder(CustomerDashboardState state) =>
+    switch (state) {
+      DashboardWithActivePlan(:final detail) => detail,
+      DashboardWithMultipleActivePlans(:final activeOrders, :final details) =>
+        activeOrders.isEmpty ? null : details[activeOrders.first.id],
+      _ => null,
     };
 
 String _displayName(String? name) {

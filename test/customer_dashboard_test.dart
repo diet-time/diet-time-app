@@ -112,6 +112,37 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('calendar bottom destination shows active delivery calendar', (
+    tester,
+  ) async {
+    final summary = _summary('active', 'ACTIVE', DateTime(2026, 8, 11));
+    final state = DashboardWithActivePlan(
+      order: summary,
+      detail: _detail(summary),
+      orders: [summary],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          customerDashboardControllerProvider.overrideWith(
+            () => _DashboardControllerForTest(state),
+          ),
+        ],
+        child: const MaterialApp(home: CustomerDashboardScreen()),
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('dashboardCalendarTab')));
+    await tester.pump();
+
+    expect(find.text('Delivery Calendar'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('upcomingDeliveriesScreen')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('dashboardProfileTab')), findsOneWidget);
+  });
+
   testWidgets('structured order details fit a compact phone', (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));

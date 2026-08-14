@@ -23,28 +23,53 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
   Widget build(BuildContext context) {
     final language = Localizations.localeOf(context).languageCode;
     final plans = ref.watch(mealPlansProvider(language));
+    final canPop = Navigator.of(context).canPop();
     return Scaffold(
       backgroundColor: const Color(0xFFF5F3E9),
       body: SafeArea(
-        child: plans.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.emeraldGreen),
-          ),
-          error: (_, _) => _PlanLoadState(
-            onRetry: () => ref.invalidate(mealPlansProvider(language)),
-          ),
-          data: (items) => items.isEmpty
-              ? _PlanLoadState(
-                  empty: true,
+        child: Column(
+          children: [
+            if (canPop)
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: IconButton(
+                  key: const ValueKey('mealPlanBackButton'),
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  color: AppColors.darkGreen,
+                  icon: const Icon(Icons.arrow_back_rounded),
+                ),
+              ),
+            Expanded(
+              child: plans.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.emeraldGreen,
+                  ),
+                ),
+                error: (_, _) => _PlanLoadState(
                   onRetry: () => ref.invalidate(mealPlansProvider(language)),
-                )
-              : _buildPlanList(context, items),
+                ),
+                data: (items) => items.isEmpty
+                    ? _PlanLoadState(
+                        empty: true,
+                        onRetry: () =>
+                            ref.invalidate(mealPlansProvider(language)),
+                      )
+                    : _buildPlanList(context, items, showBackButton: canPop),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildPlanList(BuildContext context, List<MealPlanOption> plans) {
+  Widget _buildPlanList(
+    BuildContext context,
+    List<MealPlanOption> plans, {
+    required bool showBackButton,
+  }) {
     final l10n = AppLocalizations.of(context);
     final selectedCode = plans.any((plan) => plan.code == _selectedCode)
         ? _selectedCode!
@@ -57,7 +82,12 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
             physics: const BouncingScrollPhysics(),
             slivers: [
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(13, 24, 13, 8),
+                padding: EdgeInsets.fromLTRB(
+                  13,
+                  showBackButton ? 4 : 24,
+                  13,
+                  8,
+                ),
                 sliver: SliverList.list(
                   children: [
                     ConstrainedBox(
