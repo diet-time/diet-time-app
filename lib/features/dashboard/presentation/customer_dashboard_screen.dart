@@ -1,7 +1,6 @@
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
-import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
@@ -43,14 +42,7 @@ class _CustomerDashboardScreenState
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(personalizationControllerProvider);
-    final checkout = ref.watch(checkoutControllerProvider);
-    final phoneNumber = ref.watch(
-      otpAuthControllerProvider.select(
-        (state) => state.user?.phoneNumber ?? state.phoneNumber,
-      ),
-    );
     final state = ref.watch(customerDashboardControllerProvider);
-    final accountState = ref.watch(customerProfileControllerProvider);
     ref.listen(
       customerProfileControllerProvider.select((value) => value.requiresLogin),
       (_, requiresLogin) {
@@ -58,17 +50,6 @@ class _CustomerDashboardScreenState
       },
     );
     _ensureProfileLoaded();
-    final account = accountState.profile;
-    final visibleProfile = account == null
-        ? profile
-        : profile.copyWith(
-            profileId: account.id.isEmpty ? profile.profileId : account.id,
-            preferredName: account.fullName,
-            dateOfBirth: account.dateOfBirth == null
-                ? profile.dateOfBirth
-                : DateFormat('yyyy-MM-dd').format(account.dateOfBirth!),
-            genderCode: account.gender ?? profile.genderCode,
-          );
     final pages = [
       _DashboardHome(
         state: state,
@@ -78,26 +59,9 @@ class _CustomerDashboardScreenState
       _CustomerOrders(state: state),
       _DashboardCalendar(state: state),
       CustomerProfileTab(
-        profile: visibleProfile,
-        phoneNumber: account?.mobileNumber.isNotEmpty == true
-            ? account!.mobileNumber
-            : phoneNumber,
-        address:
-            checkout.selectedAddress ??
-            (checkout.addresses.isEmpty
-                ? account?.defaultAddress
-                : checkout.addresses.firstWhere(
-                    (item) => item.isDefault,
-                    orElse: () => checkout.addresses.first,
-                  )),
-        isLoading: !accountState.hasLoaded || accountState.isLoading,
-        errorMessage: accountState.errorMessage,
-        onRetry: () => ref
-            .read(customerProfileControllerProvider.notifier)
-            .load(force: true),
         onBack: () => setState(() => _tabIndex = 0),
         onEditAddress: _editAddress,
-        onEditProfile: account == null ? () {} : () => _editProfile(account),
+        onEditProfile: _openCustomerProfile,
         onQuestionnaire: _openQuestionnaire,
         onLogout: _confirmLogout,
       ),
@@ -166,6 +130,26 @@ class _CustomerDashboardScreenState
           const SnackBar(content: Text('Profile updated successfully')),
         );
     }
+  }
+
+  Future<void> _openCustomerProfile() async {
+    var account = ref.read(customerProfileControllerProvider).profile;
+    if (account == null) {
+      await ref
+          .read(customerProfileControllerProvider.notifier)
+          .load(force: true);
+      if (!mounted) return;
+      account = ref.read(customerProfileControllerProvider).profile;
+    }
+    if (account == null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Unable to load your profile.')),
+        );
+      return;
+    }
+    await _editProfile(account);
   }
 
   Future<void> _editAddress() async {
