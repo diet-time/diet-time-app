@@ -255,14 +255,18 @@ class _Calendar extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: delivery ? AppColors.jasper : Colors.transparent,
+                    color: delivery
+                        ? AppColors.emeraldGreen
+                        : Colors.transparent,
                     border: selected
                         ? Border.all(color: AppColors.darkGreen, width: 2)
                         : null,
                     boxShadow: selected
                         ? [
                             BoxShadow(
-                              color: AppColors.jasper.withValues(alpha: .24),
+                              color: AppColors.emeraldGreen.withValues(
+                                alpha: .24,
+                              ),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             ),
@@ -316,7 +320,7 @@ class _CalendarLegend extends StatelessWidget {
     spacing: 24,
     runSpacing: 8,
     children: [
-      _LegendItem(color: AppColors.jasper, label: 'Delivery days'),
+      _LegendItem(color: AppColors.emeraldGreen, label: 'Delivery days'),
       _LegendItem(color: Color(0xFFE3E3E0), label: 'Non-delivery days'),
     ],
   );
