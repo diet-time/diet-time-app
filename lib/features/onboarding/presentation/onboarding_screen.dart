@@ -19,7 +19,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class PersonalizationScreen extends ConsumerStatefulWidget {
-  const PersonalizationScreen({super.key});
+  const PersonalizationScreen({this.customerProfileMode = false, super.key});
+
+  final bool customerProfileMode;
 
   @override
   ConsumerState<PersonalizationScreen> createState() =>
@@ -71,7 +73,8 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
 
   Future<void> _loadProfile() async {
     final cachedProfile = ref.read(personalizationControllerProvider);
-    if (cachedProfile.isCompleted || cachedProfile.hasCapturedQuestionnaire) {
+    if (!widget.customerProfileMode &&
+        (cachedProfile.isCompleted || cachedProfile.hasCapturedQuestionnaire)) {
       if (mounted) context.go(AppRoutes.plans);
       return;
     }
@@ -82,7 +85,11 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     if (!authenticated) {
       context.go(
         AppRoutes.phoneLogin,
-        extra: const PendingAuthDestination(route: AppRoutes.personalization),
+        extra: PendingAuthDestination(
+          route: widget.customerProfileMode
+              ? AppRoutes.customerQuestionnaire
+              : AppRoutes.personalization,
+        ),
       );
       return;
     }
@@ -91,6 +98,10 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         ? ref.read(personalizationControllerProvider)
         : await ref.read(profilePersistenceControllerProvider.notifier).load();
     if (!mounted || profile == null) return;
+    if (widget.customerProfileMode) {
+      _restoreVisibleValues(profile);
+      return;
+    }
     if (profile.isCompleted) {
       context.go(AppRoutes.plans);
       return;
@@ -211,7 +222,11 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       return;
     }
     if (_index == _stepCount - 1) {
-      context.go(AppRoutes.menu);
+      if (widget.customerProfileMode) {
+        Navigator.of(context).pop(true);
+      } else {
+        context.go(AppRoutes.menu);
+      }
       return;
     }
     await _goTo(_index + 1);
@@ -404,8 +419,10 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
               child: Column(
                 children: [
                   _OnboardingHeader(
-                    showBack: _history.isNotEmpty,
-                    onBack: _previous,
+                    showBack: widget.customerProfileMode || _history.isNotEmpty,
+                    onBack: _history.isNotEmpty
+                        ? _previous
+                        : () => Navigator.of(context).maybePop(),
                   ),
                   _StepProgress(
                     current: _index,
@@ -500,7 +517,12 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     String language,
     AsyncValue<List<GuestAllergen>> allergenState,
   ) => [
-    _WelcomeStep(l10n: l10n, onNotNow: () => context.go(AppRoutes.menu)),
+    _WelcomeStep(
+      l10n: l10n,
+      onNotNow: widget.customerProfileMode
+          ? () => Navigator.of(context).maybePop()
+          : () => context.go(AppRoutes.menu),
+    ),
     _StepFrame(
       title: l10n.onboardingGoalTitle,
       subtitle: l10n.onboardingGoalSubtitle,

@@ -98,6 +98,7 @@ class _CustomerDashboardScreenState
         onBack: () => setState(() => _tabIndex = 0),
         onEditAddress: _editAddress,
         onEditProfile: account == null ? () {} : () => _editProfile(account),
+        onQuestionnaire: _openQuestionnaire,
         onLogout: _confirmLogout,
       ),
     ];
@@ -171,6 +172,17 @@ class _CustomerDashboardScreenState
     await context.push(AppRoutes.customerAddress);
     if (!mounted) return;
     await ref.read(checkoutControllerProvider.notifier).loadAddresses();
+  }
+
+  Future<void> _openQuestionnaire() async {
+    final updated = await context.push<bool>(AppRoutes.customerQuestionnaire);
+    if (updated == true && mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Questionnaire updated successfully')),
+        );
+    }
   }
 
   Future<void> _confirmLogout() async {

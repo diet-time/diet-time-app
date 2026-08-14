@@ -12,6 +12,7 @@ class CustomerProfileTab extends StatelessWidget {
     required this.onBack,
     required this.onEditAddress,
     required this.onEditProfile,
+    this.onQuestionnaire,
     this.onLogout,
     this.onRetry,
     this.isLoading = false,
@@ -25,6 +26,7 @@ class CustomerProfileTab extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onEditAddress;
   final VoidCallback onEditProfile;
+  final VoidCallback? onQuestionnaire;
   final VoidCallback? onLogout;
   final VoidCallback? onRetry;
   final bool isLoading;
@@ -59,7 +61,11 @@ class CustomerProfileTab extends StatelessWidget {
             letterSpacing: -.45,
           ),
         ),
-        const SizedBox(height: 29),
+        if (onQuestionnaire != null) ...[
+          const SizedBox(height: 18),
+          _ProfileAreaSelector(onQuestionnaire: onQuestionnaire!),
+        ],
+        const SizedBox(height: 24),
         if (isLoading) ...[const _ProfileSkeleton()],
         if (errorMessage case final message?) ...[
           _ProfileError(message: message, onRetry: onRetry),
@@ -179,6 +185,99 @@ class CustomerProfileTab extends StatelessWidget {
       ],
     );
   }
+}
+
+class _ProfileAreaSelector extends StatelessWidget {
+  const _ProfileAreaSelector({required this.onQuestionnaire});
+
+  final VoidCallback onQuestionnaire;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(4),
+    decoration: BoxDecoration(
+      color: AppColors.darkGreen.withValues(alpha: .055),
+      borderRadius: BorderRadius.circular(13),
+    ),
+    child: Row(
+      children: [
+        const Expanded(
+          child: _ProfileAreaOption(
+            key: ValueKey('customerProfileOption'),
+            icon: Icons.person_outline_rounded,
+            label: 'Customer Profile',
+            selected: true,
+          ),
+        ),
+        Expanded(
+          child: _ProfileAreaOption(
+            key: const ValueKey('customerQuestionnaireOption'),
+            icon: Icons.assignment_outlined,
+            label: 'Questionnaire',
+            selected: false,
+            onTap: onQuestionnaire,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _ProfileAreaOption extends StatelessWidget {
+  const _ProfileAreaOption({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    this.onTap,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    child: Material(
+      color: selected ? AppColors.white : Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 11),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 17,
+                color: selected
+                    ? AppColors.emeraldGreen
+                    : AppColors.darkGreen.withValues(alpha: .65),
+              ),
+              const SizedBox(width: 7),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.darkGreen,
+                    fontSize: 11,
+                    fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _ProfileCard extends StatelessWidget {

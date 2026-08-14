@@ -190,6 +190,48 @@ void main() {
     expect(selected.decoration, isNotNull);
   });
 
+  testWidgets('customer profile questionnaire reopens saved answers', (
+    tester,
+  ) async {
+    final service = _FakeProfilePersistenceService(
+      profile: const CustomerProfile(
+        profileId: 'profile-id',
+        genderCode: 'FEMALE',
+        dateOfBirth: '1990-05-12',
+        heightCm: 165,
+        weightKg: 60,
+        goalCode: 'MAINTAIN_WEIGHT',
+        dailyRoutineCode: 'OFFICE_WORK',
+        activityLevelCode: 'MOSTLY_SITTING',
+        preferences: {'HIGH_PROTEIN'},
+        allergens: {'NONE'},
+        preferencesConfirmed: true,
+        allergensConfirmed: true,
+        nextStepCode: 'PROFILE_COMPLETED',
+        completionPercentage: 100,
+        shouldShowOnboarding: false,
+      ),
+    );
+    await tester.pumpWidget(
+      _localizedApp(
+        const PersonalizationScreen(customerProfileMode: true),
+        profileService: service,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PersonalizationScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('onboardingHeaderBack')), findsOneWidget);
+    await _continue(tester);
+    final selectedGoal = tester.widget<AnimatedContainer>(
+      find.descendant(
+        of: find.byKey(const ValueKey('goal-maintain')),
+        matching: find.byType(AnimatedContainer),
+      ),
+    );
+    expect((selectedGoal.decoration! as BoxDecoration).gradient, isNotNull);
+  });
+
   testWidgets('one final submission shows summary then opens the menu', (
     tester,
   ) async {
@@ -558,14 +600,18 @@ Future<void> _fillRequiredProfile(WidgetTester tester) async {
   }
 }
 
-Widget _localizedApp(Widget home, {Locale locale = const Locale('en')}) {
+Widget _localizedApp(
+  Widget home, {
+  Locale locale = const Locale('en'),
+  ProfilePersistenceService? profileService,
+}) {
   return ProviderScope(
     overrides: [
       authenticationServiceProvider.overrideWithValue(
         const _AuthenticatedService(),
       ),
       customerProfileServiceProvider.overrideWithValue(
-        _FakeProfilePersistenceService(),
+        profileService ?? _FakeProfilePersistenceService(),
       ),
     ],
     child: MaterialApp(

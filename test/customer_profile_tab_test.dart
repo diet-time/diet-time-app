@@ -8,6 +8,7 @@ void main() {
   testWidgets('customer profile reference layout fits a compact phone', (
     tester,
   ) async {
+    var questionnaireOpened = false;
     await tester.binding.setSurfaceSize(const Size(360, 720));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -26,13 +27,20 @@ void main() {
               onBack: () {},
               onEditAddress: () {},
               onEditProfile: () {},
+              onQuestionnaire: () => questionnaireOpened = true,
             ),
           ),
         ),
       ),
     );
 
-    expect(find.text('Customer Profile'), findsOneWidget);
+    expect(find.text('Customer Profile'), findsNWidgets(2));
+    expect(
+      find.byKey(const ValueKey('customerQuestionnaireOption')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('customerQuestionnaireOption')));
+    expect(questionnaireOpened, isTrue);
     expect(find.text('PERSONAL INFORMATION'), findsOneWidget);
     expect(find.text('12 May 1990'), findsOneWidget);
     expect(find.text('Default ✓'), findsOneWidget);
