@@ -16,6 +16,7 @@ class SecureStorageService {
   static const refreshTokenKey = 'refreshToken';
   static const refreshTokenExpiresAtKey = 'refreshTokenExpiresAt';
   static const temporaryCustomerPhoneKey = 'temporaryCustomerPhone';
+  static const authenticatedUserIdKey = 'authenticatedUserId';
 
   Future<void> write(String key, String value) =>
       _storage.write(key: key, value: value);

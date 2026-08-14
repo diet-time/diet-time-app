@@ -5,7 +5,9 @@ import 'package:diet_time/features/authentication/presentation/otp_auth_controll
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_dashboard_controller.dart';
+import 'package:diet_time/features/dashboard/domain/customer_account_profile.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_profile_tab.dart';
+import 'package:diet_time/features/dashboard/presentation/customer_profile_controller.dart';
 import 'package:diet_time/features/dashboard/presentation/order_details_screen.dart';
 import 'package:diet_time/features/personalization/data/display_name_repository.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
@@ -15,7 +17,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-final _dashboardDisplayNameProvider = FutureProvider<String?>((ref) {
+final _dashboardDisplayNameProvider = FutureProvider.autoDispose<String?>((
+  ref,
+) {
   return ref.watch(displayNameRepositoryProvider).load();
 });
 
@@ -32,6 +36,7 @@ class _CustomerDashboardScreenState
   int _tabIndex = 0;
   String? _loadedProfileId;
   bool _loadQueued = false;
+  bool _profileLoadQueued = false;
 
   @override
   Widget build(BuildContext context) {
@@ -52,8 +57,27 @@ class _CustomerDashboardScreenState
     );
     final storedName = ref.watch(_dashboardDisplayNameProvider).value;
     final state = ref.watch(customerDashboardControllerProvider);
+    final accountState = ref.watch(customerProfileControllerProvider);
+    ref.listen(
+      customerProfileControllerProvider.select((value) => value.requiresLogin),
+      (_, requiresLogin) {
+        if (requiresLogin) context.go(AppRoutes.login);
+      },
+    );
     final profileId = profile.profileId ?? authProfileId ?? checkoutProfileId;
     _ensureDashboardLoaded(profileId, state);
+    _ensureProfileLoaded();
+    final account = accountState.profile;
+    final visibleProfile = account == null
+        ? profile
+        : profile.copyWith(
+            profileId: account.id.isEmpty ? profile.profileId : account.id,
+            preferredName: account.fullName,
+            dateOfBirth: account.dateOfBirth == null
+                ? profile.dateOfBirth
+                : DateFormat('yyyy-MM-dd').format(account.dateOfBirth!),
+            genderCode: account.gender ?? profile.genderCode,
+          );
     final pages = [
       _DashboardHome(
         state: state,
@@ -62,14 +86,27 @@ class _CustomerDashboardScreenState
       ),
       _CustomerOrders(state: state),
       CustomerProfileTab(
-        profile: profile,
-        phoneNumber: phoneNumber,
+        profile: visibleProfile,
+        phoneNumber: account?.mobileNumber.isNotEmpty == true
+            ? account!.mobileNumber
+            : phoneNumber,
         address:
             checkout.selectedAddress ??
-            (checkout.addresses.isEmpty ? null : checkout.addresses.first),
+            (checkout.addresses.isEmpty
+                ? account?.defaultAddress
+                : checkout.addresses.firstWhere(
+                    (item) => item.isDefault,
+                    orElse: () => checkout.addresses.first,
+                  )),
+        isLoading: !accountState.hasLoaded || accountState.isLoading,
+        errorMessage: accountState.errorMessage,
+        onRetry: () => ref
+            .read(customerProfileControllerProvider.notifier)
+            .load(force: true),
         onBack: () => setState(() => _tabIndex = 0),
-        onEditAddress: () => context.push(AppRoutes.customerAddress),
-        onEditProfile: () => _showProfileEditingMessage(context),
+        onEditAddress: _editAddress,
+        onEditProfile: account == null ? () {} : () => _editProfile(account),
+        onLogout: _confirmLogout,
       ),
     ];
     return Scaffold(
@@ -106,6 +143,62 @@ class _CustomerDashboardScreenState
     );
   }
 
+  void _ensureProfileLoaded() {
+    if (_tabIndex != 2 || _profileLoadQueued) return;
+    final state = ref.read(customerProfileControllerProvider);
+    if (state.hasLoaded || state.isLoading) return;
+    _profileLoadQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await ref.read(customerProfileControllerProvider.notifier).load();
+      _profileLoadQueued = false;
+    });
+  }
+
+  Future<void> _editProfile(CustomerAccountProfile account) async {
+    final updated = await context.push<bool>(
+      AppRoutes.editCustomerProfile,
+      extra: account,
+    );
+    if (updated == true && mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+    }
+  }
+
+  Future<void> _editAddress() async {
+    await context.push(AppRoutes.customerAddress);
+    if (!mounted) return;
+    await ref.read(checkoutControllerProvider.notifier).loadAddresses();
+  }
+
+  Future<void> _confirmLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.logout_rounded, size: 18),
+            label: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await ref.read(customerProfileControllerProvider.notifier).logout();
+    if (mounted) context.go(AppRoutes.login);
+  }
+
   void _ensureDashboardLoaded(
     String? profileId,
     CustomerDashboardState dashboardState,
@@ -125,14 +218,6 @@ class _CustomerDashboardScreenState
       _loadQueued = false;
     });
   }
-}
-
-void _showProfileEditingMessage(BuildContext context) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      const SnackBar(content: Text('Profile editing will be available soon.')),
-    );
 }
 
 class _DashboardHome extends ConsumerWidget {

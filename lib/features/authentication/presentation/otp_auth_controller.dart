@@ -146,7 +146,9 @@ class OtpAuthController extends Notifier<OtpAuthState> {
     }
   }
 
-  Future<bool> _refreshStoredSession() async {
+  Future<bool> _refreshStoredSession({
+    bool preserveSessionOnTransientFailure = true,
+  }) async {
     final storage = ref.read(secureStorageServiceProvider);
     final values = await Future.wait([
       storage.read(SecureStorageService.refreshTokenKey),
@@ -191,7 +193,8 @@ class OtpAuthController extends Notifier<OtpAuthState> {
       return true;
     } on PhoneOtpException catch (error) {
       if (error.failure == PhoneOtpFailure.invalidOtp ||
-          error.failure == PhoneOtpFailure.invalidResponse) {
+          error.failure == PhoneOtpFailure.invalidResponse ||
+          !preserveSessionOnTransientFailure) {
         await _clearStoredSession(storage);
         return false;
       }
@@ -200,6 +203,33 @@ class OtpAuthController extends Notifier<OtpAuthState> {
       state = state.copyWith(isAuthenticated: true);
       return true;
     }
+  }
+
+  /// Retries the application's existing refresh-token flow after a protected
+  /// endpoint returns 401. A failed refresh clears the resumable session.
+  Future<bool> refreshAfterUnauthorized() async {
+    final refreshed = await _refreshStoredSession(
+      preserveSessionOnTransientFailure: false,
+    );
+    if (!refreshed) {
+      await signOut();
+    }
+    return refreshed;
+  }
+
+  Future<void> signOut() async {
+    _resendTimer?.cancel();
+    final storage = ref.read(secureStorageServiceProvider);
+    await Future.wait([
+      _clearStoredSession(storage),
+      storage.delete(SecureStorageService.temporaryCustomerPhoneKey),
+      storage.delete(SecureStorageService.authenticatedUserIdKey),
+    ]);
+    final authentication = ref.read(authenticationServiceProvider);
+    if (authentication is SignOutAuthenticationService) {
+      await (authentication as SignOutAuthenticationService).signOut();
+    }
+    state = const OtpAuthState();
   }
 
   Future<void> _clearStoredSession(SecureStorageService storage) =>

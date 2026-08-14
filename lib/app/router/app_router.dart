@@ -6,6 +6,8 @@ import 'package:diet_time/features/checkout/presentation/customer_address_screen
 import 'package:diet_time/features/checkout/presentation/plan_summary_screen.dart';
 import 'package:diet_time/features/checkout/presentation/order_placed_screen.dart';
 import 'package:diet_time/features/dashboard/presentation/order_details_screen.dart';
+import 'package:diet_time/features/dashboard/domain/customer_account_profile.dart';
+import 'package:diet_time/features/dashboard/presentation/edit_customer_profile_page.dart';
 import 'package:diet_time/features/dashboard/presentation/upcoming_deliveries_screen.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/home/presentation/home_screen.dart';
@@ -49,6 +51,7 @@ abstract final class AppRoutes {
   static const home = '/home';
   static const orderDetails = '/order-details';
   static const upcomingDeliveries = '/upcoming-deliveries';
+  static const editCustomerProfile = '/edit-customer-profile';
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -227,6 +230,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 : const HomeScreen(),
           );
         },
+      ),
+      GoRoute(
+        path: AppRoutes.editCustomerProfile,
+        pageBuilder: (context, state) => _slidePage(
+          state: state,
+          child: EditCustomerProfilePage(
+            profile: state.extra is CustomerAccountProfile
+                ? state.extra! as CustomerAccountProfile
+                : null,
+          ),
+        ),
       ),
     ],
   );

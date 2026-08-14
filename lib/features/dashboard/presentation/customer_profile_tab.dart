@@ -12,6 +12,10 @@ class CustomerProfileTab extends StatelessWidget {
     required this.onBack,
     required this.onEditAddress,
     required this.onEditProfile,
+    this.onLogout,
+    this.onRetry,
+    this.isLoading = false,
+    this.errorMessage,
     super.key,
   });
 
@@ -21,6 +25,10 @@ class CustomerProfileTab extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onEditAddress;
   final VoidCallback onEditProfile;
+  final VoidCallback? onLogout;
+  final VoidCallback? onRetry;
+  final bool isLoading;
+  final String? errorMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -52,107 +60,122 @@ class CustomerProfileTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 29),
-        const _SectionLabel('PERSONAL INFORMATION'),
-        const SizedBox(height: 8),
-        _ProfileCard(
-          child: Column(
-            children: [
-              _InformationRow(
-                icon: Icons.person_outline_rounded,
-                label: 'Full Name',
-                value: _name(profile.preferredName),
-                onTap: onEditProfile,
-              ),
-              const _ThinDivider(),
-              _InformationRow(
-                icon: Icons.phone_iphone_rounded,
-                label: 'Mobile Number',
-                value: _value(phoneNumber),
-                onTap: onEditProfile,
-              ),
-              const _ThinDivider(),
-              _InformationRow(
-                icon: Icons.calendar_month_outlined,
-                label: 'Date of Birth',
-                value: _birthDate(profile.dateOfBirth),
-                onTap: onEditProfile,
-              ),
-              const _ThinDivider(),
-              _InformationRow(
-                icon: Icons.people_outline_rounded,
-                label: 'Gender',
-                value: _gender(profile.genderCode),
-                onTap: onEditProfile,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        const _SectionLabel('DELIVERY ADDRESS'),
-        const SizedBox(height: 8),
-        _ProfileCard(
-          child: Column(
-            children: [
-              _AddressBlock(address: address),
-              const _ThinDivider(),
-              InkWell(
-                key: const ValueKey('editProfileAddress'),
-                onTap: onEditAddress,
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(14),
+        if (isLoading) ...[const _ProfileSkeleton()],
+        if (errorMessage case final message?) ...[
+          _ProfileError(message: message, onRetry: onRetry),
+        ],
+        if (!isLoading && errorMessage == null) ...[
+          const _SectionLabel('PERSONAL INFORMATION'),
+          const SizedBox(height: 8),
+          _ProfileCard(
+            child: Column(
+              children: [
+                _InformationRow(
+                  icon: Icons.person_outline_rounded,
+                  label: 'Full Name',
+                  value: _name(profile.preferredName),
                 ),
-                child: const Padding(
-                  padding: EdgeInsets.fromLTRB(17, 13, 10, 13),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.edit_rounded,
-                        size: 17,
-                        color: AppColors.emeraldGreen,
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Edit Address',
-                          style: TextStyle(
-                            color: AppColors.darkGreen,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
+                const _ThinDivider(),
+                _InformationRow(
+                  icon: Icons.phone_iphone_rounded,
+                  label: 'Mobile Number',
+                  value: _value(phoneNumber),
+                ),
+                const _ThinDivider(),
+                _InformationRow(
+                  icon: Icons.calendar_month_outlined,
+                  label: 'Date of Birth',
+                  value: _birthDate(profile.dateOfBirth),
+                ),
+                const _ThinDivider(),
+                _InformationRow(
+                  icon: Icons.people_outline_rounded,
+                  label: 'Gender',
+                  value: _gender(profile.genderCode),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          const _SectionLabel('DELIVERY ADDRESS'),
+          const SizedBox(height: 8),
+          _ProfileCard(
+            child: Column(
+              children: [
+                _AddressBlock(address: address),
+                const _ThinDivider(),
+                InkWell(
+                  key: const ValueKey('editProfileAddress'),
+                  onTap: onEditAddress,
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(14),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.fromLTRB(17, 13, 10, 13),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.edit_rounded,
+                          size: 17,
+                          color: AppColors.emeraldGreen,
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Edit Address',
+                            style: TextStyle(
+                              color: AppColors.darkGreen,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
-                      ),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        size: 20,
-                        color: AppColors.emeraldGreen,
-                      ),
-                    ],
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 20,
+                          color: AppColors.emeraldGreen,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 26),
-        SizedBox(
-          height: 47,
-          child: FilledButton.icon(
-            key: const ValueKey('editCustomerProfile'),
-            onPressed: onEditProfile,
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF004D3B),
-              foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(11),
-              ),
-            ),
-            icon: const Icon(Icons.edit_rounded, size: 17),
-            label: const Text(
-              'Edit Profile',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+              ],
             ),
           ),
-        ),
+          const SizedBox(height: 26),
+          SizedBox(
+            height: 47,
+            child: FilledButton.icon(
+              key: const ValueKey('editCustomerProfile'),
+              onPressed: onEditProfile,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF004D3B),
+                foregroundColor: AppColors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(11),
+                ),
+              ),
+              icon: const Icon(Icons.edit_rounded, size: 17),
+              label: const Text(
+                'Edit Profile',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+          if (onLogout != null) ...[
+            const SizedBox(height: 8),
+            TextButton.icon(
+              key: const ValueKey('logoutCustomer'),
+              onPressed: onLogout,
+              style: TextButton.styleFrom(foregroundColor: AppColors.darkGreen),
+              icon: const Icon(Icons.logout_rounded, size: 18),
+              label: const Text(
+                'Logout',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ],
       ],
     );
   }
@@ -204,56 +227,46 @@ class _InformationRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
-    required this.onTap,
   });
 
   final IconData icon;
   final String label;
   final String value;
-  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(14, 11, 9, 11),
-      child: Row(
-        children: [
-          _RoundIcon(icon),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: AppColors.darkGreen,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(14, 11, 9, 11),
+    child: Row(
+      children: [
+        _RoundIcon(icon),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: AppColors.darkGreen,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.darkGreen.withValues(alpha: .63),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                  ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppColors.darkGreen.withValues(alpha: .63),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const Icon(
-            Icons.chevron_right_rounded,
-            size: 20,
-            color: AppColors.emeraldGreen,
-          ),
-        ],
-      ),
+        ),
+      ],
     ),
   );
 }
@@ -270,8 +283,12 @@ class _AddressBlock extends StatelessWidget {
         : [
             if (address!.unitNumber?.trim().isNotEmpty == true)
               'Unit ${address!.unitNumber}',
-            address!.streetLine,
-            address!.area,
+            if (address!.buildingNo.trim().isNotEmpty)
+              'Building ${address!.buildingNo}',
+            if (address!.streetNo.trim().isNotEmpty)
+              'Street ${address!.streetNo}',
+            if (address!.zoneNo.trim().isNotEmpty) 'Zone ${address!.zoneNo}',
+            if (address!.area.trim().isNotEmpty) 'Area ${address!.area}',
             if (address!.formattedAddress.trim().isNotEmpty &&
                 address!.formattedAddress.trim() != address!.area.trim())
               address!.formattedAddress,
@@ -377,8 +394,91 @@ class _ThinDivider extends StatelessWidget {
   );
 }
 
+class _ProfileSkeleton extends StatelessWidget {
+  const _ProfileSkeleton();
+
+  @override
+  Widget build(BuildContext context) => Column(
+    key: const ValueKey('profileLoading'),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const _SectionLabel('PERSONAL INFORMATION'),
+      const SizedBox(height: 8),
+      _ProfileCard(
+        child: Column(
+          children: [
+            for (var index = 0; index < 4; index++) ...[
+              const Padding(
+                padding: EdgeInsets.all(15),
+                child: Row(
+                  children: [
+                    _SkeletonBox(width: 31, height: 31, round: true),
+                    SizedBox(width: 12),
+                    Expanded(child: _SkeletonBox(height: 25)),
+                  ],
+                ),
+              ),
+              if (index != 3) const _ThinDivider(),
+            ],
+          ],
+        ),
+      ),
+      const SizedBox(height: 24),
+      const _SectionLabel('DELIVERY ADDRESS'),
+      const SizedBox(height: 8),
+      const _ProfileCard(
+        child: Padding(
+          padding: EdgeInsets.all(15),
+          child: _SkeletonBox(height: 105),
+        ),
+      ),
+    ],
+  );
+}
+
+class _SkeletonBox extends StatelessWidget {
+  const _SkeletonBox({this.width, required this.height, this.round = false});
+
+  final double? width;
+  final double height;
+  final bool round;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: width,
+    height: height,
+    decoration: BoxDecoration(
+      color: AppColors.darkGreen.withValues(alpha: .07),
+      borderRadius: BorderRadius.circular(round ? 99 : 7),
+    ),
+  );
+}
+
+class _ProfileError extends StatelessWidget {
+  const _ProfileError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) => _ProfileCard(
+    child: Padding(
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        children: [
+          const Icon(Icons.cloud_off_outlined, color: AppColors.emeraldGreen),
+          const SizedBox(height: 10),
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
+      ),
+    ),
+  );
+}
+
 String _name(String? value) =>
-    value?.trim().isNotEmpty == true ? value!.trim() : 'Customer';
+    value?.trim().isNotEmpty == true ? value!.trim() : 'Not provided';
 
 String _value(String? value) =>
     value?.trim().isNotEmpty == true ? value!.trim() : 'Not provided';

@@ -15,7 +15,12 @@ abstract interface class AuthenticationService {
   Future<void> markAuthenticated();
 }
 
-class MockAuthenticationService implements AuthenticationService {
+abstract interface class SignOutAuthenticationService {
+  Future<void> signOut();
+}
+
+class MockAuthenticationService
+    implements AuthenticationService, SignOutAuthenticationService {
   bool _isAuthenticated = false;
 
   @override
@@ -34,9 +39,13 @@ class MockAuthenticationService implements AuthenticationService {
   Future<void> markAuthenticated() async {
     _isAuthenticated = true;
   }
+
+  @override
+  Future<void> signOut() async => _isAuthenticated = false;
 }
 
-class SecureStorageAuthenticationService implements AuthenticationService {
+class SecureStorageAuthenticationService
+    implements AuthenticationService, SignOutAuthenticationService {
   SecureStorageAuthenticationService(this._storage);
 
   final SecureStorageService _storage;
@@ -62,6 +71,11 @@ class SecureStorageAuthenticationService implements AuthenticationService {
   @override
   Future<void> markAuthenticated() async {
     _authenticatedInMemory = true;
+  }
+
+  @override
+  Future<void> signOut() async {
+    _authenticatedInMemory = false;
   }
 
   @override

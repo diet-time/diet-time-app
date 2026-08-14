@@ -83,12 +83,19 @@ enum ApiFailure {
 }
 
 class ApiException implements Exception {
-  const ApiException(this.failure, {this.statusCode, this.message, this.code});
+  const ApiException(
+    this.failure, {
+    this.statusCode,
+    this.message,
+    this.code,
+    this.fieldErrors = const {},
+  });
 
   factory ApiException.fromResponse(ApiResponse response) {
     final errors = response.body['errors'];
     String? message;
     String? code;
+    final fieldErrors = <String, String>{};
     if (errors is List && errors.isNotEmpty) {
       final first = errors.first;
       if (first is Map<String, dynamic>) {
@@ -97,13 +104,18 @@ class ApiException implements Exception {
       }
     }
     if (message?.trim().isNotEmpty != true && errors is Map) {
-      for (final value in errors.values) {
+      for (final entry in errors.entries) {
+        final value = entry.value;
+        String? fieldMessage;
         if (value is List && value.isNotEmpty) {
-          message = value.first?.toString();
+          fieldMessage = value.first?.toString();
         } else if (value != null) {
-          message = value.toString();
+          fieldMessage = value.toString();
         }
-        if (message?.trim().isNotEmpty == true) break;
+        if (fieldMessage?.trim().isNotEmpty == true) {
+          fieldErrors[entry.key.toString()] = fieldMessage!.trim();
+          message ??= fieldMessage;
+        }
       }
     }
     message ??=
@@ -124,6 +136,7 @@ class ApiException implements Exception {
       statusCode: response.statusCode,
       message: message,
       code: code,
+      fieldErrors: Map.unmodifiable(fieldErrors),
     );
   }
 
@@ -131,4 +144,5 @@ class ApiException implements Exception {
   final int? statusCode;
   final String? message;
   final String? code;
+  final Map<String, String> fieldErrors;
 }

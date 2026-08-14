@@ -4,6 +4,7 @@ abstract final class ApiEndpoints {
   static const guestHome = '/api/v1/guest/home';
   static const guestAllergens = '/api/v1/guest/allergens';
   static const customerProfile = '/api/v1/customer/profile';
+  static const customerAccountProfile = '/api/customers/profile';
   static const mealPlans = '/api/v1/meal-plan-categories';
   static const deliveryTimeSlots = '/api/v1/delivery-time-slots';
   static const orders = '/api/v1/orders';
