@@ -3,6 +3,7 @@ import 'package:diet_time/core/network/api_endpoints.dart';
 import 'package:diet_time/core/storage/secure_storage_service.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 
 final ordersRepositoryProvider = Provider<OrdersRepository>((ref) {
   final storage = ref.watch(secureStorageServiceProvider);
@@ -51,22 +52,42 @@ class OrdersRepository {
 
   Future<List<CustomerOrderSummary>> getCustomerOrders(
     String profileId, {
-    int pageSize = 100,
+    int pageSize = 20,
   }) async {
+    final page = await getCustomerOrdersPage(
+      profileId,
+      pageNumber: 1,
+      pageSize: pageSize,
+    );
+    return page.items;
+  }
+
+  Future<CustomerOrdersPage> getCustomerOrdersPage(
+    String profileId, {
+    int pageNumber = 1,
+    int pageSize = 20,
+  }) async {
+    final path = ApiEndpoints.customerOrders(profileId);
+    final query = {'pageNumber': '$pageNumber', 'pageSize': '$pageSize'};
+    _logOrders('GET $path?pageNumber=$pageNumber&pageSize=$pageSize');
     final response = await _request(
       method: 'GET',
-      path: ApiEndpoints.customerOrders(profileId),
-      queryParameters: {'pageNumber': '1', 'pageSize': '$pageSize'},
+      path: path,
+      queryParameters: query,
     );
-    final raw = response.body['data'] ?? response.body;
-    Object? items = raw;
-    if (raw is Map<String, dynamic>) items = raw['orders'] ?? raw['items'];
-    if (items is! List) return const [];
-    return items
-        .whereType<Map<String, dynamic>>()
-        .map(CustomerOrderSummary.fromJson)
-        .where((order) => order.isValid)
-        .toList(growable: false);
+    try {
+      final page = CustomerOrdersPage.fromJson(response.body);
+      _logOrders(
+        'Parsed ${page.items.length} items; totalCount=${page.totalCount}',
+      );
+      return page;
+    } on Object catch (error) {
+      _logOrders('Parsing failed: ${error.runtimeType}');
+      throw const ApiException(
+        ApiFailure.invalidResponse,
+        message: 'The customer orders response was invalid.',
+      );
+    }
   }
 
   Future<OrderConfirmation> getOrder(String orderId) async {
@@ -98,9 +119,16 @@ class OrdersRepository {
       },
       body: body,
     );
+    if (path.contains('/customer-profiles/') && path.endsWith('/orders')) {
+      _logOrders('HTTP ${response.statusCode}');
+    }
     if (!response.isSuccess) throw ApiException.fromResponse(response);
     return response;
   }
+}
+
+void _logOrders(String message) {
+  if (kDebugMode) debugPrint('[CustomerOrders] $message');
 }
 
 Map<String, dynamic> _orderFrom(Map<String, dynamic> body) {

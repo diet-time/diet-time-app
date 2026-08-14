@@ -169,23 +169,7 @@ class CheckoutController extends Notifier<CheckoutState> {
           'We could not load your customer profile. Please sign in again.',
         );
       }
-      final addresses = await ref
-          .read(checkoutRepositoryProvider)
-          .getAddresses(profileId);
-      CustomerDeliveryAddress? selected = state.selectedAddress;
-      if (selected == null && addresses.isNotEmpty) {
-        selected = addresses.firstWhere(
-          (item) => item.isDefault,
-          orElse: () => addresses.first,
-        );
-      }
-      state = state.copyWith(
-        customerProfileId: profileId,
-        addresses: addresses,
-        isLoadingAddresses: false,
-        selectedAddress: selected,
-        selectedAddressId: selected?.id,
-      );
+      await _loadAddressesForResolvedProfile(profileId);
     } catch (error) {
       state = state.copyWith(
         isLoadingAddresses: false,
@@ -195,6 +179,43 @@ class CheckoutController extends Notifier<CheckoutState> {
         ),
       );
     }
+  }
+
+  Future<void> loadAddressesForProfile(String profileId) async {
+    final normalized = profileId.trim();
+    if (normalized.isEmpty || state.isLoadingAddresses) return;
+    state = state.copyWith(isLoadingAddresses: true, addressError: null);
+    try {
+      await _loadAddressesForResolvedProfile(normalized);
+    } catch (error) {
+      state = state.copyWith(
+        isLoadingAddresses: false,
+        addressError: _message(
+          error,
+          fallback: 'Saved addresses could not be loaded. Please try again.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _loadAddressesForResolvedProfile(String profileId) async {
+    final addresses = await ref
+        .read(checkoutRepositoryProvider)
+        .getAddresses(profileId);
+    CustomerDeliveryAddress? selected = state.selectedAddress;
+    if (selected == null && addresses.isNotEmpty) {
+      selected = addresses.firstWhere(
+        (item) => item.isDefault,
+        orElse: () => addresses.first,
+      );
+    }
+    state = state.copyWith(
+      customerProfileId: profileId,
+      addresses: addresses,
+      isLoadingAddresses: false,
+      selectedAddress: selected,
+      selectedAddressId: selected?.id,
+    );
   }
 
   void selectAddress(CustomerDeliveryAddress address) {

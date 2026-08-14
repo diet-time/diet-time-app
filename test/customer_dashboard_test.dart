@@ -1,46 +1,48 @@
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
+import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
+import 'package:diet_time/features/checkout/domain/checkout_models.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_dashboard_controller.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_dashboard_screen.dart';
 import 'package:diet_time/features/dashboard/presentation/order_details_screen.dart';
 import 'package:diet_time/features/personalization/domain/customer_profile.dart';
+import 'package:diet_time/features/personalization/data/customer_profile_repository.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets(
-    'dashboard loads when profile ID becomes available after first frame',
-    (tester) async {
-      final dashboard = _RecordingDashboardController();
-      final container = ProviderContainer(
-        overrides: [
-          customerDashboardControllerProvider.overrideWith(() => dashboard),
-        ],
-      );
-      addTearDown(container.dispose);
+  testWidgets('dashboard initialization runs once across widget rebuilds', (
+    tester,
+  ) async {
+    final dashboard = _RecordingDashboardController();
+    final container = ProviderContainer(
+      overrides: [
+        customerDashboardControllerProvider.overrideWith(() => dashboard),
+      ],
+    );
+    addTearDown(container.dispose);
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(home: CustomerDashboardScreen()),
-        ),
-      );
-      await tester.pump();
-      expect(dashboard.loadedProfileId, isNull);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: CustomerDashboardScreen()),
+      ),
+    );
+    await tester.pump();
+    expect(dashboard.initializeCalls, 1);
 
-      container
-          .read(personalizationControllerProvider.notifier)
-          .replace(const CustomerProfile(profileId: 'late-profile-id'));
-      await tester.pump();
-      await tester.pump();
+    container
+        .read(personalizationControllerProvider.notifier)
+        .replace(const CustomerProfile(profileId: 'late-profile-id'));
+    await tester.pump();
+    await tester.pump();
 
-      expect(dashboard.loadedProfileId, 'late-profile-id');
-      expect(find.byKey(const ValueKey('noActivePlan')), findsOneWidget);
-    },
-  );
+    expect(dashboard.initializeCalls, 1);
+    expect(find.byKey(const ValueKey('noActivePlan')), findsOneWidget);
+  });
 
   testWidgets('green active-plan dashboard fits a compact phone', (
     tester,
@@ -229,8 +231,9 @@ void main() {
   );
 
   test('order list parser accepts the backend root items envelope', () async {
+    final api = _OrderListApiClient();
     final repository = OrdersRepository(
-      apiClient: _OrderListApiClient(),
+      apiClient: api,
       accessTokenProvider: () async => 'token',
     );
 
@@ -239,7 +242,121 @@ void main() {
     expect(orders.single.planName, 'Classic Plan');
     expect(orders.single.status, 'ACTIVE');
     expect(orders.single.totalAmount, 1880);
+    expect(api.path, '/api/v1/customer-profiles/profile-id/orders');
+    expect(api.queryParameters, {'pageNumber': '1', 'pageSize': '20'});
+    expect(api.headers['Authorization'], 'Bearer token');
   });
+
+  test('order list parser accepts a successful top-level empty page', () async {
+    final repository = OrdersRepository(
+      apiClient: _StaticOrdersApiClient(
+        const ApiResponse(
+          statusCode: 200,
+          body: {'items': [], 'pageNumber': 1, 'pageSize': 20, 'totalCount': 0},
+        ),
+      ),
+      accessTokenProvider: () async => 'token',
+    );
+
+    final orders = await repository.getCustomerOrders('profile-id');
+
+    expect(orders, isEmpty);
+  });
+
+  test('malformed order page is an API failure, not an empty result', () async {
+    final repository = OrdersRepository(
+      apiClient: _StaticOrdersApiClient(
+        const ApiResponse(
+          statusCode: 200,
+          body: {
+            'data': {'orders': []},
+          },
+        ),
+      ),
+      accessTokenProvider: () async => 'token',
+    );
+
+    expect(
+      repository.getCustomerOrders('profile-id'),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.failure,
+          'failure',
+          ApiFailure.invalidResponse,
+        ),
+      ),
+    );
+  });
+
+  test('successful empty items response becomes loaded empty state', () async {
+    final container = ProviderContainer(
+      overrides: [
+        ordersRepositoryProvider.overrideWithValue(
+          _FakeOrdersRepository(const []),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(customerDashboardControllerProvider.notifier)
+        .load('profile-id');
+
+    final state = container.read(customerDashboardControllerProvider);
+    expect(state, isA<DashboardNoOrders>());
+  });
+
+  test('orders request failure becomes retryable dashboard error', () async {
+    final container = ProviderContainer(
+      overrides: [
+        ordersRepositoryProvider.overrideWithValue(_FailingOrdersRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(customerDashboardControllerProvider.notifier)
+        .load('profile-id');
+
+    expect(
+      container.read(customerDashboardControllerProvider),
+      isA<DashboardError>(),
+    );
+  });
+
+  test(
+    'profile PUT failure cannot block GET-based dashboard loading',
+    () async {
+      final profileRepository = _GetOnlyProfileRepository();
+      final ordersRepository = _CountingOrdersRepository();
+      final container = ProviderContainer(
+        overrides: [
+          customerProfileRepositoryProvider.overrideWithValue(
+            profileRepository,
+          ),
+          ordersRepositoryProvider.overrideWithValue(ordersRepository),
+          checkoutControllerProvider.overrideWith(_NoopCheckoutController.new),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await expectLater(
+        profileRepository.updateProfile(const CustomerProfile()),
+        throwsA(isA<CustomerProfileException>()),
+      );
+      await container
+          .read(customerDashboardControllerProvider.notifier)
+          .initialize();
+
+      expect(profileRepository.getCalls, 1);
+      expect(profileRepository.updateCalls, 1);
+      expect(ordersRepository.profileIds, ['profile-from-get']);
+      expect(
+        container.read(customerDashboardControllerProvider),
+        isA<DashboardNoOrders>(),
+      );
+    },
+  );
 }
 
 CustomerOrderSummary _summary(String id, String status, DateTime startDate) =>
@@ -290,7 +407,7 @@ class _FakeOrdersRepository extends OrdersRepository {
   @override
   Future<List<CustomerOrderSummary>> getCustomerOrders(
     String profileId, {
-    int pageSize = 100,
+    int pageSize = 20,
   }) async => orders;
 
   @override
@@ -307,23 +424,30 @@ class _DashboardControllerForTest extends CustomerDashboardController {
   CustomerDashboardState build() => initialState;
 
   @override
+  Future<void> initialize({String? profileId, bool force = false}) async {}
+
+  @override
   Future<void> load(String profileId, {bool force = false}) async {}
 }
 
 class _RecordingDashboardController extends CustomerDashboardController {
-  String? loadedProfileId;
+  int initializeCalls = 0;
 
   @override
   CustomerDashboardState build() => const DashboardLoading();
 
   @override
-  Future<void> load(String profileId, {bool force = false}) async {
-    loadedProfileId = profileId;
+  Future<void> initialize({String? profileId, bool force = false}) async {
+    initializeCalls++;
     state = const DashboardWithoutActivePlan([]);
   }
 }
 
 class _OrderListApiClient extends ApiClient {
+  String? path;
+  Map<String, String> queryParameters = const {};
+  Map<String, String> headers = const {};
+
   @override
   Future<ApiResponse> request({
     required String method,
@@ -331,29 +455,101 @@ class _OrderListApiClient extends ApiClient {
     Map<String, String> queryParameters = const {},
     Map<String, String> headers = const {},
     Map<String, dynamic>? body,
-  }) async => const ApiResponse(
-    statusCode: 200,
-    body: {
-      'items': [
-        {
-          'id': 'order-id',
-          'orderNumber': 'ORD-1',
-          'planName': 'Classic Plan',
-          'planDurationName': '1 Month',
-          'startDate': '2026-08-11',
-          'endDate': '2026-09-05',
-          'status': 'ACTIVE',
-          'paymentStatus': 'PAID',
-          'totalAmount': 1880,
-          'currencyCode': 'QAR',
-          'placedAt': '2026-08-10T10:00:00Z',
-        },
-      ],
-      'pageNumber': 1,
-      'pageSize': 100,
-      'totalCount': 1,
-    },
-  );
+  }) async {
+    this.path = path;
+    this.queryParameters = queryParameters;
+    this.headers = headers;
+    return const ApiResponse(
+      statusCode: 200,
+      body: {
+        'items': [
+          {
+            'id': 'order-id',
+            'orderNumber': 'ORD-1',
+            'planName': 'Classic Plan',
+            'planDurationName': '1 Month',
+            'startDate': '2026-08-11',
+            'endDate': '2026-09-05',
+            'status': 'ACTIVE',
+            'paymentStatus': 'PAID',
+            'totalAmount': 1880,
+            'currencyCode': 'QAR',
+            'placedAt': '2026-08-10T10:00:00Z',
+          },
+        ],
+        'pageNumber': 1,
+        'pageSize': 100,
+        'totalCount': 1,
+      },
+    );
+  }
+}
+
+class _StaticOrdersApiClient extends ApiClient {
+  _StaticOrdersApiClient(this.response);
+
+  final ApiResponse response;
+
+  @override
+  Future<ApiResponse> request({
+    required String method,
+    required String path,
+    Map<String, String> queryParameters = const {},
+    Map<String, String> headers = const {},
+    Map<String, dynamic>? body,
+  }) async => response;
+}
+
+class _FailingOrdersRepository extends OrdersRepository {
+  _FailingOrdersRepository()
+    : super(apiClient: ApiClient(), accessTokenProvider: _noToken);
+
+  @override
+  Future<List<CustomerOrderSummary>> getCustomerOrders(
+    String profileId, {
+    int pageSize = 20,
+  }) => throw const ApiException(ApiFailure.server, statusCode: 500);
+}
+
+class _CountingOrdersRepository extends OrdersRepository {
+  _CountingOrdersRepository()
+    : super(apiClient: ApiClient(), accessTokenProvider: _noToken);
+
+  final List<String> profileIds = [];
+
+  @override
+  Future<List<CustomerOrderSummary>> getCustomerOrders(
+    String profileId, {
+    int pageSize = 20,
+  }) async {
+    profileIds.add(profileId);
+    return const [];
+  }
+}
+
+class _GetOnlyProfileRepository implements CustomerProfileRepository {
+  int getCalls = 0;
+  int updateCalls = 0;
+
+  @override
+  Future<CustomerProfile?> getProfile() async {
+    getCalls++;
+    return const CustomerProfile(profileId: 'profile-from-get');
+  }
+
+  @override
+  Future<CustomerProfile> updateProfile(CustomerProfile profile) async {
+    updateCalls++;
+    throw const CustomerProfileException(statusCode: 500);
+  }
+}
+
+class _NoopCheckoutController extends CheckoutController {
+  @override
+  CheckoutState build() => const CheckoutState();
+
+  @override
+  Future<void> loadAddressesForProfile(String profileId) async {}
 }
 
 Future<String?> _noToken() async => null;

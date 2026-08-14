@@ -1,5 +1,13 @@
+import 'dart:async';
+
+import 'package:diet_time/core/network/api_client.dart';
+import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
+import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
+import 'package:diet_time/features/personalization/data/customer_profile_repository.dart';
+import 'package:diet_time/features/personalization/domain/customer_profile.dart';
+import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 sealed class CustomerDashboardState {
@@ -14,6 +22,18 @@ class DashboardError extends CustomerDashboardState {
   const DashboardError(this.message);
 
   final String message;
+}
+
+class DashboardAuthenticationFailure extends CustomerDashboardState {
+  const DashboardAuthenticationFailure();
+}
+
+class DashboardProfileNotFound extends CustomerDashboardState {
+  const DashboardProfileNotFound();
+}
+
+class DashboardNoOrders extends CustomerDashboardState {
+  const DashboardNoOrders();
 }
 
 class DashboardWithoutActivePlan extends CustomerDashboardState {
@@ -54,6 +74,8 @@ final customerDashboardControllerProvider =
 class CustomerDashboardController extends Notifier<CustomerDashboardState> {
   String? _profileId;
   bool _requestInProgress = false;
+  bool _initializationInProgress = false;
+  bool _hasInitialized = false;
 
   @override
   CustomerDashboardState build() => const DashboardLoading();
@@ -61,7 +83,51 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
   void clear() {
     _profileId = null;
     _requestInProgress = false;
+    _initializationInProgress = false;
+    _hasInitialized = false;
     state = const DashboardLoading();
+  }
+
+  Future<void> initialize({String? profileId, bool force = false}) async {
+    if (_initializationInProgress || (!force && _hasInitialized)) return;
+    _initializationInProgress = true;
+    state = const DashboardLoading();
+    try {
+      var resolvedProfileId = profileId?.trim() ?? '';
+      if (resolvedProfileId.isEmpty) {
+        final profile = await _loadAuthenticatedProfile();
+        if (profile == null || profile.profileId?.trim().isNotEmpty != true) {
+          state = const DashboardProfileNotFound();
+          return;
+        }
+        ref.read(personalizationControllerProvider.notifier).replace(profile);
+        resolvedProfileId = profile.profileId!.trim();
+      }
+      _profileId = resolvedProfileId;
+      unawaited(
+        ref
+            .read(checkoutControllerProvider.notifier)
+            .loadAddressesForProfile(resolvedProfileId),
+      );
+      await load(resolvedProfileId, force: force);
+      _hasInitialized = true;
+    } on CustomerProfileException catch (error) {
+      state = switch (error.statusCode) {
+        401 => const DashboardAuthenticationFailure(),
+        404 => const DashboardProfileNotFound(),
+        _ => const DashboardError(
+          'We could not load your dashboard. Please try again.',
+        ),
+      };
+    } on ApiException catch (error) {
+      state = _errorState(error);
+    } on Object {
+      state = const DashboardError(
+        'We could not load your dashboard. Please try again.',
+      );
+    } finally {
+      _initializationInProgress = false;
+    }
   }
 
   Future<void> load(String profileId, {bool force = false}) async {
@@ -78,8 +144,30 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
     state = const DashboardLoading();
     try {
       final repository = ref.read(ordersRepositoryProvider);
-      final orders = await repository.getCustomerOrders(normalized);
+      List<CustomerOrderSummary> orders;
+      try {
+        orders = await repository.getCustomerOrders(normalized, pageSize: 20);
+      } on ApiException catch (error) {
+        if (error.failure != ApiFailure.unauthorized) rethrow;
+        final refreshed = await ref
+            .read(otpAuthControllerProvider.notifier)
+            .refreshAfterUnauthorized();
+        if (!refreshed) {
+          state = const DashboardAuthenticationFailure();
+          return;
+        }
+        unawaited(
+          ref
+              .read(checkoutControllerProvider.notifier)
+              .loadAddressesForProfile(normalized),
+        );
+        orders = await repository.getCustomerOrders(normalized, pageSize: 20);
+      }
       final sortedOrders = [...orders]..sort(_newestFirst);
+      if (sortedOrders.isEmpty) {
+        state = const DashboardNoOrders();
+        return;
+      }
       final activeOrders = orders.where((order) => order.isCurrent).toList()
         ..sort(_currentFirst);
       if (activeOrders.isEmpty) {
@@ -105,8 +193,12 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
           orders: List.unmodifiable(sortedOrders),
         );
       }
+    } on ApiException catch (error) {
+      state = _errorState(error);
     } on Object {
-      state = const DashboardError("We couldn't load your plans.");
+      state = const DashboardError(
+        'We could not load your orders. Please try again.',
+      );
     } finally {
       _requestInProgress = false;
     }
@@ -114,8 +206,44 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
 
   Future<void> refresh() async {
     final profileId = _profileId;
-    if (profileId != null) await load(profileId, force: true);
+    if (profileId != null) {
+      unawaited(
+        ref
+            .read(checkoutControllerProvider.notifier)
+            .loadAddressesForProfile(profileId),
+      );
+      await load(profileId, force: true);
+    } else {
+      await initialize(force: true);
+    }
   }
+
+  Future<CustomerProfile?> _loadAuthenticatedProfile() async {
+    final repository = ref.read(customerProfileRepositoryProvider);
+    try {
+      return await repository.getProfile();
+    } on CustomerProfileException catch (error) {
+      if (error.statusCode != 401) rethrow;
+      final refreshed = await ref
+          .read(otpAuthControllerProvider.notifier)
+          .refreshAfterUnauthorized();
+      if (!refreshed) {
+        throw const CustomerProfileException(statusCode: 401);
+      }
+      return repository.getProfile();
+    }
+  }
+
+  CustomerDashboardState _errorState(ApiException error) =>
+      switch (error.failure) {
+        ApiFailure.unauthorized => const DashboardAuthenticationFailure(),
+        ApiFailure.notFound => const DashboardProfileNotFound(),
+        _ => DashboardError(
+          error.message?.trim().isNotEmpty == true
+              ? error.message!.trim()
+              : 'We could not load your orders. Please try again.',
+        ),
+      };
 }
 
 int _statusPriority(String status) => switch (status) {

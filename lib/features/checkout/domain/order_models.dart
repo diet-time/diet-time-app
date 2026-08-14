@@ -100,6 +100,56 @@ class CustomerOrderSummary {
   bool get isCancelled => status == 'CANCELLED';
 }
 
+class CustomerOrdersPage {
+  const CustomerOrdersPage({
+    required this.items,
+    required this.pageNumber,
+    required this.pageSize,
+    required this.totalCount,
+  });
+
+  factory CustomerOrdersPage.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'];
+    if (rawItems is! List) {
+      throw const FormatException(
+        'Customer orders response has no items list.',
+      );
+    }
+    final pageNumber = _integer(json['pageNumber']);
+    final pageSize = _integer(json['pageSize']);
+    final totalCount = _integer(json['totalCount']);
+    if (pageNumber == null || pageSize == null || totalCount == null) {
+      throw const FormatException(
+        'Customer orders response has invalid pagination fields.',
+      );
+    }
+    return CustomerOrdersPage(
+      items: rawItems
+          .map((item) {
+            if (item is! Map) {
+              throw const FormatException('Customer order item is invalid.');
+            }
+            final order = CustomerOrderSummary.fromJson(
+              Map<String, dynamic>.from(item),
+            );
+            if (!order.isValid) {
+              throw const FormatException('Customer order item is incomplete.');
+            }
+            return order;
+          })
+          .toList(growable: false),
+      pageNumber: pageNumber,
+      pageSize: pageSize,
+      totalCount: totalCount,
+    );
+  }
+
+  final List<CustomerOrderSummary> items;
+  final int pageNumber;
+  final int pageSize;
+  final int totalCount;
+}
+
 class OrderConfirmation {
   const OrderConfirmation({
     required this.id,

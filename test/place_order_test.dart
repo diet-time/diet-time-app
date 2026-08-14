@@ -241,9 +241,10 @@ class _OrdersApiClient extends ApiClient {
       return ApiResponse(
         statusCode: 200,
         body: {
-          'data': {
-            'orders': [_confirmationJson],
-          },
+          'items': [_confirmationJson],
+          'pageNumber': 1,
+          'pageSize': 20,
+          'totalCount': 1,
         },
       );
     }

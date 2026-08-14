@@ -10,19 +10,12 @@ import 'package:diet_time/features/dashboard/domain/customer_account_profile.dar
 import 'package:diet_time/features/dashboard/presentation/customer_profile_tab.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_profile_controller.dart';
 import 'package:diet_time/features/dashboard/presentation/order_details_screen.dart';
-import 'package:diet_time/features/personalization/data/display_name_repository.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-
-final _dashboardDisplayNameProvider = FutureProvider.autoDispose<String?>((
-  ref,
-) {
-  return ref.watch(displayNameRepositoryProvider).load();
-});
 
 class CustomerDashboardScreen extends ConsumerStatefulWidget {
   const CustomerDashboardScreen({super.key});
@@ -35,28 +28,26 @@ class CustomerDashboardScreen extends ConsumerStatefulWidget {
 class _CustomerDashboardScreenState
     extends ConsumerState<CustomerDashboardScreen> {
   int _tabIndex = 0;
-  String? _loadedProfileId;
-  bool _loadQueued = false;
   bool _profileLoadQueued = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(customerDashboardControllerProvider.notifier).initialize();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(personalizationControllerProvider);
-    final authProfileId = ref.watch(
-      otpAuthControllerProvider.select(
-        (state) => state.user?.customerProfileId,
-      ),
-    );
-    final checkoutProfileId = ref.watch(
-      checkoutControllerProvider.select((state) => state.customerProfileId),
-    );
     final checkout = ref.watch(checkoutControllerProvider);
     final phoneNumber = ref.watch(
       otpAuthControllerProvider.select(
         (state) => state.user?.phoneNumber ?? state.phoneNumber,
       ),
     );
-    final storedName = ref.watch(_dashboardDisplayNameProvider).value;
     final state = ref.watch(customerDashboardControllerProvider);
     final accountState = ref.watch(customerProfileControllerProvider);
     ref.listen(
@@ -65,8 +56,6 @@ class _CustomerDashboardScreenState
         if (requiresLogin) _goToPhoneLogin();
       },
     );
-    final profileId = profile.profileId ?? authProfileId ?? checkoutProfileId;
-    _ensureDashboardLoaded(profileId, state);
     _ensureProfileLoaded();
     final account = accountState.profile;
     final visibleProfile = account == null
@@ -82,7 +71,7 @@ class _CustomerDashboardScreenState
     final pages = [
       _DashboardHome(
         state: state,
-        name: profile.preferredName ?? storedName,
+        name: profile.preferredName,
         onViewAll: () => setState(() => _tabIndex = 1),
       ),
       _CustomerOrders(state: state),
@@ -204,26 +193,6 @@ class _CustomerDashboardScreenState
     AppRoutes.phoneLogin,
     extra: const PendingAuthDestination(route: AppRoutes.authenticatedLanding),
   );
-
-  void _ensureDashboardLoaded(
-    String? profileId,
-    CustomerDashboardState dashboardState,
-  ) {
-    final normalized = profileId?.trim();
-    if (normalized == null || normalized.isEmpty || _loadQueued) return;
-    final needsLoad =
-        _loadedProfileId != normalized || dashboardState is DashboardLoading;
-    if (!needsLoad) return;
-    _loadQueued = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      await ref
-          .read(customerDashboardControllerProvider.notifier)
-          .load(normalized);
-      _loadedProfileId = normalized;
-      _loadQueued = false;
-    });
-  }
 }
 
 class _DashboardHome extends ConsumerWidget {
@@ -243,6 +212,25 @@ class _DashboardHome extends ConsumerWidget {
     if (state is DashboardError) {
       return _DashboardErrorView(
         message: (state as DashboardError).message,
+        onRetry: () =>
+            ref.read(customerDashboardControllerProvider.notifier).refresh(),
+      );
+    }
+    if (state is DashboardAuthenticationFailure) {
+      return _DashboardErrorView(
+        message: 'Your session has expired. Please sign in again.',
+        actionLabel: 'SIGN IN',
+        onRetry: () => context.go(
+          AppRoutes.phoneLogin,
+          extra: const PendingAuthDestination(
+            route: AppRoutes.authenticatedLanding,
+          ),
+        ),
+      );
+    }
+    if (state is DashboardProfileNotFound) {
+      return _DashboardErrorView(
+        message: 'Your customer profile could not be found.',
         onRetry: () =>
             ref.read(customerDashboardControllerProvider.notifier).refresh(),
       );
@@ -312,11 +300,13 @@ class _DashboardHome extends ConsumerWidget {
             ),
             const SizedBox(height: 10),
             _MultiPlanCarousel(orders: multiple.activeOrders),
-          ] else if (state is DashboardWithoutActivePlan) ...[
+          ] else if (state is DashboardWithoutActivePlan ||
+              state is DashboardNoOrders) ...[
             const _NoActivePlanCard(),
           ],
           const SizedBox(height: 22),
-          if (state is! DashboardWithoutActivePlan)
+          if (state is! DashboardWithoutActivePlan &&
+              state is! DashboardNoOrders)
             OutlinedButton.icon(
               key: const ValueKey('orderAnotherPlan'),
               onPressed: () => _startNewOrder(context, ref),
@@ -336,7 +326,8 @@ class _DashboardHome extends ConsumerWidget {
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
               ),
             ),
-          if (state is! DashboardWithoutActivePlan) ...[
+          if (state is! DashboardWithoutActivePlan &&
+              state is! DashboardNoOrders) ...[
             const SizedBox(height: 24),
             const _SectionTitle('QUICK ACTIONS'),
             const SizedBox(height: 10),
@@ -356,7 +347,8 @@ class _DashboardHome extends ConsumerWidget {
             Row(
               children: [
                 _SectionTitle(
-                  state is DashboardWithoutActivePlan
+                  state is DashboardWithoutActivePlan ||
+                          state is DashboardNoOrders
                       ? 'PREVIOUS ORDERS'
                       : 'MY ORDERS',
                 ),
@@ -1431,6 +1423,25 @@ class _CustomerOrdersState extends ConsumerState<_CustomerOrders> {
             ref.read(customerDashboardControllerProvider.notifier).refresh(),
       );
     }
+    if (state is DashboardAuthenticationFailure) {
+      return _DashboardErrorView(
+        message: 'Your session has expired. Please sign in again.',
+        actionLabel: 'SIGN IN',
+        onRetry: () => context.go(
+          AppRoutes.phoneLogin,
+          extra: const PendingAuthDestination(
+            route: AppRoutes.authenticatedLanding,
+          ),
+        ),
+      );
+    }
+    if (state is DashboardProfileNotFound) {
+      return _DashboardErrorView(
+        message: 'Your customer profile could not be found.',
+        onRetry: () =>
+            ref.read(customerDashboardControllerProvider.notifier).refresh(),
+      );
+    }
     final orders = _ordersFrom(state);
     final filtered = _filter == 'ALL'
         ? orders
@@ -1789,10 +1800,15 @@ class _SkeletonBox extends StatelessWidget {
 }
 
 class _DashboardErrorView extends StatelessWidget {
-  const _DashboardErrorView({required this.message, required this.onRetry});
+  const _DashboardErrorView({
+    required this.message,
+    required this.onRetry,
+    this.actionLabel = 'TRY AGAIN',
+  });
 
   final String message;
   final VoidCallback onRetry;
+  final String actionLabel;
 
   @override
   Widget build(BuildContext context) => Center(
@@ -1818,7 +1834,7 @@ class _DashboardErrorView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          OutlinedButton(onPressed: onRetry, child: const Text('TRY AGAIN')),
+          OutlinedButton(onPressed: onRetry, child: Text(actionLabel)),
         ],
       ),
     ),
@@ -1944,6 +1960,7 @@ List<CustomerOrderSummary> _ordersFrom(CustomerDashboardState state) =>
       DashboardWithActivePlan(:final orders) => orders,
       DashboardWithMultipleActivePlans(:final orders) => orders,
       DashboardWithoutActivePlan(:final orders) => orders,
+      DashboardNoOrders() => const [],
       _ => const [],
     };
 
@@ -1964,6 +1981,7 @@ String _dashboardSubtitle(CustomerDashboardState state) => switch (state) {
     'You have ${activeOrders.length} active meal plans',
   DashboardWithActivePlan() => 'Your meal plan is active',
   DashboardWithoutActivePlan() => 'Ready when you are',
+  DashboardNoOrders() => 'Ready when you are',
   _ => 'Your meal plans at a glance',
 };
 
