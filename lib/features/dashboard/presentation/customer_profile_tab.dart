@@ -52,7 +52,7 @@ class CustomerProfileTab extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Customer Profile',
+          'Profile',
           style: TextStyle(
             color: AppColors.darkGreen,
             fontSize: 23,
@@ -63,7 +63,10 @@ class CustomerProfileTab extends StatelessWidget {
         ),
         if (onQuestionnaire != null) ...[
           const SizedBox(height: 18),
-          _ProfileAreaSelector(onQuestionnaire: onQuestionnaire!),
+          _ProfileAreaSelector(
+            onCustomerProfile: onEditProfile,
+            onQuestionnaire: onQuestionnaire!,
+          ),
         ],
         const SizedBox(height: 24),
         if (isLoading) ...[const _ProfileSkeleton()],
@@ -188,89 +191,104 @@ class CustomerProfileTab extends StatelessWidget {
 }
 
 class _ProfileAreaSelector extends StatelessWidget {
-  const _ProfileAreaSelector({required this.onQuestionnaire});
+  const _ProfileAreaSelector({
+    required this.onCustomerProfile,
+    required this.onQuestionnaire,
+  });
 
+  final VoidCallback onCustomerProfile;
   final VoidCallback onQuestionnaire;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(4),
-    decoration: BoxDecoration(
-      color: AppColors.darkGreen.withValues(alpha: .055),
-      borderRadius: BorderRadius.circular(13),
-    ),
-    child: Row(
-      children: [
-        const Expanded(
-          child: _ProfileAreaOption(
-            key: ValueKey('customerProfileOption'),
-            icon: Icons.person_outline_rounded,
-            label: 'Customer Profile',
-            selected: true,
-          ),
-        ),
-        Expanded(
-          child: _ProfileAreaOption(
-            key: const ValueKey('customerQuestionnaireOption'),
-            icon: Icons.assignment_outlined,
-            label: 'Questionnaire',
-            selected: false,
-            onTap: onQuestionnaire,
-          ),
-        ),
-      ],
-    ),
+  Widget build(BuildContext context) => Column(
+    children: [
+      _ProfileAreaRow(
+        key: const ValueKey('customerProfileOption'),
+        icon: Icons.person_outline_rounded,
+        label: 'Customer Profile',
+        description: 'View or update your personal information',
+        onTap: onCustomerProfile,
+      ),
+      const SizedBox(height: 9),
+      _ProfileAreaRow(
+        key: const ValueKey('customerQuestionnaireOption'),
+        icon: Icons.assignment_outlined,
+        label: 'Questionnaire',
+        description: 'Capture your goals and food preferences',
+        onTap: onQuestionnaire,
+      ),
+    ],
   );
 }
 
-class _ProfileAreaOption extends StatelessWidget {
-  const _ProfileAreaOption({
+class _ProfileAreaRow extends StatelessWidget {
+  const _ProfileAreaRow({
     required this.icon,
     required this.label,
-    required this.selected,
-    this.onTap,
+    required this.description,
+    required this.onTap,
     super.key,
   });
 
   final IconData icon;
   final String label;
-  final bool selected;
-  final VoidCallback? onTap;
+  final String description;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => Semantics(
     button: true,
-    selected: selected,
     child: Material(
-      color: selected ? AppColors.white : Colors.transparent,
-      borderRadius: BorderRadius.circular(10),
+      color: AppColors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(13),
+        side: BorderSide(color: AppColors.darkGreen.withValues(alpha: .08)),
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(13),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 11),
+          padding: const EdgeInsets.fromLTRB(13, 13, 10, 13),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 17,
-                color: selected
-                    ? AppColors.emeraldGreen
-                    : AppColors.darkGreen.withValues(alpha: .65),
-              ),
-              const SizedBox(width: 7),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.darkGreen,
-                    fontSize: 11,
-                    fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
-                  ),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.emeraldGreen.withValues(alpha: .1),
+                  shape: BoxShape.circle,
                 ),
+                child: Icon(icon, size: 20, color: AppColors.emeraldGreen),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: AppColors.darkGreen,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        color: AppColors.darkGreen.withValues(alpha: .58),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.emeraldGreen,
               ),
             ],
           ),

@@ -11,6 +11,7 @@ import 'package:diet_time/features/onboarding/presentation/onboarding_carousel_s
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
 import 'package:diet_time/features/personalization/domain/customer_profile.dart';
+import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -203,7 +204,7 @@ void main() {
         goalCode: 'MAINTAIN_WEIGHT',
         dailyRoutineCode: 'OFFICE_WORK',
         activityLevelCode: 'MOSTLY_SITTING',
-        preferences: {'HIGH_PROTEIN'},
+        preferences: {'HIGH_PROTEIN', 'INTERNATIONAL', 'MEDITERRANEAN'},
         allergens: {'NONE'},
         preferencesConfirmed: true,
         allergensConfirmed: true,
@@ -230,6 +231,23 @@ void main() {
       ),
     );
     expect((selectedGoal.decoration! as BoxDecoration).gradient, isNotNull);
+    for (var step = 0; step < 4; step++) {
+      await _continue(tester);
+    }
+    expect(find.text('What do you enjoy eating?'), findsOneWidget);
+    expect(find.text('International'), findsNothing);
+    expect(find.text('Mediterranean'), findsNothing);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(PersonalizationScreen)),
+    );
+    expect(
+      container.read(personalizationControllerProvider).preferences,
+      isNot(contains('INTERNATIONAL')),
+    );
+    expect(
+      container.read(personalizationControllerProvider).preferences,
+      isNot(contains('MEDITERRANEAN')),
+    );
   });
 
   testWidgets('one final submission shows summary then opens the menu', (

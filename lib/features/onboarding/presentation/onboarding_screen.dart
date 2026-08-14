@@ -134,6 +134,14 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   }
 
   void _restoreVisibleValues(CustomerProfile profile) {
+    final visiblePreferences = profile.preferences
+        .where((value) => value != 'INTERNATIONAL' && value != 'MEDITERRANEAN')
+        .toSet();
+    if (visiblePreferences.length != profile.preferences.length) {
+      ref
+          .read(personalizationControllerProvider.notifier)
+          .replace(profile.copyWith(preferences: visiblePreferences));
+    }
     setState(() {
       _goal = profile.goalCode;
       _gender = profile.genderCode?.toLowerCase();
@@ -144,7 +152,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       _activity = profile.activityLevelCode;
       _preferences
         ..clear()
-        ..addAll(profile.preferences);
+        ..addAll(visiblePreferences);
       _allergies
         ..clear()
         ..addAll(profile.allergens);
@@ -856,8 +864,6 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
           'CHICKEN': l10n.onboardingChicken,
           'BEEF': l10n.onboardingBeef,
           'ARABIC_CUISINE': l10n.onboardingArabicCuisine,
-          'INTERNATIONAL': l10n.onboardingInternational,
-          'MEDITERRANEAN': l10n.onboardingMediterranean,
           'HEALTHY_SNACKS': l10n.onboardingHealthySnacks,
           'BREAKFAST_LOVER': l10n.onboardingBreakfastLover,
           'NONE': _wellnessCopy(

@@ -8,6 +8,7 @@ void main() {
   testWidgets('customer profile reference layout fits a compact phone', (
     tester,
   ) async {
+    var customerProfileOpened = false;
     var questionnaireOpened = false;
     await tester.binding.setSurfaceSize(const Size(360, 720));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -26,7 +27,7 @@ void main() {
               address: _address,
               onBack: () {},
               onEditAddress: () {},
-              onEditProfile: () {},
+              onEditProfile: () => customerProfileOpened = true,
               onQuestionnaire: () => questionnaireOpened = true,
             ),
           ),
@@ -34,7 +35,10 @@ void main() {
       ),
     );
 
-    expect(find.text('Customer Profile'), findsNWidgets(2));
+    expect(find.text('Profile'), findsOneWidget);
+    expect(find.text('Customer Profile'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('customerProfileOption')));
+    expect(customerProfileOpened, isTrue);
     expect(
       find.byKey(const ValueKey('customerQuestionnaireOption')),
       findsOneWidget,
