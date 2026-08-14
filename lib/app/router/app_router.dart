@@ -35,7 +35,6 @@ abstract final class AppRoutes {
   static const personalization = '/personalization';
   static const menu = '/menu';
   static const language = '/language';
-  static const login = '/login';
   static const phoneLogin = '/phone-login';
   static const otp = '/otp-verification';
   static const plans = '/plans';
@@ -91,27 +90,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.landing,
         builder: (context, state) => const LoginScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.login,
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          transitionDuration: const Duration(milliseconds: 300),
-          child: const LoginScreen(showLoginInitially: true),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final offset =
-                Tween<Offset>(
-                  begin: const Offset(0, 0.035),
-                  end: Offset.zero,
-                ).animate(
-                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
-                );
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(position: offset, child: child),
-            );
-          },
-        ),
       ),
       GoRoute(
         path: AppRoutes.phoneLogin,

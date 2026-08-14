@@ -2,6 +2,7 @@ import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
+import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_dashboard_controller.dart';
@@ -61,7 +62,7 @@ class _CustomerDashboardScreenState
     ref.listen(
       customerProfileControllerProvider.select((value) => value.requiresLogin),
       (_, requiresLogin) {
-        if (requiresLogin) context.go(AppRoutes.login);
+        if (requiresLogin) _goToPhoneLogin();
       },
     );
     final profileId = profile.profileId ?? authProfileId ?? checkoutProfileId;
@@ -196,8 +197,13 @@ class _CustomerDashboardScreenState
     );
     if (confirmed != true || !mounted) return;
     await ref.read(customerProfileControllerProvider.notifier).logout();
-    if (mounted) context.go(AppRoutes.login);
+    if (mounted) _goToPhoneLogin();
   }
+
+  void _goToPhoneLogin() => context.go(
+    AppRoutes.phoneLogin,
+    extra: const PendingAuthDestination(route: AppRoutes.authenticatedLanding),
+  );
 
   void _ensureDashboardLoaded(
     String? profileId,

@@ -1,6 +1,7 @@
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
+import 'package:diet_time/core/widgets/app_logo.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/authentication/presentation/otp_flow_widgets.dart';
@@ -110,6 +111,282 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final auth = ref.watch(otpAuthControllerProvider);
+    final error = _hasInteracted && _phoneController.text.isNotEmpty
+        ? (_isValidPhone ? null : l10n.otpInvalidPhone)
+        : null;
+    return Scaffold(
+      backgroundColor: AppColors.emeraldGreen,
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final heroHeight = (constraints.maxHeight * .45).clamp(
+              245.0,
+              370.0,
+            );
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.asset(
+                  'assets/images/login_meal_background.png',
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                  errorBuilder: (_, _, _) =>
+                      const ColoredBox(color: AppColors.emeraldGreen),
+                ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppColors.black.withValues(alpha: .36),
+                        AppColors.emeraldGreen.withValues(alpha: .05),
+                        AppColors.emeraldGreen.withValues(alpha: .40),
+                      ],
+                    ),
+                  ),
+                ),
+                SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.viewInsetsOf(context).bottom,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: heroHeight,
+                          child: SafeArea(
+                            bottom: false,
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const AppLogo(
+                                    width: 84,
+                                    color: AppColors.white,
+                                  ),
+                                  const SizedBox(height: 18),
+                                  Text(
+                                    l10n.healthy,
+                                    style: const TextStyle(
+                                      color: AppColors.white,
+                                      fontSize: 38,
+                                      fontStyle: FontStyle.italic,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    l10n.journeyStartsHere,
+                                    style: const TextStyle(
+                                      color: AppColors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          width: double.infinity,
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight - heroHeight,
+                          ),
+                          padding: const EdgeInsets.fromLTRB(20, 9, 20, 28),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFCFBF7),
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(27),
+                            ),
+                          ),
+                          child: SafeArea(
+                            top: false,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Container(
+                                      width: 42,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.darkGreen.withValues(
+                                          alpha: .16,
+                                        ),
+                                        borderRadius: BorderRadius.circular(99),
+                                      ),
+                                    ),
+                                    if (context.canPop())
+                                      Align(
+                                        alignment:
+                                            AlignmentDirectional.centerStart,
+                                        child: IconButton(
+                                          onPressed: _back,
+                                          icon: const Icon(
+                                            Icons.arrow_back_rounded,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  l10n.welcomeBack,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: AppColors.darkGreen,
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  l10n.otpPhoneSubtitle,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: AppColors.darkGreen.withValues(
+                                      alpha: .58,
+                                    ),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                Directionality(
+                                  textDirection: TextDirection.ltr,
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      PopupMenuButton<_CountryOption>(
+                                        key: const ValueKey(
+                                          'countryCodeSelector',
+                                        ),
+                                        onSelected: _selectCountry,
+                                        itemBuilder: (context) => [
+                                          for (final country in _countries)
+                                            PopupMenuItem(
+                                              value: country,
+                                              child: Text(
+                                                '${country.isoCode} ${country.dialCode}',
+                                              ),
+                                            ),
+                                        ],
+                                        child: Container(
+                                          height: 56,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 13,
+                                          ),
+                                          decoration: _fieldDecoration(),
+                                          child: Row(
+                                            children: [
+                                              if (_country.isoCode == 'QA')
+                                                const Text(
+                                                  '🇶🇦',
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                  ),
+                                                ),
+                                              const SizedBox(width: 7),
+                                              Text(
+                                                '${_country.isoCode} ${_country.dialCode}',
+                                                style: const TextStyle(
+                                                  color: AppColors.darkGreen,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 9),
+                                      Expanded(
+                                        child: TextField(
+                                          key: const ValueKey(
+                                            'phoneNumberInput',
+                                          ),
+                                          controller: _phoneController,
+                                          focusNode: _phoneFocusNode,
+                                          keyboardType: TextInputType.phone,
+                                          textInputAction: TextInputAction.done,
+                                          autofillHints: const [
+                                            AutofillHints
+                                                .telephoneNumberNational,
+                                          ],
+                                          inputFormatters: [
+                                            _PhoneInputFormatter(_country),
+                                          ],
+                                          onChanged: _onChanged,
+                                          onSubmitted: (_) => _continue(),
+                                          decoration: InputDecoration(
+                                            hintText: l10n.otpMobileNumber,
+                                            errorText: error,
+                                            fillColor: AppColors.white,
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 15,
+                                                  vertical: 16,
+                                                ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (auth.requestError != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _requestError(l10n, auth.requestError!),
+                                    key: const ValueKey('otpRequestError'),
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: AppColors.jasper,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 24),
+                                OtpFlowButton(
+                                  key: const ValueKey('phoneContinueButton'),
+                                  label: l10n.continueLabel,
+                                  onPressed:
+                                      _isValidPhone &&
+                                          !auth.isRequestingOtp &&
+                                          !_isSubmitting
+                                      ? _continue
+                                      : null,
+                                  isLoading: auth.isRequestingOtp,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // Kept temporarily as a private reference while the OTP verification screen
+  // continues to share its original reusable widgets.
+  // ignore: unused_element
+  Widget _buildLegacy(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final auth = ref.watch(otpAuthControllerProvider);
     final compact = MediaQuery.sizeOf(context).height < 700;

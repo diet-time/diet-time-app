@@ -10,6 +10,7 @@ import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/core/widgets/app_logo.dart';
 import 'package:diet_time/core/widgets/app_textfield.dart';
 import 'package:diet_time/features/authentication/domain/login_credentials.dart';
+import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/login_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -41,11 +42,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _showLoginPanel = widget.showLoginInitially;
+    _showLoginPanel = false;
   }
 
   void _openLoginPanel() {
-    context.push(AppRoutes.login);
+    context.push(
+      AppRoutes.phoneLogin,
+      extra: const PendingAuthDestination(
+        route: AppRoutes.authenticatedLanding,
+      ),
+    );
   }
 
   void _closeLoginPanel() {
