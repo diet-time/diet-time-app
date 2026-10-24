@@ -1574,11 +1574,40 @@ abstract class AppLocalizations {
   /// **'{value}g'**
   String gramsValue(String value);
 
+  /// No description provided for @otpInvalidCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid OTP. Please try again.'**
   String get otpInvalidCode;
+
+  /// No description provided for @otpAccountConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to create or access this account.'**
   String get otpAccountConflict;
+
+  /// No description provided for @otpPhoneLoginUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone login is currently unavailable.'**
   String get otpPhoneLoginUnavailable;
+
+  /// No description provided for @otpConnectionError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not connect. Check your connection and try again.'**
   String get otpConnectionError;
+
+  /// No description provided for @otpServerError.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
   String get otpServerError;
+
+  /// No description provided for @otpResendTestUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend unavailable in test mode'**
   String get otpResendTestUnavailable;
 }
 

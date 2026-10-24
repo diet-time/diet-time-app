@@ -806,6 +806,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sodiumLabel => 'الصوديوم';
 
   @override
+  String gramsValue(String value) {
+    return '$valueغ';
+  }
+
+  @override
   String get otpInvalidCode => 'رمز التحقق غير صحيح. يرجى المحاولة مرة أخرى.';
 
   @override
@@ -825,9 +830,4 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get otpResendTestUnavailable =>
       'إعادة الإرسال غير متاحة في وضع الاختبار';
-
-  @override
-  String gramsValue(String value) {
-    return '$valueغ';
-  }
 }

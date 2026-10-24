@@ -356,7 +356,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       GuestMealTime(code: 'ALL', name: _language == 'ar' ? 'الكل' : 'All'),
     ];
     final seen = <String>{'ALL'};
-    for (final slot in data?.slots ?? const <GuestMenuSlot>[]) {
+    for (final slot in _configuredMenuSlots(data)) {
       final normalized = normalizeMealTimeCode(slot.mealTime.code);
       if (normalized.isNotEmpty && seen.add(normalized)) {
         filters.add(slot.mealTime);
@@ -434,7 +434,9 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   }
 
   List<GuestMeal> _filterMeals(GuestMenuData data, String filterCode) {
-    final meals = data.meals;
+    final meals = [
+      for (final slot in _configuredMenuSlots(data)) ...slot.meals,
+    ];
     final normalizedFilter = normalizeMealTimeCode(filterCode);
     final filtered = normalizedFilter == 'ALL'
         ? meals
@@ -442,8 +444,38 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
             (meal) =>
                 normalizeMealTimeCode(meal.mealTime.code) == normalizedFilter,
           );
-    return filtered.toList(growable: false)
-      ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+    return filtered.toList(growable: false);
+  }
+
+  List<GuestMenuSlot> _configuredMenuSlots(GuestMenuData? data) {
+    final menuSlots = data?.slots ?? const <GuestMenuSlot>[];
+    final plan = _homeData?.mealPlans
+        .where((item) => item.code == _selectedPlanCode)
+        .firstOrNull;
+    if (plan == null || plan.slots.isEmpty) {
+      return menuSlots.toList(growable: false)
+        ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+    }
+
+    final configuredOrder = <String, int>{};
+    for (var index = 0; index < plan.slots.length; index++) {
+      final code = normalizeMealTimeCode(plan.slots[index].mealTime.code);
+      if (code.isNotEmpty) configuredOrder.putIfAbsent(code, () => index);
+    }
+    final configuredSlots = menuSlots
+        .where(
+          (slot) => configuredOrder.containsKey(
+            normalizeMealTimeCode(slot.mealTime.code),
+          ),
+        )
+        .toList(growable: false);
+    return configuredSlots
+      ..sort((a, b) {
+        final aOrder = configuredOrder[normalizeMealTimeCode(a.mealTime.code)]!;
+        final bOrder = configuredOrder[normalizeMealTimeCode(b.mealTime.code)]!;
+        final order = aOrder.compareTo(bOrder);
+        return order != 0 ? order : a.displayOrder.compareTo(b.displayOrder);
+      });
   }
 
   Future<void> _startPlan() async {
