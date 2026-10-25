@@ -18,7 +18,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 45
     env:
-      APP_BUNDLE_ID: com.diettime.dietTime
+      APP_BUNDLE_ID: com.diettime.dietTime.9495H8ZN5C
       # Support either Actions Variables or Secrets. Secrets take over when a
       # value has not been created under Settings > Secrets and variables > Variables.
       APPSTORE_TEAM_ID: ${{ vars.APPSTORE_TEAM_ID || secrets.APPSTORE_TEAM_ID }}
