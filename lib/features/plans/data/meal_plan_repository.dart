@@ -68,22 +68,18 @@ class MealPlanRepository {
     required String mealPlanTemplateId,
     required String language,
   }) async {
-    final response = await apiClient.request(
-      method: 'GET',
-      path: ApiEndpoints.mealPlanDetails(mealPlanTemplateId),
-      queryParameters: {'language': language},
+    // Use the purchase contract: it carries price IDs and explicit package/duration mappings.
+    return getPurchaseOptions(
+      mealPlanCode: mealPlanTemplateId,
+      language: language,
+      expectedTemplateId: mealPlanTemplateId,
     );
-    if (!response.isSuccess) throw ApiException.fromResponse(response);
-    final raw = response.body['data'];
-    if (raw is! Map<String, dynamic>) {
-      throw const ApiException(ApiFailure.invalidResponse);
-    }
-    return parseMealPlanConfigurations(raw, language: language);
   }
 
   Future<List<MealPlanConfiguration>> getPurchaseOptions({
     required String mealPlanCode,
     required String language,
+    String? expectedTemplateId,
   }) async {
     final token = await accessTokenProvider();
     final response = await apiClient.request(
@@ -100,11 +96,13 @@ class MealPlanRepository {
     if (data is! Map<String, dynamic> || data['mealConfigurations'] is! List) {
       throw const ApiException(ApiFailure.invalidResponse);
     }
-    return (data['mealConfigurations'] as List)
-        .whereType<Map<String, dynamic>>()
-        .map(MealPlanConfiguration.fromJson)
-        .where((configuration) => configuration.isValid)
-        .toList(growable: false);
+    if (expectedTemplateId != null) {
+      final plan = data['plan'];
+      if (plan is! Map<String, dynamic> || plan['id'] != expectedTemplateId) {
+        throw const ApiException(ApiFailure.invalidResponse);
+      }
+    }
+    return parseMealPlanConfigurations(data, language: language);
   }
 }
 
@@ -119,9 +117,31 @@ List<MealPlanConfiguration> parseMealPlanConfigurations(
       raw['configurations'] ??
       raw['mealQuantityConfigurations'];
   if (nested is List) {
+    final types = (raw['supportedMealTypes'] as List? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .toList(growable: false);
     return nested
         .whereType<Map<String, dynamic>>()
-        .map(MealPlanConfiguration.fromJson)
+        .map((configuration) {
+          final selected = _mealSelections(
+            types,
+            meals: _integer(configuration['mealsPerDay']) ?? 0,
+            snacks: _integer(configuration['snacksPerDay']) ?? 0,
+          );
+          return MealPlanConfiguration.fromJson({
+            ...configuration,
+            if (configuration['selectedMeals'] == null && selected.isNotEmpty)
+              'selectedMeals': selected
+                  .map(
+                    (meal) => {
+                      'mealTypeId': meal.mealTypeId,
+                      'name': meal.name,
+                      'quantity': meal.quantity,
+                    },
+                  )
+                  .toList(growable: false),
+          });
+        })
         .where((item) => item.isValid)
         .toList(growable: false);
   }

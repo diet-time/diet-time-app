@@ -16,13 +16,18 @@ class MealPlanConfiguration {
     ).map(MealPlanPackage.fromJson).where((item) => item.isValid).toList();
     return MealPlanConfiguration(
       id: _text(
-        json['id'] ??
+        json['packageOptionId'] ??
+            json['id'] ??
             json['mealConfigurationId'] ??
             json['code'] ??
             _configurationId(json),
       ),
       name: _text(
-        json['name'] ?? json['displayName'] ?? json['title'] ?? json['label'],
+        json['packageOptionName'] ??
+            json['name'] ??
+            json['displayName'] ??
+            json['title'] ??
+            json['label'],
       ),
       description: _optionalText(
         json['description'] ??
@@ -35,7 +40,9 @@ class MealPlanConfiguration {
               .map(MealPlanMealSelection.fromJson)
               .where((item) => item.isValid)
               .toList(growable: false),
-      packages: packages,
+      packages: json['isActive'] == false || json['isAvailable'] == false
+          ? const []
+          : packages,
     );
   }
 
@@ -99,14 +106,17 @@ class MealPlanPackage {
           json['pricePerServiceDay'],
     );
     return MealPlanPackage(
-      mealPlanPriceId: _text(
-        json['mealPlanPriceId'] ??
-            json['pricingRecordId'] ??
-            json['priceId'] ??
-            json['id'],
-      ),
+      mealPlanPriceId: json['isActive'] == false || json['isAvailable'] == false
+          ? ''
+          : _text(
+              json['mealPlanPriceId'] ??
+                  json['pricingRecordId'] ??
+                  json['priceId'] ??
+                  json['id'],
+            ),
       name: _text(
-        json['packageName'] ??
+        json['durationName'] ??
+            json['packageName'] ??
             json['name'] ??
             json['durationName'] ??
             json['displayName'] ??
@@ -150,6 +160,7 @@ class MealPlanPackage {
       mealPlanPriceId.isNotEmpty ? mealPlanPriceId : 'duration-$serviceDays';
 
   bool get isValid =>
+      mealPlanPriceId.isNotEmpty &&
       name.isNotEmpty &&
       serviceDays > 0 &&
       totalPrice > 0 &&

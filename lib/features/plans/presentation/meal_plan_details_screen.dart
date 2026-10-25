@@ -92,7 +92,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                     ),
                     const SizedBox(height: 16),
                     const _SectionTitle(
-                      titleEn: 'Choose your daily meals',
+                      titleEn: 'Choose package',
                       titleAr: 'اختر وجباتك اليومية',
                       subtitleEn:
                           'Select the meal combination that works for you.',
@@ -189,6 +189,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
     MealPlanConfiguration configuration,
     MealPlanPackage package,
   ) async {
+    if (!package.isValid) return;
     widget.onContinue?.call(widget.plan.id, package.mealPlanPriceId);
     if (widget.onContinue != null) return;
     final selection = MealPlanPurchaseSelection(
@@ -766,7 +767,7 @@ class _BottomAction extends StatelessWidget {
                 AppButton(
                   key: const ValueKey('detailsContinue'),
                   label: isArabic ? 'متابعة ←' : 'Continue →',
-                  onPressed: onContinue,
+                  onPressed: package.isValid ? onContinue : null,
                 ),
               ],
             ),

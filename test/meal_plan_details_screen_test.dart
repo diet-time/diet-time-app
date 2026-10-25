@@ -57,11 +57,12 @@ void main() {
   });
 
   test(
-    'flat meal-plan prices are grouped into API-supported configurations',
+    'flat meal-plan prices with identities are grouped into configurations',
     () {
       final configurations = parseMealPlanConfigurations(const {
         'prices': [
           {
+            'priceId': 'day-price',
             'durationDays': 1,
             'mealsPerDay': 3,
             'snacksPerDay': 1,
@@ -70,6 +71,7 @@ void main() {
             'name': '1 Day Plan',
           },
           {
+            'priceId': 'week-price',
             'durationDays': 6,
             'mealsPerDay': 3,
             'snacksPerDay': 1,
@@ -78,6 +80,7 @@ void main() {
             'name': 'Weekly Plan',
           },
           {
+            'priceId': 'month-price',
             'durationDays': 24,
             'mealsPerDay': 3,
             'snacksPerDay': 1,
@@ -110,7 +113,7 @@ void main() {
         configurations.single.packages.last.dailyPrice,
         closeTo(116.67, .01),
       );
-      expect(configurations.single.packages.first.mealPlanPriceId, isEmpty);
+      expect(configurations.single.packages.first.mealPlanPriceId, 'day-price');
     },
   );
 
@@ -227,7 +230,7 @@ void main() {
     expect(find.byKey(const ValueKey('startDateTitle')), findsNothing);
   });
 
-  testWidgets('Continue opens the next step when a valid price has no ID', (
+  testWidgets('Continue is disabled when a displayed price has no ID', (
     tester,
   ) async {
     var continued = false;
@@ -265,10 +268,8 @@ void main() {
         matching: find.byType(FilledButton),
       ),
     );
-    expect(button.onPressed, isNotNull);
-
-    await tester.tap(find.byKey(const ValueKey('detailsContinue')));
-    expect(continued, isTrue);
+    expect(button.onPressed, isNull);
+    expect(continued, isFalse);
   });
 
   testWidgets('empty pricing offers navigation back and disables checkout', (
