@@ -289,7 +289,18 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     bool force = false,
   }) async {
     final language = _language ?? 'en';
-    final cacheKey = _menuCacheKey(language, planCode, date);
+    final plan = _homeData?.mealPlans
+        .where((item) => item.code == planCode)
+        .firstOrNull;
+    final cacheKey = _menuCacheKey(
+      language,
+      planCode,
+      date,
+      templateId: plan?.id,
+      versionNumber: plan?.versionNumber,
+      revision: plan?.revision,
+      rotationWeek: plan?.rotationWeek,
+    );
     final cached = _menuCache[cacheKey];
     if (!force && cached != null) {
       if (!mounted || selectionRequestId != _selectionRequestId) return;
@@ -2104,8 +2115,17 @@ String normalizeMealTimeCode(String? value) {
   return code == 'SNACK_DESSERT' ? 'SNACK' : code;
 }
 
-String _menuCacheKey(String language, String planCode, DateTime date) =>
-    '$language|$planCode|${formatGuestDate(date)}';
+String _menuCacheKey(
+  String language,
+  String planCode,
+  DateTime date, {
+  String? templateId,
+  int? versionNumber,
+  int? revision,
+  int? rotationWeek,
+}) =>
+    '$language|$planCode|${templateId ?? '-'}|${versionNumber ?? 0}|'
+    '${revision ?? 0}|${rotationWeek ?? 0}|${formatGuestDate(date)}';
 
 IconData _filterIcon(String code) {
   return switch (normalizeMealTimeCode(code)) {

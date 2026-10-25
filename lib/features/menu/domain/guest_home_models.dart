@@ -50,6 +50,9 @@ class GuestMealPlan {
     this.description,
     this.imageUrl,
     this.iconUrl,
+    this.versionNumber = 1,
+    this.revision = 0,
+    this.rotationWeek = 1,
   });
 
   factory GuestMealPlan.fromJson(Map<String, dynamic> json) {
@@ -66,6 +69,9 @@ class GuestMealPlan {
       displayOrder: _integer(json['displayOrder']),
       isSelected: json['isSelected'] == true,
       slots: slots,
+      versionNumber: _integer(json['versionNumber'], fallback: 1),
+      revision: _integer(json['revision']),
+      rotationWeek: _integer(json['rotationWeek'], fallback: 1),
     );
   }
 
@@ -78,6 +84,9 @@ class GuestMealPlan {
   final int displayOrder;
   final bool isSelected;
   final List<GuestHomeSlot> slots;
+  final int versionNumber;
+  final int revision;
+  final int rotationWeek;
 }
 
 class GuestHomeSlot {
@@ -168,6 +177,9 @@ class GuestMenuData {
     required this.planCode,
     required this.date,
     required this.slots,
+    this.versionNumber = 1,
+    this.revision = 0,
+    this.rotationWeek = 1,
   });
 
   factory GuestMenuData.fromJson(Map<String, dynamic> json) {
@@ -179,6 +191,9 @@ class GuestMenuData {
       planCode: _string(json['planCode']) ?? '',
       date: DateTime.tryParse(_string(json['date']) ?? ''),
       slots: slots,
+      versionNumber: _integer(json['versionNumber'], fallback: 1),
+      revision: _integer(json['revision']),
+      rotationWeek: _integer(json['rotationWeek'], fallback: 1),
     );
   }
 
@@ -186,6 +201,9 @@ class GuestMenuData {
   final String planCode;
   final DateTime? date;
   final List<GuestMenuSlot> slots;
+  final int versionNumber;
+  final int revision;
+  final int rotationWeek;
 
   List<GuestMeal> get meals => [for (final slot in slots) ...slot.meals];
 }
@@ -388,6 +406,6 @@ List<dynamic> _list(Object? value) => value is List<dynamic> ? value : const [];
 
 String? _string(Object? value) => value is String ? value : null;
 
-int _integer(Object? value) => value is num ? value.toInt() : 0;
+int _integer(Object? value, {int fallback = 0}) => value is num ? value.toInt() : fallback;
 
 double _decimal(Object? value) => value is num ? value.toDouble() : 0;
