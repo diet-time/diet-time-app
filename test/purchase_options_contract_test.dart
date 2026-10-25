@@ -93,7 +93,8 @@ void main() {
       final packages =
           (configs.first as Map<String, dynamic>)['packages'] as List;
       final valid = packages.first as Map<String, dynamic>;
-      (configs.first as Map<String, dynamic>)['packages'] = <Map<String, dynamic>>[
+      (configs.first
+          as Map<String, dynamic>)['packages'] = <Map<String, dynamic>>[
         ...packages.cast<Map<String, dynamic>>(),
         {...valid, 'priceId': 'inactive', 'isActive': false},
         {...valid, 'priceId': 'unavailable', 'isAvailable': false},
@@ -143,7 +144,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Choose package'), findsOneWidget);
+      expect(find.text('Choose your meals'), findsOneWidget);
       expect(find.text('Three meals and a snack'), findsWidgets);
       expect(find.byKey(const ValueKey('duration-week-price')), findsOneWidget);
       expect(find.text('QAR 715'), findsOneWidget);

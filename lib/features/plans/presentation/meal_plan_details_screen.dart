@@ -1,7 +1,6 @@
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/config/app_environment.dart';
-import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
@@ -12,6 +11,7 @@ import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_start_date_screen.dart';
+import 'package:diet_time/features/plans/presentation/subscription_selection_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -44,16 +44,22 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: const _DetailsHeader(),
-        body: configurations.when(
-          loading: () => _LoadingBody(plan: widget.plan),
-          error: (_, _) => _PricingError(
-            plan: widget.plan,
-            onRetry: () =>
-                ref.invalidate(mealPlanConfigurationsProvider(request)),
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: configurations.when(
+            skipLoadingOnRefresh: false,
+            skipLoadingOnReload: false,
+            loading: () => _LoadingBody(plan: widget.plan),
+            error: (_, _) => _PricingError(
+              plan: widget.plan,
+              onRetry: () =>
+                  ref.invalidate(mealPlanConfigurationsProvider(request)),
+            ),
+            data: (items) => items.isEmpty
+                ? _EmptyPackages(plan: widget.plan)
+                : _buildContent(items),
           ),
-          data: (items) => items.isEmpty
-              ? _EmptyPackages(plan: widget.plan)
-              : _buildContent(items),
         ),
       ),
     );
@@ -86,84 +92,124 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _PlanHero(
-                      plan: widget.plan,
-                      startingPrice: _heroPrice(configurations),
-                    ),
+                    _PlanHero(plan: widget.plan),
                     const SizedBox(height: 16),
                     const _SectionTitle(
-                      titleEn: 'Choose package',
+                      titleEn: 'Choose your meals',
                       titleAr: 'اختر وجباتك اليومية',
-                      subtitleEn:
-                          'Select the meal combination that works for you.',
+                      subtitleEn: "Pick how many meals you'd like each day.",
                       subtitleAr: 'اختر مجموعة الوجبات التي تناسبك.',
                     ),
                     const SizedBox(height: 8),
-                    SizedBox(
-                      height: 94,
-                      child: ListView.separated(
-                        key: const ValueKey('mealConfigurations'),
-                        scrollDirection: Axis.horizontal,
-                        itemCount: configurations.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 10),
-                        itemBuilder: (context, index) {
-                          final item = configurations[index];
-                          return _ChoiceCard(
-                            key: ValueKey('configuration-${item.id}'),
-                            title: item.name,
-                            subtitle: item.description,
-                            selected: item.id == configuration.id,
-                            onTap: () => setState(() {
-                              _configurationId = item.id;
-                              final keepsDuration = item.packages.any(
-                                (candidate) =>
-                                    candidate.selectionKey == _priceId,
-                              );
-                              if (!keepsDuration) {
-                                _priceId = item.packages.first.selectionKey;
-                              }
-                            }),
-                          );
-                        },
+                    SingleChildScrollView(
+                      key: const ValueKey('mealConfigurations'),
+                      scrollDirection: Axis.horizontal,
+                      child: IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final item in configurations) ...[
+                              if (item != configurations.first)
+                                const SizedBox(width: 10),
+                              PackageSelectionCard(
+                                key: ValueKey('configuration-${item.id}'),
+                                name: item.name,
+                                description: item.description,
+                                selected: item.id == configuration.id,
+                                onTap: () => setState(() {
+                                  _configurationId = item.id;
+                                  final matching = item.packages.where(
+                                    (candidate) =>
+                                        candidate.isValid &&
+                                        candidate.name == package.name &&
+                                        candidate.serviceDays ==
+                                            package.serviceDays,
+                                  );
+                                  final valid = item.packages.where(
+                                    (p) => p.isValid,
+                                  );
+                                  _priceId = matching.isNotEmpty
+                                      ? matching.first.selectionKey
+                                      : valid.isNotEmpty
+                                      ? valid.first.selectionKey
+                                      : item.packages.first.selectionKey;
+                                }),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     const _SectionTitle(
-                      titleEn: 'Choose duration',
+                      titleEn: 'Choose your duration',
                       titleAr: 'اختر المدة',
                     ),
-                    const SizedBox(height: 8),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        key: const ValueKey('packageDurations'),
-                        children: [
-                          for (
-                            var index = 0;
-                            index < configuration.packages.length;
-                            index++
-                          ) ...[
-                            if (index > 0) const SizedBox(width: 10),
-                            _ChoiceCard(
-                              key: ValueKey(
-                                'duration-${configuration.packages[index].selectionKey}',
-                              ),
-                              title: configuration.packages[index].name,
-                              subtitle: _serviceDaysLabel(
-                                context,
-                                configuration.packages[index].serviceDays,
-                              ),
-                              selected:
-                                  configuration.packages[index].selectionKey ==
-                                  package.selectionKey,
-                              compact: true,
-                              onTap: () => setState(
-                                () => _priceId =
-                                    configuration.packages[index].selectionKey,
-                              ),
+                    const SizedBox(height: 10),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final count = configuration.packages.length;
+                        final scale = MediaQuery.textScalerOf(context).scale(1);
+                        final fit =
+                            count <= 3 &&
+                            constraints.maxWidth / count >= 104 * scale;
+                        final width = fit
+                            ? ((constraints.maxWidth - (count - 1) * 10) /
+                                      count)
+                                  .clamp(104.0, 180.0)
+                            : 146.0 * scale.clamp(1, 1.5);
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: IntrinsicHeight(
+                            child: Row(
+                              key: const ValueKey('packageDurations'),
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                for (final option
+                                    in configuration.packages) ...[
+                                  if (option != configuration.packages.first)
+                                    const SizedBox(width: 10),
+                                  DurationSelectionCard(
+                                    key: ValueKey(
+                                      'duration-${option.selectionKey}',
+                                    ),
+                                    name: option.name,
+                                    deliveryDays: option.isValid
+                                        ? _serviceDaysLabel(
+                                            context,
+                                            option.serviceDays,
+                                          )
+                                        : Directionality.of(context) ==
+                                              TextDirection.rtl
+                                        ? 'غير متاح حالياً'
+                                        : 'Currently unavailable',
+                                    selected:
+                                        option.isValid &&
+                                        option.selectionKey ==
+                                            package.selectionKey,
+                                    width: width,
+                                    onTap: option.isValid
+                                        ? () => setState(
+                                            () =>
+                                                _priceId = option.selectionKey,
+                                          )
+                                        : null,
+                                  ),
+                                ],
+                              ],
                             ),
-                          ],
-                        ],
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      Directionality.of(context) == TextDirection.rtl
+                          ? 'المدد المتاحة لباقة الوجبات المختارة.'
+                          : 'Showing available durations for your meal package.',
+                      style: TextStyle(
+                        color: AppColors.darkGreen.withValues(alpha: .7),
+                        fontSize: 12,
                       ),
                     ),
                     if (hasRecordedAllergens) ...[
@@ -176,10 +222,23 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
             ),
           ),
         ),
-        _BottomAction(
-          configuration: configuration,
-          package: package,
-          onContinue: () => _continue(configuration, package),
+        SubscriptionPricingSummary(
+          selection:
+              '${configuration.name} · ${package.name} · ${_serviceDaysLabel(context, package.serviceDays)}',
+          total: package.isValid
+              ? '${package.currencyCode} ${_amount(context, package.totalPrice)}'
+              : Directionality.of(context) == TextDirection.rtl
+              ? 'السعر غير متاح'
+              : 'Pricing unavailable',
+          daily: package.isValid
+              ? '${package.currencyCode} ${_amount(context, package.dailyPrice)} ${Directionality.of(context) == TextDirection.rtl ? 'لكل يوم توصيل' : 'per delivery day'}'
+              : Directionality.of(context) == TextDirection.rtl
+              ? 'اختر مدة متاحة للمتابعة.'
+              : 'Choose an available duration to continue.',
+          priceKey: '${configuration.id}-${package.selectionKey}',
+          onContinue: package.isValid
+              ? () => _continue(configuration, package)
+              : null,
         ),
       ],
     );
@@ -249,7 +308,7 @@ class _DetailsHeader extends StatelessWidget implements PreferredSizeWidget {
         style: TextStyle(
           color: AppColors.darkGreen,
           fontSize: 20,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -272,17 +331,16 @@ class _PageBackground extends StatelessWidget {
 }
 
 class _PlanHero extends StatelessWidget {
-  const _PlanHero({required this.plan, this.startingPrice});
+  const _PlanHero({required this.plan});
 
   final MealPlanOption plan;
-  final MealPlanPackage? startingPrice;
 
   @override
   Widget build(BuildContext context) {
     final isArabic = Directionality.of(context) == TextDirection.rtl;
     return Container(
       key: const ValueKey('planHero'),
-      height: 190,
+      constraints: const BoxConstraints(minHeight: 180),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: const Color(0xFFF3F7EF),
@@ -320,10 +378,13 @@ class _PlanHero extends StatelessWidget {
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: FractionallySizedBox(
-              widthFactor: .68,
+              widthFactor: MediaQuery.textScalerOf(context).scale(1) > 1.3
+                  ? .88
+                  : .70,
               child: Padding(
                 padding: const EdgeInsetsDirectional.fromSTEB(16, 15, 10, 14),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -333,7 +394,7 @@ class _PlanHero extends StatelessWidget {
                       style: const TextStyle(
                         color: AppColors.darkGreen,
                         fontSize: 21,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                         height: 1.05,
                       ),
                     ),
@@ -349,7 +410,7 @@ class _PlanHero extends StatelessWidget {
                         ),
                       ),
                     ],
-                    const Spacer(),
+                    const SizedBox(height: 18),
                     if (plan.dailyCaloriesKcal case final calories?)
                       _HeroFact(
                         key: const ValueKey('heroCalories'),
@@ -358,15 +419,6 @@ class _PlanHero extends StatelessWidget {
                             ? 'تقريباً ${calories.round()} سعرة / يوم'
                             : 'Approx. ${calories.round()} kcal/day',
                       ),
-                    if (startingPrice case final price?) ...[
-                      const SizedBox(height: 5),
-                      _HeroFact(
-                        icon: Icons.payments_outlined,
-                        label: isArabic
-                            ? 'ابتداءً من ${price.currencyCode} ${_amount(context, price.dailyPrice)} / يوم'
-                            : 'From ${price.currencyCode} ${_amount(context, price.dailyPrice)}/day',
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -399,7 +451,7 @@ class _HeroImage extends StatelessWidget {
                 alignment: AlignmentDirectional.centerEnd,
                 frameBuilder: (context, child, frame, _) => AnimatedOpacity(
                   opacity: frame == null ? 0 : 1,
-                  duration: const Duration(milliseconds: 240),
+                  duration: selectionAnimationDuration(context),
                   child: frame == null ? const _ImageSkeleton() : child,
                 ),
                 errorBuilder: (_, _, _) => const _MealImagePlaceholder(),
@@ -457,7 +509,7 @@ class _SectionTitle extends StatelessWidget {
           style: const TextStyle(
             color: AppColors.darkGreen,
             fontSize: 17,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
           ),
         ),
         if (subtitle != null) ...[
@@ -471,177 +523,6 @@ class _SectionTitle extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-class _ChoiceCard extends StatelessWidget {
-  const _ChoiceCard({
-    required this.title,
-    required this.selected,
-    required this.onTap,
-    this.subtitle,
-    this.compact = false,
-    super.key,
-  });
-  final String title;
-  final String? subtitle;
-  final bool selected;
-  final bool compact;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(15),
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      constraints: BoxConstraints(
-        minWidth: compact ? 116 : 270,
-        maxWidth: compact ? 160 : 320,
-      ),
-      padding: const EdgeInsetsDirectional.fromSTEB(12, 9, 12, 8),
-      decoration: BoxDecoration(
-        color: selected ? const Color(0xFFE7F4E8) : AppColors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: selected
-              ? AppColors.emeraldGreen
-              : AppColors.darkGreen.withValues(alpha: .12),
-          width: selected ? 1.5 : 1,
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (selected) ...[
-            const Icon(
-              Icons.check_circle_rounded,
-              size: 17,
-              color: AppColors.emeraldGreen,
-            ),
-            const SizedBox(width: 6),
-          ],
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.darkGreen,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                if (subtitle case final value?) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    value,
-                    maxLines: compact ? 1 : 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkGreen.withValues(alpha: .58),
-                      fontSize: 11,
-                      height: 1.25,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-// Kept temporarily for compatibility with older golden-test branches.
-// ignore: unused_element
-class _PriceSummary extends StatelessWidget {
-  const _PriceSummary({required this.configuration, required this.package});
-  final MealPlanConfiguration configuration;
-  final MealPlanPackage package;
-
-  @override
-  Widget build(BuildContext context) {
-    final isArabic = Directionality.of(context) == TextDirection.rtl;
-    return Container(
-      key: const ValueKey('priceSummary'),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.teaGreen.withValues(alpha: .55)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            isArabic ? 'خطتك' : 'Your plan',
-            style: TextStyle(
-              color: AppColors.darkGreen.withValues(alpha: .58),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            configuration.name,
-            key: const ValueKey('summaryConfiguration'),
-            style: const TextStyle(
-              color: AppColors.darkGreen,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            '${package.name} · ${_serviceDaysLabel(context, package.serviceDays)}',
-            key: const ValueKey('summaryServiceDays'),
-            style: TextStyle(color: AppColors.darkGreen.withValues(alpha: .62)),
-          ),
-          const SizedBox(height: 20),
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: Text(
-              '${package.currencyCode} ${_amount(context, package.dailyPrice)} / ${isArabic ? 'يوم' : 'day'}',
-              key: const ValueKey('dailyPrice'),
-              style: const TextStyle(
-                color: AppColors.emeraldGreen,
-                fontSize: 29,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const Divider(height: 30),
-          Row(
-            children: [
-              Text(
-                isArabic ? 'الإجمالي' : 'Total',
-                style: const TextStyle(
-                  color: AppColors.darkGreen,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Spacer(),
-              Directionality(
-                textDirection: TextDirection.ltr,
-                child: Text(
-                  '${package.currencyCode} ${_amount(context, package.totalPrice)}',
-                  key: const ValueKey('packageTotal'),
-                  style: const TextStyle(
-                    color: AppColors.darkGreen,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }
@@ -696,88 +577,6 @@ class _AllergenInformation extends StatelessWidget {
   }
 }
 
-class _BottomAction extends StatelessWidget {
-  const _BottomAction({
-    required this.configuration,
-    required this.package,
-    required this.onContinue,
-  });
-  final MealPlanConfiguration configuration;
-  final MealPlanPackage package;
-  final VoidCallback onContinue;
-
-  @override
-  Widget build(BuildContext context) {
-    final isArabic = Directionality.of(context) == TextDirection.rtl;
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsetsDirectional.fromSTEB(20, 8, 20, 12),
-        color: const Color(0xE6F5F3E9),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 680),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Directionality(
-                      textDirection: TextDirection.ltr,
-                      child: Text(
-                        '${package.currencyCode} ${_amount(context, package.dailyPrice)} / ${isArabic ? 'يوم' : 'day'}',
-                        key: const ValueKey('dailyPrice'),
-                        style: const TextStyle(
-                          color: AppColors.emeraldGreen,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    Directionality(
-                      textDirection: TextDirection.ltr,
-                      child: Text(
-                        '${package.currencyCode} ${_amount(context, package.totalPrice)}',
-                        key: const ValueKey('packageTotal'),
-                        style: const TextStyle(
-                          color: AppColors.darkGreen,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${package.name} · ${_serviceDaysLabel(context, package.serviceDays)} · ${configuration.name}',
-                  key: const ValueKey('summaryServiceDays'),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.darkGreen.withValues(alpha: .58),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                AppButton(
-                  key: const ValueKey('detailsContinue'),
-                  label: isArabic ? 'متابعة ←' : 'Continue →',
-                  onPressed: package.isValid ? onContinue : null,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _LoadingBody extends StatelessWidget {
   const _LoadingBody({required this.plan});
   final MealPlanOption plan;
@@ -786,10 +585,22 @@ class _LoadingBody extends StatelessWidget {
     padding: const EdgeInsets.all(20),
     children: [
       _PlanHero(plan: plan),
-      const SizedBox(height: 26),
-      for (final width in [190.0, 340.0, 280.0, 360.0]) ...[
-        _Skeleton(width: width, height: width == 360 ? 150 : 56),
-        const SizedBox(height: 16),
+      const SizedBox(height: 20),
+      for (var section = 0; section < 2; section++) ...[
+        const _Skeleton(width: 160, height: 18),
+        const SizedBox(height: 10),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (var card = 0; card < 3; card++) ...[
+                if (card > 0) const SizedBox(width: 10),
+                _Skeleton(width: section == 0 ? 180 : 112, height: 112),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
       ],
     ],
   );
@@ -846,6 +657,12 @@ class _EmptyPackages extends StatelessWidget {
     children: [
       _PlanHero(plan: plan),
       const SizedBox(height: 28),
+      const Icon(
+        Icons.restaurant_menu_rounded,
+        color: AppColors.emeraldGreen,
+        size: 36,
+      ),
+      const SizedBox(height: 12),
       Text(
         Directionality.of(context) == TextDirection.rtl
             ? 'لا توجد باقات متاحة حالياً لخطة الوجبات هذه.'
@@ -856,7 +673,18 @@ class _EmptyPackages extends StatelessWidget {
           fontWeight: FontWeight.w800,
         ),
       ),
-      const SizedBox(height: 10),
+      const SizedBox(height: 8),
+      Text(
+        Directionality.of(context) == TextDirection.rtl
+            ? 'جرّب خطة أخرى للعثور على وجبات تناسبك.'
+            : 'Try another plan to find your daily meal routine.',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: AppColors.darkGreen.withValues(alpha: .7),
+          height: 1.5,
+        ),
+      ),
+      const SizedBox(height: 16),
       Center(
         child: OutlinedButton(
           key: const ValueKey('chooseAnotherPlan'),
@@ -912,19 +740,10 @@ class _Skeleton extends StatelessWidget {
   );
 }
 
-MealPlanPackage? _heroPrice(List<MealPlanConfiguration> configurations) {
-  final packages = [for (final item in configurations) ...item.packages];
-  if (packages.isEmpty) return null;
-  for (final package in packages) {
-    if (package.serviceDays == 1) return package;
-  }
-  return packages.first;
-}
-
 String _serviceDaysLabel(BuildContext context, int days) =>
     Directionality.of(context) == TextDirection.rtl
     ? '$days أيام خدمة'
-    : '$days service days';
+    : '$days delivery days';
 
 String _amount(BuildContext context, double value) => formatMealPlanPriceAmount(
   value,

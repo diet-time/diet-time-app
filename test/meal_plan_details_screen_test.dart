@@ -4,6 +4,7 @@ import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_details_screen.dart';
+import 'package:diet_time/features/plans/presentation/subscription_selection_widgets.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -174,22 +175,22 @@ void main() {
   ) async {
     await tester.pumpWidget(_app(plan: _plan));
     await tester.pump();
-    expect(find.text('QAR 100 / day'), findsOneWidget);
+    expect(find.text('QAR 100 per delivery day'), findsOneWidget);
     expect(find.text('QAR 600'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('configuration-plus')));
+    await _tapChoice(tester, 'configuration-plus');
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('1 Month'), findsOneWidget);
 
-    expect(find.text('QAR 120 / day'), findsOneWidget);
+    expect(find.text('QAR 120 per delivery day'), findsOneWidget);
     expect(find.text('QAR 720'), findsOneWidget);
-    expect(find.textContaining('6 service days'), findsWidgets);
+    expect(find.textContaining('6 delivery days'), findsWidgets);
 
     await _scrollTo(tester, const ValueKey('duration-plus-month'));
-    await tester.tap(find.byKey(const ValueKey('duration-plus-month')));
+    await _tapChoice(tester, 'duration-plus-month');
     await tester.pump(const Duration(milliseconds: 200));
-    expect(find.text('QAR 110 / day'), findsOneWidget);
+    expect(find.text('QAR 110 per delivery day'), findsOneWidget);
     expect(find.text('QAR 2640'), findsOneWidget);
-    expect(find.textContaining('24 service days'), findsWidgets);
+    expect(find.textContaining('24 delivery days'), findsWidgets);
   });
 
   testWidgets('Continue sends template ID and authoritative price ID', (
@@ -208,7 +209,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byKey(const ValueKey('configuration-plus')));
+    await _tapChoice(tester, 'configuration-plus');
     await tester.pump(const Duration(milliseconds: 200));
     await tester.tap(find.byKey(const ValueKey('detailsContinue')));
 
@@ -324,49 +325,49 @@ void main() {
     expect(find.byKey(const ValueKey('detailsContinue')), findsNothing);
   });
 
-  testWidgets(
-    'hero uses the one-day price instead of the cheapest daily rate',
-    (tester) async {
-      const configurations = [
-        MealPlanConfiguration(
-          id: 'daily-meals',
-          name: '3 Meals + 1 Snack',
-          packages: [
-            MealPlanPackage(
-              mealPlanPriceId: 'month-price',
-              name: '1 Month',
-              serviceDays: 24,
-              totalPrice: 80,
-              dailyPrice: 3.33,
-              currencyCode: 'QAR',
-            ),
-            MealPlanPackage(
-              mealPlanPriceId: 'day-price',
-              name: '1 Day',
-              serviceDays: 1,
-              totalPrice: 135,
-              dailyPrice: 135,
-              currencyCode: 'QAR',
-            ),
-          ],
-        ),
-      ];
-      await tester.pumpWidget(
-        _app(
-          plan: const MealPlanOption(
-            id: 'complete-balance',
-            code: 'COMPLETE_BALANCE',
-            name: 'Complete Balance',
-            mealConfigurations: configurations,
+  testWidgets('hero leaves pricing to the selected subscription summary', (
+    tester,
+  ) async {
+    const configurations = [
+      MealPlanConfiguration(
+        id: 'daily-meals',
+        name: '3 Meals + 1 Snack',
+        packages: [
+          MealPlanPackage(
+            mealPlanPriceId: 'month-price',
+            name: '1 Month',
+            serviceDays: 24,
+            totalPrice: 80,
+            dailyPrice: 3.33,
+            currencyCode: 'QAR',
           ),
+          MealPlanPackage(
+            mealPlanPriceId: 'day-price',
+            name: '1 Day',
+            serviceDays: 1,
+            totalPrice: 135,
+            dailyPrice: 135,
+            currencyCode: 'QAR',
+          ),
+        ],
+      ),
+    ];
+    await tester.pumpWidget(
+      _app(
+        plan: const MealPlanOption(
+          id: 'complete-balance',
+          code: 'COMPLETE_BALANCE',
+          name: 'Complete Balance',
+          mealConfigurations: configurations,
         ),
-      );
-      await tester.pump();
+      ),
+    );
+    await tester.pump();
 
-      expect(find.text('From QAR 135/day'), findsOneWidget);
-      expect(find.textContaining('3.33/day'), findsNothing);
-    },
-  );
+    expect(find.textContaining('From QAR'), findsNothing);
+    expect(find.text('QAR 80'), findsOneWidget);
+    expect(find.textContaining('3.33/day'), findsNothing);
+  });
 
   testWidgets('Arabic uses RTL while retaining the same image URL', (
     tester,
@@ -386,21 +387,165 @@ void main() {
     expect(find.text('اختر وجباتك اليومية'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final size in [
+    const Size(320, 568),
+    const Size(375, 667),
+    const Size(390, 844),
+    const Size(430, 932),
+    const Size(360, 800),
+  ]) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('selection fits $size at text scale $scale', (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = size;
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPhysicalSize);
+        await tester.pumpWidget(_app(plan: _plan, textScale: scale));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        final button = find.byKey(const ValueKey('detailsContinue'));
+        expect(button.hitTestable(), findsOneWidget);
+        final card = find.byKey(const ValueKey('configuration-three'));
+        await tester.ensureVisible(card);
+        await tester.pumpAndSettle();
+        expect(tester.getSize(card).width, 180);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
+  testWidgets('unpriced durations are disabled without displaying a price', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        plan: const MealPlanOption(
+          id: 'unavailable',
+          code: 'UNAVAILABLE',
+          name: 'Complete Balance',
+          mealConfigurations: [
+            MealPlanConfiguration(
+              id: 'one',
+              name: '1 Meal',
+              packages: [
+                MealPlanPackage(
+                  mealPlanPriceId: '',
+                  name: '4 Weeks',
+                  serviceDays: 24,
+                  totalPrice: 999,
+                  dailyPrice: 41.625,
+                  currencyCode: 'QAR',
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Pricing unavailable'), findsOneWidget);
+    expect(find.textContaining('999'), findsNothing);
+    expect(find.text('Currently unavailable'), findsOneWidget);
+    final button = tester.widget<FilledButton>(
+      find.descendant(
+        of: find.byKey(const ValueKey('detailsContinue')),
+        matching: find.byType(FilledButton),
+      ),
+    );
+    expect(button.onPressed, isNull);
+  });
+
+  testWidgets('switching meals guides unavailable duration to a valid price', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app(plan: _plan));
+    await tester.pumpAndSettle();
+    await _tapChoice(tester, 'configuration-plus');
+    await tester.pumpAndSettle();
+    await _tapChoice(tester, 'duration-plus-month');
+    await tester.pumpAndSettle();
+    expect(find.text('QAR 2640'), findsOneWidget);
+    await _tapChoice(tester, 'configuration-three');
+    await tester.pumpAndSettle();
+    expect(find.text('QAR 600'), findsOneWidget);
+    expect(find.byKey(const ValueKey('duration-plus-month')), findsNothing);
+    expect(find.text('QAR 2640'), findsNothing);
+  });
+
+  testWidgets('selection transitions respect reduced motion', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: Scaffold(
+            body: PackageSelectionCard(
+              name: '3 Meals + 1 Snack',
+              selected: true,
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    final container = tester.widget<AnimatedContainer>(
+      find.byType(AnimatedContainer),
+    );
+    expect(container.duration, Duration.zero);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('matching duration survives a change of meals and price ID', (
+    tester,
+  ) async {
+    final configurations = (_planJson['mealConfigurations'] as List)
+        .cast<Map<String, dynamic>>();
+    final monthly =
+        (configurations.last['packages'] as List).last as Map<String, dynamic>;
+    final plan = MealPlanOption.fromJson({
+      ..._planJson,
+      'mealConfigurations': [
+        {
+          ...configurations.first,
+          'packages': [
+            ...(configurations.first['packages'] as List),
+            {...monthly, 'mealPlanPriceId': 'three-month'},
+          ],
+        },
+        configurations.last,
+      ],
+    });
+    String? selectedPrice;
+    await tester.pumpWidget(
+      _app(plan: plan, onContinue: (_, price) => selectedPrice = price),
+    );
+    await tester.pumpAndSettle();
+    await _tapChoice(tester, 'duration-three-month');
+    await tester.pumpAndSettle();
+    await _tapChoice(tester, 'configuration-plus');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('detailsContinue')));
+    expect(selectedPrice, 'plus-month');
+  });
+}
+
+Future<void> _tapChoice(WidgetTester tester, String key) async {
+  final finder = find.byKey(ValueKey(key));
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  await tester.tap(finder);
 }
 
 Future<void> _scrollTo(WidgetTester tester, ValueKey<String> key) async {
-  await tester.scrollUntilVisible(
-    find.byKey(key),
-    300,
-    scrollable: find.byType(Scrollable).first,
-  );
-  await tester.pump();
+  await tester.ensureVisible(find.byKey(key));
+  await tester.pumpAndSettle();
 }
 
 Widget _app({
   required MealPlanOption plan,
   Locale locale = const Locale('en'),
   MealPlanContinue? onContinue,
+  double textScale = 1,
   Future<List<MealPlanConfiguration>> Function(
     Ref ref,
     MealPlanDetailsRequest request,
@@ -415,6 +560,12 @@ Widget _app({
       ),
     ],
     child: MaterialApp(
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      ),
       locale: locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
