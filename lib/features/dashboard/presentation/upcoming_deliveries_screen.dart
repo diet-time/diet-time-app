@@ -1,9 +1,13 @@
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
+import 'package:diet_time/features/dashboard/data/upcoming_meals_repository.dart';
+import 'package:diet_time/features/dashboard/domain/upcoming_meals.dart';
+import 'package:diet_time/features/dashboard/presentation/daily_meals_panel.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-class UpcomingDeliveriesScreen extends StatefulWidget {
+class UpcomingDeliveriesScreen extends ConsumerStatefulWidget {
   const UpcomingDeliveriesScreen({
     required this.order,
     this.embedded = false,
@@ -14,13 +18,15 @@ class UpcomingDeliveriesScreen extends StatefulWidget {
   final bool embedded;
 
   @override
-  State<UpcomingDeliveriesScreen> createState() =>
+  ConsumerState<UpcomingDeliveriesScreen> createState() =>
       _UpcomingDeliveriesScreenState();
 }
 
-class _UpcomingDeliveriesScreenState extends State<UpcomingDeliveriesScreen> {
+class _UpcomingDeliveriesScreenState
+    extends ConsumerState<UpcomingDeliveriesScreen> {
   late DateTime _visibleMonth;
   DateTime? _selectedDate;
+  List<UpcomingMealDay>? _serviceDays;
 
   OrderDelivery get _delivery => widget.order.delivery;
 
@@ -33,14 +39,53 @@ class _UpcomingDeliveriesScreenState extends State<UpcomingDeliveriesScreen> {
   }
 
   @override
+  void didUpdateWidget(covariant UpcomingDeliveriesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.order.id != widget.order.id) {
+      _serviceDays = null;
+      _selectedDate = _initialDeliveryDate();
+      final anchor = _selectedDate ?? _delivery.startDate ?? DateTime.now();
+      _visibleMonth = DateTime(anchor.year, anchor.month);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final days = ref.watch(upcomingMealDaysProvider(widget.order.id));
+    ref.listen(upcomingMealDaysProvider(widget.order.id), (_, next) {
+      final loaded = next.asData?.value;
+      if (loaded == null) return;
+      setState(() {
+        _serviceDays = loaded;
+        if (_selectedDate != null &&
+            loaded.any((d) => _sameDay(d.date, _selectedDate!))) {
+          return;
+        }
+        final today = DateUtils.dateOnly(
+          DateTime.now().toUtc().add(const Duration(hours: 3)),
+        );
+        final upcoming = loaded.where((d) => !d.date.isBefore(today));
+        _selectedDate = upcoming.isNotEmpty
+            ? upcoming.first.date
+            : loaded.lastOrNull?.date;
+        if (_selectedDate != null) {
+          _visibleMonth = DateTime(_selectedDate!.year, _selectedDate!.month);
+        }
+      });
+    });
+    final selectedDay =
+        (_serviceDays ?? days.asData?.value ?? const <UpcomingMealDay>[])
+            .where(
+              (d) => _selectedDate != null && _sameDay(d.date, _selectedDate!),
+            )
+            .firstOrNull;
     final content = ListView(
       key: const ValueKey('upcomingDeliveriesScreen'),
       padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
       children: [
         if (widget.embedded) ...[
           const Text(
-            'Delivery Calendar',
+            'Upcoming Meals',
             style: TextStyle(
               color: AppColors.darkGreen,
               fontSize: 25,
@@ -53,6 +98,10 @@ class _UpcomingDeliveriesScreenState extends State<UpcomingDeliveriesScreen> {
           month: _visibleMonth,
           selectedDate: _selectedDate,
           isDeliveryDay: _isDeliveryDay,
+          statusForDate: (date) => (_serviceDays ?? const <UpcomingMealDay>[])
+              .where((d) => _sameDay(d.date, date))
+              .firstOrNull
+              ?.status,
           canGoPrevious: _canChangeMonth(-1),
           canGoNext: _canChangeMonth(1),
           onPrevious: () => _changeMonth(-1),
@@ -75,8 +124,41 @@ class _UpcomingDeliveriesScreenState extends State<UpcomingDeliveriesScreen> {
             ),
           ),
           const SizedBox(height: 12),
+          if (days.isLoading)
+            const MealMenuLoading()
+          else if (days.hasError)
+            MealMenuMessage(
+              message: 'We couldn’t load your delivery meals.',
+              onRetry: () =>
+                  ref.invalidate(upcomingMealDaysProvider(widget.order.id)),
+            )
+          else if (selectedDay != null)
+            DailyMealsPanel(
+              key: ValueKey('selectedDay-${selectedDay.id}'),
+              request: (
+                orderId: widget.order.id,
+                dayId: selectedDay.id,
+                language: Localizations.localeOf(context).languageCode,
+              ),
+              date: selected,
+              planName: widget.order.plan.name,
+            )
+          else
+            const MealMenuMessage(
+              message:
+                  'Meals have not been assigned to this delivery yet. Our team will review it.',
+            ),
+          const SizedBox(height: 12),
           _DeliveryDetails(order: widget.order),
-        ] else
+        ] else if (days.isLoading)
+          const MealMenuLoading()
+        else if (days.hasError)
+          MealMenuMessage(
+            message: 'We couldn’t load your delivery meals.',
+            onRetry: () =>
+                ref.invalidate(upcomingMealDaysProvider(widget.order.id)),
+          )
+        else
           const _EmptyDelivery(),
         const SizedBox(height: 14),
         const _FridayNotice(),
@@ -98,7 +180,7 @@ class _UpcomingDeliveriesScreenState extends State<UpcomingDeliveriesScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
         ),
         title: const Text(
-          'Upcoming Deliveries',
+          'Upcoming Meals',
           style: TextStyle(
             color: AppColors.darkGreen,
             fontSize: 17,
@@ -114,7 +196,9 @@ class _UpcomingDeliveriesScreenState extends State<UpcomingDeliveriesScreen> {
     final start = _dateOnly(_delivery.startDate);
     final end = _dateOnly(_delivery.endDate);
     if (start == null || end == null || _delivery.days.isEmpty) return null;
-    final today = _dateOnly(DateTime.now())!;
+    final today = _dateOnly(
+      DateTime.now().toUtc().add(const Duration(hours: 3)),
+    )!;
     var candidate = today.isAfter(start) ? today : start;
     while (!candidate.isAfter(end)) {
       if (_delivery.days.contains(candidate.weekday)) return candidate;
@@ -124,6 +208,9 @@ class _UpcomingDeliveriesScreenState extends State<UpcomingDeliveriesScreen> {
   }
 
   bool _isDeliveryDay(DateTime date) {
+    if (date.weekday == DateTime.friday) return false;
+    final loaded = _serviceDays;
+    if (loaded != null) return loaded.any((d) => _sameDay(d.date, date));
     final start = _dateOnly(_delivery.startDate);
     final end = _dateOnly(_delivery.endDate);
     if (start == null || end == null) return false;
@@ -161,6 +248,7 @@ class _Calendar extends StatelessWidget {
     required this.month,
     required this.selectedDate,
     required this.isDeliveryDay,
+    required this.statusForDate,
     required this.canGoPrevious,
     required this.canGoNext,
     required this.onPrevious,
@@ -171,6 +259,7 @@ class _Calendar extends StatelessWidget {
   final DateTime month;
   final DateTime? selectedDate;
   final bool Function(DateTime) isDeliveryDay;
+  final String? Function(DateTime) statusForDate;
   final bool canGoPrevious;
   final bool canGoNext;
   final VoidCallback onPrevious;
@@ -187,15 +276,16 @@ class _Calendar extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(
-              DateFormat('MMMM yyyy').format(month),
-              style: const TextStyle(
-                color: AppColors.darkGreen,
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
+            Expanded(
+              child: Text(
+                DateFormat('MMMM yyyy').format(month),
+                style: const TextStyle(
+                  color: AppColors.darkGreen,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
-            const Spacer(),
             _MonthButton(
               key: const ValueKey('previousDeliveryMonth'),
               icon: Icons.chevron_left_rounded,
@@ -241,44 +331,63 @@ class _Calendar extends StatelessWidget {
             if (index < leading) return const SizedBox.shrink();
             final date = DateTime(month.year, month.month, index - leading + 1);
             final delivery = isDeliveryDay(date);
+            final status = statusForDate(date);
             final selected =
                 selectedDate != null && _sameDay(date, selectedDate!);
-            return Center(
-              child: InkWell(
-                key: ValueKey('deliveryDate-${date.toIso8601String()}'),
-                onTap: delivery ? () => onSelect(date) : null,
-                customBorder: const CircleBorder(),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  width: 36,
-                  height: 36,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: delivery
-                        ? AppColors.emeraldGreen
-                        : Colors.transparent,
-                    border: selected
-                        ? Border.all(color: AppColors.darkGreen, width: 2)
-                        : null,
-                    boxShadow: selected
-                        ? [
-                            BoxShadow(
-                              color: AppColors.emeraldGreen.withValues(
-                                alpha: .24,
-                              ),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Text(
-                    '${date.day}',
-                    style: TextStyle(
-                      color: delivery ? AppColors.white : AppColors.darkGreen,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
+            return Tooltip(
+              message: status == null
+                  ? 'No delivery'
+                  : mealDayStatusLabel(status),
+              child: Semantics(
+                label:
+                    '${DateFormat('d MMMM yyyy').format(date)}${status == null ? '' : ', ${mealDayStatusLabel(status)}'}',
+                selected: selected,
+                child: Center(
+                  child: InkWell(
+                    key: ValueKey('deliveryDate-${date.toIso8601String()}'),
+                    onTap: delivery ? () => onSelect(date) : null,
+                    customBorder: const CircleBorder(),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      width: 36,
+                      height: 36,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: delivery
+                            ? status == 'locked'
+                                  ? const Color(0xFF63776D)
+                                  : status == 'delivered'
+                                  ? const Color(0xFF476A5C)
+                                  : status == 'customized'
+                                  ? const Color(0xFF168176)
+                                  : AppColors.emeraldGreen
+                            : Colors.transparent,
+                        border: selected
+                            ? Border.all(color: AppColors.darkGreen, width: 2)
+                            : null,
+                        boxShadow: selected
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.emeraldGreen.withValues(
+                                    alpha: .24,
+                                  ),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Text(
+                        '${date.day}',
+                        style: TextStyle(
+                          color: delivery
+                              ? AppColors.white
+                              : AppColors.darkGreen,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -322,6 +431,13 @@ class _CalendarLegend extends StatelessWidget {
     children: [
       _LegendItem(color: AppColors.emeraldGreen, label: 'Delivery days'),
       _LegendItem(color: Color(0xFFE3E3E0), label: 'Non-delivery days'),
+      _LegendItem(
+        color: AppColors.emeraldGreen,
+        label: 'Automatically Selected',
+      ),
+      _LegendItem(color: Color(0xFF168176), label: 'Customized'),
+      _LegendItem(color: Color(0xFF63776D), label: 'Locked'),
+      _LegendItem(color: Color(0xFF476A5C), label: 'Delivered'),
     ],
   );
 }
@@ -338,7 +454,7 @@ class _LegendItem extends StatelessWidget {
     children: [
       _LegendDot(color: color),
       const SizedBox(width: 6),
-      Text(label, style: const TextStyle(fontSize: 11)),
+      Flexible(child: Text(label, style: const TextStyle(fontSize: 11))),
     ],
   );
 }
@@ -452,87 +568,10 @@ class _DeliveryDetails extends StatelessWidget {
               ),
             ],
           ),
-          if (order.meals.isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 14),
-              child: Divider(height: 1),
-            ),
-            const Text(
-              'Meals',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 8),
-            for (final meal in order.meals) _MealRow(meal: meal),
-          ],
         ],
       ),
     );
   }
-}
-
-class _MealRow extends StatelessWidget {
-  const _MealRow({required this.meal});
-
-  final OrderMeal meal;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 7),
-    child: Row(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: AppColors.jasper.withValues(alpha: .09),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.room_service_outlined,
-            color: AppColors.jasper,
-            size: 17,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                meal.name,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              Text(
-                meal.quantity > 1
-                    ? '${meal.quantity} meals included'
-                    : 'Included in your plan',
-                style: TextStyle(
-                  color: AppColors.darkGreen.withValues(alpha: .62),
-                  fontSize: 10,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Container(
-          width: 48,
-          height: 38,
-          decoration: BoxDecoration(
-            color: AppColors.cream.withValues(alpha: .6),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(
-            Icons.restaurant_rounded,
-            color: AppColors.emeraldGreen,
-            size: 20,
-          ),
-        ),
-      ],
-    ),
-  );
 }
 
 class _EmptyDelivery extends StatelessWidget {
@@ -565,7 +604,7 @@ class _FridayNotice extends StatelessWidget {
         SizedBox(width: 8),
         Expanded(
           child: Text(
-            'Delivery times may slightly change on Fridays',
+            'Deliveries run Saturday to Thursday. Friday is a non-delivery day.',
             style: TextStyle(
               color: AppColors.jasper,
               fontSize: 10,
