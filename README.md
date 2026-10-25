@@ -41,6 +41,30 @@ pod install
 open Runner.xcworkspace
 ```
 
+## TestFlight
+
+The `iOS TestFlight` GitHub Actions workflow builds a signed IPA and uploads it
+to App Store Connect on pushes to `main` or from **Actions → iOS TestFlight →
+Run workflow**. It expects the app record and the `com.diettime.dietTime` App
+Store bundle ID to already exist in Apple Developer and App Store Connect.
+
+Configure these GitHub Actions variables:
+
+- `APPSTORE_ISSUER_ID`
+- `APPSTORE_API_KEY_ID`
+- `APPSTORE_TEAM_ID`
+
+Configure these GitHub Actions secrets:
+
+- `APPSTORE_API_PRIVATE_KEY` — the contents of the App Store Connect `AuthKey_*.p8`
+- `APPSTORE_CERTIFICATES_FILE_BASE64` — a base64-encoded Apple Distribution `.p12`
+- `APPSTORE_CERTIFICATES_PASSWORD` — the `.p12` password
+
+The workflow downloads the App Store provisioning profile named
+`AppStore com.diettime.dietTime`; create that profile with the same bundle ID
+and an Apple Distribution certificate. Never commit signing certificates,
+private keys, provisioning profiles, or local API key files.
+
 ## Run
 
 ```sh
