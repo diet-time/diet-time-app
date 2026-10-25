@@ -103,16 +103,12 @@ jobs:
         with:
           workspace: ios/Runner.xcworkspace
           scheme: Runner
+          configuration: Release
           sdk: iphoneos
           action: archive
           archive-path: .build/Archives/Runner.xcarchive
           export-options-plist: ios/ExportOptions.plist
           build-number: ${{ github.run_number }}
-          build-settings: |
-            CODE_SIGN_STYLE=Manual
-            CODE_SIGN_IDENTITY=Apple Distribution
-            DEVELOPMENT_TEAM=${{ env.APPSTORE_TEAM_ID }}
-            PROVISIONING_PROFILE_SPECIFIER=com.diettime.dietTime
 
       - name: Upload build to TestFlight
         uses: apple-actions/upload-testflight-build@v5
