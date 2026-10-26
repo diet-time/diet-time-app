@@ -94,8 +94,13 @@ class CustomerOrderSummary {
   final DateTime? placedAt;
 
   bool get isValid => id.isNotEmpty && orderNumber.isNotEmpty;
-  bool get isCurrent =>
-      const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(status);
+  bool get isCurrent => const {
+    'CONFIRMED',
+    'ACTIVE',
+    'PAUSED',
+    'PENDING',
+    'PENDING_ACTIVATION',
+  }.contains(status);
   bool get isCompleted => status == 'COMPLETED';
   bool get isCancelled => status == 'CANCELLED';
 }

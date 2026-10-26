@@ -60,6 +60,108 @@ TomorrowMenu menu({bool confirmed = false, bool noDelivery = false}) =>
     );
 
 void main() {
+  Future<void> show(WidgetTester tester, FakeRepository repository) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tomorrowMenuRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: TomorrowMenuSection(orderId: 'order'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+  }
+
+  for (final entry in {
+    'SERVICE_DAYS_MISSING':
+        'Your order is saved, but its delivery schedule needs to be initialized by our team.',
+    'MENU_NOT_CONFIGURED':
+        'Your order is saved. Tomorrow’s dishes have not been configured yet.',
+    'NOT_STARTED':
+        'Your plan starts soon. Selection opens the day before your first delivery.',
+    'PENDING_ACTIVATION': 'Your order is saved and is waiting for activation.',
+    'FINALIZATION_PENDING':
+        'The 9:00 PM selection window has closed. Your automatic meals are being finalized.',
+  }.entries) {
+    testWidgets(
+      '${entry.key} retains plan details with a distinct explanation',
+      (tester) async {
+        final response = TomorrowMenu(
+          subscriptionId: 'order',
+          dayId: null,
+          deliveryDate: DateTime(2026, 10, 27),
+          planName: 'Complete Balance',
+          mealCount: 2,
+          snackCount: 1,
+          status: entry.key,
+          locked: false,
+          canConfirm: false,
+          cutoffAt: DateTime.utc(2026, 10, 26, 18),
+          serverNow: DateTime.utc(2026, 10, 26, 12),
+          selected: [],
+          meals: [],
+          snacks: [],
+          firstDeliveryDate: DateTime(2026, 10, 31),
+        );
+        await show(tester, FakeRepository()..response = response);
+        expect(find.text('Complete Balance'), findsOneWidget);
+        expect(find.text('2 Meals + 1 Snack'), findsOneWidget);
+        expect(find.text(entry.value), findsOneWidget);
+        expect(find.text('Confirm My Meals'), findsNothing);
+        expect(
+          find.text('No delivery is scheduled for tomorrow.'),
+          findsNothing,
+        );
+        if (entry.key == 'NOT_STARTED') {
+          expect(
+            find.text('First delivery: Saturday, 31 October'),
+            findsOneWidget,
+          );
+        }
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
+  testWidgets(
+    'an available menu with no saved selections shows selectable dishes and zero progress',
+    (tester) async {
+      final available = menu();
+      final response = TomorrowMenu(
+        subscriptionId: available.subscriptionId,
+        dayId: available.dayId,
+        deliveryDate: available.deliveryDate,
+        planName: available.planName,
+        mealCount: 2,
+        snackCount: 1,
+        status: 'DEFAULT_PENDING',
+        locked: false,
+        canConfirm: true,
+        cutoffAt: available.cutoffAt,
+        serverNow: available.serverNow,
+        selected: [],
+        meals: dishes,
+        snacks: [snack],
+      );
+      await show(tester, FakeRepository()..response = response);
+      expect(find.text('Meals: 0/2 selected'), findsOneWidget);
+      expect(find.text('Snacks: 0/1 selected'), findsOneWidget);
+      expect(find.text('Grilled chicken'), findsOneWidget);
+      await tester.tap(find.text('Grilled chicken'));
+      await tester.pump();
+      expect(find.text('Meals: 1/2 selected'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
   test(
     'defaults preselect locally; exact entitlements and distinct dishes are enforced',
     () {
@@ -145,26 +247,6 @@ void main() {
       expect(noAuth.path, isNull);
     },
   );
-
-  Future<void> show(WidgetTester tester, FakeRepository repository) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          tomorrowMenuRepositoryProvider.overrideWithValue(repository),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: TomorrowMenuSection(orderId: 'order'),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pump();
-  }
 
   testWidgets(
     'draft is editable, confirmation is cancellable, duplicate submits blocked, success waits for API',

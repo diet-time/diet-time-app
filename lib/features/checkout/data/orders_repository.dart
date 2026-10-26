@@ -54,12 +54,36 @@ class OrdersRepository {
     String profileId, {
     int pageSize = 20,
   }) async {
-    final page = await getCustomerOrdersPage(
-      profileId,
-      pageNumber: 1,
-      pageSize: pageSize,
-    );
-    return page.items;
+    final orders = <CustomerOrderSummary>[];
+    final seenIds = <String>{};
+    var pageNumber = 1;
+    while (true) {
+      final page = await getCustomerOrdersPage(
+        profileId,
+        pageNumber: pageNumber,
+        pageSize: pageSize,
+      );
+      if (page.pageNumber != pageNumber ||
+          (page.items.isEmpty && orders.length < page.totalCount)) {
+        throw const ApiException(
+          ApiFailure.invalidResponse,
+          message:
+              'Your order list was incomplete. Please refresh your dashboard.',
+        );
+      }
+      for (final order in page.items) {
+        if (!seenIds.add(order.id)) {
+          throw const ApiException(
+            ApiFailure.invalidResponse,
+            message:
+                'Your order list changed while loading. Please refresh your dashboard.',
+          );
+        }
+        orders.add(order);
+      }
+      if (orders.length >= page.totalCount) return orders;
+      pageNumber++;
+    }
   }
 
   Future<CustomerOrdersPage> getCustomerOrdersPage(

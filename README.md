@@ -307,3 +307,79 @@ diet-time-admin-spa/
   src/features/delivery-calendar/components/DateDetailsDrawer.tsx
   src/features/delivery-calendar/components/DateDetailsDrawer.test.tsx
 ```
+
+## Empty Tomorrow’s Menu investigation
+
+The code investigation found these defects; the affected live customer order has **not yet been verified**. No usable application database connection or affected order identifier was available in this session. The affected order/environment and authorized access are still required. The checks below are ready to establish the live cause rather than assume that an order is missing.
+
+- `GetTomorrowAsync` previously returned `NO_DELIVERY` whenever no matching `subscription_service_days.order_id` row existed, even when the purchased order scheduled a delivery tomorrow. It now checks the owned order, purchased quantities, date range, and delivery weekdays first, then distinguishes `SERVICE_DAYS_MISSING`, `SERVICE_DAY_INCOMPLETE`, `NOT_STARTED`, `PENDING_ACTIVATION`, `NO_DELIVERY`, `INACTIVE_ORDER`, and `MENU_NOT_CONFIGURED`.
+- Flutter previously treated every null service-day ID as “No delivery.” It now renders the API status and reason, retains plan/package information, shows the first delivery date for future plans, and distinguishes authentication, missing-order lookup, network, and API failures. Repairable empty states have a refresh action.
+- The customer order lookup previously read only its first page. It now reads all pages, so an older active plan is not hidden by newer orders. Incomplete or changing pagination is reported as an error. Pending activation orders remain visible as plans.
+- A PostgreSQL regression reproduced a confirmation failure when no provisional selection rows existed: new rows with assigned UUIDs were treated as updates, resulting in `DbUpdateConcurrencyException`. New selections are now explicitly added to EF before saving. Configured dishes load without any saved selections, and customers can confirm a new complete set.
+
+Order placement already calls `InitializeAsync` after saving the order and before committing the same transaction. Orders are the subscription source; there is no new subscription table. The operational backfill now checks both order/subscription identifiers and refuses ambiguous links or conflicting service sequences. It adds only missing current/future service days, preserves historical dates and selections, and remains idempotent. No schema changes or application-data backfill were executed for this investigation. The exact 9 PM Qatar cutoff, tomorrow-only window, Friday exclusion, row locks, and permanent confirmation remain unchanged.
+
+Trace the real customer through these existing authenticated routes:
+
+```http
+GET /api/v1/customer/profile
+GET /api/v1/customer-profiles/{profileId}/orders?pageNumber=1&pageSize=100
+GET /api/v1/orders/{orderId}/tomorrow-menu?language=en
+```
+
+Use the `id` from the owned orders response as `{orderId}`. The existing response field `subscriptionId` still carries this order identifier. The menu now also returns `orderStatus`, `orderStartDate`, `firstDeliveryDate`, `menuTemplateId`, `menuTemplateVersion`, `menuWeekNumber`, and `emptyReason` where applicable.
+
+Server logs record authenticated user/customer IDs, order/subscription IDs, order status, Qatar today/tomorrow, matched service-day ID, saved template/version, week/weekday, dish and selection counts, status, and empty reason. Flutter debug logs show the actual route, HTTP status, and parsed menu state; access tokens are not logged. Empty results are not treated as evidence of a missing order.
+
+Operational tools are provided separately in the API repository:
+
+- `database/scripts/tomorrow_menu_diagnostics.sql`: read-only PostgreSQL queries for the real order, authenticated user link, purchased quantities, delivery weekdays, service days, persisted selections, configured menu options, and foreign keys. The SQL uses the actual mapped template weekday column, `day_of_week`.
+- `database/scripts/backfill_upcoming_meals.ps1`: defaults to a read-only admin preview. An explicit `-Apply` invokes the existing transaction-protected initialization endpoint for one verified order. Raw DML is not duplicated in SQL because that would bypass the existing service’s eligibility, sequence, and locking rules.
+- `database/scripts/verify_tomorrow_menu.ps1`: resolves the authenticated customer profile, locates the actual existing order across pages, and fetches its real menu. It changes no selections. Supply the customer access token through `DIETTIME_CUSTOMER_ACCESS_TOKEN` in the environment, never in a committed file or chat.
+
+Run diagnostics against the intended database, supplying the actual order UUID:
+
+```sh
+psql -v order_id='<order-uuid>' -f database/scripts/tomorrow_menu_diagnostics.sql
+```
+
+Preview a backfill using an authorized Admin/Operations session token supplied through `DIETTIME_ADMIN_ACCESS_TOKEN`:
+
+```powershell
+.\database\scripts\backfill_upcoming_meals.ps1 -ApiBaseUrl https://your-api.example -OrderId <order-uuid>
+```
+
+Review the order, status, dates, saved template version, existing IDs, conflicts, and missing dates. Only after verifying the cause, repeat with `-Apply`. Historical days and existing selections are preserved. Ambiguous existing subscription links must be reviewed separately; they are not automatically reassigned.
+
+Verify the customer’s actual menu with the updated API deployed, during the appropriate selection window:
+
+```powershell
+.\database\scripts\verify_tomorrow_menu.ps1 -ApiBaseUrl https://your-api.example -OrderId <order-uuid>
+```
+
+An existing future-starting or non-delivery order should return its distinct state. Do not alter the server clock or bypass cutoff to make a live verification pass. A successful test fixture is not evidence that the affected live order has been repaired.
+
+Files affected by this investigation:
+
+```text
+diet-time-app/
+  README.md
+  lib/features/checkout/data/orders_repository.dart
+  lib/features/checkout/domain/order_models.dart
+  lib/features/dashboard/data/tomorrow_menu_repository.dart
+  lib/features/dashboard/domain/tomorrow_menu.dart
+  lib/features/dashboard/presentation/tomorrow_menu_section.dart
+  test/tomorrow_menu_test.dart
+  test/dashboard_order_pagination_test.dart
+diet-time-api/
+  src/BuildingBlocks/DietTime.Contracts/UpcomingMealContracts.cs
+  src/BuildingBlocks/DietTime.Persistence/TomorrowMealService.cs
+  src/BuildingBlocks/DietTime.Persistence/UpcomingMealService.cs
+  src/Apis/DietTime.Meal.Api/Controllers/AdminUpcomingMealsController.cs
+  tests/DietTime.Meal.Api.IntegrationTests/UpcomingMealServiceTests.cs
+  database/scripts/tomorrow_menu_diagnostics.sql
+  database/scripts/backfill_upcoming_meals.ps1
+  database/scripts/verify_tomorrow_menu.ps1
+```
+
+Current regression results: 43 Flutter dashboard/menu/pagination/calendar tests passed; 31 PostgreSQL menu/rotation tests passed, including missing schedules, no saved selections, explicit idempotent backfill, preserved locks, and cutoff/concurrency cases. One additional PostgreSQL test passed for the read-only diagnostic SQL, for 32 passing database tests in total. Flutter analysis is clean, the API builds, both operational PowerShell scripts parse successfully, and whitespace checks pass. The operational HTTP scripts were not run against a live account. Live-order verification remains outstanding until the affected order/environment and authorized access are available.

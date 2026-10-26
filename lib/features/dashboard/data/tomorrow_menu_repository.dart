@@ -2,6 +2,7 @@ import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/core/storage/secure_storage_service.dart';
 import 'package:diet_time/features/dashboard/domain/tomorrow_menu.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 
 final tomorrowMenuRepositoryProvider = Provider<TomorrowMenuRepository>((ref) {
   final storage = ref.watch(secureStorageServiceProvider);
@@ -56,11 +57,21 @@ class TomorrowMenuRepository {
       headers: {'Authorization': 'Bearer ${token!.trim()}'},
       body: body,
     );
+    if (kDebugMode) {
+      debugPrint(
+        '[TomorrowMenu] $method /api/v1/orders/$orderId/$suffix HTTP ${response.statusCode}',
+      );
+    }
     if (!response.isSuccess) throw ApiException.fromResponse(response);
     try {
       final menu = TomorrowMenu.fromJson(
         response.body['data'] as Map<String, dynamic>,
       );
+      if (kDebugMode) {
+        debugPrint(
+          '[TomorrowMenu] order=$orderId status=${menu.status} orderStatus=${menu.orderStatus} date=${menu.deliveryDate} day=${menu.dayId} meals=${menu.meals.length} snacks=${menu.snacks.length} selected=${menu.selected.length} reason=${menu.emptyReason ?? menu.reviewReason}',
+        );
+      }
       if (menu.subscriptionId != orderId ||
           (expectedDayId != null &&
               (menu.dayId != expectedDayId ||

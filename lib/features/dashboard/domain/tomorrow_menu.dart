@@ -17,6 +17,10 @@ class TomorrowMenu {
     required this.meals,
     required this.snacks,
     this.reviewReason,
+    this.orderStatus,
+    this.orderStartDate,
+    this.firstDeliveryDate,
+    this.emptyReason,
   });
 
   factory TomorrowMenu.fromJson(Map<String, dynamic> json) {
@@ -36,6 +40,14 @@ class TomorrowMenu {
       cutoffAt: DateTime.parse(json['cutoffAt'] as String),
       serverNow: DateTime.parse(json['serverNow'] as String),
       reviewReason: json['reviewReason'] as String?,
+      orderStatus: json['orderStatus'] as String?,
+      orderStartDate: DateTime.tryParse(
+        json['orderStartDate']?.toString() ?? '',
+      ),
+      firstDeliveryDate: DateTime.tryParse(
+        json['firstDeliveryDate']?.toString() ?? '',
+      ),
+      emptyReason: json['emptyReason'] as String?,
       selected: items('selectedMeals'),
       meals: items('availableMeals'),
       snacks: items('availableSnacks'),
@@ -54,12 +66,41 @@ class TomorrowMenu {
   final DateTime cutoffAt;
   final DateTime serverNow;
   final String? reviewReason;
+  final String? orderStatus;
+  final DateTime? orderStartDate;
+  final DateTime? firstDeliveryDate;
+  final String? emptyReason;
   final List<DailyMealItem> selected;
   final List<DailyMealItem> meals;
   final List<DailyMealItem> snacks;
 
   bool get finalized =>
       status == 'CUSTOMER_CONFIRMED' || status == 'AUTO_FINALIZED';
+
+  String get statusMessage => switch (status) {
+    'NO_ORDER' => 'No order is linked to your account.',
+    'PENDING_ACTIVATION' =>
+      'Your order is saved and is waiting for activation.',
+    'NOT_STARTED' =>
+      'Your plan starts soon. Selection opens the day before your first delivery.',
+    'NO_DELIVERY' => 'No delivery is scheduled for tomorrow.',
+    'SERVICE_DAYS_MISSING' =>
+      'Your order is saved, but its delivery schedule needs to be initialized by our team.',
+    'SERVICE_DAY_INCOMPLETE' =>
+      'Your delivery details need review by our team.',
+    'SCHEDULE_NOT_CONFIGURED' =>
+      'Your order’s delivery weekdays need review by our team.',
+    'MENU_NOT_CONFIGURED' =>
+      'Your order is saved. Tomorrow’s dishes have not been configured yet.',
+    'SELECTION_NOT_OPEN' => 'Selection opens the day before your delivery.',
+    'FINALIZATION_PENDING' =>
+      'The 9:00 PM selection window has closed. Your automatic meals are being finalized.',
+    'INACTIVE_ORDER' => 'This order is not active for meal selection.',
+    'LOCKED' => 'Your meal selections are locked for preparation.',
+    'NEEDS_REVIEW' =>
+      'Our team needs to review suitable dishes for your package.',
+    _ => 'Please choose your meals for tomorrow.',
+  };
 }
 
 /// Local drafts never write to the API. Dish identity is shared across categories.

@@ -78,13 +78,23 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
           .get(widget.orderId, _language ?? 'en');
       if (!mounted || generation != _generation) return;
       _accept(menu);
-    } on Object {
+    } on Object catch (error) {
       if (!mounted || generation != _generation) return;
       setState(() {
         _menu = null;
         _loading = false;
         _error =
-            feedback ?? 'Unable to load tomorrow’s menu. Please try again.';
+            feedback ??
+            switch (error) {
+              ApiException(failure: ApiFailure.unauthorized) =>
+                'Your session has expired. Please sign in again.',
+              ApiException(failure: ApiFailure.notFound) =>
+                'This order could not be loaded for your account. Refresh your dashboard or contact our team with your order reference.',
+              ApiException(failure: ApiFailure.network || ApiFailure.timeout) =>
+                'We could not connect to load your menu. Check your connection and try again.',
+              _ =>
+                'The menu service could not load your order’s dishes. Please refresh or contact our team.',
+            };
       });
     }
   }
@@ -115,7 +125,13 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
     );
     final delay = menu.canConfirm && untilCutoff > Duration.zero
         ? untilCutoff
-        : menu.status == 'FINALIZATION_PENDING' || menu.status == 'NEEDS_REVIEW'
+        : const {
+            'FINALIZATION_PENDING',
+            'NEEDS_REVIEW',
+            'MENU_NOT_CONFIGURED',
+            'SERVICE_DAYS_MISSING',
+            'SERVICE_DAY_INCOMPLETE',
+          }.contains(menu.status)
         ? const Duration(seconds: 30)
         : untilMidnight;
     _refreshTimer = Timer(delay, () {
@@ -259,8 +275,6 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-          ] else if (menu != null && menu.dayId == null) ...[
-            const Text('No delivery is scheduled for tomorrow.'),
           ] else if (menu != null && draft != null) ...[
             Text(
               DateFormat('EEEE, d MMMM').format(menu.deliveryDate),
@@ -268,10 +282,17 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
             ),
             const SizedBox(height: 4),
             Text(menu.planName),
+            if (menu.orderStatus != null)
+              Text('Order status: ${menu.orderStatus!.replaceAll('_', ' ')}'),
             Text(
               '${menu.mealCount} Meals + ${menu.snackCount} Snack${menu.snackCount == 1 ? '' : 's'}',
             ),
             const SizedBox(height: 12),
+            if (menu.status == 'NOT_STARTED' &&
+                (menu.firstDeliveryDate ?? menu.orderStartDate) != null)
+              Text(
+                'First delivery: ${DateFormat('EEEE, d MMMM').format((menu.firstDeliveryDate ?? menu.orderStartDate)!)}',
+              ),
             if (menu.finalized) ...[
               Align(
                 alignment: AlignmentDirectional.centerStart,
@@ -315,10 +336,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
                 backgroundColor: const Color(0xFFEDF5EF),
               ),
             ] else ...[
-              Text(
-                menu.reviewReason ??
-                    'The selection window has closed. Your automatic meals are being finalized.',
-              ),
+              Text(menu.emptyReason ?? menu.reviewReason ?? menu.statusMessage),
             ],
             const SizedBox(height: 12),
             if (menu.canConfirm && !_expired) ...[
@@ -339,6 +357,11 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
               for (final item in menu.selected)
                 _MealCard(item: item, selected: true),
             ],
+            if (!menu.canConfirm && !menu.finalized && _error == null)
+              TextButton(
+                onPressed: _submitting ? null : () => _load(),
+                child: const Text('Refresh menu'),
+              ),
           ],
           if (_error != null) ...[
             const SizedBox(height: 8),
