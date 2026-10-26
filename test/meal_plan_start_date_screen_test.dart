@@ -112,6 +112,36 @@ void main() {
     );
   });
 
+  testWidgets('today and Friday are disabled while tomorrow is selectable', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: MealPlanStartDateScreen(
+            selection: _selection,
+            today: DateTime(2026, 10, 26),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('startDateField')));
+    await tester.pumpAndSettle();
+    for (final day in ['20261025', '20261026', '20261030']) {
+      expect(
+        tester.widget<InkWell>(find.byKey(ValueKey('calendarDay-$day'))).onTap,
+        isNull,
+      );
+    }
+    expect(
+      tester
+          .widget<InkWell>(find.byKey(const ValueKey('calendarDay-20261027')))
+          .onTap,
+      isNotNull,
+    );
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('only Friday is unavailable in the default calendar', (
     tester,
   ) async {

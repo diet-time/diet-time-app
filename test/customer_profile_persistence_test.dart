@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
 
 import 'package:diet_time/features/personalization/data/customer_profile_repository.dart';
 import 'package:diet_time/features/personalization/domain/customer_profile.dart';
@@ -94,6 +95,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           customerProfileRepositoryProvider.overrideWithValue(repository),
+          customerProfileServiceProvider.overrideWithValue(
+            CustomerProfileService(customerRepository: repository),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -109,6 +113,7 @@ void main() {
       final duplicateSave = await controller.save(complete: false);
 
       expect(duplicateSave, isFalse);
+      await Future<void>.delayed(Duration.zero);
       expect(repository.updateCalls, 1);
 
       repository.complete();

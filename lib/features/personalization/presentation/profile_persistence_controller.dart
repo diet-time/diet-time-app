@@ -1,4 +1,4 @@
-import 'package:diet_time/core/network/api_client.dart';
+import 'package:diet_time/features/personalization/data/customer_profile_repository.dart';
 import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
 import 'package:diet_time/features/personalization/domain/customer_profile.dart';
 import 'package:diet_time/features/personalization/domain/onboarding_route_resolver.dart';
@@ -100,19 +100,12 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
       state = state.copyWith(isSaving: false, resumeStep: resumeStepFor(saved));
       return true;
     } on Object catch (error) {
-      if (error is ApiException && error.failure == ApiFailure.conflict) {
-        final latest = await ref.read(customerProfileServiceProvider).load();
-        if (latest != null) {
-          ref.read(personalizationControllerProvider.notifier).replace(latest);
-        }
-        state = state.copyWith(
-          isSaving: false,
-          resumeStep: latest == null ? state.resumeStep : resumeStepFor(latest),
-          errorMessage: 'profile_conflict',
-        );
-        return false;
-      }
-      state = state.copyWith(isSaving: false, errorMessage: 'profile_save');
+      state = state.copyWith(
+        isSaving: false,
+        errorMessage: error is CustomerProfileException
+            ? error.message
+            : 'Your answers are kept on this phone. Please retry saving.',
+      );
       return false;
     }
   }

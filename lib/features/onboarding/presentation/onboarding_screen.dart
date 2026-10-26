@@ -5,8 +5,6 @@ import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
-import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
-import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/personalization/data/allergen_repository.dart';
 import 'package:diet_time/features/personalization/domain/personalization_draft.dart';
 import 'package:diet_time/features/personalization/domain/personalization_options.dart';
@@ -72,31 +70,10 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   }
 
   Future<void> _loadProfile() async {
-    final cachedProfile = ref.read(personalizationControllerProvider);
-    if (!widget.customerProfileMode &&
-        (cachedProfile.isCompleted || cachedProfile.hasCapturedQuestionnaire)) {
-      if (mounted) context.go(AppRoutes.plans);
-      return;
-    }
-    final authenticated = await ref
-        .read(authenticationServiceProvider)
-        .isLoggedIn();
-    if (!mounted) return;
-    if (!authenticated) {
-      context.go(
-        AppRoutes.phoneLogin,
-        extra: PendingAuthDestination(
-          route: widget.customerProfileMode
-              ? AppRoutes.customerQuestionnaire
-              : AppRoutes.personalization,
-        ),
-      );
-      return;
-    }
-    final existingPersistence = ref.read(profilePersistenceControllerProvider);
-    final profile = existingPersistence.hasLoaded
-        ? ref.read(personalizationControllerProvider)
-        : await ref.read(profilePersistenceControllerProvider.notifier).load();
+    // Loading also synchronizes a locally saved guest draft after sign-in.
+    final profile = await ref
+        .read(profilePersistenceControllerProvider.notifier)
+        .load();
     if (!mounted || profile == null) return;
     if (widget.customerProfileMode) {
       _restoreVisibleValues(profile);
@@ -106,31 +83,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       context.go(AppRoutes.plans);
       return;
     }
-    _startFreshDraft(profile);
-  }
-
-  void _startFreshDraft(CustomerProfile profile) {
-    ref
-        .read(personalizationControllerProvider.notifier)
-        .replace(
-          CustomerProfile(
-            profileId: profile.profileId,
-            preferredLanguage: Localizations.localeOf(context).languageCode,
-            updatedAt: profile.updatedAt,
-            rowVersion: profile.rowVersion,
-          ),
-        );
-    setState(() {
-      _goal = null;
-      _gender = null;
-      _age = null;
-      _height = null;
-      _weight = null;
-      _lifestyle = null;
-      _activity = null;
-      _preferences.clear();
-      _allergies.clear();
-    });
+    _restoreVisibleValues(profile);
   }
 
   void _restoreVisibleValues(CustomerProfile profile) {
@@ -155,7 +108,13 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         ..addAll(visiblePreferences);
       _allergies
         ..clear()
-        ..addAll(profile.allergens);
+        ..addAll(
+          profile.allergens.isEmpty && profile.allergensConfirmed
+              ? {'none'}
+              : profile.allergens.map(
+                  (value) => value.toUpperCase() == 'NONE' ? 'none' : value,
+                ),
+        );
     });
   }
 
@@ -214,10 +173,10 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     if (_index == 6) {
       ref.read(personalizationControllerProvider.notifier).confirmAllergens();
     }
-    if (_index == 6) {
+    if (_index >= 1 && _index <= 6) {
       final saved = await ref
           .read(profilePersistenceControllerProvider.notifier)
-          .save(complete: true);
+          .save(complete: _index == 6);
       if (!mounted) return;
       if (!saved) {
         if (ref.read(profilePersistenceControllerProvider).errorMessage ==
@@ -226,7 +185,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         }
         return;
       }
-      await _goTo(7);
+      await _goTo(_index + 1);
       return;
     }
     if (_index == _stepCount - 1) {
@@ -409,6 +368,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         'Could not save your progress. Check your connection.',
         'تعذر حفظ تقدمك. تحقق من اتصالك.',
       ),
+      final message? => message,
       _ => null,
     };
     final errorMessage = _validationMessage ?? persistenceErrorMessage;
@@ -438,15 +398,19 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                     completionPercentage: localCompletionPercentage,
                   ),
                   Expanded(
-                    child: PageView.builder(
-                      key: const ValueKey('onboardingPageView'),
-                      controller: _controller,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _stepCount,
-                      onPageChanged: (index) => setState(() => _index = index),
-                      itemBuilder: (context, index) => KeyedSubtree(
-                        key: ValueKey('onboardingStep-$index'),
-                        child: steps[index],
+                    child: AbsorbPointer(
+                      absorbing: persistence.isSaving,
+                      child: PageView.builder(
+                        key: const ValueKey('onboardingPageView'),
+                        controller: _controller,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _stepCount,
+                        onPageChanged: (index) =>
+                            setState(() => _index = index),
+                        itemBuilder: (context, index) => KeyedSubtree(
+                          key: ValueKey('onboardingStep-$index'),
+                          child: steps[index],
+                        ),
                       ),
                     ),
                   ),

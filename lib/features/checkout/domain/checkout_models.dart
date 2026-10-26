@@ -37,6 +37,7 @@ class CustomerDeliveryAddress {
     this.unitNumber,
     this.directions,
     this.isDefault = false,
+    this.deliveryTimeSlotId,
   });
 
   factory CustomerDeliveryAddress.fromJson(Map<String, dynamic> json) =>
@@ -56,6 +57,7 @@ class CustomerDeliveryAddress {
           json['formattedAddress'] ?? json['fullAddress'],
         ),
         isDefault: json['isDefault'] == true,
+        deliveryTimeSlotId: _nullableText(json['deliveryTimeSlotId']),
       );
 
   final String id;
@@ -71,6 +73,7 @@ class CustomerDeliveryAddress {
   final double longitude;
   final String formattedAddress;
   final bool isDefault;
+  final String? deliveryTimeSlotId;
 
   String get displayName =>
       addressName.trim().isEmpty ? addressType.label : addressName;
@@ -90,24 +93,29 @@ class CustomerDeliveryAddress {
     'longitude': longitude,
     'formattedAddress': formattedAddress.trim(),
     'isDefault': isDefault,
+    if (deliveryTimeSlotId != null) 'deliveryTimeSlotId': deliveryTimeSlotId,
   };
 
-  CustomerDeliveryAddress copyWith({String? id, bool? isDefault}) =>
-      CustomerDeliveryAddress(
-        id: id ?? this.id,
-        addressName: addressName,
-        addressType: addressType,
-        buildingNo: buildingNo,
-        streetNo: streetNo,
-        unitNumber: unitNumber,
-        zoneNo: zoneNo,
-        area: area,
-        directions: directions,
-        latitude: latitude,
-        longitude: longitude,
-        formattedAddress: formattedAddress,
-        isDefault: isDefault ?? this.isDefault,
-      );
+  CustomerDeliveryAddress copyWith({
+    String? id,
+    bool? isDefault,
+    String? deliveryTimeSlotId,
+  }) => CustomerDeliveryAddress(
+    id: id ?? this.id,
+    addressName: addressName,
+    addressType: addressType,
+    buildingNo: buildingNo,
+    streetNo: streetNo,
+    unitNumber: unitNumber,
+    zoneNo: zoneNo,
+    area: area,
+    directions: directions,
+    latitude: latitude,
+    longitude: longitude,
+    formattedAddress: formattedAddress,
+    isDefault: isDefault ?? this.isDefault,
+    deliveryTimeSlotId: deliveryTimeSlotId ?? this.deliveryTimeSlotId,
+  );
 }
 
 class DeliveryTimeSlot {
@@ -131,7 +139,8 @@ class DeliveryTimeSlot {
   final String startTime;
   final String endTime;
 
-  String get timeRange => '$startTime - $endTime';
+  String get timeRange =>
+      '${startTime.length >= 5 ? startTime.substring(0, 5) : startTime} - ${endTime.length >= 5 ? endTime.substring(0, 5) : endTime}';
 }
 
 class CheckoutState {
@@ -197,6 +206,10 @@ class CheckoutState {
       return 'Please choose a meal plan.';
     }
     if (startDate == null) return 'Please select a plan start date.';
+    if (selection != null &&
+        !eligibleDeliveryStart(startDate!, selection!.pricingOption)) {
+      return 'Choose a new delivery start date. Delivery can start tomorrow or later, excluding Friday.';
+    }
     if (selectedMeals.isEmpty || selectedMeals.any((meal) => !meal.isValid)) {
       return 'Please select at least one meal.';
     }

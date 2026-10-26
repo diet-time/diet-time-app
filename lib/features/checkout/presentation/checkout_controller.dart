@@ -33,6 +33,14 @@ class CheckoutController extends Notifier<CheckoutState> {
     MealPlanPurchaseSelection selection,
     MealPlanServiceSchedule schedule,
   ) {
+    if (!eligibleDeliveryStart(schedule.startDate, selection.pricingOption)) {
+      state = state.copyWith(
+        schedule: null,
+        placementError:
+            'Choose a future delivery start date; today and Friday are unavailable.',
+      );
+      return;
+    }
     state = state.copyWith(
       selection: selection,
       schedule: schedule,
@@ -126,7 +134,7 @@ class CheckoutController extends Notifier<CheckoutState> {
         deliveryTimeSlots: slots,
         isLoadingDeliveryTimeSlots: false,
         selectedDeliveryTimeSlot: selected.isEmpty
-            ? state.selectedDeliveryTimeSlot
+            ? null
             : selected.first,
       );
     } catch (error) {
@@ -202,7 +210,9 @@ class CheckoutController extends Notifier<CheckoutState> {
     final addresses = await ref
         .read(checkoutRepositoryProvider)
         .getAddresses(profileId);
-    CustomerDeliveryAddress? selected = state.selectedAddress;
+    CustomerDeliveryAddress? selected = addresses
+        .where((address) => address.id == state.selectedAddressId)
+        .firstOrNull;
     if (selected == null && addresses.isNotEmpty) {
       selected = addresses.firstWhere(
         (item) => item.isDefault,
@@ -216,12 +226,20 @@ class CheckoutController extends Notifier<CheckoutState> {
       selectedAddress: selected,
       selectedAddressId: selected?.id,
     );
+    if (selected != null) selectAddress(selected);
   }
 
   void selectAddress(CustomerDeliveryAddress address) {
     state = state.copyWith(
       selectedAddress: address,
       selectedAddressId: address.id,
+      selectedDeliveryTimeSlotId:
+          address.deliveryTimeSlotId ?? state.selectedDeliveryTimeSlotId,
+      selectedDeliveryTimeSlot: address.deliveryTimeSlotId == null
+          ? state.selectedDeliveryTimeSlot
+          : state.deliveryTimeSlots
+                .where((slot) => slot.id == address.deliveryTimeSlotId)
+                .firstOrNull,
       idempotencyKey: null,
       placementError: null,
     );
@@ -249,6 +267,16 @@ class CheckoutController extends Notifier<CheckoutState> {
       );
       return false;
     }
+    final slotId =
+        address.deliveryTimeSlotId ?? state.selectedDeliveryTimeSlotId;
+    if (slotId == null ||
+        !state.deliveryTimeSlots.any((slot) => slot.id == slotId)) {
+      state = state.copyWith(
+        saveAddressError: 'Select an active delivery time slot before saving.',
+      );
+      return false;
+    }
+    address = address.copyWith(deliveryTimeSlotId: slotId);
     state = state.copyWith(isSavingAddress: true, saveAddressError: null);
     try {
       final repository = ref.read(checkoutRepositoryProvider);

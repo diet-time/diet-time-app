@@ -204,7 +204,10 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
         AppButton(
           key: const ValueKey('useDeliveryAddress'),
           label: 'Use This Address',
-          onPressed: checkout.isLoadingAddresses ? null : _useAddress,
+          isLoading: checkout.isSavingAddress,
+          onPressed: checkout.isLoadingAddresses || checkout.isSavingAddress
+              ? null
+              : _useAddress,
         ),
         const SizedBox(height: 8),
       ],
@@ -376,6 +379,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
   }
 
   void _editAddress(CustomerDeliveryAddress address) {
+    ref.read(checkoutControllerProvider.notifier).selectAddress(address);
     _buildingController.text = address.buildingNo;
     _streetController.text = address.streetNo;
     _unitController.text = address.unitNumber ?? '';
@@ -441,6 +445,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
       longitude: _longitude,
       formattedAddress: _formattedAddress,
       isDefault: previous?.isDefault ?? checkout.addresses.isEmpty,
+      deliveryTimeSlotId: checkout.selectedDeliveryTimeSlotId,
     );
     final saved = await ref
         .read(checkoutControllerProvider.notifier)
@@ -448,7 +453,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
     if (saved && mounted) context.pop();
   }
 
-  void _useAddress() {
+  Future<void> _useAddress() async {
     final checkout = ref.read(checkoutControllerProvider);
     final error = checkout.selectedAddress == null
         ? 'Select a delivery address or add a new one.'
@@ -456,7 +461,28 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
         ? 'Select a delivery time slot.'
         : null;
     setState(() => _localError = error);
-    if (error == null) context.pop();
+    if (error != null) return;
+    final address = checkout.selectedAddress!;
+    if (address.deliveryTimeSlotId != checkout.selectedDeliveryTimeSlotId) {
+      final saved = await ref
+          .read(checkoutControllerProvider.notifier)
+          .saveAddress(
+            address.copyWith(
+              deliveryTimeSlotId: checkout.selectedDeliveryTimeSlotId,
+            ),
+            editing: true,
+          );
+      if (!mounted) return;
+      if (!saved) {
+        setState(
+          () => _localError = ref
+              .read(checkoutControllerProvider)
+              .saveAddressError,
+        );
+        return;
+      }
+    }
+    if (mounted) context.pop();
   }
 
   Future<void> _search(String value) async {

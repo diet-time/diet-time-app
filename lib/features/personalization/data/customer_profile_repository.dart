@@ -54,7 +54,8 @@ class HttpCustomerProfileRepository implements CustomerProfileRepository {
     if (result.statusCode < 200 || result.statusCode >= 300) {
       throw CustomerProfileException(statusCode: result.statusCode);
     }
-    return _profileFromEnvelope(result.body, fallback: profile) ?? profile;
+    return _profileFromEnvelope(result.body, fallback: profile) ??
+        (throw const CustomerProfileException(statusCode: 502));
   }
 
   Future<_ProfileHttpResult> _request({
@@ -96,8 +97,29 @@ class HttpCustomerProfileRepository implements CustomerProfileRepository {
       final responseText = await utf8.decoder.bind(response).join();
       Map<String, dynamic> decoded = const {};
       if (responseText.trim().isNotEmpty) {
-        final value = jsonDecode(responseText);
-        if (value is Map<String, dynamic>) decoded = value;
+        try {
+          final value = jsonDecode(responseText);
+          if (value is Map<String, dynamic>) decoded = value;
+        } on FormatException {
+          // A proxy may return HTML on failure; retain its HTTP status.
+          if (response.statusCode < 400) {
+            throw const CustomerProfileException(statusCode: 502);
+          }
+        }
+      }
+      if (response.statusCode >= 400) {
+        final errors = decoded['errors'];
+        // Log field names/codes, never rejected values or questionnaire answers.
+        final fields = errors is Map
+            ? errors.keys.join(',')
+            : errors is List
+            ? errors.whereType<Map>().map((e) => e['code']).join(',')
+            : '';
+        final correlation =
+            response.headers.value('x-correlation-id') ?? decoded['traceId'];
+        debugPrint(
+          '[CustomerProfile] $method ${uri.path} status=${response.statusCode} validationFields=$fields correlation=$correlation',
+        );
       }
       return _ProfileHttpResult(statusCode: response.statusCode, body: decoded);
     } on CustomerProfileException {
@@ -128,6 +150,19 @@ class CustomerProfileException implements Exception {
   const CustomerProfileException({this.statusCode});
 
   final int? statusCode;
+  String get message => switch (statusCode) {
+    400 || 422 =>
+      'Some answers could not be accepted. Review your selections and retry.',
+    401 || 403 =>
+      'Your session has expired. Your answers are kept; sign in again to save.',
+    409 =>
+      'Your profile changed elsewhere. Your answers are kept; retry saving.',
+    429 => 'Too many attempts. Please wait briefly and retry.',
+    null =>
+      'We could not reach the server. Your answers are kept; please retry.',
+    _ =>
+      'The server could not save your answers. Your answers are kept; please retry.',
+  };
 }
 
 class _ProfileHttpResult {

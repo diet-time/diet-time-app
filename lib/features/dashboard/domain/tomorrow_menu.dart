@@ -108,7 +108,7 @@ class TomorrowMealDraft {
   TomorrowMealDraft(this.menu) {
     for (final item in menu.selected) {
       final options = item.category == 'meal' ? menu.meals : menu.snacks;
-      if (options.any((option) => option.id == item.id)) toggle(item);
+      if (options.any((option) => option.id == item.id)) _toggle(item);
     }
   }
 
@@ -120,7 +120,28 @@ class TomorrowMealDraft {
       mealIds.length == menu.mealCount && snackIds.length == menu.snackCount;
   bool contains(String id) => mealIds.contains(id) || snackIds.contains(id);
 
+  bool replace(DailyMealItem item, String previousId) {
+    if (menu.locked || menu.finalized || contains(item.id)) return false;
+    final ids = item.category == 'meal' ? mealIds : snackIds;
+    final options = item.category == 'meal' ? menu.meals : menu.snacks;
+    if (!ids.contains(previousId) ||
+        !options.any(
+          (option) => option.id == item.id && option.category == item.category,
+        )) {
+      return false;
+    }
+    ids
+      ..remove(previousId)
+      ..add(item.id);
+    return true;
+  }
+
   bool toggle(DailyMealItem item) {
+    if (menu.locked || menu.finalized) return false;
+    return _toggle(item);
+  }
+
+  bool _toggle(DailyMealItem item) {
     if (item.category != 'meal' && item.category != 'snack') return false;
     final ids = item.category == 'meal' ? mealIds : snackIds;
     if (ids.remove(item.id)) return true;

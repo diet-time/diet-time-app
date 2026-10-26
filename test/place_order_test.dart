@@ -294,7 +294,7 @@ class _RefreshedDiscountPricing extends MealPlanRepository {
       id: 'configuration-id',
       name: '3 Meals',
       selectedMeals: _readyCheckout.selectedMeals,
-      packages: const [
+      packages: [
         MealPlanPackage(
           mealPlanPriceId: 'price-id',
           name: '1 Month',
@@ -302,6 +302,8 @@ class _RefreshedDiscountPricing extends MealPlanRepository {
           totalPrice: 1600,
           dailyPrice: 80,
           currencyCode: 'QAR',
+          serverNow: DateTime.utc(2026, 8, 7),
+          serverReceivedAt: DateTime.now().toUtc(),
           regularPrice: 1880,
           discountedPrice: 1600,
         ),
@@ -380,6 +382,7 @@ class _PurchaseOptionsApiClient extends ApiClient {
                   'packageCode': 'MONTH',
                   'packageName': '1 Month',
                   'serviceDays': 20,
+                  'serverNow': '2026-08-07T00:00:00Z',
                   'currencyCode': 'QAR',
                   'amount': 1880,
                   'pricePerServiceDay': 94,
@@ -408,7 +411,7 @@ class _Request {
 }
 
 final _readyCheckout = CheckoutState(
-  selection: const MealPlanPurchaseSelection(
+  selection: MealPlanPurchaseSelection(
     mealPlan: MealPlanOption(id: 'plan-id', code: 'CLASSIC', name: 'Classic'),
     mealCombination: MealPlanConfiguration(
       id: 'configuration-id',
@@ -427,6 +430,8 @@ final _readyCheckout = CheckoutState(
       totalPrice: 1880,
       dailyPrice: 94,
       currencyCode: 'QAR',
+      serverNow: DateTime.utc(2026, 8, 7),
+      serverReceivedAt: DateTime.now().toUtc(),
     ),
     deliveryDaysPerWeek: 5,
     selectedWeekdays: {2, 3, 4, 5, 6},
@@ -456,13 +461,15 @@ final _displayOnlyCheckout = _readyCheckout.copyWith(
         MealPlanMealSelection(mealTypeId: 'snack-id', name: 'Snack'),
       ],
     ),
-    pricingOption: const MealPlanPackage(
+    pricingOption: MealPlanPackage(
       mealPlanPriceId: '',
       name: 'Monthly Plan',
       serviceDays: 20,
       totalPrice: 1880,
       dailyPrice: 94,
       currencyCode: 'QAR',
+      serverNow: DateTime.utc(2026, 8, 7),
+      serverReceivedAt: DateTime.now().toUtc(),
     ),
     deliveryDaysPerWeek: 5,
     selectedWeekdays: const {2, 3, 4, 5, 6},

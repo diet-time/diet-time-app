@@ -22,7 +22,9 @@ class MealPlanPurchaseSelection {
       selectedWeekdays ??
       {
         for (var day = DateTime.monday; day <= DateTime.sunday; day++)
-          if (!pricingOption.nonDeliveryWeekdays.contains(day)) day,
+          if (day != DateTime.friday &&
+              !pricingOption.nonDeliveryWeekdays.contains(day))
+            day,
       };
   int get deliveriesPerWeek => deliveryDaysPerWeek ?? deliveryWeekdays.length;
 }
@@ -76,3 +78,45 @@ DateTime dateOnly(DateTime value) =>
 
 int dateKey(DateTime value) =>
     value.year * 10000 + value.month * 100 + value.day;
+
+// Qatar uses UTC+03 throughout the year. Advance a server clock from receipt
+// so a selection made across midnight must be reviewed again.
+DateTime qatarToday({DateTime? now, MealPlanPackage? package}) {
+  var instant = now?.toUtc() ?? DateTime.now().toUtc();
+  if (now == null &&
+      package?.serverNow != null &&
+      package?.serverReceivedAt != null) {
+    final elapsed = instant.difference(package!.serverReceivedAt!);
+    instant = package.serverNow!.toUtc().add(
+      elapsed.isNegative ? Duration.zero : elapsed,
+    );
+  }
+  return dateOnly(instant.add(const Duration(hours: 3)));
+}
+
+DateTime minimumDeliveryStart(MealPlanPackage package, {DateTime? today}) {
+  final current = today == null
+      ? qatarToday(package: package)
+      : dateOnly(today);
+  final lead = current.add(
+    Duration(
+      days: package.startDateLeadTimeDays < 1
+          ? 1
+          : package.startDateLeadTimeDays,
+    ),
+  );
+  final configured = package.earliestStartDate;
+  return configured != null && dateOnly(configured).isAfter(lead)
+      ? dateOnly(configured)
+      : lead;
+}
+
+bool eligibleDeliveryStart(
+  DateTime date,
+  MealPlanPackage package, {
+  DateTime? today,
+}) =>
+    !dateOnly(date).isBefore(minimumDeliveryStart(package, today: today)) &&
+    date.weekday != DateTime.friday &&
+    !package.nonDeliveryWeekdays.contains(date.weekday) &&
+    !package.unavailableDates.any((day) => dateKey(day) == dateKey(date));

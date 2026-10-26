@@ -379,6 +379,60 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
     );
   }
 
+  Future<void> _selectDraft(DailyMealItem item, TomorrowMealDraft draft) async {
+    if (!_editable) return;
+    if (draft.toggle(item)) {
+      setState(() {});
+      return;
+    }
+    final ids = item.category == 'meal' ? draft.mealIds : draft.snackIds;
+    final options = item.category == 'meal'
+        ? draft.menu.meals
+        : draft.menu.snacks;
+    final limit = item.category == 'meal'
+        ? draft.menu.mealCount
+        : draft.menu.snackCount;
+    if (draft.contains(item.id) || limit == 0 || ids.length != limit) return;
+    final previous = ids.length == 1
+        ? ids.single
+        : await showModalBottomSheet<String>(
+            context: context,
+            showDragHandle: true,
+            builder: (context) => SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item.category == 'meal'
+                          ? 'Replace a meal'
+                          : 'Replace a snack',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 12),
+                    for (final selected in options.where(
+                      (option) => ids.contains(option.id),
+                    ))
+                      _MealCard(
+                        item: selected,
+                        selected: true,
+                        onTap: () => Navigator.pop(context, selected.id),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          );
+    if (!mounted ||
+        !_editable ||
+        !identical(draft.menu, _menu) ||
+        previous == null) {
+      return;
+    }
+    if (draft.replace(item, previous)) setState(() {});
+  }
+
   Widget _group(
     String title,
     List<DailyMealItem> items,
@@ -402,22 +456,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
         _MealCard(
           item: item,
           selected: draft.contains(item.id),
-          onTap: _editable
-              ? () {
-                  final changed = draft.toggle(item);
-                  if (changed) {
-                    setState(() {});
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Remove a selected dish before choosing another.',
-                        ),
-                      ),
-                    );
-                  }
-                }
-              : null,
+          onTap: _editable ? () => _selectDraft(item, draft) : null,
         ),
       const SizedBox(height: 8),
     ],

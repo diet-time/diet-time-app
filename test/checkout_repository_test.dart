@@ -2,8 +2,44 @@ import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/checkout/data/checkout_repository.dart';
 import 'package:diet_time/features/checkout/domain/checkout_models.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 
 void main() {
+  for (final slotsFirst in [false, true]) {
+    test(
+      'saved slot restores and edits without a false validation error, slotsFirst=$slotsFirst',
+      () async {
+        final api = _CheckoutApiClient();
+        final container = ProviderContainer(
+          overrides: [
+            checkoutRepositoryProvider.overrideWithValue(
+              CheckoutRepository(
+                apiClient: api,
+                accessTokenProvider: () async => 'token',
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        final controller = container.read(checkoutControllerProvider.notifier);
+        if (slotsFirst) await controller.loadDeliveryTimeSlots();
+        await controller.loadAddressesForProfile('profile-id');
+        if (!slotsFirst) await controller.loadDeliveryTimeSlots();
+        var state = container.read(checkoutControllerProvider);
+        expect(state.selectedDeliveryTimeSlot!.id, 'morning-id');
+        expect(
+          await controller.saveAddress(state.selectedAddress!, editing: true),
+          true,
+        );
+        state = container.read(checkoutControllerProvider);
+        expect(state.saveAddressError, isNull);
+        expect(state.selectedAddress!.deliveryTimeSlotId, 'morning-id');
+        expect(api.requests.last.body!['deliveryTimeSlotId'], 'morning-id');
+      },
+    );
+  }
+
   test('loads addresses and delivery slots from required endpoints', () async {
     final api = _CheckoutApiClient();
     final repository = CheckoutRepository(
@@ -45,6 +81,7 @@ void main() {
       formattedAddress: 'Zone 91, Al Wakrah, Qatar',
       directions: 'Call me when you arrive',
       isDefault: true,
+      deliveryTimeSlotId: 'morning-id',
     );
 
     final created = await repository.createAddress('profile-id', newAddress);
@@ -58,6 +95,8 @@ void main() {
     expect(api.requests[0].body!['unitNumber'], isNull);
     expect(api.requests[0].body!['addressType'], 'HOME');
     expect(created.id, 'saved-address-id');
+    expect(created.deliveryTimeSlotId, 'morning-id');
+    expect(api.requests[0].body!['deliveryTimeSlotId'], 'morning-id');
     expect(api.requests[1].method, 'PUT');
     expect(
       api.requests[1].path,
@@ -105,6 +144,7 @@ class _CheckoutApiClient extends ApiClient {
             'addresses': [
               {
                 'id': 'address-id',
+                'deliveryTimeSlotId': 'morning-id',
                 'addressName': 'Home',
                 'addressType': 'HOME',
                 'buildingNo': '126',

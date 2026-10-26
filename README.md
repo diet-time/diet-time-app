@@ -529,3 +529,107 @@ diet-time-admin-spa/
   src/features/meal-plans/pricing/packageDiscount.ts
   src/features/meal-plans/pricing/packageDiscount.test.ts
 ```
+
+## Meal replacement, questionnaire persistence, Qatar dates and delivery slots
+
+Implemented together across Flutter and the sibling `diet-time-api` repository. No live database changes were executed. Android/iOS native settings and build workflows were not changed.
+
+### Root causes and resulting behavior
+
+| Issue | Confirmed cause in the code | Implemented fix |
+| --- | --- | --- |
+| Meal replacement | `TomorrowMealDraft.toggle` rejected an unselected dish when its category was full; the screen only asked the customer to remove another dish. | Multiple positions open **Replace a meal** / **Replace a snack**, listing selected dishes. A single position replaces directly. Draft counts and the other category stay unchanged, duplicate dishes are rejected, and no confirmation request runs until Confirm My Meals. Locked/finalized days and the existing 9 PM Qatar cutoff remain protected. |
+| Questionnaire | Start-plan entry points and the questionnaire required login, while `PUT /api/v1/customer/profile` is authenticated. There was no durable guest save. Every repository error became a generic connection message. The API ignored the submitted confirmation flags even though the profile table already stores them. | Guests enter the questionnaire directly and checkpoint answers in secure local storage. Authenticated drafts are scoped to the stored user identity. Existing OTP/profile loading claims and synchronizes a guest draft through the existing profile PUT; the API resolves ownership from JWT claims. Failed saves keep answers, show status-specific messages and Retry, and block repeated submissions. Controls pause during saving. Existing rows are updated rather than inserted again on retry. Confirmation flags are accepted, saved and returned. No Allergies clears individual selections and restores correctly after reload; the API receives an empty allergen list plus confirmation. |
+| Delivery start date | Flutter used the device's local date with a default lead of zero; order placement used UTC dates and permitted configured zero lead. | Purchase packages return server time, earliest start and lead days. Flutter advances the server clock from receipt, uses the Qatar calendar date, enforces at least one day, disables today/past/Friday and validates programmatic checkout changes and submission. The API uses the existing `Asia/Qatar` rules and the same minimum lead. Expired choices require reselection; historical orders and idempotent replays are preserved. Service-day counts and Friday-skipping schedules remain intact. |
+| Delivery slots | Slot times come from `delivery_time_slots`, rather than Flutter constants. Addresses had no slot field; the checkout selection only lived in memory. | A nullable address slot FK stores the preference. Creating an address requires an active slot; legacy updates omitting the field retain its saved value. Flutter restores saved slots regardless of address/slot loading order, validates active choices, and saves an explicit change when editing or choosing Use This Address. API times render as `HH:mm`. Orders continue to copy slot names and times into their existing snapshots. |
+
+The unauthenticated profile PUT returning 401 was reproduced in an isolated integration test. No failing production request trace or live database connection was supplied, so no claim is made about the exact status of the originally reported live failure. Failed profile requests now log endpoint/method, HTTP status, validation field names/error codes and correlation/trace ID where available; questionnaire answers and rejected values are excluded.
+
+### Reviewed SQL and deployment order
+
+Review `../diet-time-api/database/scripts/20261026_address_delivery_slots.sql`, then apply it to the intended database **before deploying the updated API**. It is the permanent migration file; `artifacts/four-fixes/api/database-slot.sql` was only a working copy.
+
+The transaction adds only `customer_addresses.delivery_time_slot_id uuid NULL` and its foreign key. Existing addresses remain NULL. It changes the existing Morning slot to **07:0011:00** and Evening to **16:0018:00**, retaining IDs and active states. It updates configuration rows only when times differ and is repeatable. Lock/statement timeouts are set. The script aborts for review if it cannot identify exactly one Morning and one Evening by their existing code or name. It never rewrites orders or fills historical address preferences by guessing.
+
+Deploy the API and rebuild the Flutter app after applying the reviewed migration. Existing profile confirmation columns are reused; no questionnaire table or additional confirmation column is introduced. Production slot codes/names and schema compatibility still require checking against the intended database.
+
+Delivery operations continue to use the existing order snapshots: `OrderService` copies `DeliveryTimeSlotName`, `DeliveryStartTime` and `DeliveryEndTime`; order details expose `delivery.timeSlot`. `AdminDeliveryCalendarService` and `OperationsDashboardService` read/order by stored order delivery fields. Kitchen reporting retains its existing order/service-day source. Updating slot configuration affects new purchases without changing promised times on existing orders.
+
+### Contract examples
+
+Authenticated questionnaire saves still use `PUT /api/v1/customer/profile`, with the full accumulated questionnaire (replace-all collection semantics). For No Allergies, send `allergens: []`; never send a `NONE` ID. Confirmation booleans now round-trip in the GET/PUT response `data` object. They are nullable on incoming requests, so omission by an older client preserves the saved flag.
+
+```json
+{
+  "genderCode": "FEMALE",
+  "dateOfBirth": "1995-01-01",
+  "heightCm": 165,
+  "weightKg": 65,
+  "goalCode": "LOSE_WEIGHT",
+  "dailyRoutineCode": "OFFICE_WORK",
+  "activityLevelCode": "MOSTLY_SITTING",
+  "preferredLanguage": "en",
+  "onboardingStatus": "COMPLETED",
+  "preferencesConfirmed": true,
+  "allergensConfirmed": true,
+  "preferences": [],
+  "allergens": []
+}
+```
+
+`GET /api/v1/customer/meal-plans/{code-or-id}/purchase-options` adds these fields to each `data.mealConfigurations[].packages[]` object. Lead days are at least one, including when API configuration contains zero.
+
+```json
+{
+  "serverNow": "2026-10-25T22:00:00+00:00",
+  "earliestStartDate": "2026-10-27",
+  "startDateLeadTimeDays": 1
+}
+```
+
+Address POST/PUT requests and responses now include optional `deliveryTimeSlotId` alongside the existing address fields. The value is the UUID returned by `GET /api/v1/delivery-time-slots`, not a hardcoded Morning/Evening identifier. A missing/inactive slot on create returns 400 with a clear delivery-time message; omitting/nulling it on a legacy PUT preserves the existing stored choice. The new Flutter save flow requires an active choice. Existing slot responses retain `startTime` / `endTime`, for example `"07:00:00"` / `"11:00:00"`.
+
+### Modified files
+
+Flutter application files:
+
+```text
+lib/features/dashboard/domain/tomorrow_menu.dart
+lib/features/dashboard/presentation/tomorrow_menu_section.dart
+lib/features/personalization/data/customer_profile_repository.dart
+lib/features/personalization/data/customer_profile_service.dart
+lib/features/personalization/presentation/profile_persistence_controller.dart
+lib/features/onboarding/presentation/onboarding_screen.dart
+lib/features/onboarding/presentation/onboarding_carousel_screen.dart
+lib/features/menu/presentation/browse_menu_screen.dart
+lib/features/authentication/presentation/otp_verification_page.dart
+lib/features/plans/domain/meal_plan_package.dart
+lib/features/plans/domain/meal_plan_purchase_selection.dart
+lib/features/plans/presentation/meal_plan_start_date_screen.dart
+lib/features/checkout/domain/checkout_models.dart
+lib/features/checkout/presentation/checkout_controller.dart
+lib/features/checkout/presentation/customer_address_screen.dart
+```
+
+ASP.NET Core files, relative to `diet-time-api`:
+
+```text
+src/BuildingBlocks/DietTime.Contracts/ApiContracts.cs
+src/BuildingBlocks/DietTime.Domain/Entities.cs
+src/BuildingBlocks/DietTime.Application/Abstractions.cs
+src/BuildingBlocks/DietTime.Persistence/CustomerProfileService.cs
+src/BuildingBlocks/DietTime.Persistence/CustomerMealPlanPurchaseService.cs
+src/BuildingBlocks/DietTime.Persistence/OrderService.cs
+src/BuildingBlocks/DietTime.Persistence/CustomerAddressConfigurations.cs
+src/BuildingBlocks/DietTime.Persistence/CustomerAddressService.cs
+src/Apis/DietTime.Meal.Api/Controllers/CustomerAddressesController.cs
+```
+
+Regression coverage is in `test/four_issue_regression_test.dart`, `tomorrow_menu_test.dart`, `meal_plan_start_date_screen_test.dart`, `checkout_repository_test.dart`, `customer_profile_persistence_test.dart`, `place_order_test.dart`, `plan_summary_checkout_test.dart`, `widget_test.dart`, and API `tests/DietTime.Meal.Api.IntegrationTests/FourFixesIntegrationTests.cs`. Existing checkout fixtures now use explicit server time. App navigation tests mock secure storage so installation setup completes before the splash assertions.
+
+### Validation and remaining dependencies
+
+- The new API integration tests passed **4/4** against a temporary isolated PostgreSQL instance. They cover actual authenticated HTTP calls, guest 401, invalid allergen rejection, repeated allergen saves without duplicates, clearing allergies with confirmation retained, address-slot save/reload and legacy edit retention, missing-slot 400, Qatar midnight with zero configured lead, Friday rejection, tomorrow acceptance, and applying the slot migration twice while preserving old orders and addresses.
+- API unit tests passed **133/133**. The broader meal/pricing database regression run passed **30 tests** and failed one older test because `database/scripts/20261026_package_discounted_price.sql` is absent. That removed-file dependency was not restored or hidden. The separately known missing `tomorrow_menu_diagnostics.sql` test was explicitly excluded from this broader run.
+- Flutter analysis (`flutter analyze --no-pub lib test`) passed with no issues; the complete Flutter suite passed **246/246**. This includes meal/snack replacement, locked selections, guest save/sync/retry, No Allergies exclusivity, calendar eligibility/duration, saved-slot loading in both request orders, checkout and existing navigation tests.
+- No live migration, API deployment, app release or physical-device installation was performed. The SQL review/application and deployment remain operational steps.

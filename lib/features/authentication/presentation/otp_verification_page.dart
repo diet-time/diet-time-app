@@ -112,16 +112,19 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
     _setCells('');
     final destination = ref.read(otpAuthControllerProvider).pendingDestination;
     var route = destination?.route ?? AppRoutes.home;
-    if (route == AppRoutes.personalization) {
+    {
       setState(() => _isResolvingDestination = true);
       try {
         final profile = await ref.read(customerProfileServiceProvider).load();
         if (profile != null) {
           ref.read(personalizationControllerProvider.notifier).replace(profile);
-          if (profile.isCompleted) route = AppRoutes.home;
+          if (profile.isCompleted && route == AppRoutes.personalization) {
+            route = AppRoutes.home;
+          }
         }
       } on Object {
-        // Fall back to personalization, which has its own retry/error state.
+        // Pending local answers stay cached; the questionnaire exposes retry.
+        route = AppRoutes.personalization;
       }
     }
     if (!mounted) return;

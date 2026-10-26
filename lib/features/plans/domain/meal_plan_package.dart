@@ -88,6 +88,8 @@ class MealPlanPackage {
     this.nonDeliveryWeekdays = const {DateTime.friday},
     this.unavailableDates = const [],
     this.earliestStartDate,
+    this.serverNow,
+    this.serverReceivedAt,
     this.startDateLeadTimeDays = 0,
     this.regularPrice,
     this.discountedPrice,
@@ -150,6 +152,8 @@ class MealPlanPackage {
             json['nonDeliveryDates'] ??
             json['holidays'],
       ),
+      serverNow: DateTime.tryParse(json['serverNow']?.toString() ?? ''),
+      serverReceivedAt: DateTime.now().toUtc(),
       earliestStartDate: _date(
         json['earliestStartDate'] ?? json['minimumStartDate'],
       ),
@@ -182,6 +186,8 @@ class MealPlanPackage {
   final Set<int> nonDeliveryWeekdays;
   final List<DateTime> unavailableDates;
   final DateTime? earliestStartDate;
+  final DateTime? serverNow;
+  final DateTime? serverReceivedAt;
   final int startDateLeadTimeDays;
 
   String get selectionKey =>

@@ -24,19 +24,11 @@ Future<MealPlanServiceSchedule?> showMealPlanStartDatePanel({
   DateTime? today,
   MealPlanServiceSchedule? currentSchedule,
 }) {
-  final currentDay = dateOnly(today ?? DateTime.now());
   final package = selection.pricingOption;
-  final leadDate = currentDay.add(
-    Duration(days: package.startDateLeadTimeDays),
-  );
-  final configured = package.earliestStartDate == null
-      ? null
-      : dateOnly(package.earliestStartDate!);
-  final earliestStartDate = configured != null && configured.isAfter(leadDate)
-      ? configured
-      : leadDate;
+  final earliestStartDate = minimumDeliveryStart(package, today: today);
 
   bool isUnavailable(DateTime date) =>
+      date.weekday == DateTime.friday ||
       package.nonDeliveryWeekdays.contains(date.weekday) ||
       package.unavailableDates.any((item) => dateKey(item) == dateKey(date));
 
@@ -60,12 +52,23 @@ Future<MealPlanServiceSchedule?> showMealPlanStartDatePanel({
         child: _StartDateBottomSheet(
           initialMonth: currentSchedule?.startDate ?? firstSelectableDate,
           earliestStartDate: earliestStartDate,
-          schedule: currentSchedule,
+          schedule:
+              currentSchedule != null &&
+                  eligibleDeliveryStart(
+                    currentSchedule.startDate,
+                    package,
+                    today: today,
+                  )
+              ? currentSchedule
+              : null,
           isUnavailable: isUnavailable,
           calculateSchedule: (date) => calculateMealPlanServiceSchedule(
             startDate: date,
             serviceDays: selection.serviceDays,
-            nonDeliveryWeekdays: package.nonDeliveryWeekdays,
+            nonDeliveryWeekdays: {
+              ...package.nonDeliveryWeekdays,
+              DateTime.friday,
+            },
             unavailableDates: package.unavailableDates,
           ),
         ),
@@ -109,6 +112,22 @@ class _MealPlanStartDateScreenState
   Future<void> _continue() async {
     final schedule = _schedule;
     if (schedule == null) return;
+    if (!eligibleDeliveryStart(
+      schedule.startDate,
+      widget.selection.pricingOption,
+      today: widget.today,
+    )) {
+      setState(() => _schedule = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Choose a new delivery start date. Delivery can start tomorrow or later.',
+          ),
+        ),
+      );
+      await _openStartDatePicker();
+      return;
+    }
     ref
         .read(checkoutControllerProvider.notifier)
         .begin(widget.selection, schedule);
@@ -763,6 +782,9 @@ class _StartDateBottomSheetState extends State<_StartDateBottomSheet> {
   );
 
   void _select(DateTime date) {
+    if (date.isBefore(widget.earliestStartDate) || widget.isUnavailable(date)) {
+      return;
+    }
     final schedule = widget.calculateSchedule(date);
     if (schedule == null) return;
     setState(() {

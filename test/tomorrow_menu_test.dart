@@ -37,29 +37,55 @@ const snack = DailyMealItem(
   category: 'snack',
 );
 
-TomorrowMenu menu({bool confirmed = false, bool noDelivery = false}) =>
-    TomorrowMenu(
-      subscriptionId: 'order',
-      dayId: noDelivery ? null : 'day',
-      deliveryDate: DateTime(2026, 10, 27),
-      planName: 'Complete Balance',
-      mealCount: 2,
-      snackCount: 1,
-      status: noDelivery
-          ? 'NO_DELIVERY'
-          : confirmed
-          ? 'CUSTOMER_CONFIRMED'
-          : 'DEFAULT_PENDING',
-      locked: confirmed,
-      canConfirm: !confirmed && !noDelivery,
-      cutoffAt: DateTime.utc(2026, 10, 26, 18),
-      serverNow: DateTime.utc(2026, 10, 26, 12),
-      selected: [dishes[0], dishes[1], snack],
-      meals: confirmed ? [] : dishes,
-      snacks: confirmed ? [] : [snack],
-    );
+TomorrowMenu menu({
+  bool confirmed = false,
+  bool noDelivery = false,
+  bool extraSnack = false,
+}) => TomorrowMenu(
+  subscriptionId: 'order',
+  dayId: noDelivery ? null : 'day',
+  deliveryDate: DateTime(2026, 10, 27),
+  planName: 'Complete Balance',
+  mealCount: 2,
+  snackCount: 1,
+  status: noDelivery
+      ? 'NO_DELIVERY'
+      : confirmed
+      ? 'CUSTOMER_CONFIRMED'
+      : 'DEFAULT_PENDING',
+  locked: confirmed,
+  canConfirm: !confirmed && !noDelivery,
+  cutoffAt: DateTime.utc(2026, 10, 26, 18),
+  serverNow: DateTime.utc(2026, 10, 26, 12),
+  selected: [dishes[0], dishes[1], snack],
+  meals: confirmed ? [] : dishes,
+  snacks: confirmed
+      ? []
+      : [
+          snack,
+          if (extraSnack)
+            const DailyMealItem(
+              id: 's2',
+              optionId: 'os2',
+              name: 'Fruit cup',
+              category: 'snack',
+            ),
+        ],
+);
 
 void main() {
+  test('replacement keeps count, category and dish identity', () {
+    final draft = TomorrowMealDraft(menu());
+    expect(draft.replace(dishes[2], 'm1'), true);
+    expect(draft.mealIds, {'m2', 'm3'});
+    expect(draft.snackIds, {'s1'});
+    expect(draft.replace(dishes[1], 'm3'), false);
+    expect(
+      TomorrowMealDraft(menu(confirmed: true)).replace(dishes[2], 'm1'),
+      false,
+    );
+  });
+
   Future<void> show(WidgetTester tester, FakeRepository repository) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -79,6 +105,48 @@ void main() {
     );
     await tester.pump();
   }
+
+  testWidgets('full draft opens replacement sheet without confirming', (
+    tester,
+  ) async {
+    final repository = FakeRepository();
+    await show(tester, repository);
+    await tester.ensureVisible(find.text('Roasted vegetables'));
+    await tester.tap(find.text('Roasted vegetables'));
+    await tester.pumpAndSettle();
+    expect(find.text('Replace a meal'), findsOneWidget);
+    await tester.tap(find.text('Grilled chicken').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Replace a meal'), findsNothing);
+    expect(find.text('Meals: 2/2 selected'), findsOneWidget);
+    expect(repository.confirms, 0);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets(
+    'one snack directly replaces its draft without a sheet or API call',
+    (tester) async {
+      final repository = FakeRepository()..response = menu(extraSnack: true);
+      await show(tester, repository);
+      await tester.ensureVisible(find.text('Fruit cup'));
+      await tester.tap(find.text('Fruit cup'));
+      await tester.pumpAndSettle();
+      expect(find.text('Replace a snack'), findsNothing);
+      expect(find.text('Snacks: 1/1 selected'), findsOneWidget);
+      final selected = tester
+          .widgetList<Semantics>(
+            find.ancestor(
+              of: find.text('Fruit cup'),
+              matching: find.byType(Semantics),
+            ),
+          )
+          .where((widget) => widget.properties.selected != null)
+          .single;
+      expect(selected.properties.selected, true);
+      expect(repository.confirms, 0);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 
   for (final entry in {
     'SERVICE_DAYS_MISSING':

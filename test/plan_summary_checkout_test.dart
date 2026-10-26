@@ -91,7 +91,7 @@ class _CheckoutControllerForTest extends CheckoutController {
 }
 
 final _checkoutState = CheckoutState(
-  selection: const MealPlanPurchaseSelection(
+  selection: MealPlanPurchaseSelection(
     mealPlan: MealPlanOption(
       id: 'plan-id',
       code: 'PLAN',
@@ -112,6 +112,8 @@ final _checkoutState = CheckoutState(
       totalPrice: 3200,
       dailyPrice: 133.33,
       currencyCode: 'QAR',
+      serverNow: DateTime.utc(2026, 8, 7),
+      serverReceivedAt: DateTime.now().toUtc(),
     ),
   ),
   schedule: MealPlanServiceSchedule(

@@ -18,9 +18,13 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    FlutterSecureStorage.setMockInitialValues({});
+  });
 
   testWidgets('first launch keeps the original onboarding carousel', (
     tester,
@@ -136,7 +140,7 @@ void main() {
     );
   });
 
-  testWidgets('carousel start plan requires login before the questionnaire', (
+  testWidgets('carousel start plan supports the guest questionnaire', (
     tester,
   ) async {
     await tester.pumpWidget(_dietTimeApp());
@@ -149,8 +153,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(PersonalizationScreen), findsNothing);
-    expect(find.byType(PhoneLoginPage), findsOneWidget);
+    expect(find.byType(PersonalizationScreen), findsOneWidget);
+    expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
   testWidgets('goal selection is required and preserved when navigating back', (
@@ -250,73 +254,79 @@ void main() {
     );
   });
 
-  testWidgets('one final submission shows summary then opens the menu', (
-    tester,
-  ) async {
-    final profileService = _FakeProfilePersistenceService();
-    await tester.pumpWidget(
-      _dietTimeApp(
-        authenticationService: const _AuthenticatedService(),
-        profileService: profileService,
-      ),
-    );
-    await _finishSplash(tester);
-    await _openQuestionnaireFromFirstRun(tester);
+  testWidgets(
+    'questionnaire checkpoints answers and final submission opens summary',
+    (tester) async {
+      final profileService = _FakeProfilePersistenceService();
+      await tester.pumpWidget(
+        _dietTimeApp(
+          authenticationService: const _AuthenticatedService(),
+          profileService: profileService,
+        ),
+      );
+      await _finishSplash(tester);
+      await _openQuestionnaireFromFirstRun(tester);
 
-    // BASIC_DETAILS and BODY_MEASUREMENTS share the existing profile card.
-    await _continue(tester);
-    await tester.tap(find.byKey(const ValueKey('goal-lose')).hitTestable());
-    await _continue(tester);
-    await _fillRequiredProfile(tester);
-    await _continue(tester);
-    await tester.tap(
-      find.byKey(const ValueKey('lifestyle-office')).hitTestable(),
-    );
-    await _continue(tester);
-    await tester.tap(
-      find.byKey(const ValueKey('activity-sitting')).hitTestable(),
-    );
-    await _continue(tester);
-    expect(profileService.saveProgressCalls, 0);
-    expect(profileService.completeCalls, 0);
-    await tester.tap(find.byKey(const ValueKey('choice-HIGH_PROTEIN')));
-    await _continue(tester);
-    expect(profileService.saveProgressCalls, 0);
-    expect(profileService.completeCalls, 0);
-    await tester.tap(find.byKey(const ValueKey('choice-none')));
-    await _continue(tester);
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(profileService.saveProgressCalls, 0);
-    expect(profileService.completeCalls, 1);
-    expect(profileService.lastSubmitted?.goalCode, 'LOSE_WEIGHT');
-    expect(profileService.lastSubmitted?.dailyRoutineCode, 'OFFICE_WORK');
-    expect(profileService.lastSubmitted?.activityLevelCode, 'MOSTLY_SITTING');
-    expect(profileService.lastSubmitted?.preferencesConfirmed, isTrue);
-    expect(profileService.lastSubmitted?.allergensConfirmed, isTrue);
-    expect(find.byKey(const ValueKey('bmiRange')), findsOneWidget);
-    expect(find.byKey(const ValueKey('bmiScaleMarker')), findsOneWidget);
-    expect(find.byKey(const ValueKey('bmiScaleIndicatorDot')), findsOneWidget);
-    final indicatorRect = tester.getRect(
-      find.byKey(const ValueKey('bmiScaleIndicatorDot')),
-    );
-    final bmiCardRect = tester.getRect(find.byKey(const ValueKey('bmiRange')));
-    expect(indicatorRect.size, const Size(17, 17));
-    expect(bmiCardRect.overlaps(indicatorRect), isTrue);
-    expect(find.text('24.2'), findsWidgets);
-    await _continue(tester);
-    expect(find.text("You're all set!"), findsOneWidget);
-    expect(find.byKey(const ValueKey('personalizationGoHome')), findsNothing);
-    await _continue(tester);
-    expect(find.byType(BrowseMenuScreen), findsOneWidget);
-    expect(find.byType(PhoneLoginPage), findsNothing);
+      // BASIC_DETAILS and BODY_MEASUREMENTS share the existing profile card.
+      await _continue(tester);
+      await tester.tap(find.byKey(const ValueKey('goal-lose')).hitTestable());
+      await _continue(tester);
+      await _fillRequiredProfile(tester);
+      await _continue(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('lifestyle-office')).hitTestable(),
+      );
+      await _continue(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('activity-sitting')).hitTestable(),
+      );
+      await _continue(tester);
+      expect(profileService.saveProgressCalls, 4);
+      expect(profileService.completeCalls, 0);
+      await tester.tap(find.byKey(const ValueKey('choice-HIGH_PROTEIN')));
+      await _continue(tester);
+      expect(profileService.saveProgressCalls, 5);
+      expect(profileService.completeCalls, 0);
+      await tester.tap(find.byKey(const ValueKey('choice-none')));
+      await _continue(tester);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(profileService.saveProgressCalls, 5);
+      expect(profileService.completeCalls, 1);
+      expect(profileService.lastSubmitted?.goalCode, 'LOSE_WEIGHT');
+      expect(profileService.lastSubmitted?.dailyRoutineCode, 'OFFICE_WORK');
+      expect(profileService.lastSubmitted?.activityLevelCode, 'MOSTLY_SITTING');
+      expect(profileService.lastSubmitted?.preferencesConfirmed, isTrue);
+      expect(profileService.lastSubmitted?.allergensConfirmed, isTrue);
+      expect(find.byKey(const ValueKey('bmiRange')), findsOneWidget);
+      expect(find.byKey(const ValueKey('bmiScaleMarker')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('bmiScaleIndicatorDot')),
+        findsOneWidget,
+      );
+      final indicatorRect = tester.getRect(
+        find.byKey(const ValueKey('bmiScaleIndicatorDot')),
+      );
+      final bmiCardRect = tester.getRect(
+        find.byKey(const ValueKey('bmiRange')),
+      );
+      expect(indicatorRect.size, const Size(17, 17));
+      expect(bmiCardRect.overlaps(indicatorRect), isTrue);
+      expect(find.text('24.2'), findsWidgets);
+      await _continue(tester);
+      expect(find.text("You're all set!"), findsOneWidget);
+      expect(find.byKey(const ValueKey('personalizationGoHome')), findsNothing);
+      await _continue(tester);
+      expect(find.byType(BrowseMenuScreen), findsOneWidget);
+      expect(find.byType(PhoneLoginPage), findsNothing);
 
-    await tester.tap(
-      find.byKey(const ValueKey('guestStartPlan')).hitTestable(),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.byType(PhoneLoginPage), findsNothing);
-  });
+      await tester.tap(
+        find.byKey(const ValueKey('guestStartPlan')).hitTestable(),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(PhoneLoginPage), findsNothing);
+    },
+  );
 
   testWidgets('returning incomplete guest still sees image onboarding', (
     tester,
@@ -555,7 +565,10 @@ void main() {
 }
 
 Future<void> _finishSplash(WidgetTester tester) async {
-  await tester.pump(const Duration(milliseconds: 5700));
+  // Installation setup completes asynchronously before the splash timer starts.
+  for (var i = 0; i < 7; i++) {
+    await tester.pump(const Duration(seconds: 1));
+  }
   await tester.pump(const Duration(milliseconds: 400));
 }
 
