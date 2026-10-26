@@ -41,6 +41,22 @@ pod install
 open Runner.xcworkspace
 ```
 
+## Android APK download and installation
+
+The **Build Android APK** GitHub Actions workflow builds one installable Android APK on demand. It is separate from the iOS workflows; running it does not start an iOS build or upload anything to TestFlight.
+
+1. Commit and push `.github/workflows/build-apk.yml` and this README to GitHub. The workflow must be present on the repository’s default branch to appear under **Actions**.
+2. Open **Actions → Build Android APK → Run workflow**. Select the branch to build and keep the default staging API address, or enter your API’s HTTPS address.
+3. Wait for the run to succeed, then open it. Download **diet-time-android-apk-&lt;run number&gt;** from **Artifacts**, or use the download link in the run summary.
+4. Extract the downloaded ZIP. Copy `diet-time.apk` to your Android phone if you downloaded it on your computer.
+5. Open `diet-time.apk` on the phone. Allow **Install unknown apps** for your browser or Files app if prompted, then tap **Install**.
+
+The artifact is retained for 14 days; run the workflow again whenever you need a new APK. Downloading an artifact requires signing in to GitHub with access to this repository. See [GitHub’s artifact download instructions](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts).
+
+No Apple certificates or signing secrets are needed. The workflow uses Flutter `3.41.9` (Dart `3.11.5`), Java 17, and the project’s existing Android debug signing configuration in release mode. This APK is intended for installation on your own phone for testing. Its signing key is cached between runs, and the build number increases with each new run. Use the same branch for updates. If the cache is cleared or you previously installed an APK signed with a different key, Android may require uninstalling the old app first; uninstalling clears its local data. Google Play distribution would require a permanent release signing setup.
+
+For the address map, optionally add the repository **Actions secret** `ANDROID_GOOGLE_MAPS_API_KEY` under **Settings → Secrets and variables → Actions**. Enable Maps SDK for Android and restrict the key to package `com.diettime.diet_time` and the SHA-1 fingerprint printed in the workflow summary. Without this key, the APK still builds and installs, but the address map will not load. The key is written only to the runner’s ignored `android/local.properties`; it is not added to the repository or iOS configuration.
+
 ## TestFlight
 
 The `iOS TestFlight` GitHub Actions workflow builds a signed IPA and uploads it

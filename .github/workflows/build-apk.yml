@@ -2,16 +2,28 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main1]
+    inputs:
+      api_base_url:
+        description: HTTPS API address used by the installed Android app
+        required: true
+        default: https://diet-time-api-staging.up.railway.app
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
+    name: Build downloadable Android APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    env:
+      API_BASE_URL: ${{ inputs.api_base_url }}
+      ANDROID_GOOGLE_MAPS_API_KEY: ${{ secrets.ANDROID_GOOGLE_MAPS_API_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,22 +37,93 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.41.9'
           channel: stable
           cache: true
-          # For reproducible builds, set flutter-version to your local version.
+
+      # The project already signs release-mode testing APKs with this debug key.
+      # Reuse it between builds so the phone can normally install an update.
+      - name: Restore Android test signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: android-apk-test-signing-v1
+
+      - name: Prepare Android configuration
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+          from urllib.parse import urlsplit
+
+          api = urlsplit(os.environ['API_BASE_URL'])
+          if api.scheme != 'https' or not api.hostname or api.username or api.password:
+              raise SystemExit('API address must be an HTTPS URL without credentials.')
+          PY
+
+          printf 'sdk.dir=%s\nflutter.sdk=%s\nGOOGLE_MAPS_API_KEY=%s\n' \
+            "${ANDROID_HOME:?Android SDK is missing}" \
+            "${FLUTTER_ROOT:?Flutter SDK is missing}" \
+            "$ANDROID_GOOGLE_MAPS_API_KEY" > android/local.properties
+
+          # Keep Gradle within the memory available on hosted runners.
+          printf '\norg.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=1G -XX:ReservedCodeCacheSize=512m -XX:+HeapDumpOnOutOfMemoryError\norg.gradle.workers.max=2\n' >> android/gradle.properties
+
+          mkdir -p "$HOME/.android"
+          if [[ ! -f "$HOME/.android/debug.keystore" ]]; then
+            keytool -genkeypair -noprompt -storetype JKS \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android -keypass android -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname 'CN=Android Debug,O=Android,C=US'
+          fi
+
+          if [[ -z "$ANDROID_GOOGLE_MAPS_API_KEY" ]]; then
+            echo '::notice::Set ANDROID_GOOGLE_MAPS_API_KEY as a repository secret to enable the address map. The APK can still be built and installed without it.'
+          fi
+
+          {
+            echo '### Android Maps configuration'
+            echo 'Package: `com.diettime.diet_time`'
+            echo 'Use this signing fingerprint when restricting the Android Maps API key:'
+            echo '```text'
+            keytool -list -v -keystore "$HOME/.android/debug.keystore" \
+              -storepass android -alias androiddebugkey | sed -n '/SHA1:/p'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install dependencies
         run: flutter pub get
 
-      # Uses the release signing configuration already in your Android project.
-      # A custom keystore configuration requires additional GitHub Secrets setup.
       - name: Build release APK
-        run: flutter build apk --release
+        run: |
+          flutter build apk --release \
+            --build-number "$GITHUB_RUN_NUMBER" \
+            --dart-define="API_BASE_URL=$API_BASE_URL"
+          mkdir -p build/android-download
+          cp build/app/outputs/flutter-apk/app-release.apk build/android-download/diet-time.apk
 
       - name: Upload APK
+        id: apk
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk-${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: diet-time-android-apk-${{ github.run_number }}
+          path: build/android-download/diet-time.apk
           if-no-files-found: error
+          compression-level: 0
           retention-days: 14
+
+      - name: Show download and installation instructions
+        env:
+          APK_DOWNLOAD_URL: ${{ steps.apk.outputs.artifact-url }}
+        run: |
+          {
+            echo '## Android APK ready'
+            printf '[Download the APK ZIP](%s)\n\n' "$APK_DOWNLOAD_URL"
+            echo '1. Download the artifact and extract the ZIP.'
+            echo '2. Open diet-time.apk on your Android phone.'
+            echo '3. Allow installation from your browser or Files app when Android asks, then tap Install.'
+            printf '\nAPI: `%s`\n' "$API_BASE_URL"
+            echo 'This is one universal APK; you do not need to choose a phone architecture.'
+            echo 'The APK uses the existing Android test signing configuration.'
+          } >> "$GITHUB_STEP_SUMMARY"
