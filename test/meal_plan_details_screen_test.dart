@@ -217,20 +217,20 @@ void main() {
   ) async {
     await tester.pumpWidget(_app(plan: _plan));
     await tester.pump();
-    expect(find.text('QAR 100 per delivery day'), findsOneWidget);
+    expect(find.text('QAR 100 per delivery day'), findsNothing);
     expect(find.text('QAR 600'), findsOneWidget);
     await _tapChoice(tester, 'configuration-plus');
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('1 Month'), findsOneWidget);
 
-    expect(find.text('QAR 120 per delivery day'), findsOneWidget);
+    expect(find.text('QAR 120 per delivery day'), findsNothing);
     expect(find.text('QAR 720'), findsOneWidget);
     expect(find.textContaining('6 delivery days'), findsWidgets);
 
     await _scrollTo(tester, const ValueKey('duration-plus-month'));
     await _tapChoice(tester, 'duration-plus-month');
     await tester.pump(const Duration(milliseconds: 200));
-    expect(find.text('QAR 110 per delivery day'), findsOneWidget);
+    expect(find.text('QAR 110 per delivery day'), findsNothing);
     expect(find.text('QAR 2640'), findsOneWidget);
     expect(find.textContaining('24 delivery days'), findsWidgets);
   });

@@ -240,11 +240,6 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
               : Directionality.of(context) == TextDirection.rtl
               ? 'السعر غير متاح'
               : 'Pricing unavailable',
-          daily: package.isValid
-              ? '${package.currencyCode} ${_amount(context, package.dailyPrice)} ${Directionality.of(context) == TextDirection.rtl ? 'لكل يوم توصيل' : 'per delivery day'}'
-              : Directionality.of(context) == TextDirection.rtl
-              ? 'اختر مدة متاحة للمتابعة.'
-              : 'Choose an available duration to continue.',
           priceKey: '${configuration.id}-${package.selectionKey}',
           onContinue: package.isValid
               ? () => _continue(configuration, package)

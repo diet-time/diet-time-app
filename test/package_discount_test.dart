@@ -79,6 +79,10 @@ void main() {
             .widgetList<Text>(find.byType(Text))
             .map((t) => t.data ?? '')
             .toList();
+        if (locale == 'en') {
+          expect(find.text('20% OFF'), findsOneWidget);
+          expect(find.textContaining('20.02%'), findsNothing);
+        }
         expect(
           texts.any((t) => t.contains(locale == 'ar' ? 'خصم' : 'OFF')),
           isTrue,

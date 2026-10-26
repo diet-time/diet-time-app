@@ -55,8 +55,8 @@ class PackageDiscountDetails extends StatelessWidget {
                 ),
                 child: Text(
                   arabic
-                      ? 'خصم ${amount(package.discountPercentage)}٪'
-                      : '${amount(package.discountPercentage)}% OFF',
+                      ? 'خصم ${amount(package.discountPercentage.roundToDouble())}٪'
+                      : '${amount(package.discountPercentage.roundToDouble())}% OFF',
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,

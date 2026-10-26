@@ -148,7 +148,6 @@ class SubscriptionPricingSummary extends StatelessWidget {
   const SubscriptionPricingSummary({
     required this.selection,
     required this.total,
-    required this.daily,
     required this.priceKey,
     required this.onContinue,
     this.discountDetails,
@@ -156,7 +155,6 @@ class SubscriptionPricingSummary extends StatelessWidget {
   });
   final String selection;
   final String total;
-  final String daily;
   final String priceKey;
   final Widget? discountDetails;
   final VoidCallback? onContinue;
@@ -240,17 +238,6 @@ class SubscriptionPricingSummary extends StatelessWidget {
                                     ),
                                   ),
                                   ?discountDetails,
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    daily,
-                                    key: const ValueKey('dailyPrice'),
-                                    style: TextStyle(
-                                      color: AppColors.darkGreen.withValues(
-                                        alpha: .7,
-                                      ),
-                                      fontSize: 12,
-                                    ),
-                                  ),
                                 ],
                               ),
                             ),

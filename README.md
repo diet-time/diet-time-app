@@ -402,6 +402,8 @@ Current regression results: 43 Flutter dashboard/menu/pagination/calendar tests 
 
 ## Optional package discounted prices
 
+The API returns a rounded whole discount percentage, and Flutter badges plus SPA pricing listings and live previews use whole percentages (for example, 16.53% displays as 17% OFF). The Flutter bottom subscription summary shows the package total and savings without a per-day price; the SPA already displays package totals without that line. Monetary amounts and daily-price API fields retain their existing precision and contracts.
+
 Administrators can add, change, or clear a discounted selling price in the existing **Plan Pricing → Add/Edit Price** dialog. The regular price remains separate. The dialog previews the percentage and customer savings, and the listing shows both prices when a promotion exists. Clearing the optional field submits `discountedPrice: null`.
 
 The package-specific price belongs to `meal_plan_prices`: each row maps a saved meal plan, duration (`package_code`), and `package_option_id`, with its regular amount in `amount NUMERIC(12,2)`. `meal_plan_price_packages` contains duration definitions, and `meal_package_options` contains meal/snack entitlements. Neither lookup table stores this selling amount. No equivalent discounted-price field was found in the checked-in schema or EF mappings. This assessment uses repository evidence; the live database schema was not independently queried.
@@ -418,7 +420,7 @@ WHERE table_schema = 'public'
 ORDER BY table_name, ordinal_position;
 ```
 
-The shared server-side `PackagePriceRules` computes effective price, savings, and percentage with `decimal`; percentages round to two places using `MidpointRounding.AwayFromZero`. APIs reject negative discounts, discounts equal to or above the regular amount, amounts outside NUMERIC(12,2), and more than two decimal places. A discounted price of zero is supported as a 100% promotion. No promotion is represented by NULL.
+The shared server-side `PackagePriceRules` computes effective price, savings, and percentage with `decimal`; percentages round to a whole number using `MidpointRounding.AwayFromZero`. APIs reject negative discounts, discounts equal to or above the regular amount, amounts outside NUMERIC(12,2), and more than two decimal places. A discounted price of zero is supported as a 100% promotion. No promotion is represented by NULL.
 
 Existing admin endpoints retain their request fields (`price` for the package configuration API; `amount` for the older pricing API). Responses add `regularPrice`, `discountedPrice`, `effectivePrice`, `discountAmount`, `discountPercentage`, and `hasDiscount`. Older update clients that omit `discountedPrice` preserve the stored promotion; explicit NULL removes it. Create requests that omit it create an ordinary price. Status-only updates preserve pricing. The legacy pricing API also reads, validates, and writes the new field.
 
@@ -449,7 +451,7 @@ Creation returns 201 with `{ "id": "..." }`. Updates use `PUT /api/admin/meal-pl
   "discountedPrice": 799.00,
   "effectivePrice": 799.00,
   "discountAmount": 200.00,
-  "discountPercentage": 20.02,
+  "discountPercentage": 20,
   "hasDiscount": true,
   "currencyCode": "QAR"
 }
