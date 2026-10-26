@@ -12,6 +12,48 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final language in ['en', 'ar']) {
+    testWidgets(
+      'discounted package fits a compact phone with large $language text',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(320, 568));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final configuration =
+            (_planJson['mealConfigurations'] as List).first
+                as Map<String, dynamic>;
+        final package =
+            (configuration['packages'] as List).first as Map<String, dynamic>;
+        final plan = MealPlanOption.fromJson({
+          ..._planJson,
+          'mealConfigurations': [
+            {
+              ...configuration,
+              'packages': [
+                {
+                  ...package,
+                  'totalPrice': 799,
+                  'dailyPrice': 799,
+                  'regularPrice': 999,
+                  'discountedPrice': 799,
+                },
+              ],
+            },
+          ],
+        });
+        await tester.pumpWidget(
+          _app(plan: plan, locale: Locale(language), textScale: 2),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('packageTotal')), findsOneWidget);
+        expect(
+          find.textContaining(language == 'ar' ? 'توفر' : 'You save'),
+          findsWidgets,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   test('meal plan details use the meal-plans endpoint', () {
     expect(
       ApiEndpoints.mealPlanDetails('6b5b71bd-baf7-46b6-abf0-2bc457a5ab6d'),

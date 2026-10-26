@@ -89,6 +89,9 @@ class MealPlanPackage {
     this.unavailableDates = const [],
     this.earliestStartDate,
     this.startDateLeadTimeDays = 0,
+    this.regularPrice,
+    this.discountedPrice,
+    this.serverDiscountPercentage,
   });
 
   factory MealPlanPackage.fromJson(Map<String, dynamic> json) {
@@ -98,7 +101,13 @@ class MealPlanPackage {
         ) ??
         0;
     final total =
-        _number(json['totalPrice'] ?? json['amount'] ?? json['packagePrice']) ??
+        _number(
+          json['effectivePrice'] ??
+              json['discountedPrice'] ??
+              json['totalPrice'] ??
+              json['amount'] ??
+              json['packagePrice'],
+        ) ??
         0;
     final explicitDaily = _number(
       json['dailyPrice'] ??
@@ -125,6 +134,10 @@ class MealPlanPackage {
       ),
       serviceDays: serviceDays,
       totalPrice: total,
+      regularPrice:
+          _number(json['regularPrice'] ?? json['originalPrice']) ?? total,
+      discountedPrice: _number(json['discountedPrice']),
+      serverDiscountPercentage: _number(json['discountPercentage']),
       dailyPrice: explicitDaily ?? (serviceDays > 0 ? total / serviceDays : 0),
       currencyCode: _text(json['currencyCode'] ?? json['currency']),
       nonDeliveryWeekdays: _weekdays(
@@ -150,6 +163,21 @@ class MealPlanPackage {
   final int serviceDays;
   final double totalPrice;
   final double dailyPrice;
+  final double? regularPrice;
+  final double? discountedPrice;
+  final double? serverDiscountPercentage;
+  double get originalPrice => regularPrice ?? totalPrice;
+  bool get hasDiscount =>
+      discountedPrice != null &&
+      discountedPrice! >= 0 &&
+      originalPrice > totalPrice;
+  double get discountAmount => hasDiscount
+      ? ((originalPrice * 100).round() - (totalPrice * 100).round()) / 100
+      : 0;
+  double get discountPercentage => !hasDiscount
+      ? 0
+      : serverDiscountPercentage ??
+            ((discountAmount * 100 / originalPrice * 100).round() / 100);
   final String currencyCode;
   final Set<int> nonDeliveryWeekdays;
   final List<DateTime> unavailableDates;
@@ -163,8 +191,8 @@ class MealPlanPackage {
       mealPlanPriceId.isNotEmpty &&
       name.isNotEmpty &&
       serviceDays > 0 &&
-      totalPrice > 0 &&
-      dailyPrice > 0 &&
+      (totalPrice > 0 || hasDiscount && totalPrice == 0) &&
+      (dailyPrice > 0 || hasDiscount && totalPrice == 0 && dailyPrice == 0) &&
       currencyCode.isNotEmpty;
 }
 

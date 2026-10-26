@@ -4,6 +4,7 @@ import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/checkout/domain/checkout_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
+import 'package:diet_time/features/plans/presentation/package_discount_details.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -228,6 +229,7 @@ class _PlanSummaryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _SummaryItem(label: 'PLAN', value: selection.mealPlan.name),
+                if (price.hasDiscount) PackageDiscountDetails(package: price),
                 _SummaryItem(
                   label: 'MEALS',
                   value: checkout.selectedMeals.isEmpty

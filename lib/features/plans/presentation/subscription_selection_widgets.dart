@@ -14,12 +14,14 @@ class SubscriptionSelectionCard extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.subtitle,
+    this.footer,
     this.width = 176,
     super.key,
   });
 
   final String title;
   final String? subtitle;
+  final Widget? footer;
   final bool selected;
   final VoidCallback? onTap;
   final double width;
@@ -81,6 +83,7 @@ class SubscriptionSelectionCard extends StatelessWidget {
                     ),
                   ),
                 ],
+                ?footer,
               ],
             ),
           ),
@@ -120,10 +123,12 @@ class DurationSelectionCard extends StatelessWidget {
     required this.selected,
     required this.onTap,
     required this.width,
+    this.priceDetails,
     super.key,
   });
   final String name;
   final String deliveryDays;
+  final Widget? priceDetails;
   final bool selected;
   final VoidCallback? onTap;
   final double width;
@@ -132,6 +137,7 @@ class DurationSelectionCard extends StatelessWidget {
   Widget build(BuildContext context) => SubscriptionSelectionCard(
     title: name,
     subtitle: deliveryDays,
+    footer: priceDetails,
     selected: selected,
     onTap: onTap,
     width: width,
@@ -145,12 +151,14 @@ class SubscriptionPricingSummary extends StatelessWidget {
     required this.daily,
     required this.priceKey,
     required this.onContinue,
+    this.discountDetails,
     super.key,
   });
   final String selection;
   final String total;
   final String daily;
   final String priceKey;
+  final Widget? discountDetails;
   final VoidCallback? onContinue;
 
   @override
@@ -231,6 +239,7 @@ class SubscriptionPricingSummary extends StatelessWidget {
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
+                                  ?discountDetails,
                                   const SizedBox(height: 4),
                                   Text(
                                     daily,

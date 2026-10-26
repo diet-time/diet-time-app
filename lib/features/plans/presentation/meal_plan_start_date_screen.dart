@@ -6,6 +6,7 @@ import 'package:diet_time/features/authentication/presentation/otp_auth_controll
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
+import 'package:diet_time/features/plans/presentation/package_discount_details.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -261,6 +262,10 @@ class _MealPlanStartDateScreenState
                             fontWeight: FontWeight.w900,
                           ),
                         ),
+                        if (selection.pricingOption.hasDiscount)
+                          PackageDiscountDetails(
+                            package: selection.pricingOption,
+                          ),
                         const SizedBox(height: 8),
                         AppButton(
                           key: const ValueKey('startDateContinue'),

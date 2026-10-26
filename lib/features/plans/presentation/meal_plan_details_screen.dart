@@ -1,4 +1,5 @@
 import 'package:diet_time/app/router/app_router.dart';
+import 'package:diet_time/features/plans/presentation/package_discount_details.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
@@ -174,6 +175,12 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                                       'duration-${option.selectionKey}',
                                     ),
                                     name: option.name,
+                                    priceDetails: option.hasDiscount
+                                        ? PackageDiscountDetails(
+                                            package: option,
+                                            showEffectivePrice: true,
+                                          )
+                                        : null,
                                     deliveryDays: option.isValid
                                         ? _serviceDaysLabel(
                                             context,
@@ -223,6 +230,9 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
           ),
         ),
         SubscriptionPricingSummary(
+          discountDetails: package.hasDiscount
+              ? PackageDiscountDetails(package: package)
+              : null,
           selection:
               '${configuration.name} · ${package.name} · ${_serviceDaysLabel(context, package.serviceDays)}',
           total: package.isValid

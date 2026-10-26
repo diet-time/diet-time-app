@@ -315,6 +315,10 @@ class CheckoutController extends Notifier<CheckoutState> {
           )
           .toList(growable: false),
       couponCode: snapshot.couponCode,
+      expectedTotalAmount: snapshot.selection!.pricingOption.totalPrice,
+      expectedRegularPrice: snapshot.selection!.pricingOption.originalPrice,
+      expectedDiscountAmount: snapshot.selection!.pricingOption.discountAmount,
+      expectedCurrencyCode: snapshot.selection!.pricingOption.currencyCode,
     );
 
     try {

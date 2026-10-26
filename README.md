@@ -399,3 +399,133 @@ diet-time-api/
 ```
 
 Current regression results: 43 Flutter dashboard/menu/pagination/calendar tests passed; 31 PostgreSQL menu/rotation tests passed, including missing schedules, no saved selections, explicit idempotent backfill, preserved locks, and cutoff/concurrency cases. One additional PostgreSQL test passed for the read-only diagnostic SQL, for 32 passing database tests in total. Flutter analysis is clean, the API builds, both operational PowerShell scripts parse successfully, and whitespace checks pass. The operational HTTP scripts were not run against a live account. Live-order verification remains outstanding until the affected order/environment and authorized access are available.
+
+## Optional package discounted prices
+
+Administrators can add, change, or clear a discounted selling price in the existing **Plan Pricing → Add/Edit Price** dialog. The regular price remains separate. The dialog previews the percentage and customer savings, and the listing shows both prices when a promotion exists. Clearing the optional field submits `discountedPrice: null`.
+
+The package-specific price belongs to `meal_plan_prices`: each row maps a saved meal plan, duration (`package_code`), and `package_option_id`, with its regular amount in `amount NUMERIC(12,2)`. `meal_plan_price_packages` contains duration definitions, and `meal_package_options` contains meal/snack entitlements. Neither lookup table stores this selling amount. No equivalent discounted-price field was found in the checked-in schema or EF mappings. This assessment uses repository evidence; the live database schema was not independently queried.
+
+Review and apply `diet-time-api/database/scripts/20261026_package_discounted_price.sql` **before deploying the API**. It adds nullable `meal_plan_prices.discounted_price NUMERIC(12,2)`, defaulting to NULL, and a CHECK constraint requiring a populated value to be non-negative and strictly lower than `amount`. Both amounts are in the same row. The script is repeatable, sets lock/statement timeouts, and validates the constraint. It does not update existing regular prices, orders, subscriptions, or payments. There is no startup migration hook. The migration was tested only against newly created isolated test databases and **has not been run against the application database**.
+
+For target-schema review, inspect existing columns before applying it:
+
+```sql
+SELECT table_name, column_name, data_type, numeric_precision, numeric_scale
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name IN ('meal_plan_prices', 'meal_plan_price_packages', 'meal_package_options')
+ORDER BY table_name, ordinal_position;
+```
+
+The shared server-side `PackagePriceRules` computes effective price, savings, and percentage with `decimal`; percentages round to two places using `MidpointRounding.AwayFromZero`. APIs reject negative discounts, discounts equal to or above the regular amount, amounts outside NUMERIC(12,2), and more than two decimal places. A discounted price of zero is supported as a 100% promotion. No promotion is represented by NULL.
+
+Existing admin endpoints retain their request fields (`price` for the package configuration API; `amount` for the older pricing API). Responses add `regularPrice`, `discountedPrice`, `effectivePrice`, `discountAmount`, `discountPercentage`, and `hasDiscount`. Older update clients that omit `discountedPrice` preserve the stored promotion; explicit NULL removes it. Create requests that omit it create an ordinary price. Status-only updates preserve pricing. The legacy pricing API also reads, validates, and writes the new field.
+
+Example create/update body for the current package-price endpoint:
+
+```http
+POST /api/admin/meal-plan-prices
+Content-Type: application/json
+Authorization: Bearer {adminAccessToken}
+
+{
+  "mealPlanId": "11111111-1111-1111-1111-111111111111",
+  "durationId": "WEEK",
+  "packageOptionId": "22222222-2222-2222-2222-222222222222",
+  "price": 999.00,
+  "discountedPrice": 799.00,
+  "currencyCode": "QAR",
+  "isActive": true
+}
+```
+
+Creation returns 201 with `{ "id": "..." }`. Updates use `PUT /api/admin/meal-plan-prices/{priceId}` with the same fields and return 204. The existing `GET /api/admin/meal-plan-prices` listing includes these price fields on each row:
+
+```json
+{
+  "price": 999.00,
+  "regularPrice": 999.00,
+  "discountedPrice": 799.00,
+  "effectivePrice": 799.00,
+  "discountAmount": 200.00,
+  "discountPercentage": 20.02,
+  "hasDiscount": true,
+  "currencyCode": "QAR"
+}
+```
+
+Without a promotion, the discounted price is NULL, effective price equals regular price, both computed discount values are zero, and `hasDiscount` is false. Authenticated purchase options, selection validation, public plan details, and starting-price cards use the effective amount. Older customer consumers receive the effective amount in their existing `amount` field; regular-price information is available separately.
+
+Flutter shows the discounted total, original price with strikethrough, percentage badge, and amount saved in the existing duration/package selection, start-date summary, and order summary. Promotion labels are absent for ordinary prices. The promotion widget supports English and Arabic and was checked with large text on a compact phone. Flutter rounds quote fields to cents when serializing them; it does not supply an amount the server will charge.
+
+New Flutter order requests add these quote-comparison fields to the existing order payload:
+
+```json
+{
+  "expectedTotalAmount": 799.00,
+  "expectedRegularPrice": 999.00,
+  "expectedDiscountAmount": 200.00,
+  "expectedCurrencyCode": "QAR"
+}
+```
+
+The order service reads the current price from PostgreSQL, acquires a shared row lock for the transaction, independently computes the charge, and compares supplied expectations. Changed prices produce HTTP 409 with `code: price_changed` before creating an order. Flutter refreshes the summary and requires a second customer submission; it does not automatically retry the purchase. The expectation fields are optional for older API consumers, but the updated Flutter app always supplies them. They are comparison guards, never trusted price overrides.
+
+The existing order snapshot stores regular price in `subtotal`, promotion savings in `discount_amount`, effective selling price in `total_amount`, and the agreed currency in `currency_code`. Existing delivery-charge and coupon behavior is preserved. Order history, order details, and dashboard totals continue to use the stored snapshot. Idempotent retries return the original order snapshot even after master prices change. Updating or removing a promotion never reprices existing orders, active subscriptions, or previously confirmed payments.
+
+Validation results:
+
+| Check | Result |
+| --- | --- |
+| API unit suite | 133 passed, including exact decimal calculations and omitted-versus-null update semantics. |
+| New isolated PostgreSQL discount tests | 5 passed: administration, database constraints, purchase options, HTTP checkout/snapshot/history, and repeatable migration with unchanged existing amounts. |
+| Broader meal-selection/rotation integration run | 36 passed, 1 existing diagnostic test failed because `database/scripts/tomorrow_menu_diagnostics.sql` is absent from the repository. Its test body was not changed by this feature. |
+| Relevant Flutter pricing/checkout regressions | 56 passed across targeted runs, including stale-price review, English/Arabic promotions, no-discount behavior, free promotions, and compact layouts. |
+| Flutter analysis | No issues. |
+| Admin pricing form/API/preview tests | 22 passed. |
+| Admin production build | Passed; existing bundle-size advisory remains. |
+
+No native iOS files, Android build settings, or build workflows were changed for this pricing feature. The remaining deployment step is review and application of the standalone SQL, followed by deployment of the updated API, admin app, and customer app. Production checkout was not exercised.
+
+Modified files for this feature, relative to each repository:
+
+```text
+diet-time-app/
+  README.md
+  lib/features/plans/domain/meal_plan_package.dart
+  lib/features/plans/presentation/package_discount_details.dart
+  lib/features/plans/presentation/subscription_selection_widgets.dart
+  lib/features/plans/presentation/meal_plan_details_screen.dart
+  lib/features/plans/presentation/meal_plan_start_date_screen.dart
+  lib/features/checkout/domain/order_models.dart
+  lib/features/checkout/presentation/checkout_controller.dart
+  lib/features/checkout/presentation/plan_summary_screen.dart
+  test/package_discount_test.dart
+  test/place_order_test.dart
+  test/meal_plan_details_screen_test.dart
+diet-time-api/
+  database/scripts/20261026_package_discounted_price.sql
+  src/BuildingBlocks/DietTime.Domain/Entities.cs
+  src/BuildingBlocks/DietTime.Domain/PackagePriceRules.cs
+  src/BuildingBlocks/DietTime.Contracts/ApiContracts.cs
+  src/BuildingBlocks/DietTime.Contracts/MealConfigurationContracts.cs
+  src/BuildingBlocks/DietTime.Application/Abstractions.cs
+  src/BuildingBlocks/DietTime.Persistence/DietTimeDbContext.cs
+  src/BuildingBlocks/DietTime.Persistence/MealPlanPricingService.cs
+  src/BuildingBlocks/DietTime.Persistence/AdminMealService.cs
+  src/BuildingBlocks/DietTime.Persistence/CustomerMealPlanPurchaseService.cs
+  src/BuildingBlocks/DietTime.Persistence/MealQueryService.cs
+  src/BuildingBlocks/DietTime.Persistence/OrderService.cs
+  src/Apis/DietTime.Meal.Api/Controllers/OrdersController.cs
+  tests/DietTime.UnitTests/PackagePriceTests.cs
+  tests/DietTime.Meal.Api.IntegrationTests/PackageDiscountIntegrationTests.cs
+  tests/DietTime.Meal.Api.IntegrationTests/UpcomingMealServiceTests.cs
+diet-time-admin-spa/
+  src/api/subscriptionConfigurationApi.ts
+  src/api/planPricingApi.ts
+  src/features/meal-plans/pricing/SubscriptionPlanPricingPage.tsx
+  src/features/meal-plans/pricing/SubscriptionPlanPricingPage.test.tsx
+  src/features/meal-plans/pricing/packageDiscount.ts
+  src/features/meal-plans/pricing/packageDiscount.test.ts
+```

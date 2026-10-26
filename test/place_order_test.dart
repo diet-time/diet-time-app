@@ -1,6 +1,7 @@
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/checkout_models.dart';
+import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
@@ -10,6 +11,37 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    'changed pricing refreshes the summary and requires a second customer submission',
+    () async {
+      final orders = _ChangedPriceOrders();
+      final container = ProviderContainer(
+        overrides: [
+          checkoutControllerProvider.overrideWith(
+            () => _CheckoutControllerForTest(_readyCheckout),
+          ),
+          ordersRepositoryProvider.overrideWithValue(orders),
+          mealPlanRepositoryProvider.overrideWithValue(
+            _RefreshedDiscountPricing(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(checkoutControllerProvider.notifier);
+      expect(await controller.placeOrder(), isNull);
+      final refreshed = container.read(checkoutControllerProvider);
+      expect(refreshed.selection!.pricingOption.totalPrice, 1600);
+      expect(refreshed.selection!.pricingOption.originalPrice, 1880);
+      expect(refreshed.placementError, contains('price has changed'));
+      expect(orders.requests, hasLength(1));
+      expect(orders.requests.first.expectedTotalAmount, 1880);
+      expect((await controller.placeOrder())!.pricing.totalAmount, 1600);
+      expect(orders.requests, hasLength(2));
+      expect(orders.requests.last.expectedTotalAmount, 1600);
+      expect(orders.requests.last.expectedDiscountAmount, 280);
+    },
+  );
+
   test('ProblemDetails preserves the backend order failure explanation', () {
     final error = ApiException.fromResponse(
       const ApiResponse(
@@ -78,6 +110,10 @@ void main() {
           {'mealTypeId': 'snack-id', 'quantity': 1},
         ],
         'couponCode': null,
+        'expectedTotalAmount': 1880.0,
+        'expectedRegularPrice': 1880.0,
+        'expectedDiscountAmount': 0.0,
+        'expectedCurrencyCode': 'QAR',
       });
       for (final forbidden in [
         'planName',
@@ -215,6 +251,63 @@ class _CheckoutControllerForTest extends CheckoutController {
 
   @override
   CheckoutState build() => initialState;
+}
+
+class _ChangedPriceOrders extends OrdersRepository {
+  _ChangedPriceOrders()
+    : super(apiClient: ApiClient(), accessTokenProvider: () async => 'token');
+  final requests = <PlaceOrderRequest>[];
+  @override
+  Future<OrderConfirmation> placeOrder(
+    PlaceOrderRequest request,
+    String idempotencyKey,
+  ) async {
+    requests.add(request);
+    if (requests.length == 1) {
+      throw const ApiException(
+        ApiFailure.conflict,
+        statusCode: 409,
+        code: 'price_changed',
+      );
+    }
+    return OrderConfirmation.fromJson({
+      ..._confirmationJson,
+      'pricing': {
+        'subtotal': 1880,
+        'discountAmount': 280,
+        'deliveryCharge': 0,
+        'totalAmount': 1600,
+        'currencyCode': 'QAR',
+      },
+    });
+  }
+}
+
+class _RefreshedDiscountPricing extends MealPlanRepository {
+  _RefreshedDiscountPricing() : super(ApiClient());
+  @override
+  Future<List<MealPlanConfiguration>> getMealPlanConfigurations({
+    required String mealPlanTemplateId,
+    required String language,
+  }) async => [
+    MealPlanConfiguration(
+      id: 'configuration-id',
+      name: '3 Meals',
+      selectedMeals: _readyCheckout.selectedMeals,
+      packages: const [
+        MealPlanPackage(
+          mealPlanPriceId: 'price-id',
+          name: '1 Month',
+          serviceDays: 20,
+          totalPrice: 1600,
+          dailyPrice: 80,
+          currencyCode: 'QAR',
+          regularPrice: 1880,
+          discountedPrice: 1600,
+        ),
+      ],
+    ),
+  ];
 }
 
 class _OrdersApiClient extends ApiClient {

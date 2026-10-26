@@ -24,6 +24,10 @@ class PlaceOrderRequest {
     required this.deliveryDays,
     required this.meals,
     this.couponCode,
+    this.expectedTotalAmount,
+    this.expectedRegularPrice,
+    this.expectedDiscountAmount,
+    this.expectedCurrencyCode,
   });
 
   final String customerProfileId;
@@ -35,6 +39,10 @@ class PlaceOrderRequest {
   final List<int> deliveryDays;
   final List<PlaceOrderMealRequest> meals;
   final String? couponCode;
+  final double? expectedTotalAmount;
+  final double? expectedRegularPrice;
+  final double? expectedDiscountAmount;
+  final String? expectedCurrencyCode;
 
   Map<String, dynamic> toJson() => {
     'customerProfileId': customerProfileId,
@@ -46,6 +54,20 @@ class PlaceOrderRequest {
     'deliveryDays': deliveryDays,
     'meals': meals.map((meal) => meal.toJson()).toList(growable: false),
     'couponCode': _nullableText(couponCode),
+    if (expectedTotalAmount != null)
+      'expectedTotalAmount': double.parse(
+        expectedTotalAmount!.toStringAsFixed(2),
+      ),
+    if (expectedRegularPrice != null)
+      'expectedRegularPrice': double.parse(
+        expectedRegularPrice!.toStringAsFixed(2),
+      ),
+    if (expectedDiscountAmount != null)
+      'expectedDiscountAmount': double.parse(
+        expectedDiscountAmount!.toStringAsFixed(2),
+      ),
+    if (expectedCurrencyCode != null)
+      'expectedCurrencyCode': expectedCurrencyCode,
   };
 }
 
