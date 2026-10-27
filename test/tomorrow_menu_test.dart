@@ -41,24 +41,29 @@ TomorrowMenu menu({
   bool confirmed = false,
   bool noDelivery = false,
   bool extraSnack = false,
+  int mealCount = 2,
+  List<DailyMealItem>? mealOptions,
+  bool shortage = false,
 }) => TomorrowMenu(
   subscriptionId: 'order',
   dayId: noDelivery ? null : 'day',
   deliveryDate: DateTime(2026, 10, 27),
   planName: 'Complete Balance',
-  mealCount: 2,
+  mealCount: mealCount,
   snackCount: 1,
-  status: noDelivery
+  status: shortage
+      ? 'NEEDS_REVIEW'
+      : noDelivery
       ? 'NO_DELIVERY'
       : confirmed
       ? 'CUSTOMER_CONFIRMED'
       : 'DEFAULT_PENDING',
   locked: confirmed,
-  canConfirm: !confirmed && !noDelivery,
+  canConfirm: !confirmed && !noDelivery && !shortage,
   cutoffAt: DateTime.utc(2026, 10, 26, 18),
   serverNow: DateTime.utc(2026, 10, 26, 12),
   selected: [dishes[0], dishes[1], snack],
-  meals: confirmed ? [] : dishes,
+  meals: confirmed ? [] : mealOptions ?? dishes,
   snacks: confirmed
       ? []
       : [
@@ -122,6 +127,75 @@ void main() {
     expect(repository.confirms, 0);
     await tester.pumpWidget(const SizedBox());
   });
+
+  for (var count = 1; count <= 5; count++) {
+    testWidgets(
+      '$count meal package shows all options and replaces a full draft',
+      (tester) async {
+        final options = List.generate(
+          6,
+          (index) => DailyMealItem(
+            id: 'choice-$index',
+            optionId: 'option-$index',
+            name: 'Available dish $index',
+            category: 'meal',
+          ),
+        );
+        final repository = FakeRepository()
+          ..response = menu(mealCount: count, mealOptions: options);
+        await show(tester, repository);
+        expect(find.text('Meals: 0/$count selected'), findsOneWidget);
+        for (var index = 0; index < count; index++) {
+          await tester.ensureVisible(find.text('Available dish $index'));
+          await tester.tap(find.text('Available dish $index'));
+          await tester.pump();
+        }
+        expect(find.text('Meals: $count/$count selected'), findsOneWidget);
+        expect(find.text('Available dish 5'), findsOneWidget);
+        await tester.ensureVisible(find.text('Available dish 5'));
+        await tester.tap(find.text('Available dish 5'));
+        await tester.pumpAndSettle();
+        expect(find.text('Replace a meal'), findsOneWidget);
+        for (var index = 0; index < count; index++) {
+          expect(find.text('Available dish $index'), findsNWidgets(2));
+        }
+        await tester.tap(find.text('Available dish 0').last);
+        await tester.pumpAndSettle();
+        expect(find.text('Replace a meal'), findsNothing);
+        expect(find.text('Meals: $count/$count selected'), findsOneWidget);
+        expect(find.text('Snacks: 1/1 selected'), findsOneWidget);
+        expect(repository.confirms, 0);
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.byKey(const ValueKey('confirmTomorrowMeals')),
+              )
+              .onPressed,
+          isNotNull,
+        );
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
+  testWidgets(
+    'menu shortage keeps unselected options visible and confirmation disabled',
+    (tester) async {
+      final repository = FakeRepository()
+        ..response = menu(mealCount: 5, shortage: true);
+      await show(tester, repository);
+      expect(find.text('Roasted vegetables'), findsOneWidget);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const ValueKey('confirmTomorrowMeals')),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 
   testWidgets(
     'one snack directly replaces its draft without a sheet or API call',

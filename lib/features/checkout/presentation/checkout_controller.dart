@@ -133,9 +133,7 @@ class CheckoutController extends Notifier<CheckoutState> {
       state = state.copyWith(
         deliveryTimeSlots: slots,
         isLoadingDeliveryTimeSlots: false,
-        selectedDeliveryTimeSlot: selected.isEmpty
-            ? null
-            : selected.first,
+        selectedDeliveryTimeSlot: selected.isEmpty ? null : selected.first,
       );
     } catch (error) {
       state = state.copyWith(
@@ -334,14 +332,9 @@ class CheckoutController extends Notifier<CheckoutState> {
       deliveryTimeSlotId: snapshot.selectedDeliveryTimeSlotId!,
       startDate: snapshot.startDate!,
       deliveryDays: snapshot.selectedWeekdays.toList()..sort(),
-      meals: snapshot.selectedMeals
-          .map(
-            (meal) => PlaceOrderMealRequest(
-              mealTypeId: meal.mealTypeId,
-              quantity: meal.quantity,
-            ),
-          )
-          .toList(growable: false),
+      // The API snapshots the purchased entitlement from the validated price.
+      // Daily dish choices belong to Tomorrow's Menu, after purchase.
+      meals: const [],
       couponCode: snapshot.couponCode,
       expectedTotalAmount: snapshot.selection!.pricingOption.totalPrice,
       expectedRegularPrice: snapshot.selection!.pricingOption.originalPrice,

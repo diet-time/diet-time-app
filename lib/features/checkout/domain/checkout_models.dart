@@ -210,9 +210,6 @@ class CheckoutState {
         !eligibleDeliveryStart(startDate!, selection!.pricingOption)) {
       return 'Choose a new delivery start date. Delivery can start tomorrow or later, excluding Friday.';
     }
-    if (selectedMeals.isEmpty || selectedMeals.any((meal) => !meal.isValid)) {
-      return 'Please select at least one meal.';
-    }
     if (selectedWeekdays.isEmpty) {
       return 'Please select your delivery days.';
     }

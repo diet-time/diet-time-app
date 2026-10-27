@@ -104,11 +104,7 @@ void main() {
         'deliveryTimeSlotId': 'slot-id',
         'startDate': '2026-08-11',
         'deliveryDays': [2, 3, 4, 5, 6],
-        'meals': [
-          {'mealTypeId': 'lunch-id', 'quantity': 1},
-          {'mealTypeId': 'dinner-id', 'quantity': 1},
-          {'mealTypeId': 'snack-id', 'quantity': 1},
-        ],
+        'meals': [],
         'couponCode': null,
         'expectedTotalAmount': 1880.0,
         'expectedRegularPrice': 1880.0,

@@ -635,3 +635,72 @@ Regression coverage is in `test/four_issue_regression_test.dart`, `tomorrow_menu
 - API unit tests passed **133/133**. The broader meal/pricing database regression run passed **30 tests** and failed one older test because `database/scripts/20261026_package_discounted_price.sql` is absent. That removed-file dependency was not restored or hidden. The separately known missing `tomorrow_menu_diagnostics.sql` test was explicitly excluded from this broader run.
 - Flutter analysis (`flutter analyze --no-pub lib test`) passed with no issues; the complete Flutter suite passed **246/246**. This includes meal/snack replacement, locked selections, guest save/sync/retry, No Allergies exclusivity, calendar eligibility/duration, saved-slot loading in both request orders, checkout and existing navigation tests.
 - No live migration, API deployment, app release or physical-device installation was performed. The SQL review/application and deployment remain operational steps.
+
+## Package purchase and daily meal selection — 27 October 2026
+
+Purchase and daily confirmation now use separate validation. Local PostgreSQL-backed tests purchase packages with 1, 2, 3, 4 and 5 regular meals plus one snack, load all configured menu choices, and confirm the exact quantities. The five-meal case confirms five distinct regular dishes and one snack starting with no saved selections.
+
+### Causes and changes
+
+The Flutter purchase-options mapper used `regularTypes.take(meals)` with quantity one per type. A template with three regular meal types therefore produced only three regular quantities even when its selected package entitled the customer to five. `OrderService.PlaceAsync` compared that client list to `meal_plan_prices.meals_per_day` and returned the reported error. It confused a legacy type distribution with the purchased category entitlement.
+
+Checkout now sends an empty legacy `meals` collection. The API also accepts an omitted/null collection. It validates the customer, published plan/version, active package and matching duration through `PurchasablePlanPrices`, effective price, expected amounts/currency, address, slot, weekdays, and delivery start. The server snapshots the price's quantities in the existing `order_meals` rows using regular/snack representative types. Quantity five on one regular type represents five selectable dishes, not five required types. Supplied legacy type quantities cannot override the purchased package. No individual dish IDs are required.
+
+Service-day generation continues using that order snapshot. Missing eligible defaults do not fail the order: empty days are `PENDING`, partly assigned days are `PARTIAL`, with a persisted review reason and a warning log. Neither receives confirmation/finalization timestamps or a selection lock. Complete provisional defaults retain existing `DEFAULTED` storage semantics without a finalization timestamp.
+
+The existing Tomorrow's Menu query already retrieves alternatives from template days, slots, options and meal items, separately from customer selections, and deduplicates each category by dish. It does not truncate options to the package quantity. Flutter hid those alternatives when `canConfirm` became false, showing only saved defaults when a shortage occurred. It now renders returned alternatives for an unlocked scheduled day even when confirmation is disabled. A second mapping defect hard-coded a four-week cycle when a saved week was absent; both API mapping and eligibility now use the saved template's actual cycle.
+
+Flutter retains its existing design, dynamic progress, server cutoff, and confirmation flow. Full regular-meal selections now open the replacement sheet for every package size, including one meal; a single snack still replaces directly. Confirmed selections remain read-only.
+
+Admin validation checks every active day's distinct free, available regular dishes and snacks against the maximum quantities among active package options. It accounts for overlap between categories so a dish cannot satisfy both entitlements. Create/update publication rejects insufficient capacity with HTTP 422. The existing validation endpoint returns capacity warnings for all weeks; the React editor displays them and shows the server's publication error message. Saving a draft remains available. Runtime eligibility additionally enforces delivery-date availability and each customer's restrictions.
+
+### Database and safety properties
+
+No migration or new table is needed for this change. Existing lowercase categories `meal`/`snack` and `selection_number` support positions `meal/1` through `meal/5` and `snack/1`. The integration fixture exercises the existing dish and position indexes plus the legacy-type index filtered to null categories. No constraints are removed. Repository schema/mappings contain no three-position limit for category selections. The old SQL dump contains `meal_package_option_types`, but the current EF purchase path does not map or use it as entitlement data; package master counts and price matching are authoritative, followed by saved order/service-day quantities.
+
+The existing confirmation endpoint retains ownership, active service day, tomorrow-only Qatar window, exact counts, distinct dishes, category/menu eligibility, allergen/dietary checks, transactional replacement, and permanent locking. Existing finalization and kitchen-report code is retained and covered by regression tests.
+
+Production data, deployed constraints/triggers, and the affected customer's actual menu configuration were not inspected or changed. Local verification uses synthetic fixtures in isolated PostgreSQL 18 databases. If production has only three distinct eligible dishes configured, operations must configure real additional dishes before a five-meal delivery can be confirmed. The new warnings/publication checks expose that shortage; they do not manufacture options or reduce entitlement. Deploy the API before the updated app because the older API rejects empty purchase `meals`.
+
+### Verification
+
+| Package | Purchase without daily choices | Service days | Available regular/snack dishes | Confirmation |
+| --- | --- | --- | --- | --- |
+| 1 meal + 1 snack | Passed, null legacy collection | 12 | 5 / 2 | 1 + 1, locked |
+| 2 meals + 1 snack | Passed, empty legacy collection | 12 | 5 / 2 | 2 + 1, locked |
+| 3 meals + 1 snack | Passed, empty legacy collection | 12 | 5 / 2 | 3 + 1, locked |
+| 4 meals + 1 snack | Passed, empty legacy collection | 12 | 5 / 2 | 4 + 1, locked |
+| 5 meals + 1 snack | Passed, empty legacy collection | 12 | 5 / 2 | 5 + 1 from no saved choices, locked |
+
+The package regression also checks HTTP menu responses, too-few selections, repeat-confirmation rejection, unique dishes and category positions. Additional tests cover a stale three-meal client purchasing five meals with no configured defaults, admin shortage warnings/publication rejection, and the actual saved-template cycle fallback.
+
+API unit tests: **136 passed**. New database-backed integration cases: **4 passed**. The broader meal-selection suite passed **32** cases and failed **3** existing tests because these referenced files are absent: `20261026_package_discounted_price.sql`, `tomorrow_menu_diagnostics.sql`, and `20261026_address_delivery_slots.sql`. The address failure was reproduced separately and is a `FileNotFoundException`. These missing dependencies were not hidden or recreated as part of this change.
+
+Flutter targeted checkout/menu tests: **28 passed**, including all five package sizes, replacement sheets, independent snack replacement, and shortages. The complete Flutter suite passed **252/252** and analysis of `lib`/`test` reported no issues. React Admin editor tests passed **4/4**, including the new capacity warning; TypeScript checking and ESLint also passed. `git diff --check` passed in all three repositories.
+
+### Modified files
+
+Flutter repository:
+
+- `lib/features/checkout/domain/checkout_models.dart`
+- `lib/features/checkout/presentation/checkout_controller.dart`
+- `lib/features/dashboard/presentation/tomorrow_menu_section.dart`
+- `test/place_order_test.dart`
+- `test/tomorrow_menu_test.dart`
+- `README.md`
+
+API repository (`../diet-time-api`):
+
+- `src/BuildingBlocks/DietTime.Application/Validation.cs`
+- `src/BuildingBlocks/DietTime.Contracts/ApiContracts.cs`
+- `src/BuildingBlocks/DietTime.Persistence/OrderService.cs`
+- `src/BuildingBlocks/DietTime.Persistence/UpcomingMealService.cs`
+- `src/BuildingBlocks/DietTime.Persistence/TomorrowMealService.cs`
+- `src/BuildingBlocks/DietTime.Persistence/AdminMealService.cs`
+- `tests/DietTime.UnitTests/OrderTests.cs`
+- `tests/DietTime.Meal.Api.IntegrationTests/PackageSelectionIntegrationTests.cs`
+
+React Admin repository (`../diet-time-admin-spa`):
+
+- `src/features/meal-plans/PlanBuilderPage.tsx`
+- `src/features/meal-plans/PlanBuilderPage.test.tsx`

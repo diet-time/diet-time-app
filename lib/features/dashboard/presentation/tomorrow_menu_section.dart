@@ -339,7 +339,10 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
               Text(menu.emptyReason ?? menu.reviewReason ?? menu.statusMessage),
             ],
             const SizedBox(height: 12),
-            if (menu.canConfirm && !_expired) ...[
+            if (!menu.locked &&
+                !menu.finalized &&
+                menu.dayId != null &&
+                (menu.meals.isNotEmpty || menu.snacks.isNotEmpty)) ...[
               _group('Meals', menu.meals, draft),
               _group('Snacks', menu.snacks, draft),
               FilledButton(
@@ -393,7 +396,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
         ? draft.menu.mealCount
         : draft.menu.snackCount;
     if (draft.contains(item.id) || limit == 0 || ids.length != limit) return;
-    final previous = ids.length == 1
+    final previous = item.category == 'snack' && ids.length == 1
         ? ids.single
         : await showModalBottomSheet<String>(
             context: context,
