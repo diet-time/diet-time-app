@@ -10,7 +10,7 @@ import 'package:diet_time/features/dashboard/domain/customer_account_profile.dar
 import 'package:diet_time/features/dashboard/presentation/customer_profile_tab.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_profile_controller.dart';
 import 'package:diet_time/features/dashboard/presentation/order_details_screen.dart';
-import 'package:diet_time/features/dashboard/presentation/upcoming_deliveries_screen.dart';
+import 'package:diet_time/features/dashboard/presentation/customer_delivery_calendar.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
 import 'package:flutter/material.dart';
@@ -1347,9 +1347,18 @@ class _DashboardCalendar extends ConsumerWidget {
             ref.read(customerDashboardControllerProvider.notifier).refresh(),
       );
     }
-    final order = _calendarOrder(state);
-    if (order != null) {
-      return UpcomingDeliveriesScreen(order: order, embedded: true);
+    final orders = _ordersFrom(
+      state,
+    ).where((o) => o.isCurrent || o.isCompleted).toList();
+    if (orders.isNotEmpty) {
+      return CustomerDeliveryCalendar(
+        orders: orders,
+        knownOrders: switch (state) {
+          DashboardWithActivePlan(:final detail) => {detail.id: detail},
+          DashboardWithMultipleActivePlans(:final details) => details,
+          _ => const {},
+        },
+      );
     }
     return ListView(
       key: const ValueKey('emptyDashboardCalendar'),
@@ -1953,14 +1962,6 @@ List<CustomerOrderSummary> _ordersFrom(CustomerDashboardState state) =>
       DashboardWithoutActivePlan(:final orders) => orders,
       DashboardNoOrders() => const [],
       _ => const [],
-    };
-
-OrderConfirmation? _calendarOrder(CustomerDashboardState state) =>
-    switch (state) {
-      DashboardWithActivePlan(:final detail) => detail,
-      DashboardWithMultipleActivePlans(:final activeOrders, :final details) =>
-        activeOrders.isEmpty ? null : details[activeOrders.first.id],
-      _ => null,
     };
 
 String _displayName(String? name) {

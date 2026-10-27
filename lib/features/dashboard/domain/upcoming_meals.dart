@@ -3,16 +3,40 @@ class UpcomingMealDay {
     required this.id,
     required this.date,
     required this.status,
+    this.orderId,
+    this.subscriptionId,
+    this.planName,
+    this.mealCount,
+    this.snackCount,
+    this.selectionStatus,
+    this.selectionLocked = false,
+    this.deliveryStatus = 'PLANNED',
   });
   factory UpcomingMealDay.fromJson(Map<String, dynamic> json) =>
       UpcomingMealDay(
         id: json['subscriptionServiceDayId'] as String,
         date: DateTime.parse(json['deliveryDate'] as String),
         status: json['status'] as String,
+        orderId: json['orderId'] as String?,
+        subscriptionId: json['subscriptionId'] as String?,
+        planName: json['planName'] as String?,
+        mealCount: json['mealCount'] as int?,
+        snackCount: json['snackCount'] as int?,
+        selectionStatus: json['selectionStatus'] as String?,
+        selectionLocked: json['selectionLocked'] == true,
+        deliveryStatus: json['deliveryStatus'] as String? ?? 'PLANNED',
       );
   final String id;
   final DateTime date;
   final String status;
+  final String? orderId;
+  final String? subscriptionId;
+  final String? planName;
+  final int? mealCount;
+  final int? snackCount;
+  final String? selectionStatus;
+  final bool selectionLocked;
+  final String deliveryStatus;
 }
 
 class DailyMealItem {
@@ -48,16 +72,19 @@ class AssignedDailyMeal {
     required this.id,
     required this.source,
     required this.meal,
+    this.selectionNumber,
   });
   factory AssignedDailyMeal.fromJson(Map<String, dynamic> json) =>
       AssignedDailyMeal(
         id: json['selectionId'] as String,
         source: json['selectionSource'] as String,
         meal: DailyMealItem.fromJson(json['meal'] as Map<String, dynamic>),
+        selectionNumber: json['selectionNumber'] as int?,
       );
   final String id;
   final String source;
   final DailyMealItem meal;
+  final int? selectionNumber;
 }
 
 class DailyMealMenu {
@@ -73,9 +100,19 @@ class DailyMealMenu {
     required this.alternatives,
     this.cutoffAt,
     this.lockReason,
+    this.orderId,
+    this.subscriptionId,
+    this.selectionStatus,
+    this.selectionLocked = false,
+    this.deliveryStatus = 'PLANNED',
   });
   factory DailyMealMenu.fromJson(Map<String, dynamic> json) => DailyMealMenu(
     dayId: json['subscriptionServiceDayId'] as String,
+    orderId: json['orderId'] as String?,
+    subscriptionId: json['subscriptionId'] as String?,
+    selectionStatus: json['selectionStatus'] as String?,
+    selectionLocked: json['selectionLocked'] == true,
+    deliveryStatus: json['deliveryStatus'] as String? ?? 'PLANNED',
     date: DateTime.parse(json['deliveryDate'] as String),
     mealCount: json['mealCount'] as int,
     snackCount: json['snackCount'] as int,
@@ -92,6 +129,11 @@ class DailyMealMenu {
         .toList(),
   );
   final String dayId;
+  final String? orderId;
+  final String? subscriptionId;
+  final String? selectionStatus;
+  final bool selectionLocked;
+  final String deliveryStatus;
   final DateTime date;
   final int mealCount;
   final int snackCount;
@@ -105,5 +147,13 @@ class DailyMealMenu {
 
   bool get deadlinePassed =>
       cutoffAt != null && !DateTime.now().toUtc().isBefore(cutoffAt!.toUtc());
-  bool get editable => canEdit && !deadlinePassed;
+  bool get editable =>
+      canEdit &&
+      !selectionLocked &&
+      selectionStatus != 'CUSTOMER_CONFIRMED' &&
+      selectionStatus != 'AUTO_FINALIZED' &&
+      deliveryStatus != 'DELIVERED' &&
+      deliveryStatus != 'CANCELLED' &&
+      deliveryStatus != 'SKIPPED' &&
+      !deadlinePassed;
 }

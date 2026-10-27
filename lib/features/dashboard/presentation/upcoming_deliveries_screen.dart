@@ -1,3 +1,4 @@
+import 'package:diet_time/features/dashboard/domain/calendar_delivery.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/dashboard/data/upcoming_meals_repository.dart';
@@ -9,12 +10,13 @@ import 'package:intl/intl.dart';
 
 class UpcomingDeliveriesScreen extends ConsumerStatefulWidget {
   const UpcomingDeliveriesScreen({
-    required this.order,
+    this.order,
+    this.orders = const [],
     this.embedded = false,
     super.key,
   });
-
-  final OrderConfirmation order;
+  final OrderConfirmation? order;
+  final List<OrderConfirmation> orders;
   final bool embedded;
 
   @override
@@ -26,59 +28,102 @@ class _UpcomingDeliveriesScreenState
     extends ConsumerState<UpcomingDeliveriesScreen> {
   late DateTime _visibleMonth;
   DateTime? _selectedDate;
-  List<UpcomingMealDay>? _serviceDays;
+  final Map<String, List<UpcomingMealDay>> _serviceDays = {};
+  List<OrderConfirmation> get _orders => [
+    ?widget.order,
+    ...widget.orders,
+  ].where((o) => o.status != 'CANCELLED').toList();
 
-  OrderDelivery get _delivery => widget.order.delivery;
+  Map<DateTime, List<CalendarDelivery>> get _byDate => deliveriesByDate([
+    for (final order in _orders)
+      for (final day in _serviceDays[order.id] ?? <UpcomingMealDay>[])
+        CalendarDelivery(order: order, day: day),
+  ]);
 
   @override
   void initState() {
     super.initState();
+    _resetDate();
+  }
+
+  void _resetDate() {
     _selectedDate = _initialDeliveryDate();
-    final anchor = _selectedDate ?? _delivery.startDate ?? DateTime.now();
+    final anchor =
+        _selectedDate ??
+        _orders.firstOrNull?.delivery.startDate ??
+        DateTime.now();
     _visibleMonth = DateTime(anchor.year, anchor.month);
   }
 
   @override
   void didUpdateWidget(covariant UpcomingDeliveriesScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.order.id != widget.order.id) {
-      _serviceDays = null;
-      _selectedDate = _initialDeliveryDate();
-      final anchor = _selectedDate ?? _delivery.startDate ?? DateTime.now();
-      _visibleMonth = DateTime(anchor.year, anchor.month);
+    final oldIds = [
+      oldWidget.order?.id,
+      ...oldWidget.orders.map((o) => o.id),
+    ].join(',');
+    final ids = [widget.order?.id, ...widget.orders.map((o) => o.id)].join(',');
+    if (oldIds != ids) {
+      _serviceDays.clear();
+      _resetDate();
+    }
+  }
+
+  void _acceptDays(String orderId, List<UpcomingMealDay> days) {
+    setState(() {
+      _serviceDays[orderId] = days;
+      final dates = _byDate.keys.toList()..sort();
+      if (_selectedDate != null && dates.contains(_selectedDate)) return;
+      final today = DateUtils.dateOnly(
+        DateTime.now().toUtc().add(const Duration(hours: 3)),
+      );
+      _selectedDate =
+          dates.where((date) => !date.isBefore(today)).firstOrNull ??
+          dates.lastOrNull;
+      if (_selectedDate != null) {
+        _visibleMonth = DateTime(_selectedDate!.year, _selectedDate!.month);
+      }
+    });
+  }
+
+  void _retry() {
+    for (final order in _orders) {
+      ref.invalidate(upcomingMealDaysProvider(order.id));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final days = ref.watch(upcomingMealDaysProvider(widget.order.id));
-    ref.listen(upcomingMealDaysProvider(widget.order.id), (_, next) {
-      final loaded = next.asData?.value;
-      if (loaded == null) return;
-      setState(() {
-        _serviceDays = loaded;
-        if (_selectedDate != null &&
-            loaded.any((d) => _sameDay(d.date, _selectedDate!))) {
-          return;
-        }
-        final today = DateUtils.dateOnly(
-          DateTime.now().toUtc().add(const Duration(hours: 3)),
-        );
-        final upcoming = loaded.where((d) => !d.date.isBefore(today));
-        _selectedDate = upcoming.isNotEmpty
-            ? upcoming.first.date
-            : loaded.lastOrNull?.date;
-        if (_selectedDate != null) {
-          _visibleMonth = DateTime(_selectedDate!.year, _selectedDate!.month);
+    var loading = false;
+    var failed = false;
+    for (final order in _orders) {
+      final provider = upcomingMealDaysProvider(order.id);
+      final result = ref.watch(provider);
+      loading |= result.isLoading;
+      failed |= result.hasError;
+      if (result.asData?.value case final loaded?) {
+        _serviceDays[order.id] = loaded;
+      }
+      ref.listen(provider, (_, next) {
+        if (next.asData?.value case final loaded?) {
+          _acceptDays(order.id, loaded);
         }
       });
-    });
-    final selectedDay =
-        (_serviceDays ?? days.asData?.value ?? const <UpcomingMealDay>[])
-            .where(
-              (d) => _selectedDate != null && _sameDay(d.date, _selectedDate!),
-            )
-            .firstOrNull;
+    }
+    final byDate = _byDate;
+    if (!loading && !failed && !byDate.containsKey(_selectedDate)) {
+      final dates = byDate.keys.toList()..sort();
+      final today = DateUtils.dateOnly(
+        DateTime.now().toUtc().add(const Duration(hours: 3)),
+      );
+      _selectedDate =
+          dates.where((date) => !date.isBefore(today)).firstOrNull ??
+          dates.lastOrNull;
+      if (_selectedDate case final selected?) {
+        _visibleMonth = DateTime(selected.year, selected.month);
+      }
+    }
+    final selected = byDate[_selectedDate] ?? const <CalendarDelivery>[];
     final content = ListView(
       key: const ValueKey('upcomingDeliveriesScreen'),
       padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
@@ -98,10 +143,16 @@ class _UpcomingDeliveriesScreenState
           month: _visibleMonth,
           selectedDate: _selectedDate,
           isDeliveryDay: _isDeliveryDay,
-          statusForDate: (date) => (_serviceDays ?? const <UpcomingMealDay>[])
-              .where((d) => _sameDay(d.date, date))
-              .firstOrNull
-              ?.status,
+          statusForDate: (date) {
+            final deliveries = byDate[date] ?? const <CalendarDelivery>[];
+            final statuses = deliveries.map((d) => d.day.status).toSet();
+            return statuses.length == 1
+                ? statuses.single
+                : deliveries.isEmpty
+                ? null
+                : 'mixed';
+          },
+          countForDate: (date) => byDate[date]?.length ?? 0,
           canGoPrevious: _canChangeMonth(-1),
           canGoNext: _canChangeMonth(1),
           onPrevious: () => _changeMonth(-1),
@@ -113,9 +164,9 @@ class _UpcomingDeliveriesScreenState
         const SizedBox(height: 18),
         Divider(color: AppColors.darkGreen.withValues(alpha: .09)),
         const SizedBox(height: 12),
-        if (_selectedDate case final selected?) ...[
+        if (_selectedDate case final date?) ...[
           Text(
-            'Delivery for ${DateFormat('EEE, d MMM').format(selected)}',
+            'Delivery for ${DateFormat('EEE, d MMM').format(date)}',
             key: const ValueKey('selectedDeliveryTitle'),
             style: const TextStyle(
               color: AppColors.darkGreen,
@@ -124,40 +175,34 @@ class _UpcomingDeliveriesScreenState
             ),
           ),
           const SizedBox(height: 12),
-          if (days.isLoading)
-            const MealMenuLoading()
-          else if (days.hasError)
+          if (failed)
             MealMenuMessage(
-              message: 'We couldn’t load your delivery meals.',
-              onRetry: () =>
-                  ref.invalidate(upcomingMealDaysProvider(widget.order.id)),
+              message: 'We couldn’t load all your delivery meals.',
+              onRetry: _retry,
             )
-          else if (selectedDay != null)
-            DailyMealsPanel(
-              key: ValueKey('selectedDay-${selectedDay.id}'),
-              request: (
-                orderId: widget.order.id,
-                dayId: selectedDay.id,
-                language: Localizations.localeOf(context).languageCode,
-              ),
-              date: selected,
-              planName: widget.order.plan.name,
-            )
-          else
+          else if (loading)
+            const MealMenuLoading()
+          else if (selected.isEmpty)
             const MealMenuMessage(
               message:
                   'Meals have not been assigned to this delivery yet. Our team will review it.',
+            )
+          else ...[
+            Text(
+              '${selected.length} scheduled ${selected.length == 1 ? 'delivery' : 'deliveries'}',
+              key: const ValueKey('scheduledDeliveryCount'),
             ),
-          const SizedBox(height: 12),
-          _DeliveryDetails(order: widget.order),
-        ] else if (days.isLoading)
-          const MealMenuLoading()
-        else if (days.hasError)
+            const SizedBox(height: 12),
+            for (final delivery in selected)
+              _orderCard(delivery, date, expandable: selected.length > 1),
+          ],
+        ] else if (failed)
           MealMenuMessage(
-            message: 'We couldn’t load your delivery meals.',
-            onRetry: () =>
-                ref.invalidate(upcomingMealDaysProvider(widget.order.id)),
+            message: 'We couldn’t load all your delivery meals.',
+            onRetry: _retry,
           )
+        else if (loading)
+          const MealMenuLoading()
         else
           const _EmptyDelivery(),
         const SizedBox(height: 14),
@@ -192,54 +237,121 @@ class _UpcomingDeliveriesScreenState
     );
   }
 
+  Widget _orderCard(
+    CalendarDelivery delivery,
+    DateTime date, {
+    required bool expandable,
+  }) {
+    final day = delivery.day;
+    final order = delivery.order;
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DailyMealsPanel(
+          key: ValueKey('selectedDay-${order.id}-${day.id}'),
+          request: (
+            orderId: order.id,
+            dayId: day.id,
+            language: Localizations.localeOf(context).languageCode,
+          ),
+          date: date,
+          planName: order.plan.name,
+        ),
+        const SizedBox(height: 12),
+        _DeliveryDetails(order: order),
+      ],
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: expandable
+          ? Card(
+              key: ValueKey('calendarOrder-${order.id}-${day.id}'),
+              color: Colors.white,
+              clipBehavior: Clip.antiAlias,
+              child: ExpansionTile(
+                key: PageStorageKey('calendar-${order.id}-${day.id}'),
+                initiallyExpanded: true,
+                title: Text('${order.orderNumber} · ${order.plan.name}'),
+                subtitle: Text(
+                  [
+                    if (day.mealCount != null)
+                      '${day.mealCount} Meals + ${day.snackCount ?? 0} ${day.snackCount == 1 ? 'Snack' : 'Snacks'}',
+                    mealDayStatusLabel(day.status),
+                    day.selectionStatus?.replaceAll('_', ' ') ??
+                        (day.selectionLocked ? 'Locked' : 'Selection pending'),
+                    day.deliveryStatus,
+                  ].join(' · '),
+                ),
+                children: [
+                  Padding(padding: const EdgeInsets.all(12), child: details),
+                ],
+              ),
+            )
+          : details,
+    );
+  }
+
   DateTime? _initialDeliveryDate() {
-    final start = _dateOnly(_delivery.startDate);
-    final end = _dateOnly(_delivery.endDate);
-    if (start == null || end == null || _delivery.days.isEmpty) return null;
-    final today = _dateOnly(
+    final today = DateUtils.dateOnly(
       DateTime.now().toUtc().add(const Duration(hours: 3)),
-    )!;
-    var candidate = today.isAfter(start) ? today : start;
-    while (!candidate.isAfter(end)) {
-      if (_delivery.days.contains(candidate.weekday)) return candidate;
-      candidate = candidate.add(const Duration(days: 1));
+    );
+    final candidates = <DateTime>[];
+    for (final order in _orders) {
+      final start = _dateOnly(order.delivery.startDate);
+      final end = _dateOnly(order.delivery.endDate);
+      if (start == null || end == null || order.delivery.days.isEmpty) continue;
+      var date = today.isAfter(start) ? today : start;
+      while (!date.isAfter(end)) {
+        if (date.weekday != DateTime.friday &&
+            order.delivery.days.contains(date.weekday)) {
+          candidates.add(date);
+          break;
+        }
+        date = date.add(const Duration(days: 1));
+      }
     }
-    return null;
+    candidates.sort();
+    return candidates.firstOrNull;
   }
 
   bool _isDeliveryDay(DateTime date) {
     if (date.weekday == DateTime.friday) return false;
-    final loaded = _serviceDays;
-    if (loaded != null) return loaded.any((d) => _sameDay(d.date, date));
-    final start = _dateOnly(_delivery.startDate);
-    final end = _dateOnly(_delivery.endDate);
-    if (start == null || end == null) return false;
-    return !date.isBefore(start) &&
-        !date.isAfter(end) &&
-        _delivery.days.contains(date.weekday);
+    if (_byDate.containsKey(date)) return true;
+    return _orders.any((order) {
+      if (_serviceDays.containsKey(order.id)) return false;
+      final start = _dateOnly(order.delivery.startDate);
+      final end = _dateOnly(order.delivery.endDate);
+      return start != null &&
+          end != null &&
+          !date.isBefore(start) &&
+          !date.isAfter(end) &&
+          order.delivery.days.contains(date.weekday);
+    });
   }
 
   bool _canChangeMonth(int offset) {
     final target = DateTime(_visibleMonth.year, _visibleMonth.month + offset);
-    final start = _delivery.startDate;
-    final end = _delivery.endDate;
-    if (offset < 0 && start != null) {
-      return !target.isBefore(DateTime(start.year, start.month));
-    }
-    if (offset > 0 && end != null) {
-      return !target.isAfter(DateTime(end.year, end.month));
-    }
-    return true;
+    final dates =
+        _orders
+            .map((o) => offset < 0 ? o.delivery.startDate : o.delivery.endDate)
+            .whereType<DateTime>()
+            .toList()
+          ..sort();
+    if (dates.isEmpty) return false;
+    final bound = offset < 0 ? dates.first : dates.last;
+    final month = DateTime(bound.year, bound.month);
+    return offset < 0 ? !target.isBefore(month) : !target.isAfter(month);
   }
 
   void _changeMonth(int offset) {
-    if (!_canChangeMonth(offset)) return;
-    setState(() {
-      _visibleMonth = DateTime(
-        _visibleMonth.year,
-        _visibleMonth.month + offset,
+    if (_canChangeMonth(offset)) {
+      setState(
+        () => _visibleMonth = DateTime(
+          _visibleMonth.year,
+          _visibleMonth.month + offset,
+        ),
       );
-    });
+    }
   }
 }
 
@@ -249,6 +361,7 @@ class _Calendar extends StatelessWidget {
     required this.selectedDate,
     required this.isDeliveryDay,
     required this.statusForDate,
+    required this.countForDate,
     required this.canGoPrevious,
     required this.canGoNext,
     required this.onPrevious,
@@ -260,6 +373,7 @@ class _Calendar extends StatelessWidget {
   final DateTime? selectedDate;
   final bool Function(DateTime) isDeliveryDay;
   final String? Function(DateTime) statusForDate;
+  final int Function(DateTime) countForDate;
   final bool canGoPrevious;
   final bool canGoNext;
   final VoidCallback onPrevious;
@@ -332,15 +446,22 @@ class _Calendar extends StatelessWidget {
             final date = DateTime(month.year, month.month, index - leading + 1);
             final delivery = isDeliveryDay(date);
             final status = statusForDate(date);
+            final count = countForDate(date);
             final selected =
                 selectedDate != null && _sameDay(date, selectedDate!);
             return Tooltip(
-              message: status == null
+              message: count > 1
+                  ? '$count scheduled deliveries'
+                  : status == null
                   ? 'No delivery'
                   : mealDayStatusLabel(status),
               child: Semantics(
                 label:
-                    '${DateFormat('d MMMM yyyy').format(date)}${status == null ? '' : ', ${mealDayStatusLabel(status)}'}',
+                    '${DateFormat('d MMMM yyyy').format(date)}${count > 1
+                        ? ', $count scheduled deliveries'
+                        : status == null
+                        ? ''
+                        : ', ${mealDayStatusLabel(status)}'}',
                 selected: selected,
                 child: Center(
                   child: InkWell(
@@ -355,7 +476,9 @@ class _Calendar extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: delivery
-                            ? status == 'locked'
+                            ? status == 'mixed'
+                                  ? const Color(0xFF71867E)
+                                  : status == 'locked'
                                   ? const Color(0xFF63776D)
                                   : status == 'delivered'
                                   ? const Color(0xFF476A5C)
@@ -378,14 +501,23 @@ class _Calendar extends StatelessWidget {
                               ]
                             : null,
                       ),
-                      child: Text(
-                        '${date.day}',
-                        style: TextStyle(
-                          color: delivery
-                              ? AppColors.white
-                              : AppColors.darkGreen,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
+                      child: Badge(
+                        isLabelVisible: count > 1,
+                        label: Text(
+                          '$count',
+                          key: ValueKey(
+                            'deliveryCount-${date.toIso8601String()}',
+                          ),
+                        ),
+                        child: Text(
+                          '${date.day}',
+                          style: TextStyle(
+                            color: delivery
+                                ? AppColors.white
+                                : AppColors.darkGreen,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ),

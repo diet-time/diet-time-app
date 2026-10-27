@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/dashboard/data/tomorrow_menu_repository.dart';
+import 'package:diet_time/features/dashboard/data/upcoming_meals_repository.dart';
 import 'package:diet_time/features/dashboard/domain/tomorrow_menu.dart';
 import 'package:diet_time/features/dashboard/domain/upcoming_meals.dart';
 import 'package:flutter/material.dart';
@@ -100,6 +101,16 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
   }
 
   void _accept(TomorrowMenu menu) {
+    if (menu.finalized && menu.dayId != null) {
+      ref.invalidate(upcomingMealDaysProvider(widget.orderId));
+      ref.invalidate(
+        dailyMealMenuProvider((
+          orderId: widget.orderId,
+          dayId: menu.dayId!,
+          language: _language ?? 'en',
+        )),
+      );
+    }
     setState(() {
       _menu = menu;
       _draft = TomorrowMealDraft(menu);

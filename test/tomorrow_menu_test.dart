@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/dashboard/data/tomorrow_menu_repository.dart';
+import 'package:diet_time/features/dashboard/data/upcoming_meals_repository.dart';
 import 'package:diet_time/features/dashboard/domain/tomorrow_menu.dart';
 import 'package:diet_time/features/dashboard/domain/upcoming_meals.dart';
 import 'package:diet_time/features/dashboard/presentation/tomorrow_menu_section.dart';
@@ -79,6 +80,46 @@ TomorrowMenu menu({
 );
 
 void main() {
+  testWidgets(
+    'finalized meals refresh the same orders cached calendar status',
+    (tester) async {
+      var reads = 0;
+      final repository = FakeRepository()..response = menu(confirmed: true);
+      final container = ProviderContainer(
+        overrides: [
+          tomorrowMenuRepositoryProvider.overrideWithValue(repository),
+          upcomingMealDaysProvider('order').overrideWith((ref) async {
+            reads++;
+            return [];
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        upcomingMealDaysProvider('order'),
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      await container.read(upcomingMealDaysProvider('order').future);
+      expect(reads, 1);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: TomorrowMenuSection(orderId: 'order'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(reads, 2);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
   test('replacement keeps count, category and dish identity', () {
     final draft = TomorrowMealDraft(menu());
     expect(draft.replace(dishes[2], 'm1'), true);

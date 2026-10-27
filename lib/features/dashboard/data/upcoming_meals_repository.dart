@@ -41,9 +41,13 @@ class UpcomingMealsRepository {
   Future<List<UpcomingMealDay>> getDays(String orderId) async {
     final data = await _request('GET', '${_base(orderId)}/upcoming-meals');
     if (data is! List) throw const ApiException(ApiFailure.invalidResponse);
-    return data
+    final days = data
         .map((j) => UpcomingMealDay.fromJson(j as Map<String, dynamic>))
         .toList();
+    if (days.any((day) => day.orderId != null && day.orderId != orderId)) {
+      throw const ApiException(ApiFailure.invalidResponse);
+    }
+    return days;
   }
 
   Future<DailyMealMenu> getMenu(DailyMenuRequest request) async {
@@ -53,7 +57,8 @@ class UpcomingMealsRepository {
       language: request.language,
     );
     final menu = DailyMealMenu.fromJson(data as Map<String, dynamic>);
-    if (menu.dayId != request.dayId) {
+    if (menu.dayId != request.dayId ||
+        (menu.orderId != null && menu.orderId != request.orderId)) {
       throw const ApiException(ApiFailure.invalidResponse);
     }
     return menu;

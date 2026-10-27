@@ -52,6 +52,36 @@ void main() {
   });
 
   test(
+    'a calendar response for another order is rejected even when the day matches',
+    () async {
+      final api = _Api()..orderId = 'other-order';
+      await expectLater(
+        UpcomingMealsRepository(api, () async => 'token').getMenu(request),
+        throwsA(
+          isA<ApiException>().having(
+            (e) => e.failure,
+            'failure',
+            ApiFailure.invalidResponse,
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
+    'server lock prevents editing even if a legacy edit flag is true',
+    () async {
+      final api = _Api()..locked = true;
+      final menu = await UpcomingMealsRepository(
+        api,
+        () async => 'token',
+      ).getMenu(request);
+      expect(menu.canEdit, true);
+      expect(menu.editable, false);
+    },
+  );
+
+  test(
     'replacement updates only the chosen selection with its expected revision',
     () async {
       final api = _Api();
@@ -101,6 +131,8 @@ class _Api extends ApiClient {
   Map<String, dynamic>? body;
   int status = 200;
   String dayId = 'day-1';
+  String orderId = 'order-1';
+  bool locked = false;
 
   @override
   Future<ApiResponse> request({
@@ -120,6 +152,8 @@ class _Api extends ApiClient {
       body: {
         'data': {
           'subscriptionServiceDayId': dayId,
+          'orderId': orderId,
+          'selectionLocked': locked,
           'deliveryDate': '2030-10-27',
           'mealCount': 3,
           'snackCount': 1,

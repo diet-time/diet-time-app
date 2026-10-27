@@ -704,3 +704,76 @@ React Admin repository (`../diet-time-admin-spa`):
 
 - `src/features/meal-plans/PlanBuilderPage.tsx`
 - `src/features/meal-plans/PlanBuilderPage.test.tsx`
+
+## Calendar with overlapping orders — 27 October 2026
+
+The customer calendar now displays all current and completed orders from the existing fully paginated customer order list. Two orders delivering on the same date have separate expandable cards, packages, statuses, meals, snacks and delivery details. The single-order layout is retained. Dates with multiple deliveries show a count badge; mixed statuses use a neutral indicator, with individual statuses inside each card.
+
+### Root cause and data flow
+
+`_calendarOrder` in `customer_dashboard_screen.dart` selected `activeOrders.first`, even though the dashboard controller already retained multiple active orders. `UpcomingDeliveriesScreen` then watched only that order's service-day provider and used `firstOrNull` for the selected date and its status. Completed orders had no calendar path. These presentation restrictions discarded other orders before their service days or dishes were requested.
+
+The existing API meal query already returns every non-cancelled selection ordered by category and selection number. It does not group by meal type or limit regular meals to three. The apparent missing dishes were associated with orders the calendar never loaded; no additional selection-grouping defect was found in that query.
+
+The new `CustomerDeliveryCalendar` resolves all current/completed order details, reusing details already loaded by the dashboard. Each order uses its existing `upcomingMealDaysProvider(orderId)`. `deliveriesByDate` builds `Map<DateTime, List<CalendarDelivery>>`; every entry retains its order and service-day identity. Each card independently fetches its `DailyMealMenu` using `(orderId, dayId, language)`. Meals from different orders are never merged. Per-order request failures produce a retry state instead of silently displaying an incomplete delivery count. When Tomorrow's Menu accepts a finalized selection, it invalidates only that order's service-day list and that day's menu cache so the calendar updates its lock/status without restarting the app.
+
+### Existing API endpoints and additive response fields
+
+No duplicate calendar endpoint was introduced. The authenticated data flow remains:
+
+```text
+GET /api/v1/customer-profiles/{customerProfileId}/orders?pageNumber=...&pageSize=...
+GET /api/v1/orders/{orderId}
+GET /api/v1/orders/{orderId}/upcoming-meals
+GET /api/v1/orders/{orderId}/service-days/{dayId}/menu?language=en
+```
+
+The calendar combines these existing per-order responses. The API continues validating ownership against the authenticated user's active customer profile.
+
+| Response | Added or clarified fields |
+| --- | --- |
+| Each `data[]` row from `upcoming-meals` | `orderId`, actual `subscriptionId`, `planName`, `mealCount`, `snackCount`, `selectionStatus`, `selectionLocked`, `deliveryStatus` |
+| `data` from the service-day menu | `orderId`, actual `subscriptionId`, `selectionStatus`, `selectionLocked`, `deliveryStatus` |
+| Each `selectedMeals[]` row | `selectionNumber`; dish details and category remain in `meal` |
+
+Selected regular dishes and snacks remain in the existing `selectedMeals` collection, distinguished by `meal.category`. The service filters by the specific `subscription_service_day_id`, excludes cancelled selection rows, and returns every position. It never chooses just one row per meal type. A four-meal package therefore returns regular positions 1–4 plus its snack, and a five-meal package returns positions 1–5 plus its snack. Flutter rejects responses identifying a different order or day. Lock/finalization metadata also prevents a legacy edit flag from enabling changes to a locked day.
+
+The service-day query excludes cancelled/skipped service days and planned deliveries on cancelled orders. Completed orders retain delivered history. Calendar navigation spans the included orders' delivery periods. Confirmation, automatic finalization, and kitchen behavior retain their existing service-day scope; calendar reads do not modify selections or lock days.
+
+### Database review
+
+No tables, migrations, constraints or indexes were added. Multiple orders can share a customer, and multiple subscriptions can share a delivery date. Existing unique indexes are scoped to `(subscription_id, service_date)` and `(order_id, service_date)`, not `service_date` alone. The existing `(customer_profile_id, placed_at)` index supports customer order retrieval. Service-day queries use the order/date index; selection lookups are supported by the service-day prefix of the existing position/dish indexes. The category/selection-position and legacy-type constraints are preserved. The isolated PostgreSQL fixture exercises two orders on the same date with four and five regular selections using the same regular meal type.
+
+### Verification and modified files
+
+New Flutter tests verify the real dashboard calendar with two active orders and two completed orders, overlapping 4+1 and 5+1 packages, all selected dishes and independent snacks, mixed-status indicators, cancelled-order exclusion, failure/retry, and cross-order response rejection. Existing single-order calendar/dashboard tests continue to pass.
+
+Three new PostgreSQL-backed integration tests pass. They verify both authenticated per-order endpoints on Wednesday, 28 October 2026, selection positions, confirmed/pending isolation, a cross-order service-day rejection, completed deliveries, cancelled selections/days/orders, ownership checks, and kitchen reports retaining both order references and all eleven dishes after both orders confirm. The API unit suite passes **136/136**. The complete Flutter suite passes **261/261**, including the new order-specific calendar cache refresh test, and Flutter analysis reports no issues. `git diff --check` passes in both repositories.
+
+The broader PostgreSQL meal-service run passes **35 tests** and fails **1**: `Allergens_restrictions_inactive_slots_and_wrong_menu_days_are_excluded`. The same test was run against a separate archive of the unchanged committed API and fails there as well. Its assertion shows an allergen-associated dish remains eligible; the current committed `EligibleAsync` query has no allergen exclusion. That query is unchanged by this calendar work. This existing eligibility issue remains unresolved and the broader suite is not reported as green. Three previously identified tests referencing absent SQL files (`20261026_package_discounted_price.sql`, `tomorrow_menu_diagnostics.sql`, `20261026_address_delivery_slots.sql`) were explicitly excluded from this broader run.
+
+Flutter files:
+
+```text
+lib/features/dashboard/data/upcoming_meals_repository.dart
+lib/features/dashboard/domain/upcoming_meals.dart
+lib/features/dashboard/domain/calendar_delivery.dart
+lib/features/dashboard/presentation/customer_dashboard_screen.dart
+lib/features/dashboard/presentation/customer_delivery_calendar.dart
+lib/features/dashboard/presentation/upcoming_deliveries_screen.dart
+lib/features/dashboard/presentation/tomorrow_menu_section.dart
+test/upcoming_meals_repository_test.dart
+test/calendar_multiple_orders_test.dart
+test/tomorrow_menu_test.dart
+README.md
+```
+
+API files, relative to `../diet-time-api`:
+
+```text
+src/BuildingBlocks/DietTime.Contracts/UpcomingMealContracts.cs
+src/BuildingBlocks/DietTime.Persistence/UpcomingMealService.cs
+tests/DietTime.Meal.Api.IntegrationTests/CalendarMultipleOrdersTests.cs
+```
+
+Validation uses isolated test data; no production database, API deployment, or app release was changed. This calendar change does not establish the cause of the previously reported missing dishes in the live Tomorrow's Menu.
