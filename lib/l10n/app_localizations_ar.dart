@@ -9,6 +9,99 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String get deliveriesTitle => 'توصيلات الغد';
+
+  @override
+  String deliveriesScheduled(int count) {
+    return '$count طلبات مجدولة';
+  }
+
+  @override
+  String deliveriesOrder(String reference) {
+    return 'الطلب: $reference';
+  }
+
+  @override
+  String get deliveriesConfirmed => 'مؤكد';
+
+  @override
+  String get deliveriesActionNeeded => 'يتطلب إجراء';
+
+  @override
+  String get deliveriesWaiting => 'تحديث التوصيل';
+
+  @override
+  String deliveriesPackage(int meals, int snacks) {
+    return '$meals وجبات + $snacks وجبات خفيفة';
+  }
+
+  @override
+  String deliveriesAllConfirmed(int count) {
+    return 'تم تأكيد جميع الأطباق ($count)';
+  }
+
+  @override
+  String get deliveriesViewDishes => 'عرض أطباقك';
+
+  @override
+  String get deliveriesHideDishes => 'إخفاء أطباقك';
+
+  @override
+  String deliveriesProgress(int selected, int total) {
+    return 'تم اختيار $selected من $total';
+  }
+
+  @override
+  String get deliveriesDeadline => 'اختر قبل الساعة 9:00 مساءً';
+
+  @override
+  String get deliveriesChoose => 'اختر وجباتك';
+
+  @override
+  String get deliveriesRefresh => 'تحديث القائمة';
+
+  @override
+  String get deliveriesLoading => 'جارٍ تحميل التوصيلات…';
+
+  @override
+  String get deliveriesMeal => 'وجبة';
+
+  @override
+  String get deliveriesSnack => 'وجبة خفيفة';
+
+  @override
+  String get deliveriesViewDetails => 'عرض التفاصيل';
+
+  @override
+  String deliveriesFirstDelivery(String date) {
+    return 'أول توصيل: $date';
+  }
+
+  @override
+  String deliveriesStatus(String status) {
+    String _temp0 = intl.Intl.selectLogic(status, {
+      'NO_ORDER': 'لا يوجد طلب مرتبط بحسابك.',
+      'PENDING_ACTIVATION': 'تم حفظ طلبك وهو بانتظار التفعيل.',
+      'NOT_STARTED':
+          'تبدأ خطتك قريبًا. يفتح الاختيار في اليوم السابق لأول توصيل.',
+      'NO_DELIVERY': 'لا توجد توصيلات مجدولة للغد.',
+      'SERVICE_DAYS_MISSING':
+          'تم حفظ طلبك ويحتاج فريقنا إلى إعداد جدول التوصيل.',
+      'SERVICE_DAY_INCOMPLETE': 'تحتاج تفاصيل التوصيل إلى مراجعة فريقنا.',
+      'SCHEDULE_NOT_CONFIGURED': 'تحتاج أيام توصيل طلبك إلى مراجعة فريقنا.',
+      'MENU_NOT_CONFIGURED': 'تم حفظ طلبك. لم يتم إعداد أطباق الغد بعد.',
+      'SELECTION_NOT_OPEN': 'يفتح الاختيار في اليوم السابق للتوصيل.',
+      'FINALIZATION_PENDING':
+          'انتهت مهلة الاختيار في الساعة 9:00 مساءً. يجري تأكيد وجباتك تلقائيًا.',
+      'INACTIVE_ORDER': 'هذا الطلب غير نشط لاختيار الوجبات.',
+      'LOCKED': 'تم قفل اختياراتك لبدء التحضير.',
+      'NEEDS_REVIEW': 'يحتاج فريقنا إلى مراجعة الأطباق المناسبة لباقتك.',
+      'other': 'يرجى اختيار وجبات الغد.',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get appName => 'دايت تايم';
 
   @override

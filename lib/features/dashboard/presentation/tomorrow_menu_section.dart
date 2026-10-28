@@ -6,6 +6,7 @@ import 'package:diet_time/features/dashboard/data/tomorrow_menu_repository.dart'
 import 'package:diet_time/features/dashboard/data/upcoming_meals_repository.dart';
 import 'package:diet_time/features/dashboard/domain/tomorrow_menu.dart';
 import 'package:diet_time/features/dashboard/domain/upcoming_meals.dart';
+import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -15,9 +16,11 @@ class TomorrowMenuSection extends ConsumerStatefulWidget {
     super.key,
     required this.orderId,
     this.orderReference,
+    this.onMenuLoaded,
   });
   final String orderId;
   final String? orderReference;
+  final ValueChanged<TomorrowMenu?>? onMenuLoaded;
 
   @override
   ConsumerState<TomorrowMenuSection> createState() =>
@@ -105,6 +108,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
                 'The menu service could not load your order’s dishes. Please refresh or contact our team.',
             };
       });
+      widget.onMenuLoaded?.call(null);
     }
   }
 
@@ -129,6 +133,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
       _loading = false;
       _expired = !menu.canConfirm;
     });
+    widget.onMenuLoaded?.call(menu);
     _refreshTimer?.cancel();
     // Relative server timestamps schedule a refresh without trusting device time.
     final untilCutoff = menu.cutoffAt.difference(menu.serverNow);
@@ -179,7 +184,13 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
             builder: (routeContext, refresh) {
               _selectionRebuild = refresh;
               return Scaffold(
-                appBar: AppBar(title: const Text('Choose your meals')),
+                appBar: AppBar(
+                  title: Text(
+                    lookupAppLocalizations(
+                      Localizations.localeOf(context),
+                    ).deliveriesChoose,
+                  ),
+                ),
                 body: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: _buildPanel(routeContext, fullSelection: true),
@@ -297,7 +308,324 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
   }
 
   @override
-  Widget build(BuildContext context) => _buildPanel(context);
+  Widget build(BuildContext context) => _buildDeliveryCard(context);
+
+  Widget _buildDeliveryCard(BuildContext context) {
+    final copy = lookupAppLocalizations(Localizations.localeOf(context));
+    final menu = _menu;
+    final draft = _draft;
+    final confirmed = menu?.finalized == true;
+    final actionable =
+        menu?.canConfirm == true && menu?.locked == false && !_expired;
+    final accent = confirmed ? AppColors.emeraldGreen : const Color(0xFF946315);
+    final reference = widget.orderReference?.trim().isNotEmpty == true
+        ? widget.orderReference!.trim()
+        : widget.orderId;
+    final shortReference = reference.length > 16
+        ? '…${reference.substring(reference.length - 12)}'
+        : reference;
+    final total = (menu?.mealCount ?? 0) + (menu?.snackCount ?? 0);
+    final selected =
+        (draft?.mealIds.length ?? 0) + (draft?.snackIds.length ?? 0);
+    final images = [
+      ...?menu?.selected,
+      ...?menu?.meals,
+      ...?menu?.snacks,
+    ].where((item) => item.imageUrl?.trim().isNotEmpty == true);
+    return Container(
+      key: ValueKey('tomorrowMenu-${widget.orderId}'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: confirmed ? const Color(0xFFF0F7F0) : const Color(0xFFFFFEFA),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: confirmed ? const Color(0xFFD9E7DA) : const Color(0xFFE8E3D8),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Semantics(
+                  label: copy.deliveriesOrder(reference),
+                  child: Text(
+                    copy.deliveriesOrder(shortReference),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.darkGreen.withValues(alpha: .7),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (menu != null)
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: confirmed
+                          ? const Color(0xFFDDEDE0)
+                          : const Color(0xFFFFF1D8),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      confirmed
+                          ? copy.deliveriesConfirmed
+                          : actionable
+                          ? copy.deliveriesActionNeeded
+                          : copy.deliveriesWaiting,
+                      style: TextStyle(
+                        color: accent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (_loading)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Semantics(
+                label: copy.deliveriesLoading,
+                child: Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDF3E9),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            )
+          else if (menu != null && draft != null) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _DeliveryThumbnail(imageUrl: images.firstOrNull?.imageUrl),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        menu.planName,
+                        style: const TextStyle(
+                          color: AppColors.darkGreen,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        copy.deliveriesPackage(menu.mealCount, menu.snackCount),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.darkGreen.withValues(alpha: .7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (confirmed) ...[
+              Text(
+                copy.deliveriesAllConfirmed(menu.selected.length),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.emeraldGreen,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              TextButton(
+                key: const ValueKey('toggleConfirmedMeals'),
+                onPressed: () =>
+                    _update(() => _showConfirmed = !_showConfirmed),
+                style:
+                    TextButton.styleFrom(
+                      alignment: AlignmentDirectional.centerStart,
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 44),
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
+                      surfaceTintColor: Colors.transparent,
+                      side: BorderSide.none,
+                    ).copyWith(
+                      backgroundBuilder: (_, _, child) =>
+                          child ?? const SizedBox(),
+                    ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _showConfirmed
+                            ? copy.deliveriesHideDishes
+                            : copy.deliveriesViewDishes,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    AnimatedRotation(
+                      turns: _showConfirmed ? .5 : 0,
+                      duration: const Duration(milliseconds: 220),
+                      child: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 20,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              AnimatedSize(
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 220),
+                alignment: Alignment.topCenter,
+                child: _showConfirmed
+                    ? Column(
+                        children: [
+                          for (final item in menu.selected)
+                            _CompactMealRow(item: item),
+                        ],
+                      )
+                    : const SizedBox(width: double.infinity),
+              ),
+            ] else if (menu.dayId != null) ...[
+              if (actionable) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: LinearProgressIndicator(
+                    key: ValueKey('deliveryProgress-${widget.orderId}'),
+                    value: total == 0 ? 0 : (selected / total).clamp(0.0, 1.0),
+                    minHeight: 4,
+                    color: AppColors.emeraldGreen,
+                    backgroundColor: const Color(0xFFEAECE1),
+                    semanticsLabel: copy.deliveriesProgress(selected, total),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    Text(
+                      copy.deliveriesProgress(selected, total),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.darkGreen,
+                      ),
+                    ),
+                    Text(
+                      copy.deliveriesDeadline,
+                      style: TextStyle(fontSize: 11, color: accent),
+                    ),
+                  ],
+                ),
+              ] else
+                Text(
+                  menu.emptyReason ??
+                      menu.reviewReason ??
+                      copy.deliveriesStatus(menu.status),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.darkGreen,
+                  ),
+                ),
+              if (!menu.locked &&
+                  (menu.meals.isNotEmpty || menu.snacks.isNotEmpty)) ...[
+                const SizedBox(height: 8),
+                FilledButton(
+                  key: const ValueKey('chooseTomorrowMeals'),
+                  onPressed: _submitting ? null : _openSelection,
+                  style:
+                      FilledButton.styleFrom(
+                        backgroundColor: AppColors.emeraldGreen,
+                        foregroundColor: AppColors.white,
+                        minimumSize: const Size.fromHeight(44),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        elevation: 0,
+                        surfaceTintColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        side: BorderSide.none,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ).copyWith(
+                        backgroundBuilder: (_, _, child) =>
+                            child ?? const SizedBox(),
+                      ),
+                  child: Text(copy.deliveriesChoose),
+                ),
+              ],
+            ] else ...[
+              Text(
+                menu.emptyReason ??
+                    menu.reviewReason ??
+                    copy.deliveriesStatus(menu.status),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.darkGreen,
+                ),
+              ),
+              if (menu.status == 'NOT_STARTED' &&
+                  (menu.firstDeliveryDate ?? menu.orderStartDate) != null)
+                Text(
+                  copy.deliveriesFirstDelivery(
+                    DateFormat(
+                      'EEEE, d MMMM',
+                      Localizations.localeOf(context).languageCode == 'ar'
+                          ? 'ar'
+                          : null,
+                    ).format((menu.firstDeliveryDate ?? menu.orderStartDate)!),
+                  ),
+                  style: const TextStyle(fontSize: 12),
+                ),
+            ],
+            if (!menu.canConfirm && !confirmed && _error == null)
+              TextButton(
+                onPressed: _submitting ? null : () => _load(),
+                child: Text(copy.deliveriesRefresh),
+              ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              _error!,
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+            TextButton(
+              onPressed: _loading || _submitting ? null : () => _load(),
+              child: Text(copy.deliveriesRefresh),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 
   Widget _buildPanel(BuildContext context, {bool fullSelection = false}) {
     final menu = _menu;
@@ -538,6 +866,37 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
   );
 }
 
+class _DeliveryThumbnail extends StatelessWidget {
+  const _DeliveryThumbnail({this.imageUrl});
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(10),
+    child: SizedBox.square(
+      dimension: 48,
+      child: ColoredBox(
+        color: const Color(0xFFE4EDE0),
+        child: imageUrl?.trim().isNotEmpty == true
+            ? Image.network(
+                imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => const Icon(
+                  Icons.restaurant_rounded,
+                  size: 22,
+                  color: AppColors.emeraldGreen,
+                ),
+              )
+            : const Icon(
+                Icons.restaurant_rounded,
+                size: 22,
+                color: AppColors.emeraldGreen,
+              ),
+      ),
+    ),
+  );
+}
+
 class _CompactMealRow extends StatelessWidget {
   const _CompactMealRow({required this.item});
   final DailyMealItem item;
@@ -576,7 +935,7 @@ class _CompactMealRow extends StatelessWidget {
                 ),
               ),
               Text(
-                '${item.category == 'snack' ? 'Snack' : 'Meal'}${item.calories == null ? '' : ' · ${item.calories!.round()} kcal'}',
+                '${item.category == 'snack' ? lookupAppLocalizations(Localizations.localeOf(context)).deliveriesSnack : lookupAppLocalizations(Localizations.localeOf(context)).deliveriesMeal}${item.calories == null ? '' : ' · ${item.calories!.round()} kcal'}',
                 style: const TextStyle(fontSize: 12),
               ),
             ],

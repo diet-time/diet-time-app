@@ -109,6 +109,19 @@ void main() {
 
     expect(find.byKey(const ValueKey('activePlansCarousel')), findsOneWidget);
     expect(find.text('2 PLANS'), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('activePlan-active'))).height,
+      lessThan(150),
+    );
+    await tester.drag(
+      find.byKey(const ValueKey('activePlansCarousel')),
+      const Offset(-330, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('viewOrder-confirmed')).hitTestable(),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 

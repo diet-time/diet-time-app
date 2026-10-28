@@ -1,4 +1,5 @@
-import 'package:diet_time/features/dashboard/presentation/tomorrow_menu_section.dart';
+import 'package:diet_time/features/dashboard/presentation/tomorrow_deliveries_section.dart';
+import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
@@ -266,12 +267,9 @@ class _DashboardHome extends ConsumerWidget {
           if (single != null) ...[
             const _SectionTitle('YOUR ACTIVE PLAN'),
             const SizedBox(height: 10),
-            _ReferencePlanCard(summary: single.order),
-            const SizedBox(height: 20),
-            TomorrowMenuSection(
-              key: ValueKey('tomorrow-${single.order.id}'),
-              orderId: single.order.id,
-            ),
+            _ReferencePlanCard(summary: single.order, detail: single.detail),
+            const SizedBox(height: 16),
+            TomorrowDeliveriesSection(orders: [single.order]),
           ] else if (multiple != null) ...[
             Row(
               children: [
@@ -289,15 +287,12 @@ class _DashboardHome extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 10),
-            _MultiPlanCarousel(orders: multiple.activeOrders),
-            for (final order in multiple.activeOrders) ...[
-              const SizedBox(height: 20),
-              TomorrowMenuSection(
-                key: ValueKey('tomorrow-${order.id}'),
-                orderId: order.id,
-                orderReference: order.orderNumber,
-              ),
-            ],
+            _MultiPlanCarousel(
+              orders: multiple.activeOrders,
+              details: multiple.details,
+            ),
+            const SizedBox(height: 16),
+            TomorrowDeliveriesSection(orders: multiple.activeOrders),
           ] else if (state is DashboardWithoutActivePlan ||
               state is DashboardNoOrders) ...[
             const _NoActivePlanCard(),
@@ -554,146 +549,109 @@ class _NoActivePlanCard extends ConsumerWidget {
   );
 }
 
+double _activePlanCardHeight(BuildContext context) =>
+    132 +
+    (MediaQuery.textScalerOf(context).scale(14) - 14).clamp(
+          0,
+          double.infinity,
+        ) *
+        5;
+
 class _ReferencePlanCard extends StatelessWidget {
-  const _ReferencePlanCard({required this.summary});
+  const _ReferencePlanCard({required this.summary, this.detail});
 
   final CustomerOrderSummary summary;
+  final OrderConfirmation? detail;
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: ValueKey('activePlan-${summary.id}'),
-    height: 174,
-    padding: const EdgeInsets.all(15),
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF0A7159), Color(0xFF064638)],
+  Widget build(BuildContext context) {
+    final copy = lookupAppLocalizations(Localizations.localeOf(context));
+    final package = detail?.meals
+        .map((meal) => '${meal.name} × ${meal.quantity}')
+        .join(' · ');
+    return Container(
+      key: ValueKey('activePlan-${summary.id}'),
+      height: _activePlanCardHeight(context),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0A7159), Color(0xFF064638)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.white.withValues(alpha: .12)),
       ),
-      borderRadius: BorderRadius.circular(18),
-      boxShadow: [
-        BoxShadow(
-          color: AppColors.emeraldGreen.withValues(alpha: .2),
-          blurRadius: 20,
-          offset: const Offset(0, 8),
-        ),
-      ],
-    ),
-    child: Stack(
-      children: [
-        PositionedDirectional(
-          end: 0,
-          top: 18,
-          child: Icon(
-            Icons.spa_rounded,
-            color: AppColors.white.withValues(alpha: .1),
-            size: 88,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            summary.planName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+            ),
           ),
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Text(
-                  summary.status == 'ACTIVE' ? 'ACTIVE PLAN' : summary.status,
-                  style: const TextStyle(
-                    color: Color(0xFF9AE2A7),
-                    fontSize: 9,
-                    letterSpacing: .7,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const Spacer(),
-                _HeroStatusPill(summary.status),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              summary.planName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
+          const SizedBox(height: 4),
+          Text(
+            package?.isNotEmpty == true ? package! : summary.planDurationName,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Color(0xFFD7E7E1), fontSize: 11),
+          ),
+          const Spacer(),
+          Row(
+            children: [
+              const Icon(
+                Icons.calendar_today_outlined,
+                color: Color(0xFFB7D5CA),
+                size: 12,
               ),
-            ),
-            const SizedBox(height: 7),
-            Row(
-              children: [
-                const Icon(
-                  Icons.calendar_today_outlined,
-                  color: Color(0xFFB7D5CA),
-                  size: 13,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  _period(summary.startDate, summary.endDate),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  _period(
+                    summary.startDate,
+                    summary.endDate,
+                    locale: Localizations.localeOf(context).languageCode,
+                  ),
                   style: const TextStyle(
                     color: Color(0xFFD7E7E1),
                     fontSize: 10,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ],
-            ),
-            const Spacer(),
-            Divider(height: 1, color: AppColors.white.withValues(alpha: .14)),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'TOTAL PRICE',
-                        style: TextStyle(
-                          color: AppColors.white.withValues(alpha: .55),
-                          fontSize: 8,
-                          fontWeight: FontWeight.w800,
-                        ),
+              ),
+              const SizedBox(width: 6),
+              TextButton(
+                key: ValueKey('viewOrder-${summary.id}'),
+                onPressed: () =>
+                    context.push(AppRoutes.orderDetails, extra: summary.id),
+                style:
+                    TextButton.styleFrom(
+                      foregroundColor: AppColors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(0, 44),
+                      side: BorderSide.none,
+                      textStyle: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${formatMealPlanPriceAmount(summary.totalAmount, Localizations.localeOf(context).toLanguageTag())} ${summary.currencyCode}',
-                        style: const TextStyle(
-                          color: AppColors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                FilledButton.icon(
-                  key: ValueKey('viewOrder-${summary.id}'),
-                  onPressed: () =>
-                      context.push(AppRoutes.orderDetails, extra: summary.id),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.white,
-                    foregroundColor: AppColors.darkGreen,
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 13,
-                      vertical: 9,
+                    ).copyWith(
+                      backgroundBuilder: (_, _, child) =>
+                          child ?? const SizedBox(),
                     ),
-                  ),
-                  iconAlignment: IconAlignment.end,
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 14),
-                  label: const Text(
-                    'VIEW DETAILS',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
+                child: Text(copy.deliveriesViewDetails),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ignore: unused_element
@@ -926,9 +884,10 @@ class _HeroStatusPill extends StatelessWidget {
 }
 
 class _MultiPlanCarousel extends StatefulWidget {
-  const _MultiPlanCarousel({required this.orders});
+  const _MultiPlanCarousel({required this.orders, required this.details});
 
   final List<CustomerOrderSummary> orders;
+  final Map<String, OrderConfirmation> details;
 
   @override
   State<_MultiPlanCarousel> createState() => _MultiPlanCarouselState();
@@ -948,7 +907,7 @@ class _MultiPlanCarouselState extends State<_MultiPlanCarousel> {
   Widget build(BuildContext context) => Column(
     children: [
       SizedBox(
-        height: 174,
+        height: _activePlanCardHeight(context),
         child: PageView.builder(
           key: const ValueKey('activePlansCarousel'),
           controller: _controller,
@@ -961,7 +920,10 @@ class _MultiPlanCarouselState extends State<_MultiPlanCarousel> {
               padding: EdgeInsetsDirectional.only(
                 end: index == widget.orders.length - 1 ? 0 : 10,
               ),
-              child: _ReferencePlanCard(summary: order),
+              child: _ReferencePlanCard(
+                summary: order,
+                detail: widget.details[order.id],
+              ),
             );
           },
         ),
@@ -1994,9 +1956,10 @@ String _dashboardSubtitle(CustomerDashboardState state) => switch (state) {
   _ => 'Your meal plans at a glance',
 };
 
-String _period(DateTime? start, DateTime? end) {
+String _period(DateTime? start, DateTime? end, {String? locale}) {
   if (start == null || end == null) return '—';
-  return '${DateFormat('dd MMM').format(start)} - ${DateFormat('dd MMM').format(end)}';
+  final dateLocale = locale == 'en' ? null : locale;
+  return '${DateFormat('dd MMM', dateLocale).format(start)} - ${DateFormat('dd MMM', dateLocale).format(end)}';
 }
 
 String _weekdays(List<int> days) {

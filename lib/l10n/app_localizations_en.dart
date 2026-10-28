@@ -9,6 +9,116 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get deliveriesTitle => 'Tomorrow’s Deliveries';
+
+  @override
+  String deliveriesScheduled(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'orders',
+      one: 'order',
+    );
+    return '$count scheduled $_temp0';
+  }
+
+  @override
+  String deliveriesOrder(String reference) {
+    return 'Order: $reference';
+  }
+
+  @override
+  String get deliveriesConfirmed => 'Confirmed';
+
+  @override
+  String get deliveriesActionNeeded => 'Action needed';
+
+  @override
+  String get deliveriesWaiting => 'Delivery update';
+
+  @override
+  String deliveriesPackage(int meals, int snacks) {
+    String _temp0 = intl.Intl.pluralLogic(
+      snacks,
+      locale: localeName,
+      other: 'Snacks',
+      one: 'Snack',
+    );
+    return '$meals Meals + $snacks $_temp0';
+  }
+
+  @override
+  String deliveriesAllConfirmed(int count) {
+    return 'All $count dishes confirmed';
+  }
+
+  @override
+  String get deliveriesViewDishes => 'View your dishes';
+
+  @override
+  String get deliveriesHideDishes => 'Hide your dishes';
+
+  @override
+  String deliveriesProgress(int selected, int total) {
+    return '$selected of $total selected';
+  }
+
+  @override
+  String get deliveriesDeadline => 'Choose before 9:00 PM';
+
+  @override
+  String get deliveriesChoose => 'Choose your meals';
+
+  @override
+  String get deliveriesRefresh => 'Refresh menu';
+
+  @override
+  String get deliveriesLoading => 'Loading deliveries…';
+
+  @override
+  String get deliveriesMeal => 'Meal';
+
+  @override
+  String get deliveriesSnack => 'Snack';
+
+  @override
+  String get deliveriesViewDetails => 'View Details';
+
+  @override
+  String deliveriesFirstDelivery(String date) {
+    return 'First delivery: $date';
+  }
+
+  @override
+  String deliveriesStatus(String status) {
+    String _temp0 = intl.Intl.selectLogic(status, {
+      'NO_ORDER': 'No order is linked to your account.',
+      'PENDING_ACTIVATION':
+          'Your order is saved and is waiting for activation.',
+      'NOT_STARTED':
+          'Your plan starts soon. Selection opens the day before your first delivery.',
+      'NO_DELIVERY': 'No delivery is scheduled for tomorrow.',
+      'SERVICE_DAYS_MISSING':
+          'Your order is saved, but its delivery schedule needs to be initialized by our team.',
+      'SERVICE_DAY_INCOMPLETE':
+          'Your delivery details need review by our team.',
+      'SCHEDULE_NOT_CONFIGURED':
+          'Your order’s delivery weekdays need review by our team.',
+      'MENU_NOT_CONFIGURED':
+          'Your order is saved. Tomorrow’s dishes have not been configured yet.',
+      'SELECTION_NOT_OPEN': 'Selection opens the day before your delivery.',
+      'FINALIZATION_PENDING':
+          'The 9:00 PM selection window has closed. Your automatic meals are being finalized.',
+      'INACTIVE_ORDER': 'This order is not active for meal selection.',
+      'LOCKED': 'Your meal selections are locked for preparation.',
+      'NEEDS_REVIEW':
+          'Our team needs to review suitable dishes for your package.',
+      'other': 'Please choose your meals for tomorrow.',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get appName => 'Diet Time';
 
   @override

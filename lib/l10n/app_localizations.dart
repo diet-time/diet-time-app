@@ -98,6 +98,126 @@ abstract class AppLocalizations {
     Locale('en'),
   ];
 
+  /// No description provided for @deliveriesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow’s Deliveries'**
+  String get deliveriesTitle;
+
+  /// No description provided for @deliveriesScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} scheduled {count, plural, =1{order} other{orders}}'**
+  String deliveriesScheduled(int count);
+
+  /// No description provided for @deliveriesOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Order: {reference}'**
+  String deliveriesOrder(String reference);
+
+  /// No description provided for @deliveriesConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get deliveriesConfirmed;
+
+  /// No description provided for @deliveriesActionNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Action needed'**
+  String get deliveriesActionNeeded;
+
+  /// No description provided for @deliveriesWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery update'**
+  String get deliveriesWaiting;
+
+  /// No description provided for @deliveriesPackage.
+  ///
+  /// In en, this message translates to:
+  /// **'{meals} Meals + {snacks} {snacks, plural, =1{Snack} other{Snacks}}'**
+  String deliveriesPackage(int meals, int snacks);
+
+  /// No description provided for @deliveriesAllConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'All {count} dishes confirmed'**
+  String deliveriesAllConfirmed(int count);
+
+  /// No description provided for @deliveriesViewDishes.
+  ///
+  /// In en, this message translates to:
+  /// **'View your dishes'**
+  String get deliveriesViewDishes;
+
+  /// No description provided for @deliveriesHideDishes.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide your dishes'**
+  String get deliveriesHideDishes;
+
+  /// No description provided for @deliveriesProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{selected} of {total} selected'**
+  String deliveriesProgress(int selected, int total);
+
+  /// No description provided for @deliveriesDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose before 9:00 PM'**
+  String get deliveriesDeadline;
+
+  /// No description provided for @deliveriesChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your meals'**
+  String get deliveriesChoose;
+
+  /// No description provided for @deliveriesRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh menu'**
+  String get deliveriesRefresh;
+
+  /// No description provided for @deliveriesLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading deliveries…'**
+  String get deliveriesLoading;
+
+  /// No description provided for @deliveriesMeal.
+  ///
+  /// In en, this message translates to:
+  /// **'Meal'**
+  String get deliveriesMeal;
+
+  /// No description provided for @deliveriesSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Snack'**
+  String get deliveriesSnack;
+
+  /// No description provided for @deliveriesViewDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View Details'**
+  String get deliveriesViewDetails;
+
+  /// No description provided for @deliveriesFirstDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'First delivery: {date}'**
+  String deliveriesFirstDelivery(String date);
+
+  /// No description provided for @deliveriesStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'{status, select, NO_ORDER{No order is linked to your account.} PENDING_ACTIVATION{Your order is saved and is waiting for activation.} NOT_STARTED{Your plan starts soon. Selection opens the day before your first delivery.} NO_DELIVERY{No delivery is scheduled for tomorrow.} SERVICE_DAYS_MISSING{Your order is saved, but its delivery schedule needs to be initialized by our team.} SERVICE_DAY_INCOMPLETE{Your delivery details need review by our team.} SCHEDULE_NOT_CONFIGURED{Your order’s delivery weekdays need review by our team.} MENU_NOT_CONFIGURED{Your order is saved. Tomorrow’s dishes have not been configured yet.} SELECTION_NOT_OPEN{Selection opens the day before your delivery.} FINALIZATION_PENDING{The 9:00 PM selection window has closed. Your automatic meals are being finalized.} INACTIVE_ORDER{This order is not active for meal selection.} LOCKED{Your meal selections are locked for preparation.} NEEDS_REVIEW{Our team needs to review suitable dishes for your package.} other{Please choose your meals for tomorrow.}}'**
+  String deliveriesStatus(String status);
+
   /// No description provided for @appName.
   ///
   /// In en, this message translates to:
