@@ -24,8 +24,8 @@ class _TomorrowDeliveriesSectionState extends State<TomorrowDeliveriesSection> {
 
   int _priority(String id) {
     final menu = _menus[id];
-    if (menu?.canConfirm == true && menu?.locked == false) return 0;
-    return menu?.finalized == true ? 2 : 1;
+    if (menu?.canConfirm == true && menu?.readOnly == false) return 0;
+    return menu?.readOnly == true ? 2 : 1;
   }
 
   void _received(String orderId, TomorrowMenu? menu) {
@@ -54,7 +54,7 @@ class _TomorrowDeliveriesSectionState extends State<TomorrowDeliveriesSection> {
         .where((entry) => ids.contains(entry.key))
         .map((entry) => entry.value)
         .toList();
-    final scheduled = menus.where((menu) => menu.dayId != null).length;
+    final scheduled = menus.where((menu) => menu.scheduledForTomorrow).length;
     final sorted = widget.orders.indexed.toList()
       ..sort((a, b) {
         final priority = _priority(a.$2.id).compareTo(_priority(b.$2.id));
@@ -92,6 +92,8 @@ class _TomorrowDeliveriesSectionState extends State<TomorrowDeliveriesSection> {
             Text(
               !ids.every(_loaded.contains)
                   ? copy.deliveriesLoading
+                  : menus.length < ids.length
+                  ? copy.deliveriesUnavailable
                   : copy.deliveriesScheduled(scheduled),
               key: const ValueKey('tomorrowDeliveryCount'),
               style: TextStyle(
@@ -105,11 +107,14 @@ class _TomorrowDeliveriesSectionState extends State<TomorrowDeliveriesSection> {
         for (final (_, order) in sorted)
           Padding(
             key: ValueKey('deliveryOrder-${order.id}'),
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: _menus[order.id]?.scheduledForTomorrow == false
+                ? EdgeInsets.zero
+                : const EdgeInsets.only(bottom: 10),
             child: TomorrowMenuSection(
               key: ValueKey('tomorrow-${order.id}'),
               orderId: order.id,
               orderReference: order.orderNumber,
+              scheduledOnly: true,
               onMenuLoaded: (menu) => _received(order.id, menu),
             ),
           ),

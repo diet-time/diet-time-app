@@ -151,12 +151,12 @@ void main() {
       expect(find.text('Order: ORD-B'), findsOneWidget);
       expect(find.text('Dish a'), findsNothing);
       expect(find.text('Dish b'), findsNothing);
-      await tester.tap(find.text('View your dishes').first);
+      await tester.tap(find.text('View confirmed meals').first);
       await tester.pumpAndSettle();
       expect(find.text('Dish a'), findsOneWidget);
       expect(find.text('Dish b'), findsNothing);
-      await tester.ensureVisible(find.text('View your dishes'));
-      await tester.tap(find.text('View your dishes'));
+      await tester.ensureVisible(find.text('View confirmed meals'));
+      await tester.tap(find.text('View confirmed meals'));
       await tester.pumpAndSettle();
       expect(find.text('Dish a'), findsOneWidget);
       expect(find.text('Dish b'), findsOneWidget);
@@ -231,9 +231,9 @@ void main() {
         );
       await show(tester, repository, openSelection: false);
       expect(find.text('Confirmed'), findsOneWidget);
-      expect(find.text('All ${count + 1} dishes confirmed'), findsOneWidget);
+      expect(find.text('$count Meals + 1 Snack'), findsOneWidget);
       expect(find.text('Confirmed dish 1'), findsNothing);
-      await tester.tap(find.text('View your dishes'));
+      await tester.tap(find.text('View confirmed meals'));
       await tester.pumpAndSettle();
       for (var i = 1; i <= count; i++) {
         expect(find.text('Confirmed dish $i'), findsOneWidget);
@@ -256,7 +256,8 @@ void main() {
       await show(tester, repository, openSelection: false);
       expect(find.text('3 of 3 selected'), findsOneWidget);
       expect(find.text(dishes[0].name), findsNothing);
-      await tester.tap(find.text('Choose your meals'));
+      expect(find.text('Ready to confirm'), findsOneWidget);
+      await tester.tap(find.text('Review & confirm'));
       await tester.pumpAndSettle();
       expect(find.text(dishes[2].name), findsOneWidget);
       await tester.ensureVisible(find.text(dishes[0].name));

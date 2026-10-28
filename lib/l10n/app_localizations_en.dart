@@ -31,6 +31,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deliveriesConfirmed => 'Confirmed';
 
   @override
+  String get deliveriesPending => 'Selection pending';
+
+  @override
+  String get deliveriesReady => 'Ready to confirm';
+
+  @override
+  String get deliveriesAutomatic => 'Automatically selected';
+
+  @override
+  String get deliveriesLocked => 'Locked';
+
+  @override
+  String get deliveriesReviewConfirm => 'Review & confirm';
+
+  @override
+  String get deliveriesViewConfirmed => 'View confirmed meals';
+
+  @override
+  String get deliveriesViewSelected => 'View selected meals';
+
+  @override
+  String get deliveriesViewMenu => 'View menu';
+
+  @override
+  String get deliveriesUnavailable => 'Unable to load all deliveries';
+
+  @override
   String get deliveriesActionNeeded => 'Action needed';
 
   @override

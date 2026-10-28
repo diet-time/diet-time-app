@@ -1,7 +1,7 @@
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/features/plans/presentation/package_discount_details.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
-import 'package:diet_time/core/config/app_environment.dart';
+import 'package:diet_time/core/widgets/meal_plan_image.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
@@ -755,10 +755,4 @@ String _amount(BuildContext context, double value) => formatMealPlanPriceAmount(
   Localizations.localeOf(context).toLanguageTag(),
 );
 
-String _resolveImageUrl(String? value) {
-  final candidate = value?.trim() ?? '';
-  if (candidate.isEmpty) return '';
-  final parsed = Uri.tryParse(candidate);
-  if (parsed != null && parsed.hasScheme) return candidate;
-  return Uri.parse(AppEnvironment.apiBaseUrl).resolve(candidate).toString();
-}
+String _resolveImageUrl(String? value) => resolvePlanImageUrl(value);

@@ -25,6 +25,33 @@ class AppLocalizationsAr extends AppLocalizations {
   String get deliveriesConfirmed => 'مؤكد';
 
   @override
+  String get deliveriesPending => 'بانتظار الاختيار';
+
+  @override
+  String get deliveriesReady => 'جاهز للتأكيد';
+
+  @override
+  String get deliveriesAutomatic => 'تم الاختيار تلقائيًا';
+
+  @override
+  String get deliveriesLocked => 'مقفل';
+
+  @override
+  String get deliveriesReviewConfirm => 'مراجعة وتأكيد';
+
+  @override
+  String get deliveriesViewConfirmed => 'عرض الوجبات المؤكدة';
+
+  @override
+  String get deliveriesViewSelected => 'عرض الوجبات المختارة';
+
+  @override
+  String get deliveriesViewMenu => 'عرض القائمة';
+
+  @override
+  String get deliveriesUnavailable => 'تعذر تحميل جميع التوصيلات';
+
+  @override
   String get deliveriesActionNeeded => 'يتطلب إجراء';
 
   @override

@@ -122,6 +122,60 @@ abstract class AppLocalizations {
   /// **'Confirmed'**
   String get deliveriesConfirmed;
 
+  /// No description provided for @deliveriesPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Selection pending'**
+  String get deliveriesPending;
+
+  /// No description provided for @deliveriesReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to confirm'**
+  String get deliveriesReady;
+
+  /// No description provided for @deliveriesAutomatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically selected'**
+  String get deliveriesAutomatic;
+
+  /// No description provided for @deliveriesLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked'**
+  String get deliveriesLocked;
+
+  /// No description provided for @deliveriesReviewConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Review & confirm'**
+  String get deliveriesReviewConfirm;
+
+  /// No description provided for @deliveriesViewConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'View confirmed meals'**
+  String get deliveriesViewConfirmed;
+
+  /// No description provided for @deliveriesViewSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'View selected meals'**
+  String get deliveriesViewSelected;
+
+  /// No description provided for @deliveriesViewMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'View menu'**
+  String get deliveriesViewMenu;
+
+  /// No description provided for @deliveriesUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load all deliveries'**
+  String get deliveriesUnavailable;
+
   /// No description provided for @deliveriesActionNeeded.
   ///
   /// In en, this message translates to:

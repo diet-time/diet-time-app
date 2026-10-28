@@ -1,6 +1,6 @@
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
-import 'package:diet_time/core/config/app_environment.dart';
+import 'package:diet_time/core/widgets/meal_plan_image.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
@@ -511,10 +511,4 @@ class _PlanLoadState extends StatelessWidget {
   }
 }
 
-String _resolveImageUrl(String? value) {
-  final candidate = value?.trim() ?? '';
-  if (candidate.isEmpty) return '';
-  final parsed = Uri.tryParse(candidate);
-  if (parsed != null && parsed.hasScheme) return candidate;
-  return Uri.parse(AppEnvironment.apiBaseUrl).resolve(candidate).toString();
-}
+String _resolveImageUrl(String? value) => resolvePlanImageUrl(value);

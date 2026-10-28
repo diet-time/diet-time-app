@@ -1,5 +1,14 @@
 import 'package:diet_time/features/dashboard/domain/upcoming_meals.dart';
 
+enum TomorrowDeliveryState {
+  selectionPending,
+  readyToConfirm,
+  confirmed,
+  automaticallySelected,
+  locked,
+  unavailable,
+}
+
 class TomorrowMenu {
   const TomorrowMenu({
     required this.subscriptionId,
@@ -21,6 +30,14 @@ class TomorrowMenu {
     this.orderStartDate,
     this.firstDeliveryDate,
     this.emptyReason,
+    this.orderNumber,
+    this.planId,
+    this.planImageUrl,
+    this.planVersion,
+    this.selectedMealCount,
+    this.selectedSnackCount,
+    this.customerConfirmedAt,
+    this.autoFinalizedAt,
   });
 
   factory TomorrowMenu.fromJson(Map<String, dynamic> json) {
@@ -32,6 +49,18 @@ class TomorrowMenu {
       dayId: json['subscriptionServiceDayId'] as String?,
       deliveryDate: DateTime.parse(json['deliveryDate'] as String),
       planName: json['mealPlanName'] as String,
+      orderNumber: json['orderNumber'] as String?,
+      planId: json['mealPlanTemplateId'] as String?,
+      planImageUrl: json['mealPlanImageUrl'] as String?,
+      planVersion: json['mealPlanVersion'] as int?,
+      selectedMealCount: json['selectedMealCount'] as int?,
+      selectedSnackCount: json['selectedSnackCount'] as int?,
+      customerConfirmedAt: DateTime.tryParse(
+        json['customerConfirmedAt']?.toString() ?? '',
+      ),
+      autoFinalizedAt: DateTime.tryParse(
+        json['autoFinalizedAt']?.toString() ?? '',
+      ),
       mealCount: json['mealCount'] as int,
       snackCount: json['snackCount'] as int,
       status: json['selectionStatus'] as String,
@@ -58,6 +87,14 @@ class TomorrowMenu {
   final String? dayId;
   final DateTime deliveryDate;
   final String planName;
+  final String? orderNumber;
+  final String? planId;
+  final String? planImageUrl;
+  final int? planVersion;
+  final int? selectedMealCount;
+  final int? selectedSnackCount;
+  final DateTime? customerConfirmedAt;
+  final DateTime? autoFinalizedAt;
   final int mealCount;
   final int snackCount;
   final String status;
@@ -75,7 +112,60 @@ class TomorrowMenu {
   final List<DailyMealItem> snacks;
 
   bool get finalized =>
-      status == 'CUSTOMER_CONFIRMED' || status == 'AUTO_FINALIZED';
+      status == 'CUSTOMER_CONFIRMED' ||
+      status == 'AUTO_FINALIZED' ||
+      customerConfirmedAt != null ||
+      autoFinalizedAt != null;
+
+  bool get readOnly => finalized || locked || status == 'LOCKED';
+
+  bool get scheduledForTomorrow =>
+      dayId != null ||
+      const {
+        'SERVICE_DAYS_MISSING',
+        'SERVICE_DAY_INCOMPLETE',
+        'MENU_NOT_CONFIGURED',
+        'FINALIZATION_PENDING',
+        'NEEDS_REVIEW',
+        'LOCKED',
+        'CUSTOMER_CONFIRMED',
+        'AUTO_FINALIZED',
+      }.contains(status);
+
+  int get savedMealCount =>
+      selectedMealCount ??
+      selected
+          .where((item) => item.category == 'meal')
+          .map((item) => item.id)
+          .toSet()
+          .length;
+  int get savedSnackCount =>
+      selectedSnackCount ??
+      selected
+          .where((item) => item.category == 'snack')
+          .map((item) => item.id)
+          .toSet()
+          .length;
+
+  TomorrowDeliveryState deliveryState({
+    int? mealsSelected,
+    int? snacksSelected,
+    bool expired = false,
+  }) {
+    if (customerConfirmedAt != null || status == 'CUSTOMER_CONFIRMED') {
+      return TomorrowDeliveryState.confirmed;
+    }
+    if (autoFinalizedAt != null || status == 'AUTO_FINALIZED') {
+      return TomorrowDeliveryState.automaticallySelected;
+    }
+    if (readOnly) return TomorrowDeliveryState.locked;
+    if (!canConfirm || expired) return TomorrowDeliveryState.unavailable;
+    return (mealsSelected ?? savedMealCount) == mealCount &&
+            (snacksSelected ?? savedSnackCount) == snackCount &&
+            mealCount + snackCount > 0
+        ? TomorrowDeliveryState.readyToConfirm
+        : TomorrowDeliveryState.selectionPending;
+  }
 
   String get statusMessage => switch (status) {
     'NO_ORDER' => 'No order is linked to your account.',
@@ -121,7 +211,7 @@ class TomorrowMealDraft {
   bool contains(String id) => mealIds.contains(id) || snackIds.contains(id);
 
   bool replace(DailyMealItem item, String previousId) {
-    if (menu.locked || menu.finalized || contains(item.id)) return false;
+    if (menu.readOnly || contains(item.id)) return false;
     final ids = item.category == 'meal' ? mealIds : snackIds;
     final options = item.category == 'meal' ? menu.meals : menu.snacks;
     if (!ids.contains(previousId) ||
@@ -137,7 +227,7 @@ class TomorrowMealDraft {
   }
 
   bool toggle(DailyMealItem item) {
-    if (menu.locked || menu.finalized) return false;
+    if (menu.readOnly) return false;
     return _toggle(item);
   }
 
