@@ -55,26 +55,26 @@ abstract final class AppTheme {
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
-        style: _metallicButtonStyle(
-          elevation: 6,
-          borderColor: AppColors.white.withValues(alpha: .24),
+        style: _matteButtonStyle(
+          elevation: 1,
+          borderColor: AppColors.transparent,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: _metallicButtonStyle(
-          elevation: 6,
-          borderColor: AppColors.white.withValues(alpha: .22),
+        style: _matteButtonStyle(
+          elevation: 1,
+          borderColor: AppColors.transparent,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: _metallicButtonStyle(
-          elevation: 2,
-          borderColor: AppColors.emeraldGreen.withValues(alpha: .46),
+        style: _matteButtonStyle(
+          elevation: 0,
+          borderColor: AppColors.emeraldGreen.withValues(alpha: .32),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style:
-            _metallicButtonStyle(
+            _matteButtonStyle(
               elevation: 0,
               borderColor: AppColors.transparent,
             ).copyWith(
@@ -100,75 +100,43 @@ abstract final class AppTheme {
     );
   }
 
-  static ButtonStyle _metallicButtonStyle({
+  static ButtonStyle _matteButtonStyle({
     required double elevation,
     required Color borderColor,
   }) {
     return ButtonStyle(
       animationDuration: const Duration(milliseconds: 180),
-      backgroundBuilder: _metallicLayer,
       elevation: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) return 0;
         if (states.contains(WidgetState.pressed)) {
-          return (elevation - 2).clamp(0, elevation);
+          return 0;
         }
-        if (states.contains(WidgetState.hovered)) return elevation + 2;
+        if (states.contains(WidgetState.hovered) && elevation > 0) {
+          return elevation + 1;
+        }
         return elevation;
       }),
       shadowColor: WidgetStatePropertyAll(
-        AppColors.darkGreen.withValues(alpha: .30),
+        AppColors.darkGreen.withValues(alpha: .12),
       ),
-      surfaceTintColor: WidgetStatePropertyAll(
-        AppColors.white.withValues(alpha: .16),
-      ),
+      surfaceTintColor: const WidgetStatePropertyAll(AppColors.transparent),
       overlayColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.pressed)) {
-          return AppColors.white.withValues(alpha: .15);
+          return AppColors.darkGreen.withValues(alpha: .10);
         }
         if (states.contains(WidgetState.hovered) ||
             states.contains(WidgetState.focused)) {
-          return AppColors.limeGlow.withValues(alpha: .10);
+          return AppColors.teaGreen.withValues(alpha: .08);
         }
         return AppColors.transparent;
       }),
       side: WidgetStateProperty.resolveWith((states) {
-        final opacity = states.contains(WidgetState.disabled) ? .35 : 1.0;
-        return BorderSide(color: borderColor.withValues(alpha: opacity));
+        return BorderSide(
+          color: states.contains(WidgetState.disabled)
+              ? borderColor.withValues(alpha: borderColor.a * .35)
+              : borderColor,
+        );
       }),
-    );
-  }
-
-  static Widget _metallicLayer(
-    BuildContext context,
-    Set<WidgetState> states,
-    Widget? child,
-  ) {
-    final pressed = states.contains(WidgetState.pressed);
-    final disabled = states.contains(WidgetState.disabled);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          stops: const [0, .22, .48, .72, 1],
-          colors: disabled
-              ? const [
-                  Color(0x12FFFFFF),
-                  Color(0x06FFFFFF),
-                  Color(0x00000000),
-                  Color(0x06000000),
-                  Color(0x0AFFFFFF),
-                ]
-              : [
-                  AppColors.white.withValues(alpha: pressed ? .10 : .24),
-                  AppColors.white.withValues(alpha: pressed ? .04 : .09),
-                  AppColors.transparent,
-                  AppColors.black.withValues(alpha: pressed ? .09 : .05),
-                  AppColors.white.withValues(alpha: pressed ? .05 : .13),
-                ],
-        ),
-      ),
-      child: child,
     );
   }
 }

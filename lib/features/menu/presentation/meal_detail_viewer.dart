@@ -255,7 +255,7 @@ class _MealPageIndicator extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 3),
             decoration: BoxDecoration(
               color: index == current
-                  ? const Color(0xFF62CE55)
+                  ? AppColors.teaGreen
                   : AppColors.white.withValues(alpha: .30),
               borderRadius: BorderRadius.circular(99),
             ),
@@ -353,7 +353,7 @@ class _MealDetailCardState extends State<_MealDetailCard> {
               const LinearProgressIndicator(
                 minHeight: 2,
                 color: AppColors.emeraldGreen,
-                backgroundColor: Color(0x1A00674E),
+                backgroundColor: Color(0x1A3F6252),
               ),
             _DetailMealImage(url: imageUrl, height: compact ? 220 : 290),
             Padding(

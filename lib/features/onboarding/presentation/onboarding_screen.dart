@@ -1387,12 +1387,7 @@ class _SelectionCard extends StatelessWidget {
       duration: const Duration(milliseconds: 240),
       margin: const EdgeInsets.only(bottom: 9),
       decoration: BoxDecoration(
-        gradient: selected
-            ? const LinearGradient(
-                colors: [Color(0xFF006A4E), Color(0xFF007A58)],
-              )
-            : null,
-        color: selected ? null : AppColors.white,
+        color: selected ? AppColors.emeraldGreen : AppColors.white,
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(
           color: selected

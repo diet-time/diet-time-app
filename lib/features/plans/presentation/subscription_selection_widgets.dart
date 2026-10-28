@@ -249,14 +249,9 @@ class SubscriptionPricingSummary extends StatelessWidget {
                   const SizedBox(height: 14),
                   DecoratedBox(
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: onContinue == null
-                            ? const [Color(0xFF899C93), Color(0xFF778A80)]
-                            : const [
-                                AppColors.emeraldGreen,
-                                AppColors.darkGreen,
-                              ],
-                      ),
+                      color: onContinue == null
+                          ? AppColors.teaGreen
+                          : AppColors.emeraldGreen,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: AppButton(

@@ -740,18 +740,14 @@ class _PersonalizeButton extends StatelessWidget {
         height: 60,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: enabled
-                  ? const [Color(0xFF16806A), AppColors.emeraldGreen]
-                  : const [Color(0xFF8CB9AA), Color(0xFF78A898)],
-            ),
+            color: enabled ? AppColors.emeraldGreen : AppColors.teaGreen,
             borderRadius: BorderRadius.circular(AppRadius.pill),
             boxShadow: enabled
                 ? [
                     BoxShadow(
-                      color: AppColors.emeraldGreen.withValues(alpha: .24),
-                      blurRadius: 20,
-                      offset: const Offset(0, 9),
+                      color: AppColors.darkGreen.withValues(alpha: .12),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
                   ]
                 : null,

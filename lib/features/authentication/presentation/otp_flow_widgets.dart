@@ -139,19 +139,15 @@ class OtpFlowButton extends StatelessWidget {
       width: double.infinity,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: disabled
-                ? const [Color(0xFFA4CDBF), Color(0xFF87BFAF)]
-                : const [Color(0xFF55A696), Color(0xFF2D837F)],
-          ),
+          color: disabled ? AppColors.teaGreen : AppColors.emeraldGreen,
           borderRadius: BorderRadius.circular(AppRadius.pill),
           boxShadow: disabled
               ? null
               : [
                   BoxShadow(
-                    color: const Color(0xFF2D837F).withValues(alpha: .18),
-                    blurRadius: 16,
-                    offset: const Offset(0, 7),
+                    color: AppColors.darkGreen.withValues(alpha: .12),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
                 ],
         ),
