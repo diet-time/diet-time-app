@@ -260,7 +260,7 @@ class _CarouselProgressSegment extends StatelessWidget {
       child: FractionallySizedBox(
         widthFactor: progress.clamp(0, 1).toDouble(),
         heightFactor: 1,
-        child: const ColoredBox(color: AppColors.teaGreen),
+        child: const ColoredBox(color: Color(0xFF62CE55)),
       ),
     );
   }
@@ -315,7 +315,7 @@ class _CarouselPage extends StatelessWidget {
                       child: Center(
                         child: Icon(
                           Icons.restaurant_rounded,
-                          color: AppColors.teaGreen,
+                          color: Color(0xFF62CE55),
                           size: 72,
                         ),
                       ),
@@ -354,7 +354,7 @@ class _CarouselPage extends StatelessWidget {
             content.accent,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppColors.teaGreen,
+              color: const Color(0xFF62CE55),
               fontSize: compact ? 23 : 28,
               height: 1.1,
               fontWeight: FontWeight.w800,
@@ -386,7 +386,7 @@ class _CarouselPage extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 4),
                   decoration: BoxDecoration(
                     color: index == current
-                        ? AppColors.teaGreen
+                        ? const Color(0xFF62CE55)
                         : AppColors.white.withValues(alpha: .22),
                     borderRadius: BorderRadius.circular(99),
                   ),

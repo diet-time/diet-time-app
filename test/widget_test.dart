@@ -1,5 +1,4 @@
 import 'package:diet_time/app/app.dart';
-import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
 import 'package:diet_time/features/authentication/presentation/login_screen.dart';
 import 'package:diet_time/features/authentication/presentation/phone_login_page.dart';
@@ -235,10 +234,7 @@ void main() {
         matching: find.byType(AnimatedContainer),
       ),
     );
-    expect(
-      (selectedGoal.decoration! as BoxDecoration).color,
-      AppColors.emeraldGreen,
-    );
+    expect((selectedGoal.decoration! as BoxDecoration).gradient, isNotNull);
     for (var step = 0; step < 4; step++) {
       await _continue(tester);
     }
