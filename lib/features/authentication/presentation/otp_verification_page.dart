@@ -10,6 +10,7 @@ import 'package:diet_time/features/personalization/data/customer_profile_service
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:diet_time/features/personalization/presentation/questionnaire_deferral_controller.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -124,7 +125,9 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
         }
       } on Object {
         // Pending local answers stay cached; the questionnaire exposes retry.
-        route = AppRoutes.personalization;
+        if (!ref.read(questionnaireDeferralProvider)) {
+          route = AppRoutes.personalization;
+        }
       }
     }
     if (!mounted) return;

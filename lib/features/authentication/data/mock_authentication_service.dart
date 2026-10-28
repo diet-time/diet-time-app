@@ -53,18 +53,18 @@ class SecureStorageAuthenticationService
 
   @override
   Future<bool> isLoggedIn() async {
-    if (_authenticatedInMemory) return true;
     final values = await Future.wait([
       _storage.read(SecureStorageService.accessTokenKey),
       _storage.read(SecureStorageService.accessTokenExpiresAtKey),
     ]);
     final accessToken = values[0]?.trim() ?? '';
     final expiresAt = DateTime.tryParse(values[1] ?? '');
+    if (accessToken.isEmpty && expiresAt == null) return _authenticatedInMemory;
     final isValid =
         accessToken.isNotEmpty &&
         expiresAt != null &&
         expiresAt.isAfter(DateTime.now().toUtc());
-    if (isValid) _authenticatedInMemory = true;
+    _authenticatedInMemory = isValid;
     return isValid;
   }
 

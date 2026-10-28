@@ -10,6 +10,9 @@ import 'package:diet_time/features/personalization/domain/personalization_draft.
 import 'package:diet_time/features/personalization/domain/personalization_options.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
+import 'package:diet_time/features/personalization/presentation/questionnaire_deferral_controller.dart';
+import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
+import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -33,6 +36,8 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   int _index = 0;
   bool _isNavigating = false;
   bool _profileLoadStarted = false;
+  bool _skipping = false;
+  Future<void>? _profileLoad;
   final List<int> _history = [];
   String? _validationMessage;
   String? _goal;
@@ -65,7 +70,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     if (_profileLoadStarted) return;
     _profileLoadStarted = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(_loadProfile());
+      if (mounted) unawaited(_profileLoad = _loadProfile());
     });
   }
 
@@ -74,7 +79,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     final profile = await ref
         .read(profilePersistenceControllerProvider.notifier)
         .load();
-    if (!mounted || profile == null) return;
+    if (!mounted || profile == null || _skipping) return;
     if (widget.customerProfileMode) {
       _restoreVisibleValues(profile);
       return;
@@ -203,6 +208,48 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     if (_history.isEmpty) return;
     final target = _history.removeLast();
     unawaited(_goTo(target, recordHistory: false));
+  }
+
+  Future<void> _notNow() async {
+    if (_skipping) return;
+    setState(() => _skipping = true);
+    try {
+      await _profileLoad;
+      final authenticated = await ref
+          .read(otpAuthControllerProvider.notifier)
+          .ensureCurrentSession();
+      final profile = ref.read(personalizationControllerProvider);
+      final answers = ref.read(personalizationControllerProvider.notifier);
+      if (_gender != null && _gender!.toUpperCase() != profile.genderCode) {
+        answers.setGender(_gender!.toUpperCase());
+      }
+      if (_age != null && _age != profile.age) answers.setAge(_age!);
+      if (_height != null && _height != profile.heightCm?.round()) {
+        answers.setHeight(_height!.toDouble());
+      }
+      if (_weight != null && _weight != profile.weightKg?.round()) {
+        answers.setWeight(_weight!.toDouble());
+      }
+      await ref.read(questionnaireDeferralProvider.notifier).defer();
+      if (!mounted) return;
+      if (authenticated) {
+        context.go(AppRoutes.home);
+      } else {
+        context.go(
+          AppRoutes.phoneLogin,
+          extra: const PendingAuthDestination(route: AppRoutes.home),
+        );
+      }
+    } on Object {
+      if (mounted) {
+        setState(
+          () => _validationMessage =
+              'Your draft could not be saved. Please try again.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _skipping = false);
+    }
   }
 
   void _selectGoal(String value) {
@@ -489,12 +536,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     String language,
     AsyncValue<List<GuestAllergen>> allergenState,
   ) => [
-    _WelcomeStep(
-      l10n: l10n,
-      onNotNow: widget.customerProfileMode
-          ? () => Navigator.of(context).maybePop()
-          : () => context.go(AppRoutes.menu),
-    ),
+    _WelcomeStep(l10n: l10n, onNotNow: _notNow),
     _StepFrame(
       title: l10n.onboardingGoalTitle,
       subtitle: l10n.onboardingGoalSubtitle,

@@ -45,6 +45,7 @@ TomorrowMenu menu({
   int mealCount = 2,
   List<DailyMealItem>? mealOptions,
   bool shortage = false,
+  List<DailyMealItem>? selectedItems,
 }) => TomorrowMenu(
   subscriptionId: 'order',
   dayId: noDelivery ? null : 'day',
@@ -63,7 +64,7 @@ TomorrowMenu menu({
   canConfirm: !confirmed && !noDelivery && !shortage,
   cutoffAt: DateTime.utc(2026, 10, 26, 18),
   serverNow: DateTime.utc(2026, 10, 26, 12),
-  selected: [dishes[0], dishes[1], snack],
+  selected: selectedItems ?? [dishes[0], dishes[1], snack],
   meals: confirmed ? [] : mealOptions ?? dishes,
   snacks: confirmed
       ? []
@@ -120,6 +121,50 @@ void main() {
     },
   );
 
+  testWidgets(
+    'same-plan orders have separate labels and independently expanded dishes',
+    (tester) async {
+      final repository = PerOrderRepository();
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            tomorrowMenuRepositoryProvider.overrideWithValue(repository),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    TomorrowMenuSection(orderId: 'a', orderReference: 'ORD-A'),
+                    TomorrowMenuSection(orderId: 'b', orderReference: 'ORD-B'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Order: ORD-A'), findsOneWidget);
+      expect(find.text('Order: ORD-B'), findsOneWidget);
+      expect(find.text('Dish a'), findsNothing);
+      expect(find.text('Dish b'), findsNothing);
+      await tester.tap(find.text('View confirmed meals').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Dish a'), findsOneWidget);
+      expect(find.text('Dish b'), findsNothing);
+      await tester.ensureVisible(find.text('View confirmed meals'));
+      await tester.tap(find.text('View confirmed meals'));
+      await tester.pumpAndSettle();
+      expect(find.text('Dish a'), findsOneWidget);
+      expect(find.text('Dish b'), findsOneWidget);
+      expect(repository.confirms, 0);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
   test('replacement keeps count, category and dish identity', () {
     final draft = TomorrowMealDraft(menu());
     expect(draft.replace(dishes[2], 'm1'), true);
@@ -132,7 +177,11 @@ void main() {
     );
   });
 
-  Future<void> show(WidgetTester tester, FakeRepository repository) async {
+  Future<void> show(
+    WidgetTester tester,
+    FakeRepository repository, {
+    bool openSelection = true,
+  }) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
@@ -150,7 +199,80 @@ void main() {
       ),
     );
     await tester.pump();
+    final choose = find.byKey(const ValueKey('chooseTomorrowMeals'));
+    if (openSelection &&
+        choose.evaluate().isNotEmpty &&
+        tester.widget<FilledButton>(choose).onPressed != null) {
+      await tester.ensureVisible(choose);
+      await tester.tap(choose);
+      await tester.pumpAndSettle();
+    }
   }
+
+  for (final count in [3, 5]) {
+    testWidgets('confirmed $count meal package stays compact until expanded', (
+      tester,
+    ) async {
+      final selected = [
+        for (var i = 1; i <= count; i++)
+          DailyMealItem(
+            id: 'selected-$i',
+            optionId: 'option-$i',
+            name: 'Confirmed dish $i',
+            category: 'meal',
+          ),
+        snack,
+      ];
+      final repository = FakeRepository()
+        ..response = menu(
+          confirmed: true,
+          mealCount: count,
+          selectedItems: selected,
+        );
+      await show(tester, repository, openSelection: false);
+      expect(find.text('Confirmed'), findsOneWidget);
+      expect(find.text('${count + 1} dishes'), findsOneWidget);
+      expect(find.text('Confirmed dish 1'), findsNothing);
+      await tester.tap(find.text('View confirmed meals'));
+      await tester.pumpAndSettle();
+      for (var i = 1; i <= count; i++) {
+        expect(find.text('Confirmed dish $i'), findsOneWidget);
+      }
+      expect(find.text(snack.name), findsOneWidget);
+      expect(find.byKey(const ValueKey('confirmTomorrowMeals')), findsNothing);
+      await tester.ensureVisible(find.text('Hide confirmed meals'));
+      await tester.tap(find.text('Hide confirmed meals'));
+      await tester.pumpAndSettle();
+      expect(find.text('Confirmed dish 1'), findsNothing);
+      expect(repository.confirms, 0);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
+  testWidgets(
+    'compact chooser preserves provisional and unsaved selections on return',
+    (tester) async {
+      final repository = FakeRepository();
+      await show(tester, repository, openSelection: false);
+      expect(find.text('Meals: 2/2 selected'), findsOneWidget);
+      expect(find.text(dishes[0].name), findsNothing);
+      await tester.tap(find.text('Choose your meals'));
+      await tester.pumpAndSettle();
+      expect(find.text(dishes[2].name), findsOneWidget);
+      await tester.ensureVisible(find.text(dishes[0].name));
+      await tester.tap(find.text(dishes[0].name));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.text('Meals: 1/2 selected'), findsOneWidget);
+      await tester.tap(find.text('Choose your meals'));
+      await tester.pumpAndSettle();
+      expect(find.text('Meals: 1/2 selected'), findsOneWidget);
+      expect(repository.gets, 1);
+      expect(repository.confirms, 0);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 
   testWidgets('full draft opens replacement sheet without confirming', (
     tester,
@@ -473,12 +595,15 @@ void main() {
       );
       repository.pending.complete(menu(confirmed: true));
       await tester.pumpAndSettle();
-      expect(find.text('Your meals are confirmed!'), findsOneWidget);
+      expect(find.text('Your meals are confirmed!'), findsNothing);
       expect(find.text('Confirmed'), findsOneWidget);
       expect(find.text('Confirm My Meals'), findsNothing);
       expect(
         find
-            .byType(InkWell)
+            .descendant(
+              of: find.byKey(const ValueKey('tomorrowMenu-order')),
+              matching: find.byType(InkWell),
+            )
             .evaluate()
             .where((e) => (e.widget as InkWell).onTap != null),
         isEmpty,
@@ -539,6 +664,23 @@ class FakeRepository extends TomorrowMenuRepository {
     confirms++;
     return pending.future;
   }
+}
+
+class PerOrderRepository extends FakeRepository {
+  @override
+  Future<TomorrowMenu> get(String orderId, String language) async => menu(
+    confirmed: true,
+    mealCount: 1,
+    selectedItems: [
+      DailyMealItem(
+        id: orderId,
+        optionId: 'option-$orderId',
+        name: 'Dish $orderId',
+        category: 'meal',
+      ),
+      snack,
+    ],
+  );
 }
 
 class RecordingApi extends ApiClient {

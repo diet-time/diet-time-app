@@ -16,6 +16,7 @@ import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:diet_time/features/personalization/presentation/questionnaire_deferral_controller.dart';
 import 'package:intl/intl.dart';
 
 class CustomerDashboardScreen extends ConsumerStatefulWidget {
@@ -294,6 +295,7 @@ class _DashboardHome extends ConsumerWidget {
               TomorrowMenuSection(
                 key: ValueKey('tomorrow-${order.id}'),
                 orderId: order.id,
+                orderReference: order.orderNumber,
               ),
             ],
           ] else if (state is DashboardWithoutActivePlan ||
@@ -1952,7 +1954,14 @@ class _StatusPill extends StatelessWidget {
 
 void _startNewOrder(BuildContext context, WidgetRef ref) {
   ref.read(checkoutControllerProvider.notifier).beginNewOrder();
-  context.push(AppRoutes.plans);
+  context.push(
+    ref.read(questionnaireDeferralProvider) &&
+            !ref
+                .read(personalizationControllerProvider)
+                .hasCapturedQuestionnaire
+        ? AppRoutes.customerQuestionnaire
+        : AppRoutes.plans,
+  );
 }
 
 List<CustomerOrderSummary> _ordersFrom(CustomerDashboardState state) =>

@@ -777,3 +777,71 @@ tests/DietTime.Meal.Api.IntegrationTests/CalendarMultipleOrdersTests.cs
 ```
 
 Validation uses isolated test data; no production database, API deployment, or app release was changed. This calendar change does not establish the cause of the previously reported missing dishes in the live Tomorrow's Menu.
+
+## Compact meal panel, address rules and questionnaire skip — 28 October 2026
+
+### Behavior and root causes
+
+Tomorrow's Menu previously rendered large meal cards directly on the dashboard and repeated its confirmation status in several lines. Confirmed packages now show the delivery date, plan, purchased quantities, one green status indicator, and the persisted dish count. The full list starts collapsed. **View confirmed meals** and **Hide confirmed meals** control compact, read-only rows with a small thumbnail, dish name, category and optional calories. Multiple active orders retain separate panels with order references, even when their plan names match.
+
+Unconfirmed panels show selection progress and **Choose your meals**. This opens the existing picker in a full-screen view backed by the same menu and draft state; closing and reopening preserves unsaved choices and provisional defaults. All API-provided eligible dishes remain available in that picker. Selection replacement, the confirmation review sheet, ownership/service-day targeting, server-authoritative success, calendar cache refresh, and the 9 PM Qatar cutoff are retained. The presentation change does not alter the API's menu eligibility query or create additional selections.
+
+Address fields previously shared required-only checks in Flutter, while most API fields only had length limits. Client and server now apply matching field rules:
+
+| Field | Validation |
+| --- | --- |
+| Building No | Required; Unicode letters/digits and space, hyphen or slash; maximum 50 characters |
+| Street | Required; letters and digits, including numeric streets such as `960`, plus common street punctuation; maximum 50 characters |
+| Unit Number | Optional; alphanumeric identifiers with space, hyphen or slash; maximum 50 characters |
+| Zone No | Required; decimal digits only, including Arabic digits; numeric keyboard; maximum 50 characters |
+| Area | Required; English/Arabic letters, combining marks, spaces and common name punctuation; at least one letter, no digits; maximum 150 characters |
+| Directions | Optional free text, including numbers and punctuation; maximum 500 characters |
+
+Input is trimmed when submitted, without rewriting the form's valid entered values. Area errors remain visible inline instead of silently deleting invalid characters. The zone formatter accepts complete numeric pastes and preserves active IME composition; it rejects an invalid edit as a whole rather than stripping characters out of a pasted value. Copy/paste and RTL behavior remain available. API field errors are shown beside the relevant input and cleared as that field is corrected.
+
+Address creation applies all rules. The existing update endpoint validates changed fields while permitting unchanged legacy values in the newly restricted fields, allowing delivery-slot updates without forcing a rewrite of an older address. Both paths return structured field validation errors. Reads and existing saved records are not migrated or automatically corrected. There are no new database CHECK constraints, tables or migrations.
+
+The questionnaire introduction's **Not now** previously navigated directly to Browse Menu, or merely popped the profile screen, without consulting authentication. It now saves available answers to the existing encrypted guest/per-user draft format without changing completion or confirmation flags. Session validity is rechecked rather than relying on the cached authenticated flag or customer name. Guests and expired sessions use the existing phone Login route with Dashboard as the pending destination; authenticated customers go directly to Dashboard. The existing refresh-token flow handles resumable sessions.
+
+A separate in-memory deferral flag prevents the current skip/login journey from immediately reopening the questionnaire, including the existing OTP error fallback and authenticated landing gate. It is not questionnaire completion, and logout clears it. Drafts remain durable in secure storage. Customers can complete the questionnaire later through their profile; starting a new plan after deferral routes incomplete questionnaires back to that existing flow, preserving the existing captured-answer purchase gate. Existing completed answers, birth dates and fractional measurements are preserved when the customer has not changed them.
+
+### Validation
+
+- Flutter analysis of `lib` and `test`: no issues.
+- Complete Flutter suite: **272/272 passed**. Coverage includes confirmed 3- and 5-meal expand/collapse, read-only dishes, all eligible options for 1–5-meal packages, provisional and unsaved draft retention, same-plan order isolation, actual address form entry and numeric keyboard, Arabic/English area rules, guest/authenticated/expired-session skip routing, local draft preservation and unchanged completion flags, and existing checkout/calendar/authentication regressions.
+- API unit suite: **148/148 passed**, including 12 new address cases.
+- PostgreSQL-backed authenticated HTTP test: **1/1 passed**. It exercises invalid creation with structured BuildingNo/Area/ZoneNo errors, valid Arabic address creation and trimming, numeric street and alphanumeric building/unit fields, valid/invalid edits, unchanged legacy retrieval and delivery-slot updates, and rejection of newly invalid area changes. It also verifies the fixture's order, price and meal-selection state is unchanged.
+- `git diff --check`: passed in both repositories.
+
+All database writes during verification were confined to disposable test databases. No existing customer order, pricing or meal-selection data was altered. No production database changes, deployment, app release, or physical-device verification was performed.
+
+### Modified files
+
+Flutter files, relative to this repository:
+
+```text
+lib/features/authentication/data/mock_authentication_service.dart
+lib/features/authentication/presentation/otp_auth_controller.dart
+lib/features/authentication/presentation/otp_verification_page.dart
+lib/features/checkout/domain/address_validation.dart
+lib/features/checkout/domain/checkout_models.dart
+lib/features/checkout/presentation/checkout_controller.dart
+lib/features/checkout/presentation/customer_address_screen.dart
+lib/features/dashboard/presentation/customer_dashboard_screen.dart
+lib/features/dashboard/presentation/tomorrow_menu_section.dart
+lib/features/onboarding/presentation/onboarding_screen.dart
+lib/features/personalization/presentation/authenticated_landing_screen.dart
+lib/features/personalization/presentation/questionnaire_deferral_controller.dart
+test/dashboard_improvements_test.dart
+test/tomorrow_menu_test.dart
+README.md
+```
+
+API files, relative to `../diet-time-api`:
+
+```text
+src/BuildingBlocks/DietTime.Application/Validation.cs
+src/Apis/DietTime.Meal.Api/Controllers/CustomerAddressesController.cs
+tests/DietTime.UnitTests/CustomerAddressValidationTests.cs
+tests/DietTime.Meal.Api.IntegrationTests/AddressInputValidationTests.cs
+```

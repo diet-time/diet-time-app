@@ -275,7 +275,11 @@ class CheckoutController extends Notifier<CheckoutState> {
       return false;
     }
     address = address.copyWith(deliveryTimeSlotId: slotId);
-    state = state.copyWith(isSavingAddress: true, saveAddressError: null);
+    state = state.copyWith(
+      isSavingAddress: true,
+      saveAddressError: null,
+      saveAddressFieldErrors: const {},
+    );
     try {
       final repository = ref.read(checkoutRepositoryProvider);
       final saved = editing
@@ -300,6 +304,9 @@ class CheckoutController extends Notifier<CheckoutState> {
     } catch (error) {
       state = state.copyWith(
         isSavingAddress: false,
+        saveAddressFieldErrors: error is ApiException
+            ? error.fieldErrors
+            : const {},
         saveAddressError: _message(
           error,
           fallback: 'Your address could not be saved. Please try again.',
@@ -307,6 +314,24 @@ class CheckoutController extends Notifier<CheckoutState> {
       );
       return false;
     }
+  }
+
+  void clearAddressFieldError(String field) {
+    state = state.copyWith(
+      saveAddressError: null,
+      saveAddressFieldErrors: {
+        for (final entry in state.saveAddressFieldErrors.entries)
+          if (entry.key.toLowerCase() != field.toLowerCase())
+            entry.key: entry.value,
+      },
+    );
+  }
+
+  void clearAddressErrors() {
+    state = state.copyWith(
+      saveAddressError: null,
+      saveAddressFieldErrors: const {},
+    );
   }
 
   Future<OrderConfirmation?> placeOrder({String language = 'en'}) async {

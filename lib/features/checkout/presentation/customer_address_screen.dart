@@ -1,3 +1,4 @@
+import 'package:diet_time/features/checkout/domain/address_validation.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/checkout/domain/checkout_models.dart';
@@ -295,7 +296,11 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
                   key: const ValueKey('buildingNoField'),
                   controller: _buildingController,
                   label: 'Building No *',
-                  validator: _required('Building number'),
+                  validator: AddressValidation.building,
+                  serverError: _fieldError(checkout, 'buildingNo'),
+                  onChanged: (_) => ref
+                      .read(checkoutControllerProvider.notifier)
+                      .clearAddressFieldError('buildingNo'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -304,7 +309,11 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
                   key: const ValueKey('streetNoField'),
                   controller: _streetController,
                   label: 'Street *',
-                  validator: _required('Street'),
+                  validator: AddressValidation.street,
+                  serverError: _fieldError(checkout, 'streetNo'),
+                  onChanged: (_) => ref
+                      .read(checkoutControllerProvider.notifier)
+                      .clearAddressFieldError('streetNo'),
                 ),
               ),
             ],
@@ -317,6 +326,11 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
                 child: _AddressField(
                   controller: _unitController,
                   label: 'Unit Number',
+                  validator: AddressValidation.unit,
+                  serverError: _fieldError(checkout, 'unitNumber'),
+                  onChanged: (_) => ref
+                      .read(checkoutControllerProvider.notifier)
+                      .clearAddressFieldError('unitNumber'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -325,7 +339,13 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
                   key: const ValueKey('zoneNoField'),
                   controller: _zoneController,
                   label: 'Zone No *',
-                  validator: _required('Zone number'),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [AddressValidation.zoneFormatter],
+                  validator: AddressValidation.zone,
+                  serverError: _fieldError(checkout, 'zoneNo'),
+                  onChanged: (_) => ref
+                      .read(checkoutControllerProvider.notifier)
+                      .clearAddressFieldError('zoneNo'),
                 ),
               ),
             ],
@@ -335,12 +355,21 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
             key: const ValueKey('areaField'),
             controller: _areaController,
             label: 'Area *',
-            validator: _required('Area'),
+            validator: AddressValidation.area,
+            serverError: _fieldError(checkout, 'area'),
+            onChanged: (_) => ref
+                .read(checkoutControllerProvider.notifier)
+                .clearAddressFieldError('area'),
           ),
           const SizedBox(height: 14),
           _AddressField(
             controller: _directionsController,
             label: 'Directions To Reach',
+            validator: AddressValidation.directions,
+            serverError: _fieldError(checkout, 'directions'),
+            onChanged: (_) => ref
+                .read(checkoutControllerProvider.notifier)
+                .clearAddressFieldError('directions'),
             hint: 'Call me when you arrive',
             maxLines: 3,
           ),
@@ -369,6 +398,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
   }
 
   void _addAddress() {
+    ref.read(checkoutControllerProvider.notifier).clearAddressErrors();
     _clearForm();
     setState(() {
       _editingForm = true;
@@ -379,6 +409,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
   }
 
   void _editAddress(CustomerDeliveryAddress address) {
+    ref.read(checkoutControllerProvider.notifier).clearAddressErrors();
     ref.read(checkoutControllerProvider.notifier).selectAddress(address);
     _buildingController.text = address.buildingNo;
     _streetController.text = address.streetNo;
@@ -431,13 +462,13 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
       id: previous?.id ?? '',
       addressName: _addressType!.label,
       addressType: _addressType!,
-      buildingNo: _buildingController.text,
-      streetNo: _streetController.text,
+      buildingNo: _buildingController.text.trim(),
+      streetNo: _streetController.text.trim(),
       unitNumber: _unitController.text.trim().isEmpty
           ? null
           : _unitController.text.trim(),
-      zoneNo: _zoneController.text,
-      area: _areaController.text,
+      zoneNo: _zoneController.text.trim(),
+      area: _areaController.text.trim(),
       directions: _directionsController.text.trim().isEmpty
           ? null
           : _directionsController.text.trim(),
@@ -598,8 +629,12 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
     }
   }
 
-  String? Function(String?) _required(String label) =>
-      (value) => value?.trim().isEmpty ?? true ? '$label is required' : null;
+  String? _fieldError(CheckoutState state, String field) => state
+      .saveAddressFieldErrors
+      .entries
+      .where((entry) => entry.key.toLowerCase() == field.toLowerCase())
+      .map((entry) => entry.value)
+      .firstOrNull;
 }
 
 class _MapArea extends StatefulWidget {
@@ -991,6 +1026,10 @@ class _AddressField extends StatelessWidget {
     this.hint,
     this.maxLines = 1,
     this.validator,
+    this.serverError,
+    this.keyboardType,
+    this.inputFormatters,
+    this.onChanged,
     super.key,
   });
   final TextEditingController controller;
@@ -998,14 +1037,23 @@ class _AddressField extends StatelessWidget {
   final String? hint;
   final int maxLines;
   final String? Function(String?)? validator;
+  final String? serverError;
+  final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) => TextFormField(
     controller: controller,
+    keyboardType: keyboardType,
+    inputFormatters: inputFormatters,
+    onChanged: onChanged,
     maxLines: maxLines,
+    autovalidateMode: AutovalidateMode.onUserInteraction,
     validator: validator,
     decoration: InputDecoration(
       labelText: label,
+      errorText: serverError,
       hintText: hint,
       filled: true,
       fillColor: AppColors.white,

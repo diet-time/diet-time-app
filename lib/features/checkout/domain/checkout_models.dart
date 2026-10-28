@@ -160,6 +160,7 @@ class CheckoutState {
     this.addressError,
     this.deliveryTimeSlotError,
     this.saveAddressError,
+    this.saveAddressFieldErrors = const {},
     this.couponCode,
     this.idempotencyKey,
     this.isPlacingOrder = false,
@@ -183,6 +184,7 @@ class CheckoutState {
   final String? addressError;
   final String? deliveryTimeSlotError;
   final String? saveAddressError;
+  final Map<String, String> saveAddressFieldErrors;
   final String? couponCode;
   final String? idempotencyKey;
   final bool isPlacingOrder;
@@ -251,6 +253,7 @@ class CheckoutState {
     Object? addressError = _unset,
     Object? deliveryTimeSlotError = _unset,
     Object? saveAddressError = _unset,
+    Map<String, String>? saveAddressFieldErrors,
     Object? couponCode = _unset,
     Object? idempotencyKey = _unset,
     bool? isPlacingOrder,
@@ -291,6 +294,8 @@ class CheckoutState {
     deliveryTimeSlotError: identical(deliveryTimeSlotError, _unset)
         ? this.deliveryTimeSlotError
         : deliveryTimeSlotError as String?,
+    saveAddressFieldErrors:
+        saveAddressFieldErrors ?? this.saveAddressFieldErrors,
     saveAddressError: identical(saveAddressError, _unset)
         ? this.saveAddressError
         : saveAddressError as String?,

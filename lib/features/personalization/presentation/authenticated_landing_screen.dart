@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
+import 'package:diet_time/features/personalization/presentation/questionnaire_deferral_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -29,6 +30,10 @@ class _AuthenticatedLandingScreenState
   }
 
   Future<void> _resolve() async {
+    if (ref.read(questionnaireDeferralProvider)) {
+      context.go(AppRoutes.home);
+      return;
+    }
     if (_hasError) setState(() => _hasError = false);
     final profile = await ref
         .read(profilePersistenceControllerProvider.notifier)
@@ -40,7 +45,9 @@ class _AuthenticatedLandingScreenState
       return;
     }
     context.go(
-      profile?.isCompleted == true ? AppRoutes.home : AppRoutes.personalization,
+      profile?.isCompleted == true || ref.read(questionnaireDeferralProvider)
+          ? AppRoutes.home
+          : AppRoutes.personalization,
     );
   }
 

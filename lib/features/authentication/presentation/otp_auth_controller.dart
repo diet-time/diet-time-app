@@ -8,6 +8,7 @@ import 'package:diet_time/features/authentication/domain/auth_models.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/core/storage/secure_storage_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:diet_time/features/personalization/presentation/questionnaire_deferral_controller.dart';
 
 enum OtpUiError {
   requestFailed,
@@ -130,6 +131,22 @@ class OtpAuthController extends Notifier<OtpAuthState> {
     });
   }
 
+  /// Recheck expiry even if this controller previously restored the session.
+  Future<bool> ensureCurrentSession() async {
+    await _sessionRestore;
+    final session = state.session;
+    final valid =
+        session != null &&
+            !session.accessTokenExpiresAt.isAfter(DateTime.now().toUtc())
+        ? await _refreshStoredSession(preserveSessionOnTransientFailure: false)
+        : await _restoreSession();
+    state = state.copyWith(
+      isAuthenticated: valid,
+      session: valid ? state.session : null,
+    );
+    return valid;
+  }
+
   Future<bool> _restoreSession() async {
     try {
       final authenticated = await ref
@@ -218,6 +235,7 @@ class OtpAuthController extends Notifier<OtpAuthState> {
   }
 
   Future<void> signOut() async {
+    ref.invalidate(questionnaireDeferralProvider);
     _resendTimer?.cancel();
     final storage = ref.read(secureStorageServiceProvider);
     await Future.wait([

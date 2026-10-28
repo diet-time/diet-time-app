@@ -11,8 +11,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 class TomorrowMenuSection extends ConsumerStatefulWidget {
-  const TomorrowMenuSection({super.key, required this.orderId});
+  const TomorrowMenuSection({
+    super.key,
+    required this.orderId,
+    this.orderReference,
+  });
   final String orderId;
+  final String? orderReference;
 
   @override
   ConsumerState<TomorrowMenuSection> createState() =>
@@ -31,6 +36,9 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
   Timer? _refreshTimer;
   int _generation = 0;
   String? _language;
+  bool _showConfirmed = false;
+  StateSetter? _selectionRebuild;
+  bool _selectionOpening = false;
 
   @override
   void initState() {
@@ -69,7 +77,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
   Future<void> _load({String? feedback}) async {
     final generation = ++_generation;
     _refreshTimer?.cancel();
-    setState(() {
+    _update(() {
       _loading = true;
       _error = feedback;
     });
@@ -81,7 +89,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
       _accept(menu);
     } on Object catch (error) {
       if (!mounted || generation != _generation) return;
-      setState(() {
+      _update(() {
         _menu = null;
         _loading = false;
         _error =
@@ -101,6 +109,10 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
   }
 
   void _accept(TomorrowMenu menu) {
+    if (_menu?.dayId != menu.dayId ||
+        _menu?.subscriptionId != menu.subscriptionId) {
+      _showConfirmed = false;
+    }
     if (menu.finalized && menu.dayId != null) {
       ref.invalidate(upcomingMealDaysProvider(widget.orderId));
       ref.invalidate(
@@ -111,7 +123,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
         )),
       );
     }
-    setState(() {
+    _update(() {
       _menu = menu;
       _draft = TomorrowMealDraft(menu);
       _loading = false;
@@ -147,9 +159,41 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
         : untilMidnight;
     _refreshTimer = Timer(delay, () {
       if (!mounted) return;
-      setState(() => _expired = true);
+      _update(() => _expired = true);
       if (!_submitting) _load();
     });
+  }
+
+  void _update(VoidCallback action) {
+    setState(action);
+    _selectionRebuild?.call(() {});
+  }
+
+  Future<void> _openSelection() async {
+    if (_selectionOpening) return;
+    _selectionOpening = true;
+    try {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (routeContext) => StatefulBuilder(
+            builder: (routeContext, refresh) {
+              _selectionRebuild = refresh;
+              return Scaffold(
+                appBar: AppBar(title: const Text('Choose your meals')),
+                body: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: _buildPanel(routeContext, fullSelection: true),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    } finally {
+      _selectionOpening = false;
+      _selectionRebuild = null;
+      if (mounted) setState(() {});
+    }
   }
 
   bool get _editable =>
@@ -214,7 +258,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
     if (!mounted || approved != true || !_editable || !identical(menu, _menu)) {
       return;
     }
-    setState(() {
+    _update(() {
       _submitting = true;
       _error = null;
     });
@@ -248,12 +292,14 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
           : 'Unable to confirm your meals. Please try again.';
       await _load(feedback: message);
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted) _update(() => _submitting = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _buildPanel(context);
+
+  Widget _buildPanel(BuildContext context, {bool fullSelection = false}) {
     final menu = _menu;
     final draft = _draft;
     return Container(
@@ -293,7 +339,9 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
             ),
             const SizedBox(height: 4),
             Text(menu.planName),
-            if (menu.orderStatus != null)
+            if (widget.orderReference != null)
+              Text('Order: ${widget.orderReference}'),
+            if (fullSelection && menu.orderStatus != null)
               Text('Order status: ${menu.orderStatus!.replaceAll('_', ' ')}'),
             Text(
               '${menu.mealCount} Meals + ${menu.snackCount} Snack${menu.snackCount == 1 ? '' : 's'}',
@@ -305,71 +353,84 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
                 'First delivery: ${DateFormat('EEEE, d MMMM').format((menu.firstDeliveryDate ?? menu.orderStartDate)!)}',
               ),
             if (menu.finalized) ...[
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Chip(
-                  avatar: const Icon(
-                    Icons.check_circle,
-                    color: AppColors.darkGreen,
-                    size: 18,
+              Row(
+                children: [
+                  Chip(
+                    avatar: const Icon(
+                      Icons.check_circle,
+                      color: AppColors.darkGreen,
+                      size: 18,
+                    ),
+                    backgroundColor: const Color(0xFFDDF3E6),
+                    label: Text(
+                      menu.status == 'CUSTOMER_CONFIRMED'
+                          ? 'Confirmed'
+                          : 'Automatically finalized',
+                    ),
                   ),
-                  backgroundColor: const Color(0xFFDDF3E6),
-                  label: Text(
-                    menu.status == 'CUSTOMER_CONFIRMED'
-                        ? 'Confirmed'
-                        : 'Automatically finalized',
+                  const SizedBox(width: 8),
+                  Text('${menu.selected.length} dishes'),
+                ],
+              ),
+              if (!fullSelection)
+                TextButton(
+                  key: const ValueKey('toggleConfirmedMeals'),
+                  onPressed: () =>
+                      _update(() => _showConfirmed = !_showConfirmed),
+                  child: Text(
+                    _showConfirmed
+                        ? 'Hide confirmed meals'
+                        : 'View confirmed meals',
                   ),
                 ),
-              ),
-              Text(
-                menu.status == 'CUSTOMER_CONFIRMED'
-                    ? 'Your meals are confirmed!'
-                    : 'Your meals are ready for tomorrow.',
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-              const Text('Your selections for tomorrow have been saved.'),
-            ] else if (menu.canConfirm && !_expired) ...[
-              Text(
-                'Choose ${menu.mealCount} meals and ${menu.snackCount} snack${menu.snackCount == 1 ? '' : 's'}.',
-              ),
-              const Text('Selection closes today at 9:00 PM Qatar time.'),
+              if (fullSelection || _showConfirmed)
+                for (final item in menu.selected) _CompactMealRow(item: item),
+            ] else ...[
+              if (menu.canConfirm) const Text('Selection pending'),
+              if (menu.dayId != null) ...[
+                Text(
+                  'Meals: ${draft.mealIds.length}/${menu.mealCount} selected',
+                ),
+                Text(
+                  'Snacks: ${draft.snackIds.length}/${menu.snackCount} selected',
+                ),
+              ],
+              if (menu.canConfirm && !_expired)
+                const Text('Selection closes today at 9:00 PM Qatar time.')
+              else
+                Text(
+                  menu.emptyReason ?? menu.reviewReason ?? menu.statusMessage,
+                ),
               const SizedBox(height: 12),
-              Text('Meals: ${draft.mealIds.length}/${menu.mealCount} selected'),
-              Text(
-                'Snacks: ${draft.snackIds.length}/${menu.snackCount} selected',
-              ),
-              const SizedBox(height: 10),
-              LinearProgressIndicator(
-                value:
-                    (draft.mealIds.length + draft.snackIds.length) /
-                    (menu.mealCount + menu.snackCount),
-                color: AppColors.emeraldGreen,
-                backgroundColor: const Color(0xFFEDF5EF),
-              ),
-            ] else ...[
-              Text(menu.emptyReason ?? menu.reviewReason ?? menu.statusMessage),
-            ],
-            const SizedBox(height: 12),
-            if (!menu.locked &&
-                !menu.finalized &&
-                menu.dayId != null &&
-                (menu.meals.isNotEmpty || menu.snacks.isNotEmpty)) ...[
-              _group('Meals', menu.meals, draft),
-              _group('Snacks', menu.snacks, draft),
-              FilledButton(
-                key: const ValueKey('confirmTomorrowMeals'),
-                onPressed: _editable && draft.complete ? _confirm : null,
-                child: _submitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Confirm My Meals'),
-              ),
-            ] else ...[
-              for (final item in menu.selected)
-                _MealCard(item: item, selected: true),
+              if (!fullSelection && menu.dayId != null)
+                FilledButton(
+                  key: const ValueKey('chooseTomorrowMeals'),
+                  onPressed:
+                      !menu.locked &&
+                          (menu.meals.isNotEmpty || menu.snacks.isNotEmpty)
+                      ? _openSelection
+                      : null,
+                  child: const Text('Choose your meals'),
+                ),
+              if (fullSelection) ...[
+                if (!menu.locked &&
+                    (menu.meals.isNotEmpty || menu.snacks.isNotEmpty)) ...[
+                  _group('Meals', menu.meals, draft),
+                  _group('Snacks', menu.snacks, draft),
+                  FilledButton(
+                    key: const ValueKey('confirmTomorrowMeals'),
+                    onPressed: _editable && draft.complete ? _confirm : null,
+                    child: _submitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Confirm My Meals'),
+                  ),
+                ] else
+                  for (final item in menu.selected) _CompactMealRow(item: item),
+              ],
             ],
             if (!menu.canConfirm && !menu.finalized && _error == null)
               TextButton(
@@ -396,7 +457,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
   Future<void> _selectDraft(DailyMealItem item, TomorrowMealDraft draft) async {
     if (!_editable) return;
     if (draft.toggle(item)) {
-      setState(() {});
+      _update(() {});
       return;
     }
     final ids = item.category == 'meal' ? draft.mealIds : draft.snackIds;
@@ -444,7 +505,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
         previous == null) {
       return;
     }
-    if (draft.replace(item, previous)) setState(() {});
+    if (draft.replace(item, previous)) _update(() {});
   }
 
   Widget _group(
@@ -474,6 +535,55 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
         ),
       const SizedBox(height: 8),
     ],
+  );
+}
+
+class _CompactMealRow extends StatelessWidget {
+  const _CompactMealRow({required this.item});
+  final DailyMealItem item;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: item.imageUrl?.isNotEmpty == true
+                ? Image.network(
+                    item.imageUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const Icon(
+                      Icons.restaurant,
+                      color: AppColors.emeraldGreen,
+                    ),
+                  )
+                : const Icon(Icons.restaurant, color: AppColors.emeraldGreen),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.name,
+                style: const TextStyle(
+                  color: AppColors.darkGreen,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                '${item.category == 'snack' ? 'Snack' : 'Meal'}${item.calories == null ? '' : ' · ${item.calories!.round()} kcal'}',
+                style: const TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
   );
 }
 
