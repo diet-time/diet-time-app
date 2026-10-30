@@ -54,7 +54,13 @@ class AppButton extends StatelessWidget {
                     ),
                     if (loadingLabel case final loadingLabel?) ...[
                       const SizedBox(width: 10),
-                      Text(loadingLabel),
+                      Flexible(
+                        child: Text(
+                          loadingLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ],
                 )

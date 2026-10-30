@@ -97,8 +97,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.menu,
-        pageBuilder: (context, state) =>
-            _slidePage(state: state, child: const BrowseMenuScreen()),
+        pageBuilder: (context, state) => _slidePage(
+          state: state,
+          child: BrowseMenuScreen(fromDashboard: state.extra == 'dashboard'),
+        ),
       ),
       GoRoute(
         path: AppRoutes.landing,

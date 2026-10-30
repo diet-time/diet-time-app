@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
@@ -56,8 +57,8 @@ class _LanguageSelectionPanelState extends State<LanguageSelectionPanel> {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    const Text(
-                      'Choose your language',
+                    Text(
+                      context.customerCopy('Choose your language'),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.darkGreen,
@@ -107,7 +108,9 @@ class _LanguageSelectionPanelState extends State<LanguageSelectionPanel> {
                     const SizedBox(height: 20),
                     AppButton(
                       key: const ValueKey('languageSelectionContinue'),
-                      label: isArabic ? 'متابعة' : 'Continue',
+                      label: isArabic
+                          ? 'متابعة'
+                          : context.customerCopy('Continue'),
                       onPressed: _selectedLanguage == null
                           ? null
                           : () => Navigator.of(context).pop(_selectedLanguage),

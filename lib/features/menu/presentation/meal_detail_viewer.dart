@@ -395,20 +395,50 @@ class _MealDetailCardState extends State<_MealDetailCard> {
                     ),
                   ],
                   const SizedBox(height: 18),
-                  _NutritionSummary(meal: meal),
-                  if ((fiber != null && fiber > 0) ||
-                      (sodium != null && sodium > 0)) ...[
+                  _NutritionSummary(meal: meal, detail: detail),
+                  if (detail?.nutrition.servingQuantity != null)
+                    Text(
+                      l10n.nutritionServing(
+                        "${detail!.nutrition.servingQuantity} ${detail!.nutrition.servingUnit ?? ""}",
+                      ),
+                    ),
+                  if (fiber != null ||
+                      sodium != null ||
+                      detail?.nutrition.sugar != null ||
+                      detail?.nutrition.saturatedFat != null ||
+                      detail?.nutrition.transFat != null ||
+                      detail?.nutrition.cholesterol != null) ...[
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        if (fiber != null && fiber > 0)
+                        if (detail?.nutrition.sugar != null)
+                          _InformationChip(
+                            label: l10n.sugarLabel,
+                            value: _grams(l10n, detail!.nutrition.sugar),
+                          ),
+                        if (detail?.nutrition.saturatedFat != null)
+                          _InformationChip(
+                            label: l10n.saturatedFatLabel,
+                            value: _grams(l10n, detail!.nutrition.saturatedFat),
+                          ),
+                        if (detail?.nutrition.transFat != null)
+                          _InformationChip(
+                            label: l10n.transFatLabel,
+                            value: _grams(l10n, detail!.nutrition.transFat),
+                          ),
+                        if (detail?.nutrition.cholesterol != null)
+                          _InformationChip(
+                            label: l10n.cholesterolLabel,
+                            value: '${detail!.nutrition.cholesterol} mg',
+                          ),
+                        if (fiber != null)
                           _InformationChip(
                             label: l10n.fiberLabel,
                             value: _grams(l10n, fiber),
                           ),
-                        if (sodium != null && sodium > 0)
+                        if (sodium != null)
                           _InformationChip(
                             label: l10n.sodiumLabel,
                             value: '${_number(sodium)} mg',
@@ -737,7 +767,8 @@ class _EmptyInformationState extends StatelessWidget {
 }
 
 class _NutritionSummary extends StatelessWidget {
-  const _NutritionSummary({required this.meal});
+  const _NutritionSummary({required this.meal, this.detail});
+  final MealDetailData? detail;
 
   final GuestMeal meal;
 
@@ -747,52 +778,67 @@ class _NutritionSummary extends StatelessWidget {
     final values = [
       (
         l10n.caloriesLabel,
-        l10n.kcal(meal.nutrition.calories.round()),
+        (detail?.nutrition.calories ?? meal.nutrition.calories) == null
+            ? '—'
+            : l10n.kcal(
+                (detail?.nutrition.calories ?? meal.nutrition.calories)!
+                    .round(),
+              ),
         AppColors.emeraldGreen,
       ),
       (
         l10n.proteinLabel,
-        _grams(l10n, meal.nutrition.protein),
+        _grams(l10n, detail?.nutrition.protein ?? meal.nutrition.protein),
         const Color(0xFFFFA000),
       ),
       (
         l10n.carbsLabel,
-        _grams(l10n, meal.nutrition.carbs),
+        _grams(l10n, detail?.nutrition.carbs ?? meal.nutrition.carbs),
         const Color(0xFF258AA5),
       ),
       (
         l10n.fatLabel,
-        _grams(l10n, meal.nutrition.fat),
+        _grams(l10n, detail?.nutrition.fat ?? meal.nutrition.fat),
         const Color(0xFF9858B4),
       ),
     ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final itemWidth = (constraints.maxWidth - 12) / 2;
-        return TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0, end: 1),
-          duration: const Duration(milliseconds: 240),
-          builder: (context, value, child) =>
-              Opacity(opacity: value, child: child),
-          child: Wrap(
-            key: const ValueKey('mealNutritionGrid'),
-            spacing: 12,
-            runSpacing: 10,
-            children: values
-                .map(
-                  (item) => SizedBox(
-                    width: itemWidth,
-                    child: _MacroValue(
-                      label: item.$1,
-                      value: item.$2,
-                      color: item.$3,
-                    ),
-                  ),
-                )
-                .toList(growable: false),
-          ),
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if ((detail?.nutrition.calories ?? meal.nutrition.calories) == null ||
+            (detail?.nutrition.protein ?? meal.nutrition.protein) == null ||
+            (detail?.nutrition.carbs ?? meal.nutrition.carbs) == null ||
+            (detail?.nutrition.fat ?? meal.nutrition.fat) == null)
+          Text(l10n.nutritionUnavailable, style: const TextStyle(fontSize: 12)),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final itemWidth = (constraints.maxWidth - 12) / 2;
+            return TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 240),
+              builder: (context, value, child) =>
+                  Opacity(opacity: value, child: child),
+              child: Wrap(
+                key: const ValueKey('mealNutritionGrid'),
+                spacing: 12,
+                runSpacing: 10,
+                children: values
+                    .map(
+                      (item) => SizedBox(
+                        width: itemWidth,
+                        child: _MacroValue(
+                          label: item.$1,
+                          value: item.$2,
+                          color: item.$3,
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
@@ -1027,9 +1073,8 @@ class _DetailMealImage extends StatelessWidget {
   }
 }
 
-String _grams(AppLocalizations l10n, double value) {
-  if (value <= 0) return '—';
-  return l10n.gramsValue(_number(value));
+String _grams(AppLocalizations l10n, double? value) {
+  return value == null ? "—" : l10n.gramsValue(_number(value));
 }
 
 String _number(double value) => value == value.roundToDouble()

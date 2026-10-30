@@ -1,3 +1,5 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
+import 'package:diet_time/features/language/presentation/dashboard_language_switcher.dart';
 import 'dart:async';
 import 'package:diet_time/features/checkout/domain/order_status.dart';
 import 'package:diet_time/features/dashboard/presentation/tomorrow_deliveries_section.dart';
@@ -106,30 +108,30 @@ class _CustomerDashboardScreenState
         onDestinationSelected: (index) => setState(() => _tabIndex = index),
         backgroundColor: AppColors.white,
         indicatorColor: AppColors.emeraldGreen.withValues(alpha: .14),
-        destinations: const [
+        destinations: [
           NavigationDestination(
             key: ValueKey('dashboardHomeTab'),
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home_rounded),
-            label: 'HOME',
+            label: context.customerCopy('HOME'),
           ),
           NavigationDestination(
             key: ValueKey('dashboardOrdersTab'),
             icon: Icon(Icons.receipt_long_outlined),
             selectedIcon: Icon(Icons.receipt_long_rounded),
-            label: 'ORDERS',
+            label: context.customerCopy('ORDERS'),
           ),
           NavigationDestination(
             key: ValueKey('dashboardCalendarTab'),
             icon: Icon(Icons.calendar_month_outlined),
             selectedIcon: Icon(Icons.calendar_month_rounded),
-            label: 'CALENDAR',
+            label: context.customerCopy('CALENDAR'),
           ),
           NavigationDestination(
             key: ValueKey('dashboardProfileTab'),
             icon: Icon(Icons.person_outline_rounded),
             selectedIcon: Icon(Icons.person_rounded),
-            label: 'PROFILE',
+            label: context.customerCopy('PROFILE'),
           ),
         ],
       ),
@@ -157,7 +159,9 @@ class _CustomerDashboardScreenState
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully')),
+          SnackBar(
+            content: Text(context.customerCopy('Profile updated successfully')),
+          ),
         );
     }
   }
@@ -175,7 +179,9 @@ class _CustomerDashboardScreenState
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(content: Text('Unable to load your profile.')),
+          SnackBar(
+            content: Text(context.customerCopy('Unable to load your profile.')),
+          ),
         );
       return;
     }
@@ -194,7 +200,11 @@ class _CustomerDashboardScreenState
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(content: Text('Questionnaire updated successfully')),
+          SnackBar(
+            content: Text(
+              context.customerCopy('Questionnaire updated successfully'),
+            ),
+          ),
         );
     }
   }
@@ -203,17 +213,17 @@ class _CustomerDashboardScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        title: Text(context.customerCopy('Logout')),
+        content: Text(context.customerCopy('Are you sure you want to logout?')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.customerCopy('Cancel')),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.pop(context, true),
             icon: const Icon(Icons.logout_rounded, size: 18),
-            label: const Text('Logout'),
+            label: Text(context.customerCopy('Logout')),
           ),
         ],
       ),
@@ -252,8 +262,10 @@ class _DashboardHome extends ConsumerWidget {
     }
     if (state is DashboardAuthenticationFailure) {
       return _DashboardErrorView(
-        message: 'Your session has expired. Please sign in again.',
-        actionLabel: 'SIGN IN',
+        message: context.customerCopy(
+          'Your session has expired. Please sign in again.',
+        ),
+        actionLabel: context.customerCopy('SIGN IN'),
         onRetry: () => context.go(
           AppRoutes.phoneLogin,
           extra: const PendingAuthDestination(
@@ -264,7 +276,9 @@ class _DashboardHome extends ConsumerWidget {
     }
     if (state is DashboardProfileNotFound) {
       return _DashboardErrorView(
-        message: 'Your customer profile could not be found.',
+        message: context.customerCopy(
+          'Your customer profile could not be found.',
+        ),
         onRetry: () =>
             ref.read(customerDashboardControllerProvider.notifier).refresh(),
       );
@@ -286,11 +300,28 @@ class _DashboardHome extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
         children: [
+          const Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: DashboardLanguageSwitcher(),
+          ),
           _ReferenceDashboardHeader(
             name: name,
-            subtitle: _dashboardSubtitle(state),
+            subtitle: _dashboardSubtitle(context, state),
           ),
           const SizedBox(height: 18),
+          Card(
+            child: ListTile(
+              key: const ValueKey('dashboardExploreMenu'),
+              leading: const Icon(Icons.restaurant_menu),
+              title: Text(
+                lookupAppLocalizations(
+                  Localizations.localeOf(context),
+                ).exploreMenu,
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(AppRoutes.menu, extra: 'dashboard'),
+            ),
+          ),
           for (final order in orders.where(
             (o) =>
                 [
@@ -303,9 +334,11 @@ class _DashboardHome extends ConsumerWidget {
           ))
             Card(
               child: ListTile(
-                title: Text('${order.planName} · ${order.statusLabel}'),
+                title: Text(
+                  '${order.planName} · ${context.customerCopy(order.statusLabel)}',
+                ),
                 subtitle: Text(
-                  '${order.orderNumber}\n${order.reviewMessage ?? 'Diet Time is reviewing your order.'}\n${order.paymentLabel}',
+                  '${order.orderNumber}\n${context.customerCopy(order.reviewMessage ?? 'Diet Time is reviewing your order.')}\n${context.customerCopy(order.paymentLabel)}',
                 ),
                 isThreeLine: true,
                 trailing: const Icon(Icons.chevron_right),
@@ -322,7 +355,7 @@ class _DashboardHome extends ConsumerWidget {
               ),
             ),
           if (single != null) ...[
-            const _SectionTitle('YOUR ACTIVE PLAN'),
+            _SectionTitle(context.customerCopy('YOUR ACTIVE PLAN')),
             const SizedBox(height: 10),
             _ReferencePlanCard(summary: single.order, detail: single.detail),
             const SizedBox(height: 16),
@@ -330,7 +363,7 @@ class _DashboardHome extends ConsumerWidget {
           ] else if (multiple != null) ...[
             Row(
               children: [
-                const _SectionTitle('MY ACTIVE PLANS'),
+                _SectionTitle(context.customerCopy('MY ACTIVE PLANS')),
                 const Spacer(),
                 Text(
                   '${multiple.activeOrders.length} PLANS',
@@ -371,15 +404,15 @@ class _DashboardHome extends ConsumerWidget {
                 ),
               ),
               icon: const Icon(Icons.add_rounded, size: 17),
-              label: const Text(
-                'ORDER ANOTHER PLAN',
+              label: Text(
+                context.customerCopy('ORDER ANOTHER PLAN'),
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
               ),
             ),
           if (state is! DashboardWithoutActivePlan &&
               state is! DashboardNoOrders) ...[
             const SizedBox(height: 24),
-            const _SectionTitle('QUICK ACTIONS'),
+            _SectionTitle(context.customerCopy('QUICK ACTIONS')),
             const SizedBox(height: 10),
             _QuickActions(
               onPlan: single == null
@@ -399,11 +432,14 @@ class _DashboardHome extends ConsumerWidget {
                 _SectionTitle(
                   state is DashboardWithoutActivePlan ||
                           state is DashboardNoOrders
-                      ? 'PREVIOUS ORDERS'
-                      : 'MY ORDERS',
+                      ? context.customerCopy('PREVIOUS ORDERS')
+                      : context.customerCopy('MY ORDERS'),
                 ),
                 const Spacer(),
-                TextButton(onPressed: onViewAll, child: const Text('VIEW ALL')),
+                TextButton(
+                  onPressed: onViewAll,
+                  child: Text(context.customerCopy('VIEW ALL')),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -432,7 +468,7 @@ class _ReferenceDashboardHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${_greeting()}, ${_displayName(name)} 👋',
+                '${_greeting(context)}, ${_displayName(name)} 👋',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -541,7 +577,7 @@ class _DashboardHeader extends StatelessWidget {
       ),
       const SizedBox(height: 16),
       Text(
-        '${_greeting()}, ${_displayName(name)} 👋',
+        '${_greeting(context)}, ${_displayName(name)} 👋',
         style: const TextStyle(
           color: AppColors.darkGreen,
           fontSize: 23,
@@ -576,8 +612,8 @@ class _NoActivePlanCard extends ConsumerWidget {
           size: 38,
         ),
         const SizedBox(height: 14),
-        const Text(
-          'NO ACTIVE PLAN',
+        Text(
+          context.customerCopy('NO ACTIVE PLAN'),
           textAlign: TextAlign.center,
           style: TextStyle(
             color: AppColors.darkGreen,
@@ -587,7 +623,7 @@ class _NoActivePlanCard extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          "You don't have an active meal plan right now.",
+          context.customerCopy("You don't have an active meal plan right now."),
           textAlign: TextAlign.center,
           style: TextStyle(
             color: AppColors.darkGreen.withValues(alpha: .62),
@@ -597,7 +633,7 @@ class _NoActivePlanCard extends ConsumerWidget {
         const SizedBox(height: 20),
         AppButton(
           key: const ValueKey('choosePlan'),
-          label: 'CHOOSE A PLAN',
+          label: context.customerCopy('CHOOSE A PLAN'),
           backgroundColor: AppColors.black,
           onPressed: () => _startNewOrder(context, ref),
         ),
@@ -654,7 +690,7 @@ class _ReferencePlanCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${package?.isNotEmpty == true ? package! : summary.planDurationName} · ${summary.fulfillmentSummary}',
+            '${package?.isNotEmpty == true ? package! : summary.planDurationName} · ${context.customerCopy(summary.fulfillmentLabel)}${summary.takeawayBranch == null ? '' : ' · ${summary.takeawayBranch!.name}'}',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: Color(0xFFD7E7E1), fontSize: 11),
@@ -804,7 +840,7 @@ class _PlanHeroCard extends StatelessWidget {
                   icon: Icons.calendar_month_outlined,
                   value: _period(summary.startDate, summary.endDate),
                   caption:
-                      '${summary.planDurationName} · ${summary.fulfillmentSummary}',
+                      '${summary.planDurationName} · ${context.customerCopy(summary.fulfillmentLabel)}${summary.takeawayBranch == null ? '' : ' · ${summary.takeawayBranch!.name}'}',
                 ),
               ),
               Container(
@@ -817,7 +853,7 @@ class _PlanHeroCard extends StatelessWidget {
                 child: _HeroDetail(
                   icon: Icons.wb_sunny_outlined,
                   value: next == null
-                      ? 'Schedule ready'
+                      ? context.customerCopy('Schedule ready')
                       : DateFormat('EEE, dd MMM').format(next),
                   caption:
                       '${detail.delivery.timeSlot.name} · ${_timeRange(detail.delivery.timeSlot)}',
@@ -828,15 +864,19 @@ class _PlanHeroCard extends StatelessWidget {
           const SizedBox(height: 15),
           _HeroDetail(
             icon: Icons.schedule_rounded,
-            value: '${detail.delivery.daysPerWeek} Days / Week',
-            caption: _weekdays(detail.delivery.days),
+            value: lookupAppLocalizations(
+              Localizations.localeOf(context),
+            ).customerDaysPerWeek(detail.delivery.daysPerWeek),
+            caption: _weekdays(context, detail.delivery.days),
           ),
           const SizedBox(height: 12),
           _HeroDetail(
             icon: Icons.location_on_outlined,
-            value: detail.isTakeaway ? 'Takeaway' : address.displayName,
+            value: detail.isTakeaway
+                ? context.customerCopy('Takeaway')
+                : address.displayName,
             caption: detail.isTakeaway
-                ? 'Collect from Diet Time'
+                ? context.customerCopy('Collect from Diet Time')
                 : [
                     address.area,
                     address.streetLine,
@@ -859,8 +899,8 @@ class _PlanHeroCard extends StatelessWidget {
               ),
               iconAlignment: IconAlignment.end,
               icon: const Icon(Icons.arrow_forward_rounded, size: 17),
-              label: const Text(
-                'VIEW PLAN',
+              label: Text(
+                context.customerCopy('VIEW PLAN'),
                 style: TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
@@ -1105,7 +1145,7 @@ class _CompactPlanCard extends StatelessWidget {
                   icon: Icons.calendar_month_outlined,
                   value: _period(summary.startDate, summary.endDate),
                   caption:
-                      '${summary.planDurationName} · ${summary.fulfillmentSummary}',
+                      '${summary.planDurationName} · ${context.customerCopy(summary.fulfillmentLabel)}${summary.takeawayBranch == null ? '' : ' · ${summary.takeawayBranch!.name}'}',
                 ),
               ),
               const SizedBox(width: 10),
@@ -1113,9 +1153,13 @@ class _CompactPlanCard extends StatelessWidget {
                 child: _HeroDetail(
                   icon: Icons.schedule_rounded,
                   value: delivery == null
-                      ? 'Schedule ready'
-                      : '${delivery.daysPerWeek} Days / Week',
-                  caption: delivery == null ? '' : _weekdays(delivery.days),
+                      ? context.customerCopy('Schedule ready')
+                      : lookupAppLocalizations(
+                          Localizations.localeOf(context),
+                        ).customerDaysPerWeek(delivery.daysPerWeek),
+                  caption: delivery == null
+                      ? ''
+                      : _weekdays(context, delivery.days),
                 ),
               ),
             ],
@@ -1147,8 +1191,8 @@ class _CompactPlanCard extends StatelessWidget {
                 ),
                 iconAlignment: IconAlignment.end,
                 icon: const Icon(Icons.arrow_forward_rounded, size: 15),
-                label: const Text(
-                  'DETAILS',
+                label: Text(
+                  context.customerCopy('DETAILS'),
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
                 ),
               ),
@@ -1177,7 +1221,7 @@ class _QuickActions extends StatelessWidget {
       Expanded(
         child: _QuickAction(
           icon: Icons.badge_outlined,
-          label: 'My Plan',
+          label: context.customerCopy('My Plan'),
           onTap: onPlan,
         ),
       ),
@@ -1185,7 +1229,7 @@ class _QuickActions extends StatelessWidget {
       Expanded(
         child: _QuickAction(
           icon: Icons.local_shipping_outlined,
-          label: 'Orders',
+          label: context.customerCopy('Orders'),
           onTap: onOrders,
         ),
       ),
@@ -1193,7 +1237,7 @@ class _QuickActions extends StatelessWidget {
       Expanded(
         child: _QuickAction(
           icon: Icons.add_circle_outline_rounded,
-          label: 'New Plan',
+          label: context.customerCopy('New Plan'),
           onTap: onNewPlan,
         ),
       ),
@@ -1201,9 +1245,13 @@ class _QuickActions extends StatelessWidget {
       Expanded(
         child: _QuickAction(
           icon: Icons.support_agent_rounded,
-          label: 'Support',
+          label: context.customerCopy('Support'),
           onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Support will be available soon.')),
+            SnackBar(
+              content: Text(
+                context.customerCopy('Support will be available soon.'),
+              ),
+            ),
           ),
         ),
       ),
@@ -1355,8 +1403,10 @@ class _DashboardCalendar extends ConsumerWidget {
     }
     if (state is DashboardAuthenticationFailure) {
       return _DashboardErrorView(
-        message: 'Your session has expired. Please sign in again.',
-        actionLabel: 'SIGN IN',
+        message: context.customerCopy(
+          'Your session has expired. Please sign in again.',
+        ),
+        actionLabel: context.customerCopy('SIGN IN'),
         onRetry: () => context.go(
           AppRoutes.phoneLogin,
           extra: const PendingAuthDestination(
@@ -1367,7 +1417,9 @@ class _DashboardCalendar extends ConsumerWidget {
     }
     if (state is DashboardProfileNotFound) {
       return _DashboardErrorView(
-        message: 'Your customer profile could not be found.',
+        message: context.customerCopy(
+          'Your customer profile could not be found.',
+        ),
         onRetry: () =>
             ref.read(customerDashboardControllerProvider.notifier).refresh(),
       );
@@ -1390,8 +1442,8 @@ class _DashboardCalendar extends ConsumerWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(18, 24, 18, 32),
       children: [
-        const Text(
-          'Delivery Calendar',
+        Text(
+          context.customerCopy('Delivery Calendar'),
           style: TextStyle(
             color: AppColors.darkGreen,
             fontSize: 25,
@@ -1408,8 +1460,8 @@ class _DashboardCalendar extends ConsumerWidget {
                 size: 42,
               ),
               const SizedBox(height: 12),
-              const Text(
-                'No active delivery calendar',
+              Text(
+                context.customerCopy('No active delivery calendar'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.darkGreen,
@@ -1419,7 +1471,9 @@ class _DashboardCalendar extends ConsumerWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Your delivery dates will appear here when a meal plan is active.',
+                context.customerCopy(
+                  'Your delivery dates will appear here when a meal plan is active.',
+                ),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.darkGreen.withValues(alpha: .58),
@@ -1450,8 +1504,10 @@ class _CustomerOrdersState extends ConsumerState<_CustomerOrders> {
     }
     if (state is DashboardAuthenticationFailure) {
       return _DashboardErrorView(
-        message: 'Your session has expired. Please sign in again.',
-        actionLabel: 'SIGN IN',
+        message: context.customerCopy(
+          'Your session has expired. Please sign in again.',
+        ),
+        actionLabel: context.customerCopy('SIGN IN'),
         onRetry: () => context.go(
           AppRoutes.phoneLogin,
           extra: const PendingAuthDestination(
@@ -1462,7 +1518,9 @@ class _CustomerOrdersState extends ConsumerState<_CustomerOrders> {
     }
     if (state is DashboardProfileNotFound) {
       return _DashboardErrorView(
-        message: 'Your customer profile could not be found.',
+        message: context.customerCopy(
+          'Your customer profile could not be found.',
+        ),
         onRetry: () =>
             ref.read(customerDashboardControllerProvider.notifier).refresh(),
       );
@@ -1480,12 +1538,12 @@ class _CustomerOrdersState extends ConsumerState<_CustomerOrders> {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'My Orders',
+                      context.customerCopy('My Orders'),
                       style: TextStyle(
                         color: AppColors.darkGreen,
                         fontSize: 26,
@@ -1494,7 +1552,7 @@ class _CustomerOrdersState extends ConsumerState<_CustomerOrders> {
                     ),
                     SizedBox(height: 3),
                     Text(
-                      'All your meal orders in one place',
+                      context.customerCopy('All your meal orders in one place'),
                       style: TextStyle(color: Color(0xFF81908B), fontSize: 12),
                     ),
                   ],
@@ -1523,14 +1581,17 @@ class _CustomerOrdersState extends ConsumerState<_CustomerOrders> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                for (final filter in const [
-                  ('ALL', 'All Orders'),
-                  ('PENDING_APPROVAL', 'Pending Confirmation'),
-                  ('ON_HOLD', 'On Hold'),
-                  ('REJECTED', 'Rejected'),
-                  ('CONFIRMED', 'Confirmed'),
-                  ('PENDING', 'Pending'),
-                  ('CANCELLED', 'Cancelled'),
+                for (final filter in [
+                  ('ALL', context.customerCopy('All Orders')),
+                  (
+                    'PENDING_APPROVAL',
+                    context.customerCopy('Pending Confirmation'),
+                  ),
+                  ('ON_HOLD', context.customerCopy('On Hold')),
+                  ('REJECTED', context.customerCopy('Rejected')),
+                  ('CONFIRMED', context.customerCopy('Confirmed')),
+                  ('PENDING', context.customerCopy('Pending')),
+                  ('CANCELLED', context.customerCopy('Cancelled')),
                 ]) ...[
                   _OrderFilterChip(
                     label: filter.$2,
@@ -1549,9 +1610,9 @@ class _CustomerOrdersState extends ConsumerState<_CustomerOrders> {
           ),
           const SizedBox(height: 16),
           if (filtered.isEmpty)
-            const _SurfaceCard(
+            _SurfaceCard(
               child: Text(
-                'No orders found for this status.',
+                context.customerCopy('No orders found for this status.'),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.darkGreen),
               ),
@@ -1706,7 +1767,9 @@ class _DetailedOrderCard extends ConsumerWidget {
                   if (delivery != null)
                     _OrderFact(
                       icon: Icons.calendar_today_outlined,
-                      text: '${delivery.daysPerWeek} Days / Week',
+                      text: lookupAppLocalizations(
+                        Localizations.localeOf(context),
+                      ).customerDaysPerWeek(delivery.daysPerWeek),
                     ),
                   if (mealSummary != null)
                     _OrderFact(
@@ -1738,7 +1801,7 @@ class _DetailedOrderCard extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     order.placedAt == null
-                        ? 'Order placed'
+                        ? context.customerCopy('Order placed')
                         : 'Ordered on ${DateFormat('dd MMM yyyy').format(order.placedAt!)}',
                     style: TextStyle(
                       color: AppColors.darkGreen.withValues(alpha: .54),
@@ -1746,8 +1809,8 @@ class _DetailedOrderCard extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const Text(
-                  'View Details  →',
+                Text(
+                  context.customerCopy('View Details  →'),
                   style: TextStyle(
                     color: AppColors.emeraldGreen,
                     fontSize: 10,
@@ -1852,7 +1915,7 @@ class _DashboardErrorView extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            message,
+            context.customerCopy(message),
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: AppColors.darkGreen,
@@ -1861,7 +1924,10 @@ class _DashboardErrorView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          OutlinedButton(onPressed: onRetry, child: Text(actionLabel)),
+          OutlinedButton(
+            onPressed: onRetry,
+            child: Text(context.customerCopy(actionLabel)),
+          ),
         ],
       ),
     ),
@@ -1996,20 +2062,25 @@ String _displayName(String? name) {
   return value == null || value.isEmpty ? 'there' : value;
 }
 
-String _greeting() {
+String _greeting(BuildContext context) {
   final hour = DateTime.now().hour;
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return context.customerCopy('Good morning');
+  if (hour < 17) return context.customerCopy('Good afternoon');
+  return context.customerCopy('Good evening');
 }
 
-String _dashboardSubtitle(CustomerDashboardState state) => switch (state) {
+String _dashboardSubtitle(
+  BuildContext context,
+  CustomerDashboardState state,
+) => switch (state) {
   DashboardWithMultipleActivePlans(:final activeOrders) =>
-    'You have ${activeOrders.length} active meal plans',
-  DashboardWithActivePlan() => 'Your meal plan is active',
-  DashboardWithoutActivePlan() => 'Ready when you are',
-  DashboardNoOrders() => 'Ready when you are',
-  _ => 'Your meal plans at a glance',
+    lookupAppLocalizations(
+      Localizations.localeOf(context),
+    ).customerActivePlans(activeOrders.length),
+  DashboardWithActivePlan() => context.customerCopy('Your meal plan is active'),
+  DashboardWithoutActivePlan() => context.customerCopy('Ready when you are'),
+  DashboardNoOrders() => context.customerCopy('Ready when you are'),
+  _ => context.customerCopy('Your meal plans at a glance'),
 };
 
 String _period(DateTime? start, DateTime? end, {String? locale}) {
@@ -2018,15 +2089,15 @@ String _period(DateTime? start, DateTime? end, {String? locale}) {
   return '${DateFormat('dd MMM', dateLocale).format(start)} - ${DateFormat('dd MMM', dateLocale).format(end)}';
 }
 
-String _weekdays(List<int> days) {
-  const labels = {
-    1: 'Mon',
-    2: 'Tue',
-    3: 'Wed',
-    4: 'Thu',
-    5: 'Fri',
-    6: 'Sat',
-    7: 'Sun',
+String _weekdays(BuildContext context, List<int> days) {
+  final labels = {
+    1: context.customerCopy('Mon'),
+    2: context.customerCopy('Tue'),
+    3: context.customerCopy('Wed'),
+    4: context.customerCopy('Thu'),
+    5: context.customerCopy('Fri'),
+    6: context.customerCopy('Sat'),
+    7: context.customerCopy('Sun'),
   };
   return days.map((day) => labels[day]).whereType<String>().join(', ');
 }

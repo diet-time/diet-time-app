@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/features/plans/presentation/package_discount_details.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
@@ -91,10 +92,12 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                   children: [
                     _PlanHero(plan: widget.plan),
                     const SizedBox(height: 16),
-                    const _SectionTitle(
-                      titleEn: 'Choose your meals',
+                    _SectionTitle(
+                      titleEn: context.customerCopy('Choose your meals'),
                       titleAr: 'اختر وجباتك اليومية',
-                      subtitleEn: "Pick how many meals you'd like each day.",
+                      subtitleEn: context.customerCopy(
+                        "Pick how many meals you'd like each day.",
+                      ),
                       subtitleAr: 'اختر مجموعة الوجبات التي تناسبك.',
                     ),
                     const SizedBox(height: 8),
@@ -152,10 +155,12 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                       ),
                     ),
                     if (configurations.length > 1)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.only(top: 6),
                         child: Text(
-                          'Swipe to explore meal packages →',
+                          context.customerCopy(
+                            'Swipe to explore meal packages →',
+                          ),
                           style: TextStyle(
                             color: AppColors.darkGreen,
                             fontSize: 12,
@@ -163,8 +168,8 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                         ),
                       ),
                     const SizedBox(height: 16),
-                    const _SectionTitle(
-                      titleEn: 'Choose your duration',
+                    _SectionTitle(
+                      titleEn: context.customerCopy('Choose your duration'),
                       titleAr: 'اختر المدة',
                     ),
                     const SizedBox(height: 10),
@@ -207,7 +212,9 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                                         : Directionality.of(context) ==
                                               TextDirection.rtl
                                         ? 'غير متاح حالياً'
-                                        : 'Currently unavailable',
+                                        : context.customerCopy(
+                                            'Currently unavailable',
+                                          ),
                                     selected:
                                         option.isValid &&
                                         option.selectionKey ==
@@ -231,7 +238,9 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                     Text(
                       Directionality.of(context) == TextDirection.rtl
                           ? 'المدد المتاحة لباقة الوجبات المختارة.'
-                          : 'Swipe to explore package durations →',
+                          : context.customerCopy(
+                              'Swipe to explore package durations →',
+                            ),
                       style: TextStyle(
                         color: AppColors.darkGreen.withValues(alpha: .7),
                         fontSize: 12,
@@ -257,7 +266,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
               ? '${package.currencyCode} ${_amount(context, package.totalPrice)}'
               : Directionality.of(context) == TextDirection.rtl
               ? 'السعر غير متاح'
-              : 'Pricing unavailable',
+              : context.customerCopy('Pricing unavailable'),
           priceKey: '${configuration.id}-${package.selectionKey}',
           onContinue: package.isValid
               ? () => _continue(configuration, package)
@@ -304,8 +313,8 @@ class _DetailsHeader extends StatelessWidget implements PreferredSizeWidget {
               : Icons.arrow_back_rounded,
         ),
       ),
-      title: const Text(
-        'Diet Time',
+      title: Text(
+        context.customerCopy('Diet Time'),
         style: TextStyle(
           color: AppColors.darkGreen,
           fontSize: 20,
@@ -552,7 +561,9 @@ class _AllergenInformation extends StatelessWidget {
                 Text(
                   isArabic
                       ? 'تم حفظ تفضيلات مسببات الحساسية لديك'
-                      : 'Your allergen preferences are saved',
+                      : context.customerCopy(
+                          'Your allergen preferences are saved',
+                        ),
                   style: const TextStyle(
                     color: AppColors.darkGreen,
                     fontWeight: FontWeight.w800,
@@ -562,7 +573,9 @@ class _AllergenInformation extends StatelessWidget {
                 Text(
                   isArabic
                       ? 'سنستخدم معلومات الحساسية المسجلة عند عرض الوجبات المناسبة. راجع تفاصيل مسببات الحساسية لكل وجبة قبل الطلب.'
-                      : 'We’ll use your recorded allergen information when showing suitable meal choices. Please review each meal’s allergen details before ordering.',
+                      : context.customerCopy(
+                          'We’ll use your recorded allergen information when showing suitable meal choices. Please review each meal’s allergen details before ordering.',
+                        ),
                   style: TextStyle(
                     color: AppColors.darkGreen.withValues(alpha: .66),
                     fontSize: 12,
@@ -626,7 +639,7 @@ class _PricingError extends StatelessWidget {
       Text(
         Directionality.of(context) == TextDirection.rtl
             ? 'الأسعار غير متاحة مؤقتاً.'
-            : 'Pricing is temporarily unavailable.',
+            : context.customerCopy('Pricing is temporarily unavailable.'),
         textAlign: TextAlign.center,
         style: const TextStyle(
           color: AppColors.darkGreen,
@@ -641,7 +654,7 @@ class _PricingError extends StatelessWidget {
           child: Text(
             Directionality.of(context) == TextDirection.rtl
                 ? 'إعادة المحاولة'
-                : 'Retry',
+                : context.customerCopy('Retry'),
           ),
         ),
       ),
@@ -667,7 +680,9 @@ class _EmptyPackages extends StatelessWidget {
       Text(
         Directionality.of(context) == TextDirection.rtl
             ? 'لا توجد باقات متاحة حالياً لخطة الوجبات هذه.'
-            : 'No packages are currently available for this meal plan.',
+            : context.customerCopy(
+                'No packages are currently available for this meal plan.',
+              ),
         textAlign: TextAlign.center,
         style: const TextStyle(
           color: AppColors.darkGreen,
@@ -678,7 +693,9 @@ class _EmptyPackages extends StatelessWidget {
       Text(
         Directionality.of(context) == TextDirection.rtl
             ? 'جرّب خطة أخرى للعثور على وجبات تناسبك.'
-            : 'Try another plan to find your daily meal routine.',
+            : context.customerCopy(
+                'Try another plan to find your daily meal routine.',
+              ),
         textAlign: TextAlign.center,
         style: TextStyle(
           color: AppColors.darkGreen.withValues(alpha: .7),
@@ -693,7 +710,7 @@ class _EmptyPackages extends StatelessWidget {
           child: Text(
             Directionality.of(context) == TextDirection.rtl
                 ? 'اختر خطة أخرى'
-                : 'Choose another plan',
+                : context.customerCopy('Choose another plan'),
           ),
         ),
       ),

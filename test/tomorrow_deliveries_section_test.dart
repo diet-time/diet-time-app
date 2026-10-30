@@ -174,6 +174,7 @@ void main() {
         }),
       );
       expect(find.byType(TomorrowDeliveryCard), findsNWidgets(4));
+      expect(inCard('a', 'Daily nutrition total'), findsOneWidget);
       expect(find.text('4 scheduled orders'), findsOneWidget);
       expect(inCard('a', 'Confirmed'), findsOneWidget);
       expect(inCard('b', 'Ready to confirm'), findsOneWidget);
@@ -348,8 +349,8 @@ void main() {
         tester.getTopLeft(card('b')).dy,
         lessThan(tester.getTopLeft(card('a')).dy),
       );
-      expect(tester.getSize(card('a')).height, lessThan(205));
-      expect(tester.getSize(card('b')).height, lessThan(260));
+      expect(tester.getSize(card('a')).height, lessThan(285));
+      expect(tester.getSize(card('b')).height, lessThan(340));
       expect(find.text('Dish a 0'), findsNothing);
       expect(
         find.descendant(of: card('a'), matching: find.byType(FilledButton)),

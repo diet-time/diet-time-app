@@ -1,3 +1,4 @@
+import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -5,13 +6,21 @@ import 'dart:io';
 import 'package:diet_time/core/config/app_environment.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+final apiClientProvider = Provider<ApiClient>(
+  (ref) => ApiClient(
+    languageCode: () => ref.read(languageControllerProvider).languageCode,
+  ),
+);
 
 class ApiClient {
-  ApiClient({HttpClient Function()? clientFactory})
-    : _clientFactory = clientFactory ?? HttpClient.new;
+  ApiClient({
+    HttpClient Function()? clientFactory,
+    String Function()? languageCode,
+  }) : _languageCode = languageCode,
+       _clientFactory = clientFactory ?? HttpClient.new;
 
   final HttpClient Function() _clientFactory;
+  final String Function()? _languageCode;
 
   Future<ApiResponse> request({
     required String method,
@@ -36,6 +45,9 @@ class ApiClient {
       request.headers
         ..set(HttpHeaders.acceptHeader, 'application/json')
         ..set(HttpHeaders.contentTypeHeader, 'application/json');
+      if (_languageCode != null) {
+        request.headers.set(HttpHeaders.acceptLanguageHeader, _languageCode());
+      }
       headers.forEach(request.headers.set);
       if (body != null) request.write(jsonEncode(body));
       final response = await request.close().timeout(

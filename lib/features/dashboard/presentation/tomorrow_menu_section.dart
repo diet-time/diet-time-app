@@ -1,3 +1,7 @@
+import 'package:diet_time/features/checkout/domain/order_status.dart';
+import 'package:diet_time/app/localization/customer_copy.dart';
+import 'package:diet_time/features/menu/domain/meal_nutrition.dart';
+import 'package:diet_time/features/menu/presentation/meal_nutrition_view.dart';
 import 'package:diet_time/features/plans/domain/meal_entitlement.dart';
 import 'dart:async';
 
@@ -59,7 +63,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
     final language = Localizations.localeOf(context).languageCode;
     if (_language != language) {
       _language = language;
-      _load();
+      _load(preserveDraft: true);
     }
   }
 
@@ -81,7 +85,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
     super.dispose();
   }
 
-  Future<void> _load({String? feedback}) async {
+  Future<void> _load({String? feedback, bool preserveDraft = false}) async {
     final generation = ++_generation;
     _refreshTimer?.cancel();
     _update(() {
@@ -93,7 +97,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
           .read(tomorrowMenuRepositoryProvider)
           .get(widget.orderId, _language ?? 'en');
       if (!mounted || generation != _generation) return;
-      _accept(menu);
+      _accept(menu, preserveDraft: preserveDraft);
     } on Object catch (error) {
       if (!mounted || generation != _generation) return;
       _update(() {
@@ -103,20 +107,27 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
             feedback ??
             switch (error) {
               ApiException(failure: ApiFailure.unauthorized) =>
-                'Your session has expired. Please sign in again.',
-              ApiException(failure: ApiFailure.notFound) =>
+                context.customerCopy(
+                  'Your session has expired. Please sign in again.',
+                ),
+              ApiException(failure: ApiFailure.notFound) => context.customerCopy(
                 'This order could not be loaded for your account. Refresh your dashboard or contact our team with your order reference.',
+              ),
               ApiException(failure: ApiFailure.network || ApiFailure.timeout) =>
-                'We could not connect to load your menu. Check your connection and try again.',
-              _ =>
+                context.customerCopy(
+                  'We could not connect to load your menu. Check your connection and try again.',
+                ),
+              _ => context.customerCopy(
                 'The menu service could not load your order’s dishes. Please refresh or contact our team.',
+              ),
             };
       });
       widget.onMenuLoaded?.call(null);
     }
   }
 
-  void _accept(TomorrowMenu menu) {
+  void _accept(TomorrowMenu menu, {bool preserveDraft = false}) {
+    final previous = _draft;
     if (_menu?.dayId != menu.dayId ||
         _menu?.subscriptionId != menu.subscriptionId) {
       _showConfirmed = false;
@@ -134,6 +145,16 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
     _update(() {
       _menu = menu;
       _draft = TomorrowMealDraft(menu);
+      if (preserveDraft &&
+          previous != null &&
+          previous.menu.dayId == menu.dayId &&
+          !menu.readOnly) {
+        _draft!.mealIds.clear();
+        _draft!.snackIds.clear();
+        for (final item in [...menu.meals, ...menu.snacks]) {
+          if (previous.contains(item.id)) _draft!.toggle(item);
+        }
+      }
       _loading = false;
       _expired = !menu.canConfirm;
     });
@@ -244,7 +265,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Confirm your meals',
+                context.customerCopy('Confirm your meals'),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
@@ -256,17 +277,19 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
                   child: Text('• ${item.name}'),
                 ),
               const SizedBox(height: 16),
-              const Text(
-                'Your selections cannot be changed after confirmation.',
+              Text(
+                context.customerCopy(
+                  'Your selections cannot be changed after confirmation.',
+                ),
               ),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Confirm'),
+                child: Text(context.customerCopy('Confirm')),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
+                child: Text(context.customerCopy('Cancel')),
               ),
             ],
           ),
@@ -297,18 +320,25 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
       if (!mounted) return;
       final message = error is ApiException
           ? switch (error.code) {
-              'cutoff_passed' =>
+              'cutoff_passed' => context.customerCopy(
                 'The 9:00 PM deadline has passed. Your automatic meals are being finalized.',
-              'already_confirmed' =>
+              ),
+              'already_confirmed' => context.customerCopy(
                 'Your meals have already been finalized. Here are your saved dishes.',
-              'subscription_inactive' =>
+              ),
+              'subscription_inactive' => context.customerCopy(
                 'Your subscription is no longer active for this delivery.',
-              'meal_unavailable' || 'invalid_selection' =>
+              ),
+              'meal_unavailable' || 'invalid_selection' => context.customerCopy(
                 'A dish is no longer available. Please review the refreshed menu.',
-              _ =>
+              ),
+              _ => context.customerCopy(
                 'We could not verify your confirmation. Please check your connection and refresh before trying again.',
+              ),
             }
-          : 'Unable to confirm your meals. Please try again.';
+          : context.customerCopy(
+              'Unable to confirm your meals. Please try again.',
+            );
       await _load(feedback: message);
     } finally {
       if (mounted) _update(() => _submitting = false);
@@ -415,8 +445,8 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Tomorrow’s Menu',
+          Text(
+            context.customerCopy('Tomorrow’s Menu'),
             style: TextStyle(
               color: AppColors.darkGreen,
               fontSize: 21,
@@ -443,9 +473,15 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
             const SizedBox(height: 4),
             Text(menu.planName),
             if (widget.orderReference != null)
-              Text('Order: ${widget.orderReference}'),
+              Text(
+                lookupAppLocalizations(
+                  Localizations.localeOf(context),
+                ).deliveriesOrder(widget.orderReference!),
+              ),
             if (fullSelection && menu.orderStatus != null)
-              Text('Order status: ${menu.orderStatus!.replaceAll('_', ' ')}'),
+              Text(
+                '${context.customerCopy('Order status')}: ${context.customerCopy(orderStatusLabel(menu.orderStatus!))}',
+              ),
             Text(
               MealEntitlement(
                 menu.mealCount,
@@ -453,13 +489,34 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
               ).label(Localizations.localeOf(context).languageCode),
             ),
             const SizedBox(height: 12),
+            MealNutritionView(
+              total: true,
+              nutrition: MealNutrition.total(
+                (menu.readOnly
+                        ? menu.selected
+                        : [
+                            ...menu.meals,
+                            ...menu.snacks,
+                          ].where((m) => draft.contains(m.id)))
+                    .map((m) => (nutrition: m.nutrition, quantity: m.quantity)),
+              ),
+            ),
             if (menu.status == 'NOT_STARTED' &&
                 (menu.firstDeliveryDate ?? menu.orderStartDate) != null)
               Text(
-                'First delivery: ${DateFormat('EEEE, d MMMM').format((menu.firstDeliveryDate ?? menu.orderStartDate)!)}',
+                lookupAppLocalizations(
+                  Localizations.localeOf(context),
+                ).deliveriesFirstDelivery(
+                  DateFormat(
+                    'EEEE, d MMMM',
+                  ).format((menu.firstDeliveryDate ?? menu.orderStartDate)!),
+                ),
               ),
             if (menu.finalized) ...[
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Chip(
                     avatar: const Icon(
@@ -470,12 +527,16 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
                     backgroundColor: const Color(0xFFDDF3E6),
                     label: Text(
                       menu.status == 'CUSTOMER_CONFIRMED'
-                          ? 'Confirmed'
-                          : 'Automatically finalized',
+                          ? context.customerCopy('Confirmed')
+                          : context.customerCopy('Automatically finalized'),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text('${menu.selected.length} dishes'),
+                  Text(
+                    lookupAppLocalizations(
+                      Localizations.localeOf(context),
+                    ).deliveriesAllConfirmed(menu.selected.length),
+                  ),
                 ],
               ),
               if (!fullSelection)
@@ -485,24 +546,29 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
                       _update(() => _showConfirmed = !_showConfirmed),
                   child: Text(
                     _showConfirmed
-                        ? 'Hide confirmed meals'
-                        : 'View confirmed meals',
+                        ? context.customerCopy('Hide confirmed meals')
+                        : context.customerCopy('View confirmed meals'),
                   ),
                 ),
               if (fullSelection || _showConfirmed)
                 for (final item in menu.selected) _CompactMealRow(item: item),
             ] else ...[
-              if (menu.canConfirm) const Text('Selection pending'),
+              if (menu.canConfirm)
+                Text(context.customerCopy('Selection pending')),
               if (menu.dayId != null) ...[
                 Text(
-                  'Meals: ${draft.mealIds.length}/${menu.mealCount} selected',
+                  '${context.customerCopy('Meals')}: ${draft.mealIds.length}/${menu.mealCount} ${context.customerCopy('selected')}',
                 ),
                 Text(
-                  'Snacks: ${draft.snackIds.length}/${menu.snackCount} selected',
+                  '${context.customerCopy('Snacks')}: ${draft.snackIds.length}/${menu.snackCount} ${context.customerCopy('selected')}',
                 ),
               ],
               if (menu.canConfirm && !_expired)
-                const Text('Selection closes today at 9:00 PM Qatar time.')
+                Text(
+                  context.customerCopy(
+                    'Selection closes today at 9:00 PM Qatar time.',
+                  ),
+                )
               else
                 Text(
                   menu.emptyReason ?? menu.reviewReason ?? menu.statusMessage,
@@ -516,13 +582,13 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
                           (menu.meals.isNotEmpty || menu.snacks.isNotEmpty)
                       ? _openSelection
                       : null,
-                  child: const Text('Choose your meals'),
+                  child: Text(context.customerCopy('Choose your meals')),
                 ),
               if (fullSelection) ...[
                 if (!menu.locked &&
                     (menu.meals.isNotEmpty || menu.snacks.isNotEmpty)) ...[
-                  _group('Meals', menu.meals, draft),
-                  _group('Snacks', menu.snacks, draft),
+                  _group(context.customerCopy('Meals'), menu.meals, draft),
+                  _group(context.customerCopy('Snacks'), menu.snacks, draft),
                   FilledButton(
                     key: const ValueKey('confirmTomorrowMeals'),
                     onPressed: _editable && draft.complete ? _confirm : null,
@@ -532,7 +598,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Confirm My Meals'),
+                        : Text(context.customerCopy('Confirm My Meals')),
                   ),
                 ] else
                   for (final item in menu.selected) _CompactMealRow(item: item),
@@ -541,18 +607,18 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
             if (!menu.canConfirm && !menu.finalized && _error == null)
               TextButton(
                 onPressed: _submitting ? null : () => _load(),
-                child: const Text('Refresh menu'),
+                child: Text(context.customerCopy('Refresh menu')),
               ),
           ],
           if (_error != null) ...[
             const SizedBox(height: 8),
             Text(
-              _error!,
+              context.customerCopy(_error!),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
             TextButton(
               onPressed: _loading || _submitting ? null : () => _load(),
-              child: const Text('Refresh menu'),
+              child: Text(context.customerCopy('Refresh menu')),
             ),
           ],
         ],
@@ -587,8 +653,8 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
                   children: [
                     Text(
                       item.category == 'meal'
-                          ? 'Replace a meal'
-                          : 'Replace a snack',
+                          ? context.customerCopy('Replace a meal')
+                          : context.customerCopy('Replace a snack'),
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 12),
@@ -630,8 +696,10 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
       ),
       const SizedBox(height: 8),
       if (items.isEmpty)
-        const Text(
-          'No eligible dishes are currently configured. Our team will review this delivery.',
+        Text(
+          context.customerCopy(
+            'No eligible dishes are currently configured. Our team will review this delivery.',
+          ),
         ),
       for (final item in items)
         _MealCard(
@@ -682,9 +750,16 @@ class _CompactMealRow extends StatelessWidget {
                 ),
               ),
               Text(
-                '${item.category == 'snack' ? lookupAppLocalizations(Localizations.localeOf(context)).deliveriesSnack : lookupAppLocalizations(Localizations.localeOf(context)).deliveriesMeal}${item.calories == null ? '' : ' · ${item.calories!.round()} kcal'}',
+                item.category == 'snack'
+                    ? lookupAppLocalizations(
+                        Localizations.localeOf(context),
+                      ).deliveriesSnack
+                    : lookupAppLocalizations(
+                        Localizations.localeOf(context),
+                      ).deliveriesMeal,
                 style: const TextStyle(fontSize: 12),
               ),
+              MealNutritionDetails(meal: item),
             ],
           ),
         ),
@@ -760,14 +835,7 @@ class _MealCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 12),
                         ),
-                      if (item.calories != null)
-                        Text(
-                          '${item.calories!.round()} kcal',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.emeraldGreen,
-                          ),
-                        ),
+                      MealNutritionDetails(meal: item),
                     ],
                   ),
                 ),

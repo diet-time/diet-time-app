@@ -1,7 +1,9 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_start_date_screen.dart';
 import 'dart:async';
 
 import 'package:diet_time/app/router/app_router.dart';
+import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/checkout/domain/checkout_models.dart';
@@ -70,8 +72,8 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
               context.canPop() ? context.pop() : context.go(AppRoutes.plans),
           icon: const Icon(Icons.arrow_back_rounded),
         ),
-        title: const Text(
-          'Your Plan Details',
+        title: Text(
+          context.customerCopy('Your Plan Details'),
           style: TextStyle(
             color: AppColors.darkGreen,
             fontWeight: FontWeight.w900,
@@ -99,19 +101,23 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                       if (!checkout.isDeliveryEnabled)
-                        const Text(
-                          'This package is available for takeaway only.',
+                        Text(
+                          context.customerCopy(
+                            'This package is available for takeaway only.',
+                          ),
                         )
                       else
                         SegmentedButton<String>(
-                          segments: const [
+                          segments: [
                             ButtonSegment(
                               value: 'TAKEAWAY',
-                              label: Text('Takeaway'),
+                              label: Text(context.customerCopy('Takeaway')),
                             ),
                             ButtonSegment(
                               value: 'HOME_DELIVERY',
-                              label: Text('Home Delivery'),
+                              label: Text(
+                                context.customerCopy('Home Delivery'),
+                              ),
                             ),
                           ],
                           selected: {
@@ -125,8 +131,8 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                         ),
                       if (checkout.isTakeaway) ...[
                         const SizedBox(height: 12),
-                        const Text(
-                          'COLLECTION BRANCH',
+                        Text(
+                          context.customerCopy('COLLECTION BRANCH'),
                           style: TextStyle(
                             color: AppColors.darkGreen,
                             fontWeight: FontWeight.w800,
@@ -144,8 +150,10 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                         if (!checkout.isLoadingBranches &&
                             checkout.branchError == null &&
                             checkout.branches.isEmpty)
-                          const Text(
-                            'No takeaway branches are currently available.',
+                          Text(
+                            context.customerCopy(
+                              'No takeaway branches are currently available.',
+                            ),
                           ),
                         for (final branch in checkout.branches)
                           Padding(
@@ -194,8 +202,8 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                           ),
                       ],
                       if (!checkout.isTakeaway) ...[
-                        const Text(
-                          'DELIVERY ADDRESS & TIME SLOT',
+                        Text(
+                          context.customerCopy('DELIVERY ADDRESS & TIME SLOT'),
                           style: TextStyle(
                             color: AppColors.darkGreen,
                             fontSize: 12,
@@ -220,10 +228,12 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                             Icons.calendar_month_outlined,
                             color: AppColors.emeraldGreen,
                           ),
-                          title: const Text('Start Date'),
+                          title: Text(context.customerCopy('Start Date')),
                           subtitle: Text(
                             checkout.schedule == null
-                                ? 'Select your service dates'
+                                ? context.customerCopy(
+                                    'Select your service dates',
+                                  )
                                 : '${DateFormat('dd MMM yyyy').format(checkout.schedule!.startDate)} – ${DateFormat('dd MMM yyyy').format(checkout.schedule!.endDate)}\n${checkout.schedule!.serviceDates.length} service days',
                           ),
                           trailing: const Icon(Icons.expand_more),
@@ -258,8 +268,8 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Order Total',
+                            Text(
+                              context.customerCopy('Order Total'),
                               style: TextStyle(
                                 color: AppColors.darkGreen,
                                 fontSize: 13,
@@ -288,17 +298,49 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                         _InlineMessage(
                           message: message,
                           onRetry:
-                              checkout.mealPlanPriceId?.trim().isNotEmpty !=
-                                      true &&
+                              checkout.configurationErrorCode != null &&
                                   !checkout.isResolvingOrderOptions
                               ? () => ref
                                     .read(checkoutControllerProvider.notifier)
                                     .prepareForOrder(
                                       language: Localizations.localeOf(
                                         context,
-                                      ).toLanguageTag(),
+                                      ).languageCode,
                                     )
                               : null,
+                          onReview:
+                              checkout.configurationErrorCode == null ||
+                                  checkout.configurationErrorCode ==
+                                      'availability_check_failed'
+                              ? null
+                              : () {
+                                  final language = Localizations.localeOf(
+                                    context,
+                                  ).languageCode;
+                                  if ([
+                                    'plan_not_found',
+                                    'plan_inactive',
+                                    'plan_not_published',
+                                    'plan_not_effective',
+                                    'plan_version_changed',
+                                    'template_not_found',
+                                    'template_unavailable',
+                                  ].contains(checkout.configurationErrorCode)) {
+                                    ref.invalidate(mealPlansProvider(language));
+                                    context.push(AppRoutes.plans);
+                                  } else {
+                                    ref.invalidate(
+                                      mealPlanConfigurationsProvider((
+                                        plan: selection.mealPlan,
+                                        language: language,
+                                      )),
+                                    );
+                                    context.push(
+                                      AppRoutes.planDetails,
+                                      extra: selection.mealPlan,
+                                    );
+                                  }
+                                },
                         ),
                       ],
                     ],
@@ -317,17 +359,18 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                   constraints: const BoxConstraints(maxWidth: 680),
                   child: AppButton(
                     key: const ValueKey('placeOrder'),
-                    label: 'PLACE ORDER',
+                    label: context.customerCopy('PLACE ORDER'),
                     loadingLabel: checkout.isPlacingOrder
-                        ? 'PLACING ORDER...'
-                        : 'PREPARING ORDER...',
+                        ? context.customerCopy('PLACING ORDER...')
+                        : context.customerCopy('PREPARING ORDER...'),
                     isLoading:
                         checkout.isPlacingOrder ||
                         checkout.isResolvingOrderOptions,
                     backgroundColor: AppColors.darkGreen,
                     onPressed:
                         checkout.isPlacingOrder ||
-                            checkout.isResolvingOrderOptions
+                            checkout.isResolvingOrderOptions ||
+                            checkout.configurationErrorCode != null
                         ? null
                         : _placeOrder,
                   ),
@@ -440,12 +483,14 @@ class _DeliverySelectionCard extends StatelessWidget {
                   children: [
                     const _RoundIcon(icon: Icons.location_on_outlined),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'No delivery address selected',
+                            context.customerCopy(
+                              'No delivery address selected',
+                            ),
                             style: TextStyle(
                               color: AppColors.darkGreen,
                               fontWeight: FontWeight.w800,
@@ -453,7 +498,7 @@ class _DeliverySelectionCard extends StatelessWidget {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            'Add Delivery Address',
+                            context.customerCopy('Add Delivery Address'),
                             style: TextStyle(
                               color: AppColors.emeraldGreen,
                               fontSize: 12,
@@ -483,8 +528,8 @@ class _DeliverySelectionCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const Text(
-                          'Change',
+                        Text(
+                          context.customerCopy('Change'),
                           style: TextStyle(
                             color: AppColors.emeraldGreen,
                             fontWeight: FontWeight.w800,
@@ -523,8 +568,10 @@ class _DeliverySelectionCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: slot == null
-                              ? const Text(
-                                  'Select a delivery time slot',
+                              ? Text(
+                                  context.customerCopy(
+                                    'Select a delivery time slot',
+                                  ),
                                   style: TextStyle(
                                     color: AppColors.emeraldGreen,
                                     fontWeight: FontWeight.w800,
@@ -578,7 +625,8 @@ class _RoundIcon extends StatelessWidget {
 }
 
 class _InlineMessage extends StatelessWidget {
-  const _InlineMessage({required this.message, this.onRetry});
+  const _InlineMessage({required this.message, this.onRetry, this.onReview});
+  final VoidCallback? onReview;
   final String message;
   final VoidCallback? onRetry;
   @override
@@ -588,20 +636,32 @@ class _InlineMessage extends StatelessWidget {
       color: const Color(0xFFFFECE8),
       borderRadius: BorderRadius.circular(12),
     ),
-    child: Row(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: Text(
-            message,
-            style: const TextStyle(
-              color: Color(0xFF9B351F),
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
+        Text(
+          context.customerCopy(message),
+          style: const TextStyle(
+            color: Color(0xFF9B351F),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
           ),
         ),
-        if (onRetry case final onRetry?)
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
+        Wrap(
+          alignment: WrapAlignment.end,
+          children: [
+            if (onReview != null)
+              TextButton(
+                onPressed: onReview,
+                child: Text(context.customerCopy('Review package')),
+              ),
+            if (onRetry case final onRetry?)
+              TextButton(
+                onPressed: onRetry,
+                child: Text(context.customerCopy('Retry')),
+              ),
+          ],
+        ),
       ],
     ),
   );
@@ -625,8 +685,10 @@ class _MissingCheckout extends StatelessWidget {
               color: AppColors.emeraldGreen,
             ),
             const SizedBox(height: 14),
-            const Text(
-              'Choose a meal plan before reviewing your summary.',
+            Text(
+              context.customerCopy(
+                'Choose a meal plan before reviewing your summary.',
+              ),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.darkGreen,
@@ -634,7 +696,10 @@ class _MissingCheckout extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 18),
-            AppButton(label: 'Browse Plans', onPressed: onBack),
+            AppButton(
+              label: context.customerCopy('Browse Plans'),
+              onPressed: onBack,
+            ),
           ],
         ),
       ),

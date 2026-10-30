@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
 import 'package:diet_time/features/plans/presentation/package_discount_details.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
@@ -214,7 +215,9 @@ class SubscriptionPricingSummary extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            arabic ? 'اشتراكك' : 'Your subscription',
+                            arabic
+                                ? 'اشتراكك'
+                                : context.customerCopy('Your subscription'),
                             style: const TextStyle(
                               color: AppColors.darkGreen,
                               fontSize: 13,
@@ -278,7 +281,9 @@ class SubscriptionPricingSummary extends StatelessWidget {
                     ),
                     child: AppButton(
                       key: const ValueKey('detailsContinue'),
-                      label: arabic ? 'متابعة ←' : 'Continue →',
+                      label: arabic
+                          ? 'متابعة ←'
+                          : context.customerCopy('Continue →'),
                       backgroundColor: Colors.transparent,
                       onPressed: onContinue,
                     ),

@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
@@ -70,7 +71,7 @@ class _DisplayNamePanelState extends State<DisplayNamePanel> {
                       Text(
                         isArabic
                             ? 'ماذا تحب أن نناديك؟'
-                            : 'What should we call you?',
+                            : context.customerCopy('What should we call you?'),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: AppColors.darkGreen,
@@ -94,14 +95,18 @@ class _DisplayNamePanelState extends State<DisplayNamePanel> {
                         },
                         onSubmitted: (_) => _submit(),
                         decoration: InputDecoration(
-                          hintText: isArabic ? 'اسمك' : 'Your name',
+                          hintText: isArabic
+                              ? 'اسمك'
+                              : context.customerCopy('Your name'),
                           prefixIcon: const Icon(Icons.person_outline_rounded),
                         ),
                       ),
                       const SizedBox(height: 18),
                       AppButton(
                         key: const ValueKey('displayNameContinue'),
-                        label: isArabic ? 'متابعة' : 'Continue',
+                        label: isArabic
+                            ? 'متابعة'
+                            : context.customerCopy('Continue'),
                         onPressed: _canContinue ? _submit : null,
                       ),
                     ],

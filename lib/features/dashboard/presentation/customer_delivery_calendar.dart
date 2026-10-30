@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/dashboard/presentation/daily_meals_panel.dart';
 import 'package:diet_time/features/dashboard/presentation/order_details_screen.dart';
@@ -33,7 +34,9 @@ class CustomerDeliveryCalendar extends ConsumerWidget {
     }
     if (failed) {
       return MealMenuMessage(
-        message: 'We couldn’t load all your delivery orders.',
+        message: context.customerCopy(
+          'We couldn’t load all your delivery orders.',
+        ),
         onRetry: () {
           for (final summary in orders) {
             ref.invalidate(orderDetailsProvider(summary.id));

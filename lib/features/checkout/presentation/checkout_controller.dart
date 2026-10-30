@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:math';
 
 import 'package:diet_time/core/network/api_client.dart';
@@ -17,6 +18,7 @@ final checkoutControllerProvider =
     NotifierProvider<CheckoutController, CheckoutState>(CheckoutController.new);
 
 class CheckoutController extends Notifier<CheckoutState> {
+  int _configurationEpoch = 0;
   @override
   CheckoutState build() => const CheckoutState();
 
@@ -62,7 +64,10 @@ class CheckoutController extends Notifier<CheckoutState> {
     }
   }
 
-  void clear() => state = const CheckoutState();
+  void clear() {
+    _configurationEpoch++;
+    state = const CheckoutState();
+  }
 
   void useCustomerProfile(String? profileId) {
     if (state.customerProfileId == profileId) return;
@@ -78,15 +83,21 @@ class CheckoutController extends Notifier<CheckoutState> {
   }
 
   void selectPackage(MealPlanPurchaseSelection selection) {
+    if (state.isPlacingOrder) return;
+    _configurationEpoch++;
     final profile = ref.read(personalizationControllerProvider);
     if (ref.read(otpAuthControllerProvider).isAuthenticated &&
         profile.isCompleted) {
       useCustomerProfile(profile.profileId);
     }
     final samePrice =
-        state.mealPlanPriceId == selection.pricingOption.mealPlanPriceId;
+        state.mealPlanPriceId == selection.pricingOption.mealPlanPriceId &&
+        state.mealPlanTemplateId == selection.mealPlan.id &&
+        state.selection?.mealCombination.id == selection.mealCombination.id;
     state = state.copyWith(
       selection: selection,
+      configurationErrorCode: null,
+      isResolvingOrderOptions: false,
       schedule: samePrice || state.schedule == null
           ? state.schedule
           : calculateMealPlanServiceSchedule(
@@ -105,6 +116,7 @@ class CheckoutController extends Notifier<CheckoutState> {
   }
 
   void beginNewOrder() {
+    _configurationEpoch++;
     state = CheckoutState(
       customerProfileId: state.customerProfileId,
       addresses: state.addresses,
@@ -136,67 +148,122 @@ class CheckoutController extends Notifier<CheckoutState> {
   Future<void> prepareForOrder({required String language}) async {
     if (state.isResolvingOrderOptions ||
         state.selection == null ||
-        state.mealPlanPriceId?.trim().isNotEmpty == true) {
+        state.isPlacingOrder) {
       return;
     }
-    final snapshot = state;
-    final selection = snapshot.selection!;
-    state = state.copyWith(isResolvingOrderOptions: true, placementError: null);
+    final selection = state.selection!;
+    final epoch = ++_configurationEpoch;
+    state = state.copyWith(
+      isResolvingOrderOptions: true,
+      placementError: null,
+      configurationErrorCode: null,
+    );
+    void trace(String event, {String? code, int? status}) {
+      if (kDebugMode) {
+        debugPrint(
+          '[CheckoutAvailability] $event planId=${selection.mealPlan.id} packageId=${selection.mealCombination.id} priceId=${selection.pricingOption.mealPlanPriceId} durationCode=${selection.pricingOption.packageCode} durationDays=${selection.serviceDays} status=$status code=$code',
+        );
+      }
+    }
+
+    trace('checking');
     try {
-      final configurations = await ref
-          .read(mealPlanRepositoryProvider)
-          .getPurchaseOptions(
-            mealPlanCode: selection.mealPlan.code,
-            language: language,
-          );
-      final matchingConfigurations = configurations.where(
+      final repository = ref.read(mealPlanRepositoryProvider);
+      final configurations = selection.pricingOption.mealPlanPriceId.isNotEmpty
+          ? await repository.getMealPlanConfigurations(
+              mealPlanTemplateId: selection.mealPlan.id,
+              language: language,
+            )
+          : await repository.getPurchaseOptions(
+              mealPlanCode: selection.mealPlan.code,
+              language: language,
+              expectedTemplateId: selection.mealPlan.id,
+            );
+      if (epoch != _configurationEpoch ||
+          !identical(state.selection, selection)) {
+        return;
+      }
+      final matching = configurations.where(
         (item) => item.id == selection.mealCombination.id,
       );
-      if (matchingConfigurations.isEmpty) {
+      if (matching.isEmpty) {
         throw const _CheckoutException(
-          'The selected meal configuration is no longer available.',
+          'The selected meal package is unavailable. Please review your package.',
+          code: 'package_not_available',
         );
       }
-      final configuration = matchingConfigurations.first;
-      final selectedPackage = selection.pricingOption;
-      final matchingPackages = configuration.packages.where(
-        (item) =>
-            item.serviceDays == selectedPackage.serviceDays &&
-            item.currencyCode == selectedPackage.currencyCode,
+      final configuration = matching.first;
+      final oldPackage = selection.pricingOption;
+      final packages = configuration.packages.where(
+        (item) => oldPackage.mealPlanPriceId.isNotEmpty
+            ? item.mealPlanPriceId == oldPackage.mealPlanPriceId
+            : item.serviceDays == oldPackage.serviceDays &&
+                  item.currencyCode == oldPackage.currencyCode &&
+                  (oldPackage.packageCode == null ||
+                      item.packageCode == oldPackage.packageCode),
       );
-      if (matchingPackages.isEmpty) {
+      if (packages.isEmpty) {
         throw const _CheckoutException(
-          'The selected plan duration is no longer available.',
+          'Pricing is unavailable for this duration. Please review your package.',
+          code: 'pricing_not_available',
         );
       }
-      final authoritativePackage = matchingPackages.first;
-      final authoritativeConfiguration = MealPlanConfiguration(
-        id: configuration.id,
-        mealCount: configuration.mealCount,
-        snackCount: configuration.snackCount,
-        name: configuration.name,
-        description: configuration.description,
-        packages: configuration.packages,
-        selectedMeals: selection.mealCombination.selectedMeals,
-      );
+      final price = packages.first;
+      if (price.mealPlanTemplateId != null &&
+              price.mealPlanTemplateId != selection.mealPlan.id ||
+          price.packageOptionId != null &&
+              price.packageOptionId != configuration.id) {
+        throw const _CheckoutException(
+          'The selected plan and pricing do not match. Please review your package.',
+        );
+      }
       state = state.copyWith(
         selection: MealPlanPurchaseSelection(
           mealPlan: selection.mealPlan,
-          mealCombination: authoritativeConfiguration,
-          pricingOption: authoritativePackage,
+          mealCombination: MealPlanConfiguration(
+            id: configuration.id,
+            mealCount: configuration.mealCount,
+            snackCount: configuration.snackCount,
+            name: configuration.name,
+            description: configuration.description,
+            packages: configuration.packages,
+            selectedMeals: configuration.selectedMeals.isEmpty
+                ? selection.mealCombination.selectedMeals
+                : configuration.selectedMeals,
+          ),
+          pricingOption: price,
           deliveryDaysPerWeek: selection.deliveryDaysPerWeek,
           selectedWeekdays: selection.selectedWeekdays,
         ),
         isResolvingOrderOptions: false,
         placementError: null,
-        idempotencyKey: null,
+        configurationErrorCode: null,
       );
+      trace('validated');
     } catch (error) {
+      if (epoch != _configurationEpoch ||
+          !identical(state.selection, selection)) {
+        return;
+      }
+      final code = error is _CheckoutException
+          ? error.code
+          : error is ApiException &&
+                _configurationFailures.contains(error.code?.toLowerCase())
+          ? error.code!.toLowerCase()
+          : error is ApiException && error.failure == ApiFailure.notFound
+          ? 'plan_not_found'
+          : 'availability_check_failed';
       state = state.copyWith(
         isResolvingOrderOptions: false,
+        configurationErrorCode: code,
         placementError: error is _CheckoutException
             ? error.message
-            : 'We could not verify the selected plan. Please try again.',
+            : _configurationMessage(code),
+      );
+      trace(
+        'rejected',
+        code: code,
+        status: error is ApiException ? error.statusCode : null,
       );
     }
   }
@@ -487,6 +554,11 @@ class CheckoutController extends Notifier<CheckoutState> {
       state = state.copyWith(
         isPlacingOrder: false,
         placementError: _orderMessage(error),
+        configurationErrorCode:
+            error is ApiException &&
+                _configurationFailures.contains(error.code?.toLowerCase())
+            ? error.code!.toLowerCase()
+            : state.configurationErrorCode,
       );
       return null;
     }
@@ -521,6 +593,7 @@ class CheckoutController extends Notifier<CheckoutState> {
         (configuration) => configuration.id == selection.mealCombination.id,
       );
       if (matchingConfigurations.isEmpty) return;
+      if (!identical(state.selection, snapshot.selection)) return;
       final configuration = matchingConfigurations.first;
       final matchingPackages = configuration.packages.where(
         (package) =>
@@ -560,15 +633,19 @@ class CheckoutController extends Notifier<CheckoutState> {
         error.failure == ApiFailure.timeout) {
       return 'Please check your connection and try again.';
     }
+    if (code != null && _configurationFailures.contains(code)) {
+      return _configurationMessage(code);
+    }
     if (error.failure == ApiFailure.conflict) {
-      if (detail.contains('price') &&
-          (detail.contains('change') || detail.contains('stale'))) {
+      if (code == 'price_changed') {
         return 'The plan price has changed. Please review the updated total before placing your order.';
       }
-      if (detail.contains('idempoten') || detail.contains('duplicate')) {
+      if (code == 'idempotency_conflict' ||
+          detail.contains('idempoten') ||
+          detail.contains('duplicate')) {
         return 'This order is already being processed. Please try again.';
       }
-      return 'The selected plan is no longer available. Please choose another plan.';
+      return 'Your order could not be saved. Please retry or contact Diet Time.';
     }
     if (error.failure == ApiFailure.notFound) {
       if (code == 'customer_not_found') {
@@ -580,7 +657,7 @@ class CheckoutController extends Notifier<CheckoutState> {
       if (code == 'delivery_time_slot_not_found') {
         return 'The selected delivery time is no longer available.';
       }
-      if (code == 'template_not_found' || code == 'price_not_found') {
+      if (code == 'template_not_found') {
         return 'The selected plan is no longer available. Please choose another plan.';
       }
       return 'A selected checkout option is no longer available. Please review your order.';
@@ -607,6 +684,39 @@ class CheckoutController extends Notifier<CheckoutState> {
     if (error.message?.trim().isNotEmpty == true) return error.message!;
     return "We couldn't place your order. Please try again.";
   }
+
+  static const _configurationFailures = {
+    'plan_not_found',
+    'plan_inactive',
+    'plan_not_published',
+    'plan_not_effective',
+    'plan_version_changed',
+    'package_not_available',
+    'pricing_not_available',
+    'invalid_plan_configuration',
+    'template_not_found',
+    'template_unavailable',
+    'price_not_found',
+    'price_unavailable',
+  };
+
+  String _configurationMessage(String code) => switch (code) {
+    'plan_not_found' || 'template_not_found' =>
+      'This meal plan was not found. Please choose another plan.',
+    'plan_inactive' ||
+    'plan_not_published' ||
+    'plan_not_effective' ||
+    'plan_version_changed' ||
+    'template_unavailable' =>
+      'This meal plan is no longer available. Please choose another plan.',
+    'package_not_available' =>
+      'The selected meal package is unavailable. Please review your package.',
+    'pricing_not_available' || 'price_not_found' || 'price_unavailable' =>
+      'Pricing is unavailable for this duration. Please review your package.',
+    'invalid_plan_configuration' =>
+      'The selected plan and pricing do not match. Please review your package.',
+    _ => 'We could not verify this package. Check your connection and retry.',
+  };
 
   String _message(Object error, {required String fallback}) {
     if (error is _CheckoutException) return error.message;
@@ -639,6 +749,10 @@ String _uuidV4() {
 }
 
 class _CheckoutException implements Exception {
-  const _CheckoutException(this.message);
+  const _CheckoutException(
+    this.message, {
+    this.code = 'invalid_plan_configuration',
+  });
+  final String code;
   final String message;
 }

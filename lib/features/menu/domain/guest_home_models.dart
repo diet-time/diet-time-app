@@ -335,18 +335,18 @@ class GuestMealNutrition {
 
   factory GuestMealNutrition.fromJson(Map<String, dynamic> json) {
     return GuestMealNutrition(
-      calories: _decimal(json['calories']),
-      protein: _decimal(json['protein']),
-      carbs: _decimal(json['carbs']),
-      fat: _decimal(json['fat']),
+      calories: (json['calories'] as num?)?.toDouble(),
+      protein: (json['protein'] as num?)?.toDouble(),
+      carbs: (json['carbs'] as num?)?.toDouble(),
+      fat: (json['fat'] as num?)?.toDouble(),
       fiber: json['fiber'] == null ? null : _decimal(json['fiber']),
     );
   }
 
-  final double calories;
-  final double protein;
-  final double carbs;
-  final double fat;
+  final double? calories;
+  final double? protein;
+  final double? carbs;
+  final double? fat;
   final double? fiber;
 }
 
@@ -406,6 +406,7 @@ List<dynamic> _list(Object? value) => value is List<dynamic> ? value : const [];
 
 String? _string(Object? value) => value is String ? value : null;
 
-int _integer(Object? value, {int fallback = 0}) => value is num ? value.toInt() : fallback;
+int _integer(Object? value, {int fallback = 0}) =>
+    value is num ? value.toInt() : fallback;
 
 double _decimal(Object? value) => value is num ? value.toDouble() : 0;

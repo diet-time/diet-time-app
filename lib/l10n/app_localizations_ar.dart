@@ -950,4 +950,1307 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get otpResendTestUnavailable =>
       'إعادة الإرسال غير متاحة في وضع الاختبار';
+
+  @override
+  String get exploreMenu => 'استكشف القائمة';
+
+  @override
+  String get backToDashboard => 'العودة إلى لوحة التحكم';
+
+  @override
+  String get dailyNutritionTotal => 'إجمالي التغذية اليومي';
+
+  @override
+  String get nutritionUnavailable => 'المعلومات الغذائية غير متاحة';
+
+  @override
+  String get nutritionTotalsIncomplete =>
+      'لا يمكن حساب إجمالي القيم الغذائية غير المتاحة.';
+
+  @override
+  String get sugarLabel => 'السكر';
+
+  @override
+  String get saturatedFatLabel => 'الدهون المشبعة';
+
+  @override
+  String get transFatLabel => 'الدهون المتحولة';
+
+  @override
+  String get cholesterolLabel => 'الكوليسترول';
+
+  @override
+  String nutritionServing(String portion) {
+    return 'لكل حصة: $portion';
+  }
+
+  @override
+  String get customerUnableToSignIn => 'تعذر تسجيل الدخول';
+
+  @override
+  String get customerWeCouldNotLoadTakeawayBranchesPleaseTryAgain =>
+      'تعذر تحميل فروع الاستلام. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get customerChooseAFutureDeliveryStartDateTodayAndFriday =>
+      'اختر تاريخ بدء لاحقاً؛ اليوم والجمعة غير متاحين.';
+
+  @override
+  String get customerTheSelectedMealConfigurationIsNoLongerAvailable =>
+      'خيارات الوجبات المحددة لم تعد متاحة.';
+
+  @override
+  String get customerTheSelectedPlanDurationIsNoLongerAvailable =>
+      'مدة الباقة المحددة لم تعد متاحة.';
+
+  @override
+  String get customerWeCouldNotVerifyTheSelectedPlanPleaseTry =>
+      'تعذر التحقق من الباقة المحددة. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get customerDeliveryTimesCouldNotBeLoadedPleaseTryAgain =>
+      'تعذر تحميل أوقات التوصيل. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get customerWeCouldNotLoadYourCustomerProfilePleaseSign =>
+      'تعذر تحميل ملفك. يرجى تسجيل الدخول مرة أخرى.';
+
+  @override
+  String get customerSavedAddressesCouldNotBeLoadedPleaseTryAgain =>
+      'تعذر تحميل العناوين المحفوظة. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get customerYourCustomerProfileIsUnavailablePleaseSignInAgain =>
+      'ملفك غير متاح. يرجى تسجيل الدخول مرة أخرى.';
+
+  @override
+  String get customerSelectAnActiveDeliveryTimeSlotBeforeSaving =>
+      'اختر وقت توصيل متاحاً قبل الحفظ.';
+
+  @override
+  String get customerYourAddressCouldNotBeSavedPleaseTryAgain =>
+      'تعذر حفظ عنوانك. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get customerWeCouldntPlaceYourOrderPleaseTryAgain =>
+      'تعذر إرسال طلبك. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get customerPleaseCheckYourConnectionAndTryAgain =>
+      'يرجى التحقق من الاتصال والمحاولة مرة أخرى.';
+
+  @override
+  String get customerThePlanPriceHasChangedPleaseReviewTheUpdated =>
+      'تغير سعر الباقة. يرجى مراجعة الإجمالي المحدث قبل إرسال الطلب.';
+
+  @override
+  String get customerThisOrderIsAlreadyBeingProcessedPleaseTryAgain =>
+      'هذا الطلب قيد المعالجة بالفعل. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get customerTheSelectedPlanIsNoLongerAvailablePleaseChoose =>
+      'الباقة المحددة لم تعد متاحة. يرجى اختيار باقة أخرى.';
+
+  @override
+  String get customerTheSelectedDeliveryAddressIsNoLongerAvailable =>
+      'عنوان التوصيل المحدد لم يعد متاحاً.';
+
+  @override
+  String get customerTheSelectedDeliveryTimeIsNoLongerAvailable =>
+      'وقت التوصيل المحدد لم يعد متاحاً.';
+
+  @override
+  String get customerASelectedCheckoutOptionIsNoLongerAvailablePlease =>
+      'أحد الخيارات المحددة لم يعد متاحاً. يرجى مراجعة طلبك.';
+
+  @override
+  String get customerPleaseReviewYourSelectedMeals =>
+      'يرجى مراجعة الوجبات المحددة.';
+
+  @override
+  String get customerPleaseReviewYourSelectedServiceDays =>
+      'يرجى مراجعة أيام الخدمة المحددة.';
+
+  @override
+  String get customerPleaseSelectAnotherPlanStartDate =>
+      'يرجى اختيار تاريخ بدء آخر للباقة.';
+
+  @override
+  String get customerCouponCodesAreNotSupportedYetRemoveTheCoupon =>
+      'رموز الخصم غير مدعومة حالياً. احذف الرمز وحاول مرة أخرى.';
+
+  @override
+  String get customerYourOrderResponseCouldNotBeConfirmedPleaseCheck =>
+      'تعذر التحقق من نتيجة الطلب. يرجى مراجعة طلباتك قبل المحاولة مرة أخرى.';
+
+  @override
+  String get customerSomeAddressInformationWasNotAcceptedPleaseReviewIt =>
+      'لم يتم قبول بعض بيانات العنوان. يرجى مراجعتها.';
+
+  @override
+  String get customerYourSessionExpiredPleaseSignInAgain =>
+      'انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.';
+
+  @override
+  String get customerWeCouldNotLoadYourProfile => 'تعذر تحميل ملفك.';
+
+  @override
+  String get customerTRYAGAIN => 'حاول مرة أخرى';
+
+  @override
+  String get customerBrowsePlans => 'تصفح الباقات';
+
+  @override
+  String get customerDohaQatar => 'الدوحة، قطر';
+
+  @override
+  String get customerCustomerAddress => 'عنوان العميل';
+
+  @override
+  String get customerDeliveryAddress => 'عنوان التوصيل';
+
+  @override
+  String get customerChooseDeliveryAddress => 'اختر عنوان التوصيل';
+
+  @override
+  String get customerSelectWhereYouWouldLikeYourMealsDelivered =>
+      'حدد المكان الذي ترغب في توصيل وجباتك إليه.';
+
+  @override
+  String get customerLoadingSavedAddresses => 'جارٍ تحميل العناوين المحفوظة...';
+
+  @override
+  String get customerAddAnotherAddress => 'إضافة عنوان آخر';
+
+  @override
+  String get customerUseThisAddress => 'استخدام هذا العنوان';
+
+  @override
+  String get customerAddressDetails => 'تفاصيل العنوان';
+
+  @override
+  String get customerSavedAddresses => 'العناوين المحفوظة';
+
+  @override
+  String get customerSAVEASundefined => 'حفظ باسم *';
+
+  @override
+  String get customerBuildingNoundefined => 'رقم المبنى *';
+
+  @override
+  String get customerStreetundefined => 'الشارع *';
+
+  @override
+  String get customerUnitNumber => 'رقم الوحدة';
+
+  @override
+  String get customerZoneNoundefined => 'رقم المنطقة *';
+
+  @override
+  String get customerAreaundefined => 'المنطقة *';
+
+  @override
+  String get customerDirectionsToReach => 'إرشادات الوصول';
+
+  @override
+  String get customerCallMeWhenYouArrive => 'اتصل بي عند الوصول';
+
+  @override
+  String get customerSavingAddress => 'جارٍ حفظ العنوان...';
+
+  @override
+  String get customerSaveAddress => 'حفظ العنوان';
+
+  @override
+  String get customerPinnedLocationQatar => 'الموقع المحدد، قطر';
+
+  @override
+  String get customerSelectAnAddressTypeBeforeSaving =>
+      'اختر نوع العنوان قبل الحفظ.';
+
+  @override
+  String get customerCompleteAllRequiredAddressFields =>
+      'أكمل جميع حقول العنوان المطلوبة.';
+
+  @override
+  String get customerSelectADeliveryTimeSlotBeforeSaving =>
+      'اختر وقت التوصيل قبل الحفظ.';
+
+  @override
+  String get customerSelectADeliveryAddressOrAddANewOne =>
+      'اختر عنوان توصيل أو أضف عنواناً جديداً.';
+
+  @override
+  String get customerSelectADeliveryTimeSlot => 'اختر وقت التوصيل.';
+
+  @override
+  String get customerEnterAZoneOrAreaToSearch => 'أدخل منطقة للبحث.';
+
+  @override
+  String get customerNoMatchingLocationWasFound =>
+      'لم يتم العثور على موقع مطابق.';
+
+  @override
+  String get customerLocationSearchIsUnavailableTryAgainOrMoveThe =>
+      'البحث عن الموقع غير متاح. حاول مرة أخرى أو حرك العلامة.';
+
+  @override
+  String get customerTurnOnLocationServicesToContinue =>
+      'فعّل خدمات الموقع للمتابعة.';
+
+  @override
+  String get customerLocationAccessIsBlockedEnableItInDeviceSettings =>
+      'الوصول إلى الموقع محظور. فعّله من إعدادات الجهاز.';
+
+  @override
+  String get customerLocationPermissionIsNeededToFindYourCurrentAddress =>
+      'يلزم إذن الموقع لتحديد عنوانك الحالي.';
+
+  @override
+  String get customerFindingYourCurrentLocation => 'جارٍ تحديد موقعك الحالي...';
+
+  @override
+  String get customerCouldNotDetermineYourLocationTryAgainOrMove =>
+      'تعذر تحديد موقعك. حاول مرة أخرى أو حرك العلامة.';
+
+  @override
+  String get customerPinnedLocation => 'الموقع المحدد';
+
+  @override
+  String get customerSearchAZone => 'ابحث عن منطقة';
+
+  @override
+  String get customerCurrentAddress => 'العنوان الحالي';
+
+  @override
+  String get customerGoogleMapsIsNotConfiguredForThisIOSBuild =>
+      'خرائط Google غير مهيأة في هذا الإصدار لنظام iOS.';
+
+  @override
+  String get customerAddTheIOSAPIKeyThenCleanAndRebuild =>
+      'أضف مفتاح iOS ثم أعد بناء التطبيق.';
+
+  @override
+  String get customerDELIVERYTIMEundefined => 'وقت التوصيل *';
+
+  @override
+  String get customerLoadingDeliveryTimes => 'جارٍ تحميل أوقات التوصيل...';
+
+  @override
+  String get customerNoDeliveryTimeSlotsAreCurrentlyAvailable =>
+      'لا توجد أوقات توصيل متاحة حالياً.';
+
+  @override
+  String get customerDEFAULT => 'الافتراضي';
+
+  @override
+  String get customerNoSavedAddressesYet => 'لا توجد عناوين محفوظة بعد';
+
+  @override
+  String get customerAddAnAddressForYourMealDeliveries =>
+      'أضف عنواناً لتوصيل وجباتك.';
+
+  @override
+  String get customerAddAddress => 'إضافة عنوان';
+
+  @override
+  String get customerOrderSubmitted => 'تم إرسال الطلب';
+
+  @override
+  String get customerOrderConfirmed => 'تم تأكيد الطلب!';
+
+  @override
+  String get customerYourOrderHasBeenReceivedAndIsAwaitingConfirmation =>
+      'استلمنا طلبك وهو بانتظار تأكيد دايت تايم. سنخطرك بعد مراجعته.';
+
+  @override
+  String get customerGOTODASHBOARD => 'الانتقال إلى لوحة التحكم';
+
+  @override
+  String get customerORDERNUMBER => 'رقم الطلب';
+
+  @override
+  String get customerPLAN => 'الباقة';
+
+  @override
+  String get customerPAYMENT => 'الدفع';
+
+  @override
+  String get customerPACKAGE => 'الاشتراك';
+
+  @override
+  String get customerFULFILLMENT => 'طريقة الاستلام';
+
+  @override
+  String get customerTakeaway => 'استلام من الفرع';
+
+  @override
+  String get customerPLANPERIOD => 'فترة الباقة';
+
+  @override
+  String get customerFIRSTCOLLECTION => 'أول استلام';
+
+  @override
+  String get customerFIRSTDELIVERY => 'أول توصيل';
+
+  @override
+  String get customerDELIVERYTO => 'التوصيل إلى';
+
+  @override
+  String get customerTOTAL => 'الإجمالي';
+
+  @override
+  String get customerSTATUS => 'الحالة';
+
+  @override
+  String get customerOrderConfirmationIsUnavailable => 'تأكيد الطلب غير متاح.';
+
+  @override
+  String get customerVerifyingYourSelectedPlan =>
+      'جارٍ التحقق من الباقة المحددة...';
+
+  @override
+  String get customerYourPlanDetails => 'تفاصيل باقتك';
+
+  @override
+  String get customerThisPackageIsAvailableForTakeawayOnly =>
+      'هذه الباقة متاحة للاستلام من الفرع فقط.';
+
+  @override
+  String get customerHomeDelivery => 'توصيل إلى المنزل';
+
+  @override
+  String get customerCOLLECTIONBRANCH => 'فرع الاستلام';
+
+  @override
+  String get customerNoTakeawayBranchesAreCurrentlyAvailable =>
+      'لا توجد فروع استلام متاحة حالياً.';
+
+  @override
+  String get customerDELIVERYADDRESSTIMESLOT => 'عنوان ووقت التوصيل';
+
+  @override
+  String get customerStartDate => 'تاريخ البدء';
+
+  @override
+  String get customerSelectYourServiceDates => 'اختر تواريخ الخدمة';
+
+  @override
+  String get customerOrderTotal => 'إجمالي الطلب';
+
+  @override
+  String get customerPLACEORDER => 'إرسال الطلب';
+
+  @override
+  String get customerPLACINGORDER => 'جارٍ إرسال الطلب...';
+
+  @override
+  String get customerPREPARINGORDER => 'جارٍ تجهيز الطلب...';
+
+  @override
+  String get customerNoDeliveryAddressSelected => 'لم يتم اختيار عنوان توصيل';
+
+  @override
+  String get customerAddDeliveryAddress => 'إضافة عنوان توصيل';
+
+  @override
+  String get customerChange => 'تغيير';
+
+  @override
+  String get customerSelectADeliveryTimeSlot2 => 'اختر وقت التوصيل';
+
+  @override
+  String get customerChooseAMealPlanBeforeReviewingYourSummary =>
+      'اختر باقة وجبات قبل مراجعة الملخص.';
+
+  @override
+  String get customerBrowsePlans2 => 'تصفح الباقات';
+
+  @override
+  String get customerWeCouldNotLoadYourDashboardPleaseTryAgain =>
+      'تعذر تحميل لوحة التحكم. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get customerWeCouldNotLoadYourOrdersPleaseTryAgain =>
+      'تعذر تحميل طلباتك. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get customerHOME => 'الرئيسية';
+
+  @override
+  String get customerORDERS => 'الطلبات';
+
+  @override
+  String get customerCALENDAR => 'التقويم';
+
+  @override
+  String get customerPROFILE => 'الملف الشخصي';
+
+  @override
+  String get customerProfileUpdatedSuccessfully => 'تم تحديث الملف بنجاح';
+
+  @override
+  String get customerUnableToLoadYourProfile => 'تعذر تحميل ملفك.';
+
+  @override
+  String get customerQuestionnaireUpdatedSuccessfully =>
+      'تم تحديث الاستبيان بنجاح';
+
+  @override
+  String get customerLogout => 'تسجيل الخروج';
+
+  @override
+  String get customerAreYouSureYouWantToLogout => 'هل تريد تسجيل الخروج؟';
+
+  @override
+  String get customerCancel => 'إلغاء';
+
+  @override
+  String get customerYourSessionHasExpiredPleaseSignInAgain =>
+      'انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.';
+
+  @override
+  String get customerSIGNIN => 'تسجيل الدخول';
+
+  @override
+  String get customerYourCustomerProfileCouldNotBeFound =>
+      'تعذر العثور على ملفك.';
+
+  @override
+  String get customerYOURACTIVEPLAN => 'باقتك الحالية';
+
+  @override
+  String get customerMYACTIVEPLANS => 'باقاتي الحالية';
+
+  @override
+  String get customerORDERANOTHERPLAN => 'طلب باقة أخرى';
+
+  @override
+  String get customerQUICKACTIONS => 'إجراءات سريعة';
+
+  @override
+  String get customerPREVIOUSORDERS => 'الطلبات السابقة';
+
+  @override
+  String get customerMYORDERS => 'طلباتي';
+
+  @override
+  String get customerVIEWALL => 'عرض الكل';
+
+  @override
+  String get customerNOACTIVEPLAN => 'لا توجد باقة نشطة';
+
+  @override
+  String get customerYouDontHaveAnActiveMealPlanRightNow =>
+      'ليس لديك باقة وجبات نشطة حالياً.';
+
+  @override
+  String get customerCHOOSEAPLAN => 'اختر باقة';
+
+  @override
+  String get customerScheduleReady => 'الجدول جاهز';
+
+  @override
+  String get customerCollectFromDietTime => 'استلم من دايت تايم';
+
+  @override
+  String get customerVIEWPLAN => 'عرض الباقة';
+
+  @override
+  String get customerDETAILS => 'التفاصيل';
+
+  @override
+  String get customerMyPlan => 'باقتي';
+
+  @override
+  String get customerOrders => 'الطلبات';
+
+  @override
+  String get customerNewPlan => 'باقة جديدة';
+
+  @override
+  String get customerSupport => 'الدعم';
+
+  @override
+  String get customerSupportWillBeAvailableSoon => 'سيتوفر الدعم قريباً.';
+
+  @override
+  String get customerDeliveryCalendar => 'تقويم التوصيل';
+
+  @override
+  String get customerNoActiveDeliveryCalendar => 'لا يوجد جدول توصيل نشط';
+
+  @override
+  String get customerYourDeliveryDatesWillAppearHereWhenAMeal =>
+      'ستظهر تواريخ التوصيل هنا عند تفعيل باقة الوجبات.';
+
+  @override
+  String get customerALL => 'الكل';
+
+  @override
+  String get customerMyOrders => 'طلباتي';
+
+  @override
+  String get customerAllYourMealOrdersInOnePlace =>
+      'جميع طلبات وجباتك في مكان واحد';
+
+  @override
+  String get customerAllOrders => 'جميع الطلبات';
+
+  @override
+  String get customerPendingConfirmation => 'بانتظار التأكيد';
+
+  @override
+  String get customerOnHold => 'معلق';
+
+  @override
+  String get customerRejected => 'مرفوض';
+
+  @override
+  String get customerPending => 'قيد الانتظار';
+
+  @override
+  String get customerCancelled => 'ملغى';
+
+  @override
+  String get customerNoOrdersFoundForThisStatus => 'لا توجد طلبات بهذه الحالة.';
+
+  @override
+  String get customerOrderPlaced => 'تم إرسال الطلب';
+
+  @override
+  String get customerViewDetailsundefined => 'عرض التفاصيل ←';
+
+  @override
+  String get customerGoodMorning => 'صباح الخير';
+
+  @override
+  String get customerGoodAfternoon => 'مساء الخير';
+
+  @override
+  String get customerGoodEvening => 'مساء الخير';
+
+  @override
+  String get customerYourMealPlanIsActive => 'باقة وجباتك نشطة';
+
+  @override
+  String get customerReadyWhenYouAre => 'نحن مستعدون عندما تكون جاهزاً';
+
+  @override
+  String get customerYourMealPlansAtAGlance => 'نظرة على باقات وجباتك';
+
+  @override
+  String get customerMon => 'الاثنين';
+
+  @override
+  String get customerTue => 'الثلاثاء';
+
+  @override
+  String get customerWed => 'الأربعاء';
+
+  @override
+  String get customerThu => 'الخميس';
+
+  @override
+  String get customerFri => 'الجمعة';
+
+  @override
+  String get customerSat => 'السبت';
+
+  @override
+  String get customerSun => 'الأحد';
+
+  @override
+  String get customerWeCouldntLoadAllYourDeliveryOrders =>
+      'تعذر تحميل جميع طلبات التوصيل.';
+
+  @override
+  String get customerUnableToUpdateProfilePleaseTryAgain =>
+      'تعذر تحديث الملف. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get customerProfile => 'الملف الشخصي';
+
+  @override
+  String get customerCustomerProfile => 'ملف العميل';
+
+  @override
+  String get customerViewOrUpdateYourPersonalInformation =>
+      'عرض بياناتك الشخصية أو تحديثها';
+
+  @override
+  String get customerQuestionnaire => 'الاستبيان';
+
+  @override
+  String get customerCaptureYourGoalsAndFoodPreferences =>
+      'أدخل أهدافك وتفضيلاتك الغذائية';
+
+  @override
+  String get customerAddOrEditYourDeliveryAddress =>
+      'أضف عنوان التوصيل أو عدله';
+
+  @override
+  String get customerPleaseSignInAgainToViewYourMeals =>
+      'يرجى تسجيل الدخول مرة أخرى لعرض وجباتك.';
+
+  @override
+  String get customerWeCouldntLoadYourMealsForThisDayPlease =>
+      'تعذر تحميل وجبات هذا اليوم. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get customerTheMenuForThisDateCouldNotBeConfirmed =>
+      'تعذر التحقق من قائمة هذا التاريخ.';
+
+  @override
+  String get customerWeveSelectedYourMealsForThisDayYouCan =>
+      'اخترنا وجباتك لهذا اليوم. يمكنك تغييرها قبل موعد إغلاق الاختيار.';
+
+  @override
+  String get customerTheSelectionDeadlineHasPassedYourMealsAreLocked =>
+      'انتهى وقت الاختيار. وجباتك مقفلة لتجهيزها في المطبخ.';
+
+  @override
+  String get customerYourMealsAreReadonlyForThisDay =>
+      'وجبات هذا اليوم متاحة للعرض فقط.';
+
+  @override
+  String get customerYourMealsForThisDay => 'وجباتك لهذا اليوم';
+
+  @override
+  String get customerYourMealsAreBeingReviewedByOurTeamPlease =>
+      'فريقنا يراجع وجباتك. يرجى العودة قريباً.';
+
+  @override
+  String get customerSelectedForYou => 'تم اختيارها لك';
+
+  @override
+  String get customerYourChoice => 'اختيارك';
+
+  @override
+  String get customerYourMealChangeHasBeenSaved => 'تم حفظ تغيير الوجبة.';
+
+  @override
+  String get customerTheSelectionDeadlineHasPassedCloseThisSheetTo =>
+      'انتهى وقت الاختيار. أغلق النافذة لعرض وجباتك المحفوظة.';
+
+  @override
+  String get customerYourChoicesOrSelectionDeadlineHaveChangedCloseThis =>
+      'تغيرت خياراتك أو موعد الإغلاق. أغلق النافذة وحدّث اليوم.';
+
+  @override
+  String get customerThatMealIsNoLongerAvailablePleaseChooseAnother =>
+      'هذه الوجبة لم تعد متاحة. اختر بديلاً أو حدّث اليوم.';
+
+  @override
+  String get customerWeCouldntSaveThisChangeYourSavedMealsAre =>
+      'تعذر حفظ التغيير. وجباتك المحفوظة لم تتغير. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get customerChangeMeal => 'تغيير الوجبة';
+
+  @override
+  String get customerClose => 'إغلاق';
+
+  @override
+  String get customerThereAreNoOtherEligibleDishesForThisSelection =>
+      'لا توجد أطباق بديلة متاحة لهذا الاختيار في هذا اليوم.';
+
+  @override
+  String get customerSelectedReplacement => 'البديل المحدد';
+
+  @override
+  String get customerAvailableForThisDay => 'متاح لهذا اليوم';
+
+  @override
+  String get customerSavingChanges => 'جارٍ حفظ التغييرات…';
+
+  @override
+  String get customerSaveChanges => 'حفظ التغييرات';
+
+  @override
+  String get customerChangeMeal2 => 'تغيير الوجبة';
+
+  @override
+  String get customerLoadingMealsForTheSelectedDay =>
+      'جارٍ تحميل وجبات اليوم المحدد';
+
+  @override
+  String get customerAutomaticallySelected => 'تم الاختيار تلقائياً';
+
+  @override
+  String get customerCustomized => 'مخصص';
+
+  @override
+  String get customerDelivered => 'تم التوصيل';
+
+  @override
+  String get customerOurTeamIsReviewingThisDay => 'فريقنا يراجع هذا اليوم';
+
+  @override
+  String get customerEditProfile => 'تعديل الملف';
+
+  @override
+  String get customerFullNameIsRequired => 'الاسم الكامل مطلوب.';
+
+  @override
+  String get customerFullNameMustBeAtLeast2Characters =>
+      'يجب أن يتكون الاسم الكامل من حرفين على الأقل.';
+
+  @override
+  String get customerFullNameMustBe150CharactersOrFewer =>
+      'يجب ألا يتجاوز الاسم الكامل 150 حرفاً.';
+
+  @override
+  String get customerFullName => 'الاسم الكامل';
+
+  @override
+  String get customerMobileNumber => 'رقم الهاتف';
+
+  @override
+  String get customerContactSupportOrUseChangeMobileNumberToUpdate =>
+      'تواصل مع الدعم أو استخدم تغيير رقم الهاتف لتحديث رقم الدخول.';
+
+  @override
+  String get customerDateOfBirth => 'تاريخ الميلاد';
+
+  @override
+  String get customerSaving => 'جارٍ الحفظ...';
+
+  @override
+  String get customerDiscardChanges => 'تجاهل التغييرات؟';
+
+  @override
+  String get customerYouHaveUnsavedChangesAreYouSureYouWant =>
+      'لديك تغييرات غير محفوظة. هل تريد المغادرة؟';
+
+  @override
+  String get customerKeepEditing => 'متابعة التعديل';
+
+  @override
+  String get customerDiscard => 'تجاهل';
+
+  @override
+  String get customerBack => 'رجوع';
+
+  @override
+  String get customerOrderDetails => 'تفاصيل الطلب';
+
+  @override
+  String get customerRequestCancellation => 'طلب الإلغاء';
+
+  @override
+  String get customerTheOrderCouldNotBeCancelledRefreshTheOrder =>
+      'تعذر إلغاء الطلب. حدّثه أو تواصل مع دايت تايم.';
+
+  @override
+  String get customerMEALSINCLUDED => 'الوجبات المشمولة';
+
+  @override
+  String get customerCOLLECTIONDAYS => 'أيام الاستلام';
+
+  @override
+  String get customerDELIVERYDAYS => 'أيام التوصيل';
+
+  @override
+  String get customerDELIVERYADDRESS => 'عنوان التوصيل';
+
+  @override
+  String get customerDELIVERYTIME => 'وقت التوصيل';
+
+  @override
+  String get customerPRICING => 'الأسعار';
+
+  @override
+  String get customerPAYMENTSTATUS => 'حالة الدفع';
+
+  @override
+  String get customerThankYouForYourOrder => 'شكراً لطلبك!';
+
+  @override
+  String get customerYourPlanAndDeliveryScheduleAreConfirmedAbove =>
+      'تفاصيل باقتك وجدول التوصيل المؤكدة أعلاه.';
+
+  @override
+  String get customerNeedHelp => 'هل تحتاج مساعدة؟';
+
+  @override
+  String get customerContactSupport => 'تواصل مع الدعم';
+
+  @override
+  String get customerWeCouldntLoadThisOrder => 'تعذر تحميل هذا الطلب.';
+
+  @override
+  String get customerCancelThisOrder => 'إلغاء هذا الطلب؟';
+
+  @override
+  String get customerReason => 'السبب';
+
+  @override
+  String get customerKeepOrder => 'الإبقاء على الطلب';
+
+  @override
+  String get customerConfirmCancellation => 'تأكيد الإلغاء';
+
+  @override
+  String get customerThisOrderCouldNotBeLoadedForYourAccount =>
+      'تعذر تحميل هذا الطلب لحسابك. حدّث لوحة التحكم أو تواصل مع فريقنا برقم الطلب.';
+
+  @override
+  String get customerWeCouldNotConnectToLoadYourMenuCheck =>
+      'تعذر الاتصال لتحميل القائمة. تحقق من الاتصال وحاول مرة أخرى.';
+
+  @override
+  String get customerTheMenuServiceCouldNotLoadYourOrdersDishes =>
+      'تعذر تحميل أطباق طلبك. يرجى التحديث أو التواصل مع فريقنا.';
+
+  @override
+  String get customerConfirmYourMeals => 'تأكيد وجباتك';
+
+  @override
+  String get customerYourSelectionsCannotBeChangedAfterConfirmation =>
+      'لا يمكن تغيير اختياراتك بعد التأكيد.';
+
+  @override
+  String get customerConfirm => 'تأكيد';
+
+  @override
+  String get customerThe900PMDeadlineHasPassedYourAutomaticMeals =>
+      'انتهى موعد الاختيار في التاسعة مساءً. جارٍ تثبيت وجباتك التلقائية.';
+
+  @override
+  String get customerYourMealsHaveAlreadyBeenFinalizedHereAreYour =>
+      'تم تثبيت وجباتك بالفعل. هذه أطباقك المحفوظة.';
+
+  @override
+  String get customerYourSubscriptionIsNoLongerActiveForThisDelivery =>
+      'اشتراكك لم يعد نشطاً لهذا التوصيل.';
+
+  @override
+  String get customerADishIsNoLongerAvailablePleaseReviewThe =>
+      'أحد الأطباق لم يعد متاحاً. يرجى مراجعة القائمة المحدثة.';
+
+  @override
+  String get customerWeCouldNotVerifyYourConfirmationPleaseCheckYour =>
+      'تعذر التحقق من التأكيد. تحقق من الاتصال وحدّث قبل المحاولة مرة أخرى.';
+
+  @override
+  String get customerUnableToConfirmYourMealsPleaseTryAgain =>
+      'تعذر تأكيد وجباتك. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get customerTomorrowsMenu => 'قائمة الغد';
+
+  @override
+  String get customerAutomaticallyFinalized => 'تم التثبيت تلقائياً';
+
+  @override
+  String get customerHideConfirmedMeals => 'إخفاء الوجبات المؤكدة';
+
+  @override
+  String get customerSelectionClosesTodayAt900PMQatarTime =>
+      'ينتهي الاختيار اليوم الساعة التاسعة مساءً بتوقيت قطر.';
+
+  @override
+  String get customerMeals => 'الوجبات';
+
+  @override
+  String get customerSnacks => 'الوجبات الخفيفة';
+
+  @override
+  String get customerConfirmMyMeals => 'تأكيد وجباتي';
+
+  @override
+  String get customerReplaceAMeal => 'استبدال وجبة';
+
+  @override
+  String get customerReplaceASnack => 'استبدال وجبة خفيفة';
+
+  @override
+  String get customerNoEligibleDishesAreCurrentlyConfiguredOurTeamWill =>
+      'لا توجد أطباق متاحة حالياً. سيراجع فريقنا هذا التوصيل.';
+
+  @override
+  String get customerUpcomingMeals => 'الوجبات القادمة';
+
+  @override
+  String get customerWeCouldntLoadAllYourDeliveryMeals =>
+      'تعذر تحميل جميع وجبات التوصيل.';
+
+  @override
+  String get customerMealsHaveNotBeenAssignedToThisDeliveryYet =>
+      'لم يتم تعيين وجبات لهذا التوصيل بعد. سيراجعه فريقنا.';
+
+  @override
+  String get customerMealsChosenForYou => 'وجبات مختارة لك';
+
+  @override
+  String get customerYourChoicesConfirmed => 'تم تأكيد اختياراتك';
+
+  @override
+  String get customerServiceDay => 'يوم خدمة';
+
+  @override
+  String get customerNonserviceDay => 'يوم بلا خدمة';
+
+  @override
+  String get customerNonservice => 'بلا خدمة';
+
+  @override
+  String get customerAutoselected => 'مختار تلقائياً';
+
+  @override
+  String get customerDelivery => 'التوصيل';
+
+  @override
+  String get customerScheduled => 'مجدول';
+
+  @override
+  String get customerNoUpcomingDeliveriesAreScheduled =>
+      'لا توجد توصيلات قادمة مجدولة.';
+
+  @override
+  String get customerServiceRunsSaturdayToThursdayFridayIsANonservice =>
+      'الخدمة من السبت إلى الخميس. الجمعة يوم بلا خدمة.';
+
+  @override
+  String get customerBeingPrepared => 'قيد التجهيز';
+
+  @override
+  String get customerOnTheWay => 'في الطريق';
+
+  @override
+  String get customerSkipped => 'تم التخطي';
+
+  @override
+  String get customerChooseYourLanguage => 'اختر لغتك';
+
+  @override
+  String get customerAll => 'الكل';
+
+  @override
+  String get customerYourDraftCouldNotBeSavedPleaseTryAgain =>
+      'تعذر حفظ المسودة. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get customerUnableToLoadYourSavedProfile => 'تعذر تحميل ملفك المحفوظ.';
+
+  @override
+  String get customerYourProfileChangedElsewhereWeReloadedItPleaseReview =>
+      'تم تعديل ملفك من مكان آخر. أعدنا تحميله؛ يرجى المراجعة والمحاولة مرة أخرى.';
+
+  @override
+  String get customerCouldNotSaveYourProgressCheckYourConnection =>
+      'تعذر حفظ تقدمك. تحقق من الاتصال.';
+
+  @override
+  String get customerSelect => 'اختر';
+
+  @override
+  String get customerNoFoodPreferences => 'لا توجد تفضيلات غذائية';
+
+  @override
+  String get customerSearchAllergies => 'ابحث عن الحساسية...';
+
+  @override
+  String get customerPersonalized => 'مخصص لك';
+
+  @override
+  String get customerBalanced => 'متوازن';
+
+  @override
+  String get customerMadeForYou => 'صُنع لك';
+
+  @override
+  String get customerUnableToLoadAllergens => 'تعذر تحميل مسببات الحساسية.';
+
+  @override
+  String get customerWellAlwaysHighlightMealsThatAreSafeForYou =>
+      'سنوضح دائماً الوجبات الآمنة لك.';
+
+  @override
+  String get customerNoAllergiesFound => 'لم يتم العثور على أنواع حساسية.';
+
+  @override
+  String get customerHeresAQuickOverviewOfYou => 'إليك نظرة سريعة على بياناتك.';
+
+  @override
+  String get customerGoal => 'الهدف';
+
+  @override
+  String get customerActivityLevel => 'مستوى النشاط';
+
+  @override
+  String get customerNotCalculatedYet => 'لم يُحسب بعد';
+
+  @override
+  String get customerProteinTarget => 'هدف البروتين';
+
+  @override
+  String get customerPersonalizeYourDietTimeExperience =>
+      'لتخصيص تجربتك مع دايت تايم.';
+
+  @override
+  String get customerYourGoals => 'أهدافك';
+
+  @override
+  String get customerYourProfile => 'ملفك';
+
+  @override
+  String get customerYourLifestyle => 'نمط حياتك';
+
+  @override
+  String get customerYourFoodPreferences => 'تفضيلاتك الغذائية';
+
+  @override
+  String get customerYourHealthAllergies => 'صحتك والحساسية';
+
+  @override
+  String get customerYoureAllSet => 'أنت جاهز!';
+
+  @override
+  String get customerYouCanNowExploreTheDietTimeMenu =>
+      'يمكنك الآن تصفح قائمة دايت تايم.';
+
+  @override
+  String get customerWeCouldntLoadYourProfile => 'تعذر تحميل ملفك.';
+
+  @override
+  String get customerWhatShouldWeCallYou => 'بماذا نناديك؟';
+
+  @override
+  String get customerYourName => 'اسمك';
+
+  @override
+  String get customerUnableToSaveYourNamePleaseTryAgain =>
+      'تعذر حفظ اسمك. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get customerYourAnswersAreKeptOnThisPhonePleaseRetry =>
+      'إجاباتك محفوظة على هذا الهاتف. يرجى محاولة الحفظ مجدداً.';
+
+  @override
+  String get customerPickHowManyMealsYoudLikeEachDay =>
+      'اختر عدد الوجبات التي ترغب بها يومياً.';
+
+  @override
+  String get customerSwipeToExploreMealPackagesundefined =>
+      'اسحب لاستعراض باقات الوجبات ←';
+
+  @override
+  String get customerChooseYourDuration => 'اختر المدة';
+
+  @override
+  String get customerCurrentlyUnavailable => 'غير متاح حالياً';
+
+  @override
+  String get customerSwipeToExplorePackageDurationsundefined =>
+      'اسحب لاستعراض مدد الباقات ←';
+
+  @override
+  String get customerPricingUnavailable => 'الأسعار غير متاحة';
+
+  @override
+  String get customerYourAllergenPreferencesAreSaved =>
+      'تم حفظ معلومات الحساسية';
+
+  @override
+  String
+  get customerWellUseYourRecordedAllergenInformationWhenShowingSuitable =>
+      'سنستخدم معلومات الحساسية المسجلة لعرض الوجبات المناسبة. يرجى مراجعة تفاصيل حساسية كل وجبة قبل الطلب.';
+
+  @override
+  String get customerPricingIsTemporarilyUnavailable =>
+      'الأسعار غير متاحة مؤقتاً.';
+
+  @override
+  String get customerNoPackagesAreCurrentlyAvailableForThisMealPlan =>
+      'لا توجد باقات متاحة حالياً لخطة الوجبات هذه.';
+
+  @override
+  String get customerTryAnotherPlanToFindYourDailyMealRoutine =>
+      'جرب باقة أخرى لتجد نظام وجباتك اليومي.';
+
+  @override
+  String get customerChooseAnotherPlan => 'اختر باقة أخرى';
+
+  @override
+  String get customerNoMealPlansAreAvailableYet =>
+      'لا توجد باقات وجبات متاحة بعد.';
+
+  @override
+  String get customerUnableToLoadMealPlans => 'تعذر تحميل باقات الوجبات.';
+
+  @override
+  String get customerChooseANewDeliveryStartDateDeliveryCanStart =>
+      'اختر تاريخ بدء جديداً. يمكن أن يبدأ التوصيل غداً أو لاحقاً.';
+
+  @override
+  String get customerChooseYourStartDate => 'اختر تاريخ البدء';
+
+  @override
+  String get customerTapToChooseAnAvailableServiceDay =>
+      'اضغط لاختيار يوم خدمة متاح.';
+
+  @override
+  String get customerTapToChooseADifferentServiceDay =>
+      'اضغط لاختيار يوم خدمة آخر.';
+
+  @override
+  String get customerContinueundefined => 'متابعة ←';
+
+  @override
+  String get customerStartDate2 => 'تاريخ البدء';
+
+  @override
+  String get customerSelectADate => 'اختر تاريخاً';
+
+  @override
+  String get customerEndDate => 'تاريخ الانتهاء';
+
+  @override
+  String get customerCalculatedAutomatically => 'يُحسب تلقائياً';
+
+  @override
+  String get customerSelectYourStartDate => 'اختر تاريخ البدء';
+
+  @override
+  String get customerSelectedStartDate => 'تاريخ البدء المحدد';
+
+  @override
+  String get customerPlanEndDate => 'تاريخ انتهاء الباقة';
+
+  @override
+  String get customerPlanServiceDay => 'يوم خدمة الباقة';
+
+  @override
+  String get customerFridayUnavailable => 'الجمعة غير متاح';
+
+  @override
+  String get customerSelectAStartDate => 'اختر تاريخ بدء';
+
+  @override
+  String get customerConfirmDates => 'تأكيد التواريخ';
+
+  @override
+  String get customerYourSubscription => 'اشتراكك';
+
+  @override
+  String get customerActive => 'نشط';
+
+  @override
+  String get customerCompleted => 'مكتمل';
+
+  @override
+  String get customerPaused => 'متوقف مؤقتاً';
+
+  @override
+  String get customerAwaitingActivation => 'بانتظار التفعيل';
+
+  @override
+  String get customerUnderReview => 'قيد المراجعة';
+
+  @override
+  String get customerUnpaid => 'غير مدفوع';
+
+  @override
+  String get customerPaymentPending => 'بانتظار الدفع';
+
+  @override
+  String get customerPaid => 'مدفوع';
+
+  @override
+  String get customerPaymentFailed => 'فشل الدفع';
+
+  @override
+  String get customerRefundUnderReview => 'استرداد المبلغ قيد المراجعة';
+
+  @override
+  String get customerRefunded => 'تم الاسترداد';
+
+  @override
+  String get customerPartiallyRefunded => 'تم استرداد جزء من المبلغ';
+
+  @override
+  String get customerPaymentUnderReview => 'الدفع قيد المراجعة';
+
+  @override
+  String get customerDietTimeIsReviewingYourOrder => 'دايت تايم تراجع طلبك.';
+
+  @override
+  String get customerDietTimeWillReviewYourOrderAndNotifyYou =>
+      'ستراجع دايت تايم طلبك وتخطرك بعد تأكيده.';
+
+  @override
+  String customerDaysPerWeek(int count) {
+    return '$count أيام في الأسبوع';
+  }
+
+  @override
+  String customerActivePlans(int count) {
+    return 'لديك $count باقات وجبات نشطة';
+  }
+
+  @override
+  String customerOrderReference(String reference) {
+    return 'يرجى ذكر رقم الطلب $reference.';
+  }
+
+  @override
+  String get customerSelectionDeadline => 'موعد إغلاق الاختيار';
+
+  @override
+  String get customerQatarTime => 'بتوقيت قطر';
+
+  @override
+  String get customerOrderStatus => 'حالة الطلب';
+
+  @override
+  String get customerSelected => 'محدد';
+
+  @override
+  String get customerYourOrderIsConfirmedAndAwaitingTheRequiredPayment =>
+      'طلبك مؤكد وبانتظار الدفع المطلوب.';
+
+  @override
+  String get addressHomeLabel => 'المنزل';
+
+  @override
+  String get addressApartmentLabel => 'الشقة';
+
+  @override
+  String get addressOfficeLabel => 'المكتب';
+
+  @override
+  String get addressOtherLabel => 'آخر';
+
+  @override
+  String get reviewPackage => 'مراجعة الباقة';
+
+  @override
+  String get packageUnavailable =>
+      'باقة الوجبات المحددة غير متاحة. يرجى مراجعة باقتك.';
+
+  @override
+  String get durationPricingUnavailable =>
+      'السعر غير متاح لهذه المدة. يرجى مراجعة باقتك.';
+
+  @override
+  String get planPricingMismatch =>
+      'الباقة والسعر المحددان غير متطابقين. يرجى مراجعة باقتك.';
+
+  @override
+  String get planNotFound =>
+      'لم يتم العثور على باقة الوجبات هذه. يرجى اختيار باقة أخرى.';
+
+  @override
+  String get planUnavailable =>
+      'باقة الوجبات هذه لم تعد متاحة. يرجى اختيار باقة أخرى.';
+
+  @override
+  String get availabilityRetry =>
+      'تعذر التحقق من هذه الباقة. تحقق من الاتصال وحاول مرة أخرى.';
+
+  @override
+  String get saveOrderRetry =>
+      'تعذر حفظ طلبك. يرجى المحاولة مرة أخرى أو التواصل مع دايت تايم.';
 }

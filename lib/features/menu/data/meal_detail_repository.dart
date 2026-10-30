@@ -1,3 +1,4 @@
+import 'package:diet_time/features/menu/domain/meal_nutrition.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -94,6 +95,7 @@ class MealDetailData {
     this.primaryImageUrl,
     this.fiberGrams,
     this.sodiumMg,
+    this.nutrition = const MealNutrition(),
   });
 
   factory MealDetailData.fromJson(Map<String, dynamic> json) {
@@ -116,6 +118,7 @@ class MealDetailData {
       primaryImageUrl: _string(json['primaryImageUrl']),
       fiberGrams: _nullableDecimal(nutrition['fiberGrams']),
       sodiumMg: _nullableDecimal(nutrition['sodiumMg']),
+      nutrition: MealNutrition.fromJson(nutrition),
       ingredients: _list(json['ingredients'])
           .map((item) => MealDetailIngredient.fromJson(_map(item)))
           .toList(growable: false),
@@ -132,6 +135,7 @@ class MealDetailData {
   final String? primaryImageUrl;
   final double? fiberGrams;
   final double? sodiumMg;
+  final MealNutrition nutrition;
   final List<MealDetailIngredient> ingredients;
   final List<String> allergens;
   final Map<String, String> allergenLevels;

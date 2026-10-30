@@ -173,6 +173,7 @@ class CheckoutState {
     this.isPlacingOrder = false,
     this.isResolvingOrderOptions = false,
     this.placementError,
+    this.configurationErrorCode,
     this.orderConfirmation,
   });
 
@@ -206,6 +207,7 @@ class CheckoutState {
   final bool isPlacingOrder;
   final bool isResolvingOrderOptions;
   final String? placementError;
+  final String? configurationErrorCode;
   final OrderConfirmation? orderConfirmation;
 
   String? get mealPlanTemplateId => selection?.mealPlan.id;
@@ -216,6 +218,9 @@ class CheckoutState {
       selection?.mealCombination.selectedMeals ?? const [];
 
   String? get placeOrderValidationMessage {
+    if (configurationErrorCode != null) {
+      return placementError ?? 'Please review your selected package.';
+    }
     if (customerProfileId?.trim().isNotEmpty != true) {
       return 'Your customer profile is unavailable. Please sign in again.';
     }
@@ -287,6 +292,7 @@ class CheckoutState {
     bool? isPlacingOrder,
     bool? isResolvingOrderOptions,
     Object? placementError = _unset,
+    Object? configurationErrorCode = _unset,
     Object? orderConfirmation = _unset,
   }) => CheckoutState(
     selectedBranch: identical(selectedBranch, _unset)
@@ -356,6 +362,9 @@ class CheckoutState {
     placementError: identical(placementError, _unset)
         ? this.placementError
         : placementError as String?,
+    configurationErrorCode: identical(configurationErrorCode, _unset)
+        ? this.configurationErrorCode
+        : configurationErrorCode as String?,
     orderConfirmation: identical(orderConfirmation, _unset)
         ? this.orderConfirmation
         : orderConfirmation as OrderConfirmation?,

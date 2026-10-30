@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/features/personalization/data/display_name_repository.dart';
 import 'package:diet_time/features/personalization/presentation/display_name_panel.dart';
@@ -63,8 +64,12 @@ class _PostLoginNameGateState extends ConsumerState<PostLoginNameGate> {
       } on Object {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to save your name. Please try again.'),
+          SnackBar(
+            content: Text(
+              context.customerCopy(
+                'Unable to save your name. Please try again.',
+              ),
+            ),
           ),
         );
       }

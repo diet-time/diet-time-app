@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/features/dashboard/domain/customer_account_profile.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_profile_controller.dart';
@@ -69,9 +70,11 @@ class _EditCustomerProfilePageState
     final state = ref.watch(customerProfileControllerProvider);
     final profile = _initialProfile;
     if (profile == null) {
-      return const Scaffold(
+      return Scaffold(
         body: SafeArea(
-          child: Center(child: Text('Unable to load your profile.')),
+          child: Center(
+            child: Text(context.customerCopy('Unable to load your profile.')),
+          ),
         ),
       );
     }
@@ -90,8 +93,8 @@ class _EditCustomerProfilePageState
             onPressed: _handleBack,
             icon: const Icon(Icons.arrow_back_rounded),
           ),
-          title: const Text(
-            'Edit Profile',
+          title: Text(
+            context.customerCopy('Edit Profile'),
             style: TextStyle(
               color: AppColors.darkGreen,
               fontWeight: FontWeight.w900,
@@ -112,30 +115,38 @@ class _EditCustomerProfilePageState
                   maxLength: 150,
                   validator: (value) {
                     final name = value?.trim() ?? '';
-                    if (name.isEmpty) return 'Full Name is required.';
+                    if (name.isEmpty) {
+                      return context.customerCopy('Full Name is required.');
+                    }
                     if (name.length < 2) {
-                      return 'Full Name must be at least 2 characters.';
+                      return context.customerCopy(
+                        'Full Name must be at least 2 characters.',
+                      );
                     }
                     if (name.length > 150) {
-                      return 'Full Name must be 150 characters or fewer.';
+                      return context.customerCopy(
+                        'Full Name must be 150 characters or fewer.',
+                      );
                     }
                     return state.fieldErrors['fullName'];
                   },
-                  decoration: _decoration('Full Name'),
+                  decoration: _decoration(context.customerCopy('Full Name')),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
                   key: const ValueKey('profileMobileNumber'),
                   initialValue: profile.mobileNumber,
                   readOnly: true,
-                  decoration: _decoration('Mobile Number').copyWith(
-                    helperText:
-                        'Contact support or use Change Mobile Number to update your login number.',
-                    suffixIcon: const Icon(
-                      Icons.lock_outline_rounded,
-                      size: 19,
-                    ),
-                  ),
+                  decoration: _decoration(context.customerCopy('Mobile Number'))
+                      .copyWith(
+                        helperText: context.customerCopy(
+                          'Contact support or use Change Mobile Number to update your login number.',
+                        ),
+                        suffixIcon: const Icon(
+                          Icons.lock_outline_rounded,
+                          size: 19,
+                        ),
+                      ),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
@@ -144,9 +155,10 @@ class _EditCustomerProfilePageState
                   onTap: _pickDate,
                   validator: (_) => state.fieldErrors['dateOfBirth'],
                   controller: _dateController,
-                  decoration: _decoration('Date of Birth').copyWith(
-                    suffixIcon: const Icon(Icons.calendar_month_outlined),
-                  ),
+                  decoration: _decoration(context.customerCopy('Date of Birth'))
+                      .copyWith(
+                        suffixIcon: const Icon(Icons.calendar_month_outlined),
+                      ),
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
@@ -165,7 +177,7 @@ class _EditCustomerProfilePageState
                       ? null
                       : (value) => setState(() => _gender = value),
                   validator: (_) => state.fieldErrors['gender'],
-                  decoration: _decoration('Gender'),
+                  decoration: _decoration(context.customerCopy('Gender')),
                 ),
                 if (state.saveError case final error?) ...[
                   const SizedBox(height: 14),
@@ -191,7 +203,7 @@ class _EditCustomerProfilePageState
                       ),
                     ),
                     child: state.isSaving
-                        ? const Row(
+                        ? Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               SizedBox(
@@ -203,11 +215,11 @@ class _EditCustomerProfilePageState
                                 ),
                               ),
                               SizedBox(width: 10),
-                              Text('Saving...'),
+                              Text(context.customerCopy('Saving...')),
                             ],
                           )
-                        : const Text(
-                            'Save Changes',
+                        : Text(
+                            context.customerCopy('Save Changes'),
                             style: TextStyle(fontWeight: FontWeight.w800),
                           ),
                   ),
@@ -283,18 +295,20 @@ class _EditCustomerProfilePageState
     final discard = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Discard changes?'),
-        content: const Text(
-          'You have unsaved changes. Are you sure you want to leave?',
+        title: Text(context.customerCopy('Discard changes?')),
+        content: Text(
+          context.customerCopy(
+            'You have unsaved changes. Are you sure you want to leave?',
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep Editing'),
+            child: Text(context.customerCopy('Keep Editing')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Discard'),
+            child: Text(context.customerCopy('Discard')),
           ),
         ],
       ),

@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/core/widgets/bmi_overview.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -275,8 +276,9 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     } on Object {
       if (mounted) {
         setState(
-          () => _validationMessage =
-              'Your draft could not be saved. Please try again.',
+          () => _validationMessage = context.customerCopy(
+            'Your draft could not be saved. Please try again.',
+          ),
         );
       }
     } finally {
@@ -434,17 +436,21 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     final persistenceErrorMessage = switch (persistence.errorMessage) {
       'profile_load' => _wellnessCopy(
         context,
-        'Unable to load your saved profile.',
+        context.customerCopy('Unable to load your saved profile.'),
         'تعذر تحميل ملفك المحفوظ.',
       ),
       'profile_conflict' => _wellnessCopy(
         context,
-        'Your profile changed elsewhere. We reloaded it; please review and retry.',
+        context.customerCopy(
+          'Your profile changed elsewhere. We reloaded it; please review and retry.',
+        ),
         'تم تحديث ملفك من مكان آخر. أعدنا تحميله؛ راجعه وحاول مجدداً.',
       ),
       'profile_save' => _wellnessCopy(
         context,
-        'Could not save your progress. Check your connection.',
+        context.customerCopy(
+          'Could not save your progress. Check your connection.',
+        ),
         'تعذر حفظ تقدمك. تحقق من اتصالك.',
       ),
       final message? => message,
@@ -531,7 +537,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                               child: Text(
                                 _wellnessCopy(
                                   context,
-                                  'Retry',
+                                  context.customerCopy('Retry'),
                                   'إعادة المحاولة',
                                 ),
                               ),
@@ -659,7 +665,11 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                       'male' => l10n.onboardingMale,
                       'female' => l10n.onboardingFemale,
                       'other' => l10n.onboardingPreferNotToSay,
-                      _ => _wellnessCopy(context, 'Select', 'اختر'),
+                      _ => _wellnessCopy(
+                        context,
+                        context.customerCopy('Select'),
+                        'اختر',
+                      ),
                     },
                     icon: Icons.person_outline_rounded,
                     onTap: () => _showPicker(
@@ -690,7 +700,11 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                     label: l10n.onboardingAge,
                     value:
                         _age?.toString() ??
-                        _wellnessCopy(context, 'Select', 'اختر'),
+                        _wellnessCopy(
+                          context,
+                          context.customerCopy('Select'),
+                          'اختر',
+                        ),
                     icon: Icons.cake_outlined,
                     onTap: () {
                       final values = List.generate(
@@ -720,7 +734,11 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                     width: width,
                     label: l10n.onboardingHeight,
                     value: _height == null
-                        ? _wellnessCopy(context, 'Select', 'اختر')
+                        ? _wellnessCopy(
+                            context,
+                            context.customerCopy('Select'),
+                            'اختر',
+                          )
                         : '$_height cm',
                     icon: Icons.height_rounded,
                     onTap: () {
@@ -751,7 +769,11 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                     width: width,
                     label: l10n.onboardingWeight,
                     value: _weight == null
-                        ? _wellnessCopy(context, 'Select', 'اختر')
+                        ? _wellnessCopy(
+                            context,
+                            context.customerCopy('Select'),
+                            'اختر',
+                          )
                         : '$_weight kg',
                     icon: Icons.monitor_weight_outlined,
                     onTap: () {
@@ -909,7 +931,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
           'BREAKFAST_LOVER': l10n.onboardingBreakfastLover,
           'NONE': _wellnessCopy(
             context,
-            'No food preferences',
+            context.customerCopy('No food preferences'),
             'لا توجد تفضيلات غذائية',
           ),
         },
@@ -935,7 +957,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
             decoration: InputDecoration(
               hintText: _wellnessCopy(
                 context,
-                'Search allergies...',
+                context.customerCopy('Search allergies...'),
                 'ابحث عن الحساسية...',
               ),
               suffixIcon: const Icon(
@@ -1130,7 +1152,11 @@ class _OnboardingNavigation extends StatelessWidget {
         : index == 7
         ? l10n.onboardingContinue
         : index == 8
-        ? _wellnessCopy(context, 'Browse Menu', 'تصفح القائمة')
+        ? _wellnessCopy(
+            context,
+            context.customerCopy('Browse Menu'),
+            'تصفح القائمة',
+          )
         : l10n.onboardingContinue;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 9, 20, 14),
@@ -1368,10 +1394,10 @@ class _WelcomeBenefits extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const items = [
-      (Icons.person_rounded, 'Personalized'),
-      (Icons.balance_rounded, 'Balanced'),
-      (Icons.favorite_rounded, 'Made for you'),
+    final items = [
+      (Icons.person_rounded, context.customerCopy('Personalized')),
+      (Icons.balance_rounded, context.customerCopy('Balanced')),
+      (Icons.favorite_rounded, context.customerCopy('Made for you')),
     ];
     return Row(
       children: items
@@ -1840,7 +1866,7 @@ class _DynamicAllergenChoices extends StatelessWidget {
                   child: Text(
                     _wellnessCopy(
                       context,
-                      'Unable to load allergens.',
+                      context.customerCopy('Unable to load allergens.'),
                       'تعذر تحميل مسببات الحساسية.',
                     ),
                     style: const TextStyle(
@@ -1854,7 +1880,11 @@ class _DynamicAllergenChoices extends StatelessWidget {
                   key: const ValueKey('retryAllergens'),
                   onPressed: onRetry,
                   child: Text(
-                    _wellnessCopy(context, 'Retry', 'إعادة المحاولة'),
+                    _wellnessCopy(
+                      context,
+                      context.customerCopy('Retry'),
+                      'إعادة المحاولة',
+                    ),
                   ),
                 ),
               ],
@@ -1912,7 +1942,9 @@ class _AllergenSafetyCard extends StatelessWidget {
                   TextSpan(
                     text: _wellnessCopy(
                       context,
-                      "We'll always highlight meals that are safe for you.",
+                      context.customerCopy(
+                        "We'll always highlight meals that are safe for you.",
+                      ),
                       'سنوضح لك دائمًا الوجبات الآمنة لك.',
                     ),
                   ),
@@ -2060,7 +2092,7 @@ class _ChoiceWrap extends StatelessWidget {
               child: Text(
                 _wellnessCopy(
                   context,
-                  'No allergies found.',
+                  context.customerCopy('No allergies found.'),
                   'لم يتم العثور على حساسية.',
                 ),
                 style: TextStyle(
@@ -2204,7 +2236,7 @@ class _BmiSummaryStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final bmi = draft.bmi ?? _bmiFromMeasurements(draft) ?? 0;
     final calculatedCategory = bmi <= 0
-        ? _wellnessCopy(context, 'Pending', 'قيد الحساب')
+        ? _wellnessCopy(context, context.customerCopy('Pending'), 'قيد الحساب')
         : draft.age < 18
         ? l10n.bmiYouthNote
         : bmi < 18.5
@@ -2261,7 +2293,7 @@ class _BmiSummaryStep extends StatelessWidget {
               Text(
                 _wellnessCopy(
                   context,
-                  "Here's a quick overview of you.",
+                  context.customerCopy("Here's a quick overview of you."),
                   'إليك نظرة سريعة على بياناتك.',
                 ),
                 textAlign: TextAlign.center,
@@ -2284,7 +2316,11 @@ class _BmiSummaryStep extends StatelessWidget {
                   Expanded(
                     child: _WellnessTile(
                       icon: Icons.track_changes_rounded,
-                      label: _wellnessCopy(context, 'Goal', 'الهدف'),
+                      label: _wellnessCopy(
+                        context,
+                        context.customerCopy('Goal'),
+                        'الهدف',
+                      ),
                       value: goal,
                     ),
                   ),
@@ -2294,7 +2330,7 @@ class _BmiSummaryStep extends StatelessWidget {
                       icon: Icons.directions_walk_rounded,
                       label: _wellnessCopy(
                         context,
-                        'Activity Level',
+                        context.customerCopy('Activity Level'),
                         'مستوى النشاط',
                       ),
                       value: activity,
@@ -2312,7 +2348,7 @@ class _BmiSummaryStep extends StatelessWidget {
                       value: calorieTarget == null
                           ? _wellnessCopy(
                               context,
-                              'Not calculated yet',
+                              context.customerCopy('Not calculated yet'),
                               'لم يُحسب بعد',
                             )
                           : l10n.dailyCalories(calorieTarget),
@@ -2324,13 +2360,13 @@ class _BmiSummaryStep extends StatelessWidget {
                       icon: Icons.fitness_center_rounded,
                       label: _wellnessCopy(
                         context,
-                        'Protein target',
+                        context.customerCopy('Protein target'),
                         'البروتين المستهدف',
                       ),
                       value: proteinTarget == null
                           ? _wellnessCopy(
                               context,
-                              'Not calculated yet',
+                              context.customerCopy('Not calculated yet'),
                               'لم يُحسب بعد',
                             )
                           : '$proteinTarget g/day',
@@ -2376,7 +2412,9 @@ class _BmiSummaryStep extends StatelessWidget {
                             TextSpan(
                               text: _wellnessCopy(
                                 context,
-                                'personalize your Diet Time experience.',
+                                context.customerCopy(
+                                  'personalize your Diet Time experience.',
+                                ),
                                 'لتخصيص تجربتك مع دايت تايم.',
                               ),
                             ),
@@ -2542,11 +2580,27 @@ class _AllSetStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      _wellnessCopy(context, 'Your goals', 'أهدافك'),
-      _wellnessCopy(context, 'Your profile', 'ملفك الشخصي'),
-      _wellnessCopy(context, 'Your lifestyle', 'نمط حياتك'),
-      _wellnessCopy(context, 'Your food preferences', 'تفضيلاتك الغذائية'),
-      _wellnessCopy(context, 'Your health & allergies', 'صحتك والحساسيات'),
+      _wellnessCopy(context, context.customerCopy('Your goals'), 'أهدافك'),
+      _wellnessCopy(
+        context,
+        context.customerCopy('Your profile'),
+        'ملفك الشخصي',
+      ),
+      _wellnessCopy(
+        context,
+        context.customerCopy('Your lifestyle'),
+        'نمط حياتك',
+      ),
+      _wellnessCopy(
+        context,
+        context.customerCopy('Your food preferences'),
+        'تفضيلاتك الغذائية',
+      ),
+      _wellnessCopy(
+        context,
+        context.customerCopy('Your health & allergies'),
+        'صحتك والحساسيات',
+      ),
     ];
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -2562,7 +2616,11 @@ class _AllSetStep extends StatelessWidget {
                 _AllSetArtwork(height: compact ? 190 : 230),
                 SizedBox(height: compact ? 9 : 17),
                 Text(
-                  _wellnessCopy(context, "You're all set!", 'أنت جاهز!'),
+                  _wellnessCopy(
+                    context,
+                    context.customerCopy("You're all set!"),
+                    'أنت جاهز!',
+                  ),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: AppColors.darkGreen,

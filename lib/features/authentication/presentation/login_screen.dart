@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -92,7 +93,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
     final error = ref.read(loginControllerProvider).error;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(error?.toString() ?? 'Unable to sign in')),
+      SnackBar(
+        content: Text(
+          error?.toString() ?? context.customerCopy('Unable to sign in'),
+        ),
+      ),
     );
   }
 

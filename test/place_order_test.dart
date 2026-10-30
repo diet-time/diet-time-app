@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/checkout_models.dart';
@@ -11,6 +12,212 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    'purchase response keeps plan, package, duration and price identities separate',
+    () {
+      final price = MealPlanPackage.fromJson({
+        'priceId': 'price-id',
+        'mealPlanId': 'plan-id',
+        'packageOptionId': 'package-id',
+        'packageCode': 'SIX',
+        'serviceDays': 6,
+        'amount': 699,
+        'currencyCode': 'QAR',
+        'packageName': '6 service days',
+      });
+      expect(price.mealPlanTemplateId, 'plan-id');
+      expect(price.packageOptionId, 'package-id');
+      expect(price.packageCode, 'SIX');
+      expect(price.mealPlanPriceId, 'price-id');
+    },
+  );
+
+  test(
+    'populated pricing is revalidated without changing unrelated selections',
+    () async {
+      final pricing = _AvailabilityPricing();
+      final container = ProviderContainer(
+        overrides: [
+          checkoutControllerProvider.overrideWith(
+            () => _CheckoutControllerForTest(_readyCheckout),
+          ),
+          mealPlanRepositoryProvider.overrideWithValue(pricing),
+        ],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(checkoutControllerProvider.notifier);
+      final pending = controller.prepareForOrder(language: 'en');
+      expect(container.read(checkoutControllerProvider).canPlaceOrder, isFalse);
+      pricing.pending[0].complete([
+        _availabilityConfiguration(_readyCheckout.selection!),
+      ]);
+      await pending;
+      final state = container.read(checkoutControllerProvider);
+      expect(pricing.planIds, ['plan-id']);
+      expect(state.mealPlanPriceId, 'price-id');
+      expect(state.selectedAddress, same(_readyCheckout.selectedAddress));
+      expect(state.customerProfileId, _readyCheckout.customerProfileId);
+      expect(state.schedule, same(_readyCheckout.schedule));
+      expect(state.canPlaceOrder, isTrue);
+      final returning = controller.prepareForOrder(language: 'en');
+      pricing.pending[1].complete([
+        _availabilityConfiguration(state.selection!),
+      ]);
+      await returning;
+      expect(
+        container.read(checkoutControllerProvider).configurationErrorCode,
+        isNull,
+      );
+    },
+  );
+  for (final switchPlan in [true, false]) {
+    test(
+      'late configuration response cannot overwrite a newer ${switchPlan ? 'plan' : 'package'}',
+      () async {
+        final pricing = _AvailabilityPricing();
+        final container = ProviderContainer(
+          overrides: [
+            checkoutControllerProvider.overrideWith(
+              () => _CheckoutControllerForTest(_readyCheckout),
+            ),
+            mealPlanRepositoryProvider.overrideWithValue(pricing),
+          ],
+        );
+        addTearDown(container.dispose);
+        final controller = container.read(checkoutControllerProvider.notifier);
+        final previous = controller.prepareForOrder(language: 'en');
+        final next = MealPlanPurchaseSelection(
+          mealPlan: switchPlan
+              ? const MealPlanOption(
+                  id: 'second-plan',
+                  code: 'SECOND',
+                  name: 'Different display name',
+                )
+              : _readyCheckout.selection!.mealPlan,
+          mealCombination: const MealPlanConfiguration(
+            id: 'second-package',
+            name: 'Different label',
+            packages: [],
+          ),
+          pricingOption: const MealPlanPackage(
+            mealPlanPriceId: 'second-price',
+            name: 'Same duration',
+            serviceDays: 20,
+            totalPrice: 700,
+            dailyPrice: 35,
+            currencyCode: 'QAR',
+          ),
+        );
+        controller.selectPackage(next);
+        final current = controller.prepareForOrder(language: 'en');
+        pricing.pending[1].complete([_availabilityConfiguration(next)]);
+        await current;
+        pricing.pending[0].complete([
+          _availabilityConfiguration(_readyCheckout.selection!),
+        ]);
+        await previous;
+        final state = container.read(checkoutControllerProvider);
+        expect(state.mealPlanTemplateId, next.mealPlan.id);
+        expect(state.mealPlanPriceId, 'second-price');
+        expect(state.selectedAddress, same(_readyCheckout.selectedAddress));
+        expect(state.configurationErrorCode, isNull);
+        expect(state.isResolvingOrderOptions, isFalse);
+      },
+    );
+  }
+  for (final code in ['database_conflict', 'concurrency_conflict', null]) {
+    test(
+      'unrelated conflict $code is not reported as an unavailable plan',
+      () async {
+        final orders = _RejectedOrders(code);
+        final container = ProviderContainer(
+          overrides: [
+            checkoutControllerProvider.overrideWith(
+              () => _CheckoutControllerForTest(_readyCheckout),
+            ),
+            ordersRepositoryProvider.overrideWithValue(orders),
+          ],
+        );
+        addTearDown(container.dispose);
+        await container.read(checkoutControllerProvider.notifier).placeOrder();
+        final state = container.read(checkoutControllerProvider);
+        expect(state.placementError, contains('could not be saved'));
+        expect(
+          state.placementError,
+          isNot(contains('plan is no longer available')),
+        );
+        expect(state.configurationErrorCode, isNull);
+      },
+    );
+  }
+  test(
+    'invalid pricing blocks repeated submission until successful revalidation',
+    () async {
+      final orders = _RejectedOrders('pricing_not_available'),
+          pricing = _AvailabilityPricing();
+      final container = ProviderContainer(
+        overrides: [
+          checkoutControllerProvider.overrideWith(
+            () => _CheckoutControllerForTest(_readyCheckout),
+          ),
+          ordersRepositoryProvider.overrideWithValue(orders),
+          mealPlanRepositoryProvider.overrideWithValue(pricing),
+        ],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(checkoutControllerProvider.notifier);
+      await controller.placeOrder();
+      expect(container.read(checkoutControllerProvider).canPlaceOrder, isFalse);
+      await controller.placeOrder();
+      expect(orders.calls, 1);
+      final retry = controller.prepareForOrder(language: 'en');
+      pricing.pending.single.complete([
+        _availabilityConfiguration(_readyCheckout.selection!),
+      ]);
+      await retry;
+      expect(container.read(checkoutControllerProvider).canPlaceOrder, isTrue);
+    },
+  );
+  test('foreign plan identity in a returned price is rejected', () async {
+    final pricing = _AvailabilityPricing();
+    final container = ProviderContainer(
+      overrides: [
+        checkoutControllerProvider.overrideWith(
+          () => _CheckoutControllerForTest(_readyCheckout),
+        ),
+        mealPlanRepositoryProvider.overrideWithValue(pricing),
+      ],
+    );
+    addTearDown(container.dispose);
+    final request = container
+        .read(checkoutControllerProvider.notifier)
+        .prepareForOrder(language: 'en');
+    final original = _readyCheckout.selection!;
+    pricing.pending.single.complete([
+      MealPlanConfiguration(
+        id: original.mealCombination.id,
+        name: 'Package',
+        packages: [
+          MealPlanPackage(
+            mealPlanPriceId: original.pricingOption.mealPlanPriceId,
+            mealPlanTemplateId: 'foreign-plan',
+            packageOptionId: original.mealCombination.id,
+            name: 'Duration',
+            serviceDays: 20,
+            totalPrice: 100,
+            dailyPrice: 5,
+            currencyCode: 'QAR',
+          ),
+        ],
+      ),
+    ]);
+    await request;
+    expect(
+      container.read(checkoutControllerProvider).configurationErrorCode,
+      'invalid_plan_configuration',
+    );
+  });
+
   test(
     'changed pricing refreshes the summary and requires a second customer submission',
     () async {
@@ -540,3 +747,43 @@ const _confirmationJson = <String, dynamic>{
   },
   'placedAt': '2026-08-10T14:00:00Z',
 };
+
+class _AvailabilityPricing extends MealPlanRepository {
+  _AvailabilityPricing() : super(ApiClient());
+  final pending = <Completer<List<MealPlanConfiguration>>>[];
+  final planIds = <String>[];
+  @override
+  Future<List<MealPlanConfiguration>> getMealPlanConfigurations({
+    required String mealPlanTemplateId,
+    required String language,
+  }) {
+    planIds.add(mealPlanTemplateId);
+    final completer = Completer<List<MealPlanConfiguration>>();
+    pending.add(completer);
+    return completer.future;
+  }
+}
+
+MealPlanConfiguration _availabilityConfiguration(
+  MealPlanPurchaseSelection selection,
+) => MealPlanConfiguration(
+  id: selection.mealCombination.id,
+  name: selection.mealCombination.name,
+  selectedMeals: selection.mealCombination.selectedMeals,
+  packages: [selection.pricingOption],
+);
+
+class _RejectedOrders extends OrdersRepository {
+  _RejectedOrders(this.code)
+    : super(apiClient: ApiClient(), accessTokenProvider: () async => 'token');
+  final String? code;
+  int calls = 0;
+  @override
+  Future<OrderConfirmation> placeOrder(
+    PlaceOrderRequest request,
+    String idempotencyKey,
+  ) async {
+    calls++;
+    throw ApiException(ApiFailure.conflict, statusCode: 409, code: code);
+  }
+}

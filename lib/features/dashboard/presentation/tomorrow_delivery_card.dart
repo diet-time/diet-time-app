@@ -1,3 +1,5 @@
+import 'package:diet_time/features/menu/domain/meal_nutrition.dart';
+import 'package:diet_time/features/menu/presentation/meal_nutrition_view.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/meal_plan_image.dart';
 import 'package:diet_time/features/dashboard/domain/tomorrow_menu.dart';
@@ -132,6 +134,19 @@ class TomorrowDeliveryCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          MealNutritionView(
+            total: true,
+            nutrition: MealNutrition.total(
+              (menu.readOnly
+                      ? menu.selected
+                      : [
+                          ...menu.meals,
+                          ...menu.snacks,
+                        ].where((m) => draft.contains(m.id)))
+                  .map((m) => (nutrition: m.nutrition, quantity: m.quantity)),
+            ),
           ),
           if (actionable) ...[
             const SizedBox(height: 8),
@@ -338,6 +353,7 @@ class _ReadOnlyDish extends StatelessWidget {
                     color: AppColors.emeraldGreen,
                   ),
                 ),
+                MealNutritionDetails(meal: item),
               ],
             ),
           ),

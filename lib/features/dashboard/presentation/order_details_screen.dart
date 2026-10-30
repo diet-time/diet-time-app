@@ -1,3 +1,5 @@
+import 'package:diet_time/l10n/app_localizations.dart';
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'dart:async';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/features/checkout/data/orders_repository.dart';
@@ -63,13 +65,13 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
         leading: Padding(
           padding: const EdgeInsets.all(8),
           child: IconButton.filledTonal(
-            tooltip: 'Back',
+            tooltip: context.customerCopy('Back'),
             onPressed: () => Navigator.of(context).maybePop(),
             icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 17),
           ),
         ),
-        title: const Text(
-          'Order Details',
+        title: Text(
+          context.customerCopy('Order Details'),
           style: TextStyle(
             color: AppColors.darkGreen,
             fontSize: 17,
@@ -128,7 +130,7 @@ class _OrderDetails extends ConsumerWidget {
             ['PENDING_APPROVAL', 'ON_HOLD', 'CONFIRMED'].contains(order.status))
           TextButton.icon(
             icon: const Icon(Icons.cancel_outlined),
-            label: const Text('Request cancellation'),
+            label: Text(context.customerCopy('Request cancellation')),
             onPressed: () async {
               final reason = await showDialog<String>(
                 context: context,
@@ -143,9 +145,11 @@ class _OrderDetails extends ConsumerWidget {
               } catch (_) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text(
-                        'The order could not be cancelled. Refresh the order or contact Diet Time.',
+                        context.customerCopy(
+                          'The order could not be cancelled. Refresh the order or contact Diet Time.',
+                        ),
                       ),
                     ),
                   );
@@ -157,12 +161,12 @@ class _OrderDetails extends ConsumerWidget {
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Text(order.reviewMessage!),
+              child: Text(context.customerCopy(order.reviewMessage!)),
             ),
           ),
         Text(
           order.isTakeaway && order.takeawayBranch != null
-              ? 'Takeaway · ${order.takeawayBranch!.name}${order.takeawayBranch!.address == null ? '' : '\n${order.takeawayBranch!.address}'}'
+              ? '${context.customerCopy('Takeaway')} · ${order.takeawayBranch!.name}${order.takeawayBranch!.address == null ? '' : '\n${order.takeawayBranch!.address}'}'
               : order.fulfillmentLabel,
         ),
         const SizedBox(height: 12),
@@ -170,12 +174,12 @@ class _OrderDetails extends ConsumerWidget {
           children: [
             _InformationRow(
               icon: Icons.calendar_month_outlined,
-              label: 'PLAN PERIOD',
+              label: context.customerCopy('PLAN PERIOD'),
               value: _period(delivery.startDate, delivery.endDate),
             ),
             _InformationRow(
               icon: Icons.restaurant_rounded,
-              label: 'MEALS INCLUDED',
+              label: context.customerCopy('MEALS INCLUDED'),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -190,14 +194,16 @@ class _OrderDetails extends ConsumerWidget {
             ),
             _InformationRow(
               icon: Icons.event_available_outlined,
-              label: order.isTakeaway ? 'COLLECTION DAYS' : 'DELIVERY DAYS',
+              label: order.isTakeaway
+                  ? context.customerCopy('COLLECTION DAYS')
+                  : context.customerCopy('DELIVERY DAYS'),
               value:
-                  '${delivery.daysPerWeek} Days / Week\n${_weekdays(delivery.days)}',
+                  '${lookupAppLocalizations(Localizations.localeOf(context)).customerDaysPerWeek(delivery.daysPerWeek)}\n${_weekdays(context, delivery.days)}',
             ),
             if (!order.isTakeaway)
               _InformationRow(
                 icon: Icons.location_on_outlined,
-                label: 'DELIVERY ADDRESS',
+                label: context.customerCopy('DELIVERY ADDRESS'),
                 value: [
                   address.displayName,
                   address.area,
@@ -208,7 +214,7 @@ class _OrderDetails extends ConsumerWidget {
             if (!order.isTakeaway)
               _InformationRow(
                 icon: Icons.schedule_rounded,
-                label: 'DELIVERY TIME',
+                label: context.customerCopy('DELIVERY TIME'),
                 value:
                     '${delivery.timeSlot.name}\n${_time(delivery.timeSlot.startTime)} - ${_time(delivery.timeSlot.endTime)}',
                 last: true,
@@ -221,7 +227,7 @@ class _OrderDetails extends ConsumerWidget {
             Expanded(
               child: _MetricTile(
                 icon: Icons.payments_outlined,
-                label: 'PRICING',
+                label: context.customerCopy('PRICING'),
                 value:
                     '${formatMealPlanPriceAmount(order.pricing.totalAmount, locale)} ${order.pricing.currencyCode}',
               ),
@@ -230,8 +236,8 @@ class _OrderDetails extends ConsumerWidget {
             Expanded(
               child: _MetricTile(
                 icon: Icons.credit_card_rounded,
-                label: 'PAYMENT STATUS',
-                value: order.paymentLabel,
+                label: context.customerCopy('PAYMENT STATUS'),
+                value: context.customerCopy(order.paymentLabel),
                 accent: true,
               ),
             ),
@@ -249,7 +255,7 @@ class _OrderDetails extends ConsumerWidget {
               color: AppColors.emeraldGreen.withValues(alpha: .1),
             ),
           ),
-          child: const Row(
+          child: Row(
             children: [
               CircleAvatar(
                 radius: 18,
@@ -266,7 +272,7 @@ class _OrderDetails extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Thank you for your order!',
+                      context.customerCopy('Thank you for your order!'),
                       style: TextStyle(
                         color: AppColors.darkGreen,
                         fontWeight: FontWeight.w900,
@@ -274,7 +280,9 @@ class _OrderDetails extends ConsumerWidget {
                     ),
                     SizedBox(height: 3),
                     Text(
-                      'Your plan and delivery schedule are confirmed above.',
+                      context.customerCopy(
+                        'Your plan and delivery schedule are confirmed above.',
+                      ),
                       style: TextStyle(
                         color: AppColors.darkGreen,
                         fontSize: 11,
@@ -338,7 +346,7 @@ class _OrderHeaderCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _Label('ORDER NUMBER'),
+                  _Label(context.customerCopy('ORDER NUMBER')),
                   const SizedBox(height: 4),
                   Text(
                     order.orderNumber,
@@ -367,7 +375,7 @@ class _OrderHeaderCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _Label('STATUS'),
+                  _Label(context.customerCopy('STATUS')),
                   const SizedBox(height: 6),
                   _StatusPill(order.status),
                 ],
@@ -384,7 +392,7 @@ class _OrderHeaderCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _Label('PLAN'),
+                  _Label(context.customerCopy('PLAN')),
                   const SizedBox(height: 5),
                   Text(
                     order.plan.name,
@@ -573,7 +581,7 @@ class _SupportBar extends StatelessWidget {
         Expanded(
           child: _SupportAction(
             icon: Icons.chat_bubble_outline_rounded,
-            label: 'Need Help?',
+            label: context.customerCopy('Need Help?'),
             onTap: () => _showSupport(context),
           ),
         ),
@@ -585,7 +593,7 @@ class _SupportBar extends StatelessWidget {
         Expanded(
           child: _SupportAction(
             icon: Icons.support_agent_rounded,
-            label: 'Contact Support',
+            label: context.customerCopy('Contact Support'),
             onTap: () => _showSupport(context),
           ),
         ),
@@ -595,7 +603,13 @@ class _SupportBar extends StatelessWidget {
 
   void _showSupport(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Please reference order $orderNumber.')),
+      SnackBar(
+        content: Text(
+          lookupAppLocalizations(
+            Localizations.localeOf(context),
+          ).customerOrderReference(orderNumber),
+        ),
+      ),
     );
   }
 }
@@ -685,7 +699,7 @@ class _StatusPill extends StatelessWidget {
         const SizedBox(width: 4),
         Flexible(
           child: Text(
-            status,
+            context.customerCopy(status),
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: AppColors.emeraldGreen,
@@ -732,9 +746,12 @@ class _OrderError extends StatelessWidget {
       children: [
         const Icon(Icons.receipt_long_outlined, color: AppColors.emeraldGreen),
         const SizedBox(height: 12),
-        const Text("We couldn't load this order."),
+        Text(context.customerCopy("We couldn't load this order.")),
         const SizedBox(height: 12),
-        OutlinedButton(onPressed: onRetry, child: const Text('TRY AGAIN')),
+        OutlinedButton(
+          onPressed: onRetry,
+          child: Text(context.customerCopy('TRY AGAIN')),
+        ),
       ],
     ),
   );
@@ -745,15 +762,15 @@ String _period(DateTime? start, DateTime? end) {
   return '${DateFormat('dd MMM yyyy').format(start)} - ${DateFormat('dd MMM yyyy').format(end)}';
 }
 
-String _weekdays(List<int> days) {
-  const labels = {
-    1: 'Mon',
-    2: 'Tue',
-    3: 'Wed',
-    4: 'Thu',
-    5: 'Fri',
-    6: 'Sat',
-    7: 'Sun',
+String _weekdays(BuildContext context, List<int> days) {
+  final labels = {
+    1: context.customerCopy('Mon'),
+    2: context.customerCopy('Tue'),
+    3: context.customerCopy('Wed'),
+    4: context.customerCopy('Thu'),
+    5: context.customerCopy('Fri'),
+    6: context.customerCopy('Sat'),
+    7: context.customerCopy('Sun'),
   };
   return days.map((day) => labels[day]).whereType<String>().join(', ');
 }
@@ -782,25 +799,25 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Cancel this order?'),
+    title: Text(context.customerCopy('Cancel this order?')),
     content: TextField(
       controller: reason,
       maxLength: 500,
       minLines: 2,
       maxLines: 4,
-      decoration: const InputDecoration(labelText: 'Reason'),
+      decoration: InputDecoration(labelText: context.customerCopy('Reason')),
       onChanged: (_) => setState(() {}),
     ),
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Keep order'),
+        child: Text(context.customerCopy('Keep order')),
       ),
       FilledButton(
         onPressed: reason.text.trim().isEmpty
             ? null
             : () => Navigator.pop(context, reason.text.trim()),
-        child: const Text('Confirm cancellation'),
+        child: Text(context.customerCopy('Confirm cancellation')),
       ),
     ],
   );

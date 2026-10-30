@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/plans/domain/meal_entitlement.dart';
 import 'service_date_cell.dart';
 import 'package:diet_time/features/dashboard/domain/calendar_delivery.dart';
@@ -131,8 +132,8 @@ class _UpcomingDeliveriesScreenState
       padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
       children: [
         if (widget.embedded) ...[
-          const Text(
-            'Upcoming Meals',
+          Text(
+            context.customerCopy('Upcoming Meals'),
             style: TextStyle(
               color: AppColors.darkGreen,
               fontSize: 25,
@@ -179,15 +180,18 @@ class _UpcomingDeliveriesScreenState
           const SizedBox(height: 12),
           if (failed)
             MealMenuMessage(
-              message: 'We couldn’t load all your delivery meals.',
+              message: context.customerCopy(
+                'We couldn’t load all your delivery meals.',
+              ),
               onRetry: _retry,
             )
           else if (loading)
             const MealMenuLoading()
           else if (selected.isEmpty)
-            const MealMenuMessage(
-              message:
-                  'Meals have not been assigned to this delivery yet. Our team will review it.',
+            MealMenuMessage(
+              message: context.customerCopy(
+                'Meals have not been assigned to this delivery yet. Our team will review it.',
+              ),
             )
           else ...[
             Text(
@@ -200,7 +204,9 @@ class _UpcomingDeliveriesScreenState
           ],
         ] else if (failed)
           MealMenuMessage(
-            message: 'We couldn’t load all your delivery meals.',
+            message: context.customerCopy(
+              'We couldn’t load all your delivery meals.',
+            ),
             onRetry: _retry,
           )
         else if (loading)
@@ -226,8 +232,8 @@ class _UpcomingDeliveriesScreenState
           onPressed: () => Navigator.of(context).maybePop(),
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
         ),
-        title: const Text(
-          'Upcoming Meals',
+        title: Text(
+          context.customerCopy('Upcoming Meals'),
           style: TextStyle(
             color: AppColors.darkGreen,
             fontSize: 17,
@@ -310,27 +316,33 @@ class _UpcomingDeliveriesScreenState
                       runSpacing: 4,
                       children: [
                         _StatusChip(
-                          label: mealDayStatusLabel(day.status),
+                          label: context.customerCopy(
+                            mealDayStatusLabel(day.status),
+                          ),
                           icon: serviceStatusIcon(day.status),
                         ),
                         if (day.selectionStatus == 'AUTO_FINALIZED')
-                          const _StatusChip(
-                            label: 'Meals chosen for you',
+                          _StatusChip(
+                            label: context.customerCopy('Meals chosen for you'),
                             icon: Icons.auto_awesome_outlined,
                           ),
                         if (day.selectionStatus == 'CUSTOMER_CONFIRMED')
-                          const _StatusChip(
-                            label: 'Your choices confirmed',
+                          _StatusChip(
+                            label: context.customerCopy(
+                              'Your choices confirmed',
+                            ),
                             icon: Icons.check_circle_outline,
                           ),
                         if (day.selectionLocked && day.status != 'locked')
-                          const _StatusChip(
-                            label: 'Locked',
+                          _StatusChip(
+                            label: context.customerCopy('Locked'),
                             icon: Icons.lock_outline_rounded,
                           ),
                         if (day.deliveryStatus != 'PLANNED')
                           _StatusChip(
-                            label: serviceDeliveryLabel(day.deliveryStatus),
+                            label: context.customerCopy(
+                              serviceDeliveryLabel(day.deliveryStatus),
+                            ),
                             icon: day.deliveryStatus == 'DELIVERED'
                                 ? Icons.check_circle_outline
                                 : Icons.local_shipping_outlined,
@@ -442,7 +454,15 @@ class _Calendar extends StatelessWidget {
     final first = DateTime(month.year, month.month);
     final count = DateTime(month.year, month.month + 1, 0).day;
     final leading = first.weekday - DateTime.monday;
-    const weekdayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final weekdayNames = [
+      context.customerCopy('Mon'),
+      context.customerCopy('Tue'),
+      context.customerCopy('Wed'),
+      context.customerCopy('Thu'),
+      context.customerCopy('Fri'),
+      context.customerCopy('Sat'),
+      context.customerCopy('Sun'),
+    ];
     return Column(
       children: [
         Row(
@@ -522,8 +542,8 @@ class _Calendar extends StatelessWidget {
                   '${DateFormat('d MMMM yyyy').format(date)}, ${count > 0
                       ? '$count scheduled orders'
                       : delivery
-                      ? 'Service day'
-                      : 'Non-service day'}, ${status == null ? '' : mealDayStatusLabel(status)}',
+                      ? context.customerCopy('Service day')
+                      : context.customerCopy('Non-service day')}, ${status == null ? '' : context.customerCopy(mealDayStatusLabel(status))}',
               onTap: () => onSelect(date),
             );
           },
@@ -561,13 +581,13 @@ class _CalendarLegend extends StatelessWidget {
     scrollDirection: Axis.horizontal,
     child: Row(
       children: [
-        for (final item in const [
-          (Icons.event_outlined, 'Service day'),
-          (Icons.remove, 'Non-service'),
-          (Icons.auto_awesome_outlined, 'Auto-selected'),
-          (Icons.tune_rounded, 'Customized'),
-          (Icons.lock_outline_rounded, 'Locked'),
-          (Icons.check_circle_outline, 'Delivered'),
+        for (final item in [
+          (Icons.event_outlined, context.customerCopy('Service day')),
+          (Icons.remove, context.customerCopy('Non-service')),
+          (Icons.auto_awesome_outlined, context.customerCopy('Auto-selected')),
+          (Icons.tune_rounded, context.customerCopy('Customized')),
+          (Icons.lock_outline_rounded, context.customerCopy('Locked')),
+          (Icons.check_circle_outline, context.customerCopy('Delivered')),
         ])
           Padding(
             padding: const EdgeInsetsDirectional.only(end: 16),
@@ -603,8 +623,9 @@ class _DeliveryDetails extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Text(
             [
-              'Takeaway',
-              order.takeawayBranch?.name ?? 'Collect from Diet Time',
+              context.customerCopy('Takeaway'),
+              order.takeawayBranch?.name ??
+                  context.customerCopy('Collect from Diet Time'),
               if (order.takeawayBranch?.address?.trim().isNotEmpty == true)
                 order.takeawayBranch!.address!,
             ].join(' · '),
@@ -690,8 +711,8 @@ class _DeliveryDetails extends StatelessWidget {
                   color: const Color(0xFFE4F6E8),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
-                  'Scheduled',
+                child: Text(
+                  context.customerCopy('Scheduled'),
                   style: TextStyle(
                     color: AppColors.emeraldGreen,
                     fontSize: 10,
@@ -715,7 +736,7 @@ class _EmptyDelivery extends StatelessWidget {
     padding: const EdgeInsets.all(22),
     alignment: Alignment.center,
     child: Text(
-      'No upcoming deliveries are scheduled.',
+      context.customerCopy('No upcoming deliveries are scheduled.'),
       style: TextStyle(color: AppColors.darkGreen.withValues(alpha: .6)),
     ),
   );
@@ -731,13 +752,15 @@ class _FridayNotice extends StatelessWidget {
       color: AppColors.jasper.withValues(alpha: .08),
       borderRadius: BorderRadius.circular(10),
     ),
-    child: const Row(
+    child: Row(
       children: [
         Icon(Icons.info_outline_rounded, color: AppColors.jasper, size: 17),
         SizedBox(width: 8),
         Expanded(
           child: Text(
-            'Service runs Saturday to Thursday. Friday is a non-service day.',
+            context.customerCopy(
+              'Service runs Saturday to Thursday. Friday is a non-service day.',
+            ),
             style: TextStyle(
               color: AppColors.jasper,
               fontSize: 10,

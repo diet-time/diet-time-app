@@ -1,3 +1,6 @@
+import 'package:diet_time/l10n/app_localizations.dart';
+import 'package:diet_time/features/menu/domain/meal_nutrition.dart';
+import 'package:diet_time/features/menu/presentation/meal_detail_viewer.dart';
 import 'dart:async';
 
 import 'package:diet_time/core/network/api_client.dart';
@@ -190,6 +193,8 @@ void main() {
           tomorrowMenuRepositoryProvider.overrideWithValue(repository),
         ],
         child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SingleChildScrollView(
               child: TomorrowMenuSection(orderId: 'order'),
@@ -208,6 +213,82 @@ void main() {
       await tester.pumpAndSettle();
     }
   }
+
+  testWidgets(
+    'draft replacement updates its nutrition total without saving an order or selection',
+    (tester) async {
+      DailyMealItem nutrientItem(
+        String id,
+        String name,
+        String category,
+        double calories,
+      ) => DailyMealItem(
+        id: id,
+        optionId: 'option-$id',
+        name: name,
+        category: category,
+        nutrition: MealNutrition(
+          calories: calories,
+          protein: 10,
+          carbs: 20,
+          fat: 5,
+        ),
+      );
+      final options = [
+        nutrientItem('one', 'First dish', 'meal', 100),
+        nutrientItem('two', 'Second dish', 'meal', 200),
+        nutrientItem('three', 'Third dish', 'meal', 300),
+      ];
+      final small = nutrientItem('snack', 'Small snack', 'snack', 10);
+      final base = menu();
+      final repository = FakeRepository()
+        ..response = TomorrowMenu(
+          subscriptionId: 'order',
+          dayId: 'day',
+          deliveryDate: base.deliveryDate,
+          planName: base.planName,
+          mealCount: 2,
+          snackCount: 1,
+          status: 'DEFAULT_PENDING',
+          locked: false,
+          canConfirm: true,
+          cutoffAt: base.cutoffAt,
+          serverNow: base.serverNow,
+          selected: [options[0], options[1], small],
+          meals: options,
+          snacks: [small],
+        );
+      await show(tester, repository);
+      expect(find.text('310 kcal'), findsWidgets);
+      await tester.ensureVisible(find.text('Third dish'));
+      await tester.tap(find.text('Third dish'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('First dish').last);
+      await tester.pumpAndSettle();
+      expect(find.text('510 kcal'), findsWidgets);
+      expect(find.text('310 kcal'), findsNothing);
+      expect(repository.confirms, 0);
+      expect(repository.gets, 1);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
+    'locked assigned dishes open the existing nutrition detail viewer without changing selections',
+    (tester) async {
+      final repository = FakeRepository()..response = menu(confirmed: true);
+      await show(tester, repository, openSelection: false);
+      await tester.tap(find.text('View confirmed meals'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('View Details').first);
+      await tester.tap(find.text('View Details').first);
+      await tester.pumpAndSettle();
+      expect(find.byType(MealDetailViewer), findsOneWidget);
+      expect(find.byKey(const ValueKey('mealNutritionGrid')), findsOneWidget);
+      expect(find.text('Confirm My Meals'), findsNothing);
+      expect(repository.confirms, 0);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 
   for (final count in [3, 5]) {
     testWidgets('confirmed $count meal package stays compact until expanded', (
@@ -599,16 +680,8 @@ void main() {
       expect(find.text('Your meals are confirmed!'), findsNothing);
       expect(find.text('Confirmed'), findsOneWidget);
       expect(find.text('Confirm My Meals'), findsNothing);
-      expect(
-        find
-            .descendant(
-              of: find.byKey(const ValueKey('tomorrowMenu-order')),
-              matching: find.byType(InkWell),
-            )
-            .evaluate()
-            .where((e) => (e.widget as InkWell).onTap != null),
-        isEmpty,
-      );
+      expect(find.text('View Details'), findsWidgets);
+      expect(repository.confirms, 1);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     },

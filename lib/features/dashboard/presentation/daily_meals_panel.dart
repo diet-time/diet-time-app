@@ -1,3 +1,6 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
+import 'package:diet_time/features/menu/domain/meal_nutrition.dart';
+import 'package:diet_time/features/menu/presentation/meal_nutrition_view.dart';
 import 'package:diet_time/features/plans/domain/meal_entitlement.dart';
 import 'dart:async';
 
@@ -61,15 +64,19 @@ class _DailyMealsPanelState extends ConsumerState<DailyMealsPanel> {
       error: (error, _) => MealMenuMessage(
         message:
             error is ApiException && error.failure == ApiFailure.unauthorized
-            ? 'Please sign in again to view your meals.'
-            : 'We couldn’t load your meals for this day. Please try again.',
+            ? context.customerCopy('Please sign in again to view your meals.')
+            : context.customerCopy(
+                'We couldn’t load your meals for this day. Please try again.',
+              ),
         onRetry: () => ref.invalidate(dailyMealMenuProvider(widget.request)),
       ),
       data: (menu) {
         // Treat cross-date responses as invalid rather than displaying another menu.
         if (DateUtils.dateOnly(menu.date) != DateUtils.dateOnly(widget.date)) {
           return MealMenuMessage(
-            message: 'The menu for this date could not be confirmed.',
+            message: context.customerCopy(
+              'The menu for this date could not be confirmed.',
+            ),
             onRetry: () =>
                 ref.invalidate(dailyMealMenuProvider(widget.request)),
           );
@@ -98,7 +105,7 @@ class _DailyMealsPanelState extends ConsumerState<DailyMealsPanel> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    mealDayStatusLabel(menu.status),
+                    context.customerCopy(mealDayStatusLabel(menu.status)),
                     style: const TextStyle(
                       color: AppColors.emeraldGreen,
                       fontWeight: FontWeight.w700,
@@ -107,11 +114,17 @@ class _DailyMealsPanelState extends ConsumerState<DailyMealsPanel> {
                   const SizedBox(height: 5),
                   Text(
                     menu.editable
-                        ? 'We’ve selected your meals for this day. You can change them before the selection deadline.'
+                        ? context.customerCopy(
+                            'We’ve selected your meals for this day. You can change them before the selection deadline.',
+                          )
                         : menu.deadlinePassed && menu.canEdit
-                        ? 'The selection deadline has passed. Your meals are locked for kitchen preparation.'
+                        ? context.customerCopy(
+                            'The selection deadline has passed. Your meals are locked for kitchen preparation.',
+                          )
                         : menu.lockReason ??
-                              'Your meals are read-only for this day.',
+                              context.customerCopy(
+                                'Your meals are read-only for this day.',
+                              ),
                     style: const TextStyle(
                       color: AppColors.darkGreen,
                       fontSize: 13,
@@ -121,7 +134,7 @@ class _DailyMealsPanelState extends ConsumerState<DailyMealsPanel> {
                   if (cutoff != null) ...[
                     const SizedBox(height: 6),
                     Text(
-                      'Selection deadline: ${DateFormat('d MMM, h:mm a').format(cutoff)} Qatar time',
+                      '${context.customerCopy('Selection deadline')}: ${DateFormat('d MMM, h:mm a').format(cutoff)} ${context.customerCopy('Qatar time')}',
                       style: const TextStyle(
                         color: AppColors.darkGreen,
                         fontSize: 12,
@@ -132,8 +145,8 @@ class _DailyMealsPanelState extends ConsumerState<DailyMealsPanel> {
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
-              'Your meals for this day',
+            Text(
+              context.customerCopy('Your meals for this day'),
               style: TextStyle(
                 color: AppColors.darkGreen,
                 fontSize: 18,
@@ -141,18 +154,29 @@ class _DailyMealsPanelState extends ConsumerState<DailyMealsPanel> {
               ),
             ),
             const SizedBox(height: 10),
+            MealNutritionView(
+              total: true,
+              nutrition: MealNutrition.total(
+                menu.selected.map(
+                  (s) =>
+                      (nutrition: s.meal.nutrition, quantity: s.meal.quantity),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
             if (menu.selected.isEmpty)
-              const MealMenuMessage(
-                message:
-                    'Your meals are being reviewed by our team. Please check back shortly.',
+              MealMenuMessage(
+                message: context.customerCopy(
+                  'Your meals are being reviewed by our team. Please check back shortly.',
+                ),
               ),
             for (final selection in menu.selected) ...[
               DailyMealCard(
                 key: ValueKey('assigned-${selection.id}'),
                 meal: selection.meal,
                 status: selection.source == 'automatic'
-                    ? 'Selected for you'
-                    : 'Your choice',
+                    ? context.customerCopy('Automatically Selected')
+                    : context.customerCopy('Your choice'),
                 onChange: menu.editable
                     ? () => _changeMeal(menu, selection)
                     : null,
@@ -197,7 +221,9 @@ class _DailyMealsPanelState extends ConsumerState<DailyMealsPanel> {
     ref.invalidate(dailyMealMenuProvider(widget.request));
     ref.invalidate(upcomingMealDaysProvider(widget.request.orderId));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Your meal change has been saved.')),
+      SnackBar(
+        content: Text(context.customerCopy('Your meal change has been saved.')),
+      ),
     );
   }
 }
@@ -234,8 +260,9 @@ class _ReplacementSheetState extends ConsumerState<_ReplacementSheet> {
         if (!mounted) return;
         setState(() {
           _refreshRequired = true;
-          _error =
-              'The selection deadline has passed. Close this sheet to view your saved meals.';
+          _error = context.customerCopy(
+            'The selection deadline has passed. Close this sheet to view your saved meals.',
+          );
         });
       });
     }
@@ -271,10 +298,16 @@ class _ReplacementSheetState extends ConsumerState<_ReplacementSheet> {
             error is ApiException &&
             (error.statusCode == 409 || error.statusCode == 422);
         _error = error is ApiException && error.statusCode == 409
-            ? 'Your choices or selection deadline have changed. Close this sheet and refresh the day.'
+            ? context.customerCopy(
+                'Your choices or selection deadline have changed. Close this sheet and refresh the day.',
+              )
             : error is ApiException && error.statusCode == 422
-            ? 'That meal is no longer available. Please choose another option or refresh the day.'
-            : 'We couldn’t save this change. Your saved meals are unchanged. Please try again.';
+            ? context.customerCopy(
+                'That meal is no longer available. Please choose another option or refresh the day.',
+              )
+            : context.customerCopy(
+                'We couldn’t save this change. Your saved meals are unchanged. Please try again.',
+              );
       });
       if (_refreshRequired) {
         ref.invalidate(dailyMealMenuProvider(widget.request));
@@ -295,9 +328,9 @@ class _ReplacementSheetState extends ConsumerState<_ReplacementSheet> {
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Change meal',
+                    context.customerCopy('Change meal'),
                     style: TextStyle(
                       color: AppColors.darkGreen,
                       fontSize: 21,
@@ -307,7 +340,7 @@ class _ReplacementSheetState extends ConsumerState<_ReplacementSheet> {
                 ),
                 IconButton(
                   onPressed: _saving ? null : () => Navigator.of(context).pop(),
-                  tooltip: 'Close',
+                  tooltip: context.customerCopy('Close'),
                   icon: const Icon(Icons.close),
                 ),
               ],
@@ -315,9 +348,11 @@ class _ReplacementSheetState extends ConsumerState<_ReplacementSheet> {
             const SizedBox(height: 8),
             Expanded(
               child: widget.options.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
-                        'There are no other eligible dishes for this selection on this day.',
+                        context.customerCopy(
+                          'There are no other eligible dishes for this selection on this day.',
+                        ),
                       ),
                     )
                   : ListView.separated(
@@ -331,8 +366,10 @@ class _ReplacementSheetState extends ConsumerState<_ReplacementSheet> {
                             key: ValueKey('alternative-${item.optionId}'),
                             meal: item,
                             status: item.optionId == _chosen?.optionId
-                                ? 'Selected replacement'
-                                : 'Available for this day',
+                                ? context.customerCopy('Selected replacement')
+                                : context.customerCopy(
+                                    'Available for this day',
+                                  ),
                             selected: item.optionId == _chosen?.optionId,
                             onSelect: _saving || _refreshRequired
                                 ? null
@@ -367,7 +404,11 @@ class _ReplacementSheetState extends ConsumerState<_ReplacementSheet> {
                         !widget.menu.editable
                     ? null
                     : _save,
-                child: Text(_saving ? 'Saving changes…' : 'Save Changes'),
+                child: Text(
+                  _saving
+                      ? 'Saving changes…'
+                      : context.customerCopy('Save Changes'),
+                ),
               ),
             ),
           ],
@@ -436,7 +477,9 @@ class DailyMealCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        meal.category == 'snack' ? 'Snack' : 'Meal',
+                        meal.category == 'snack'
+                            ? 'Snack'
+                            : context.customerCopy('Meal'),
                         style: const TextStyle(
                           color: AppColors.emeraldGreen,
                           fontSize: 12,
@@ -461,16 +504,7 @@ class DailyMealCard extends StatelessWidget {
                           ),
                         ),
                       ],
-                      if (meal.calories != null) ...[
-                        const SizedBox(height: 5),
-                        Text(
-                          '${meal.calories!.round()} kcal',
-                          style: const TextStyle(
-                            color: AppColors.darkGreen,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                      MealNutritionDetails(meal: meal),
                     ],
                   ),
                 ),
@@ -478,7 +512,7 @@ class DailyMealCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              status,
+              context.customerCopy(status),
               style: const TextStyle(
                 color: AppColors.emeraldGreen,
                 fontSize: 12,
@@ -489,7 +523,7 @@ class DailyMealCard extends StatelessWidget {
                 alignment: AlignmentDirectional.centerEnd,
                 child: TextButton(
                   onPressed: onChange,
-                  child: const Text('Change Meal'),
+                  child: Text(context.customerCopy('Change Meal')),
                 ),
               ),
           ],
@@ -512,7 +546,7 @@ class MealMenuLoading extends StatelessWidget {
   const MealMenuLoading({super.key});
   @override
   Widget build(BuildContext context) => Semantics(
-    label: 'Loading meals for the selected day',
+    label: context.customerCopy('Loading meals for the selected day'),
     child: Column(
       children: [
         for (var i = 0; i < 3; i++)
@@ -544,7 +578,10 @@ class MealMenuMessage extends StatelessWidget {
           style: const TextStyle(color: AppColors.darkGreen, height: 1.5),
         ),
         if (onRetry != null)
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
+          TextButton(
+            onPressed: onRetry,
+            child: Text(context.customerCopy('Retry')),
+          ),
       ],
     ),
   );

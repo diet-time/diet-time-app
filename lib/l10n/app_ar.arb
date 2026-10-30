@@ -186,8 +186,12 @@
   "pageProgress": "الصفحة {current} من {total}",
   "@pageProgress": {
     "placeholders": {
-      "current": {"type": "int"},
-      "total": {"type": "int"}
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "browseMenuTitle": "خيارات طازجة، صُنعت من أجلك",
@@ -203,7 +207,9 @@
   "kcal": "{value} سعرة",
   "@kcal": {
     "placeholders": {
-      "value": {"type": "int"}
+      "value": {
+        "type": "int"
+      }
     }
   },
   "choosePlanTitle": "اختر خطة وجباتك",
@@ -219,14 +225,20 @@
   "dailyCalories": "{value} سعرة / يوم",
   "@dailyCalories": {
     "placeholders": {
-      "value": {"type": "int"}
+      "value": {
+        "type": "int"
+      }
     }
   },
   "dailyPlanPrice": "{currency} {amount} / يوم",
   "@dailyPlanPrice": {
     "placeholders": {
-      "currency": {"type": "String"},
-      "amount": {"type": "String"}
+      "currency": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "dailyPriceLabel": "السعر اليومي",
@@ -234,7 +246,9 @@
   "weeklyPrice": "{value} ر.ق / أسبوع",
   "@weeklyPrice": {
     "placeholders": {
-      "value": {"type": "int"}
+      "value": {
+        "type": "int"
+      }
     }
   },
   "continueLabel": "متابعة",
@@ -251,7 +265,9 @@
   "otpResendCountdown": "إعادة إرسال الرمز خلال {time}",
   "@otpResendCountdown": {
     "placeholders": {
-      "time": {"type": "String"}
+      "time": {
+        "type": "String"
+      }
     }
   },
   "otpSendViaSms": "الإرسال عبر رسالة نصية",
@@ -259,7 +275,9 @@
   "otpDevelopmentCode": "رمز التطوير: {code}",
   "@otpDevelopmentCode": {
     "placeholders": {
-      "code": {"type": "String"}
+      "code": {
+        "type": "String"
+      }
     }
   },
   "otpIncorrectCode": "رمز التحقق غير صحيح. يرجى المحاولة مرة أخرى.",
@@ -278,7 +296,9 @@
   "selectMealPlanSemantics": "اختر خطة وجبات {planName}",
   "@selectMealPlanSemantics": {
     "placeholders": {
-      "planName": {"type": "String"}
+      "planName": {
+        "type": "String"
+      }
     }
   },
   "guestWeeklyMenuTitle": "قائمة هذا الأسبوع",
@@ -300,16 +320,38 @@
   "readMore": "قراءة المزيد",
   "showLess": "عرض أقل",
   "allergenContains": "يحتوي على {name}",
-  "@allergenContains": {"placeholders": {"name": {"type": "String"}}},
+  "@allergenContains": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "allergenMayContain": "قد يحتوي على {name}",
-  "@allergenMayContain": {"placeholders": {"name": {"type": "String"}}},
+  "@allergenMayContain": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "allergenTraces": "آثار من {name}",
-  "@allergenTraces": {"placeholders": {"name": {"type": "String"}}},
+  "@allergenTraces": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "nutritionItemSemantics": "{label} {value}",
   "@nutritionItemSemantics": {
     "placeholders": {
-      "label": {"type": "String"},
-      "value": {"type": "String"}
+      "label": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
     }
   },
   "mealMicronutrientsTitle": "العناصر الغذائية الدقيقة",
@@ -318,7 +360,9 @@
   "gramsValue": "{value}غ",
   "@gramsValue": {
     "placeholders": {
-      "value": {"type": "String"}
+      "value": {
+        "type": "String"
+      }
     }
   },
   "postLoginWelcomeLabel": "مرحباً بك في دايت تايم",
@@ -336,5 +380,423 @@
   "otpCodeSentTo": "تم إرسال الرمز إلى",
   "otpEditPhone": "تعديل",
   "otpDidntGetCode": "لم يصلك الرمز؟",
-  "otpResendViaWhatsapp": "إعادة الإرسال عبر واتساب"
+  "otpResendViaWhatsapp": "إعادة الإرسال عبر واتساب",
+  "exploreMenu": "استكشف القائمة",
+  "backToDashboard": "العودة إلى لوحة التحكم",
+  "dailyNutritionTotal": "إجمالي التغذية اليومي",
+  "nutritionUnavailable": "المعلومات الغذائية غير متاحة",
+  "nutritionTotalsIncomplete": "لا يمكن حساب إجمالي القيم الغذائية غير المتاحة.",
+  "sugarLabel": "السكر",
+  "saturatedFatLabel": "الدهون المشبعة",
+  "transFatLabel": "الدهون المتحولة",
+  "cholesterolLabel": "الكوليسترول",
+  "nutritionServing": "لكل حصة: {portion}",
+  "@nutritionServing": {
+    "placeholders": {
+      "portion": {
+        "type": "String"
+      }
+    }
+  },
+  "customerUnableToSignIn": "تعذر تسجيل الدخول",
+  "customerWeCouldNotLoadTakeawayBranchesPleaseTryAgain": "تعذر تحميل فروع الاستلام. يرجى المحاولة مرة أخرى.",
+  "customerChooseAFutureDeliveryStartDateTodayAndFriday": "اختر تاريخ بدء لاحقاً؛ اليوم والجمعة غير متاحين.",
+  "customerTheSelectedMealConfigurationIsNoLongerAvailable": "خيارات الوجبات المحددة لم تعد متاحة.",
+  "customerTheSelectedPlanDurationIsNoLongerAvailable": "مدة الباقة المحددة لم تعد متاحة.",
+  "customerWeCouldNotVerifyTheSelectedPlanPleaseTry": "تعذر التحقق من الباقة المحددة. يرجى المحاولة مرة أخرى.",
+  "customerDeliveryTimesCouldNotBeLoadedPleaseTryAgain": "تعذر تحميل أوقات التوصيل. يرجى المحاولة مرة أخرى.",
+  "customerWeCouldNotLoadYourCustomerProfilePleaseSign": "تعذر تحميل ملفك. يرجى تسجيل الدخول مرة أخرى.",
+  "customerSavedAddressesCouldNotBeLoadedPleaseTryAgain": "تعذر تحميل العناوين المحفوظة. يرجى المحاولة مرة أخرى.",
+  "customerYourCustomerProfileIsUnavailablePleaseSignInAgain": "ملفك غير متاح. يرجى تسجيل الدخول مرة أخرى.",
+  "customerSelectAnActiveDeliveryTimeSlotBeforeSaving": "اختر وقت توصيل متاحاً قبل الحفظ.",
+  "customerYourAddressCouldNotBeSavedPleaseTryAgain": "تعذر حفظ عنوانك. يرجى المحاولة مرة أخرى.",
+  "customerWeCouldntPlaceYourOrderPleaseTryAgain": "تعذر إرسال طلبك. يرجى المحاولة مرة أخرى.",
+  "customerPleaseCheckYourConnectionAndTryAgain": "يرجى التحقق من الاتصال والمحاولة مرة أخرى.",
+  "customerThePlanPriceHasChangedPleaseReviewTheUpdated": "تغير سعر الباقة. يرجى مراجعة الإجمالي المحدث قبل إرسال الطلب.",
+  "customerThisOrderIsAlreadyBeingProcessedPleaseTryAgain": "هذا الطلب قيد المعالجة بالفعل. يرجى المحاولة مرة أخرى.",
+  "customerTheSelectedPlanIsNoLongerAvailablePleaseChoose": "الباقة المحددة لم تعد متاحة. يرجى اختيار باقة أخرى.",
+  "customerTheSelectedDeliveryAddressIsNoLongerAvailable": "عنوان التوصيل المحدد لم يعد متاحاً.",
+  "customerTheSelectedDeliveryTimeIsNoLongerAvailable": "وقت التوصيل المحدد لم يعد متاحاً.",
+  "customerASelectedCheckoutOptionIsNoLongerAvailablePlease": "أحد الخيارات المحددة لم يعد متاحاً. يرجى مراجعة طلبك.",
+  "customerPleaseReviewYourSelectedMeals": "يرجى مراجعة الوجبات المحددة.",
+  "customerPleaseReviewYourSelectedServiceDays": "يرجى مراجعة أيام الخدمة المحددة.",
+  "customerPleaseSelectAnotherPlanStartDate": "يرجى اختيار تاريخ بدء آخر للباقة.",
+  "customerCouponCodesAreNotSupportedYetRemoveTheCoupon": "رموز الخصم غير مدعومة حالياً. احذف الرمز وحاول مرة أخرى.",
+  "customerYourOrderResponseCouldNotBeConfirmedPleaseCheck": "تعذر التحقق من نتيجة الطلب. يرجى مراجعة طلباتك قبل المحاولة مرة أخرى.",
+  "customerSomeAddressInformationWasNotAcceptedPleaseReviewIt": "لم يتم قبول بعض بيانات العنوان. يرجى مراجعتها.",
+  "customerYourSessionExpiredPleaseSignInAgain": "انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.",
+  "customerWeCouldNotLoadYourProfile": "تعذر تحميل ملفك.",
+  "customerTRYAGAIN": "حاول مرة أخرى",
+  "customerBrowsePlans": "تصفح الباقات",
+  "customerDohaQatar": "الدوحة، قطر",
+  "customerCustomerAddress": "عنوان العميل",
+  "customerDeliveryAddress": "عنوان التوصيل",
+  "customerChooseDeliveryAddress": "اختر عنوان التوصيل",
+  "customerSelectWhereYouWouldLikeYourMealsDelivered": "حدد المكان الذي ترغب في توصيل وجباتك إليه.",
+  "customerLoadingSavedAddresses": "جارٍ تحميل العناوين المحفوظة...",
+  "customerAddAnotherAddress": "إضافة عنوان آخر",
+  "customerUseThisAddress": "استخدام هذا العنوان",
+  "customerAddressDetails": "تفاصيل العنوان",
+  "customerSavedAddresses": "العناوين المحفوظة",
+  "customerSAVEASundefined": "حفظ باسم *",
+  "customerBuildingNoundefined": "رقم المبنى *",
+  "customerStreetundefined": "الشارع *",
+  "customerUnitNumber": "رقم الوحدة",
+  "customerZoneNoundefined": "رقم المنطقة *",
+  "customerAreaundefined": "المنطقة *",
+  "customerDirectionsToReach": "إرشادات الوصول",
+  "customerCallMeWhenYouArrive": "اتصل بي عند الوصول",
+  "customerSavingAddress": "جارٍ حفظ العنوان...",
+  "customerSaveAddress": "حفظ العنوان",
+  "customerPinnedLocationQatar": "الموقع المحدد، قطر",
+  "customerSelectAnAddressTypeBeforeSaving": "اختر نوع العنوان قبل الحفظ.",
+  "customerCompleteAllRequiredAddressFields": "أكمل جميع حقول العنوان المطلوبة.",
+  "customerSelectADeliveryTimeSlotBeforeSaving": "اختر وقت التوصيل قبل الحفظ.",
+  "customerSelectADeliveryAddressOrAddANewOne": "اختر عنوان توصيل أو أضف عنواناً جديداً.",
+  "customerSelectADeliveryTimeSlot": "اختر وقت التوصيل.",
+  "customerEnterAZoneOrAreaToSearch": "أدخل منطقة للبحث.",
+  "customerNoMatchingLocationWasFound": "لم يتم العثور على موقع مطابق.",
+  "customerLocationSearchIsUnavailableTryAgainOrMoveThe": "البحث عن الموقع غير متاح. حاول مرة أخرى أو حرك العلامة.",
+  "customerTurnOnLocationServicesToContinue": "فعّل خدمات الموقع للمتابعة.",
+  "customerLocationAccessIsBlockedEnableItInDeviceSettings": "الوصول إلى الموقع محظور. فعّله من إعدادات الجهاز.",
+  "customerLocationPermissionIsNeededToFindYourCurrentAddress": "يلزم إذن الموقع لتحديد عنوانك الحالي.",
+  "customerFindingYourCurrentLocation": "جارٍ تحديد موقعك الحالي...",
+  "customerCouldNotDetermineYourLocationTryAgainOrMove": "تعذر تحديد موقعك. حاول مرة أخرى أو حرك العلامة.",
+  "customerPinnedLocation": "الموقع المحدد",
+  "customerSearchAZone": "ابحث عن منطقة",
+  "customerCurrentAddress": "العنوان الحالي",
+  "customerGoogleMapsIsNotConfiguredForThisIOSBuild": "خرائط Google غير مهيأة في هذا الإصدار لنظام iOS.",
+  "customerAddTheIOSAPIKeyThenCleanAndRebuild": "أضف مفتاح iOS ثم أعد بناء التطبيق.",
+  "customerDELIVERYTIMEundefined": "وقت التوصيل *",
+  "customerLoadingDeliveryTimes": "جارٍ تحميل أوقات التوصيل...",
+  "customerNoDeliveryTimeSlotsAreCurrentlyAvailable": "لا توجد أوقات توصيل متاحة حالياً.",
+  "customerDEFAULT": "الافتراضي",
+  "customerNoSavedAddressesYet": "لا توجد عناوين محفوظة بعد",
+  "customerAddAnAddressForYourMealDeliveries": "أضف عنواناً لتوصيل وجباتك.",
+  "customerAddAddress": "إضافة عنوان",
+  "customerOrderSubmitted": "تم إرسال الطلب",
+  "customerOrderConfirmed": "تم تأكيد الطلب!",
+  "customerYourOrderHasBeenReceivedAndIsAwaitingConfirmation": "استلمنا طلبك وهو بانتظار تأكيد دايت تايم. سنخطرك بعد مراجعته.",
+  "customerGOTODASHBOARD": "الانتقال إلى لوحة التحكم",
+  "customerORDERNUMBER": "رقم الطلب",
+  "customerPLAN": "الباقة",
+  "customerPAYMENT": "الدفع",
+  "customerPACKAGE": "الاشتراك",
+  "customerFULFILLMENT": "طريقة الاستلام",
+  "customerTakeaway": "استلام من الفرع",
+  "customerPLANPERIOD": "فترة الباقة",
+  "customerFIRSTCOLLECTION": "أول استلام",
+  "customerFIRSTDELIVERY": "أول توصيل",
+  "customerDELIVERYTO": "التوصيل إلى",
+  "customerTOTAL": "الإجمالي",
+  "customerSTATUS": "الحالة",
+  "customerOrderConfirmationIsUnavailable": "تأكيد الطلب غير متاح.",
+  "customerVerifyingYourSelectedPlan": "جارٍ التحقق من الباقة المحددة...",
+  "customerYourPlanDetails": "تفاصيل باقتك",
+  "customerThisPackageIsAvailableForTakeawayOnly": "هذه الباقة متاحة للاستلام من الفرع فقط.",
+  "customerHomeDelivery": "توصيل إلى المنزل",
+  "customerCOLLECTIONBRANCH": "فرع الاستلام",
+  "customerNoTakeawayBranchesAreCurrentlyAvailable": "لا توجد فروع استلام متاحة حالياً.",
+  "customerDELIVERYADDRESSTIMESLOT": "عنوان ووقت التوصيل",
+  "customerStartDate": "تاريخ البدء",
+  "customerSelectYourServiceDates": "اختر تواريخ الخدمة",
+  "customerOrderTotal": "إجمالي الطلب",
+  "customerPLACEORDER": "إرسال الطلب",
+  "customerPLACINGORDER": "جارٍ إرسال الطلب...",
+  "customerPREPARINGORDER": "جارٍ تجهيز الطلب...",
+  "customerNoDeliveryAddressSelected": "لم يتم اختيار عنوان توصيل",
+  "customerAddDeliveryAddress": "إضافة عنوان توصيل",
+  "customerChange": "تغيير",
+  "customerSelectADeliveryTimeSlot2": "اختر وقت التوصيل",
+  "customerChooseAMealPlanBeforeReviewingYourSummary": "اختر باقة وجبات قبل مراجعة الملخص.",
+  "customerBrowsePlans2": "تصفح الباقات",
+  "customerWeCouldNotLoadYourDashboardPleaseTryAgain": "تعذر تحميل لوحة التحكم. يرجى المحاولة مرة أخرى.",
+  "customerWeCouldNotLoadYourOrdersPleaseTryAgain": "تعذر تحميل طلباتك. يرجى المحاولة مرة أخرى.",
+  "customerHOME": "الرئيسية",
+  "customerORDERS": "الطلبات",
+  "customerCALENDAR": "التقويم",
+  "customerPROFILE": "الملف الشخصي",
+  "customerProfileUpdatedSuccessfully": "تم تحديث الملف بنجاح",
+  "customerUnableToLoadYourProfile": "تعذر تحميل ملفك.",
+  "customerQuestionnaireUpdatedSuccessfully": "تم تحديث الاستبيان بنجاح",
+  "customerLogout": "تسجيل الخروج",
+  "customerAreYouSureYouWantToLogout": "هل تريد تسجيل الخروج؟",
+  "customerCancel": "إلغاء",
+  "customerYourSessionHasExpiredPleaseSignInAgain": "انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.",
+  "customerSIGNIN": "تسجيل الدخول",
+  "customerYourCustomerProfileCouldNotBeFound": "تعذر العثور على ملفك.",
+  "customerYOURACTIVEPLAN": "باقتك الحالية",
+  "customerMYACTIVEPLANS": "باقاتي الحالية",
+  "customerORDERANOTHERPLAN": "طلب باقة أخرى",
+  "customerQUICKACTIONS": "إجراءات سريعة",
+  "customerPREVIOUSORDERS": "الطلبات السابقة",
+  "customerMYORDERS": "طلباتي",
+  "customerVIEWALL": "عرض الكل",
+  "customerNOACTIVEPLAN": "لا توجد باقة نشطة",
+  "customerYouDontHaveAnActiveMealPlanRightNow": "ليس لديك باقة وجبات نشطة حالياً.",
+  "customerCHOOSEAPLAN": "اختر باقة",
+  "customerScheduleReady": "الجدول جاهز",
+  "customerCollectFromDietTime": "استلم من دايت تايم",
+  "customerVIEWPLAN": "عرض الباقة",
+  "customerDETAILS": "التفاصيل",
+  "customerMyPlan": "باقتي",
+  "customerOrders": "الطلبات",
+  "customerNewPlan": "باقة جديدة",
+  "customerSupport": "الدعم",
+  "customerSupportWillBeAvailableSoon": "سيتوفر الدعم قريباً.",
+  "customerDeliveryCalendar": "تقويم التوصيل",
+  "customerNoActiveDeliveryCalendar": "لا يوجد جدول توصيل نشط",
+  "customerYourDeliveryDatesWillAppearHereWhenAMeal": "ستظهر تواريخ التوصيل هنا عند تفعيل باقة الوجبات.",
+  "customerALL": "الكل",
+  "customerMyOrders": "طلباتي",
+  "customerAllYourMealOrdersInOnePlace": "جميع طلبات وجباتك في مكان واحد",
+  "customerAllOrders": "جميع الطلبات",
+  "customerPendingConfirmation": "بانتظار التأكيد",
+  "customerOnHold": "معلق",
+  "customerRejected": "مرفوض",
+  "customerPending": "قيد الانتظار",
+  "customerCancelled": "ملغى",
+  "customerNoOrdersFoundForThisStatus": "لا توجد طلبات بهذه الحالة.",
+  "customerOrderPlaced": "تم إرسال الطلب",
+  "customerViewDetailsundefined": "عرض التفاصيل ←",
+  "customerGoodMorning": "صباح الخير",
+  "customerGoodAfternoon": "مساء الخير",
+  "customerGoodEvening": "مساء الخير",
+  "customerYourMealPlanIsActive": "باقة وجباتك نشطة",
+  "customerReadyWhenYouAre": "نحن مستعدون عندما تكون جاهزاً",
+  "customerYourMealPlansAtAGlance": "نظرة على باقات وجباتك",
+  "customerMon": "الاثنين",
+  "customerTue": "الثلاثاء",
+  "customerWed": "الأربعاء",
+  "customerThu": "الخميس",
+  "customerFri": "الجمعة",
+  "customerSat": "السبت",
+  "customerSun": "الأحد",
+  "customerWeCouldntLoadAllYourDeliveryOrders": "تعذر تحميل جميع طلبات التوصيل.",
+  "customerUnableToUpdateProfilePleaseTryAgain": "تعذر تحديث الملف. يرجى المحاولة مرة أخرى.",
+  "customerProfile": "الملف الشخصي",
+  "customerCustomerProfile": "ملف العميل",
+  "customerViewOrUpdateYourPersonalInformation": "عرض بياناتك الشخصية أو تحديثها",
+  "customerQuestionnaire": "الاستبيان",
+  "customerCaptureYourGoalsAndFoodPreferences": "أدخل أهدافك وتفضيلاتك الغذائية",
+  "customerAddOrEditYourDeliveryAddress": "أضف عنوان التوصيل أو عدله",
+  "customerPleaseSignInAgainToViewYourMeals": "يرجى تسجيل الدخول مرة أخرى لعرض وجباتك.",
+  "customerWeCouldntLoadYourMealsForThisDayPlease": "تعذر تحميل وجبات هذا اليوم. يرجى المحاولة مرة أخرى.",
+  "customerTheMenuForThisDateCouldNotBeConfirmed": "تعذر التحقق من قائمة هذا التاريخ.",
+  "customerWeveSelectedYourMealsForThisDayYouCan": "اخترنا وجباتك لهذا اليوم. يمكنك تغييرها قبل موعد إغلاق الاختيار.",
+  "customerTheSelectionDeadlineHasPassedYourMealsAreLocked": "انتهى وقت الاختيار. وجباتك مقفلة لتجهيزها في المطبخ.",
+  "customerYourMealsAreReadonlyForThisDay": "وجبات هذا اليوم متاحة للعرض فقط.",
+  "customerYourMealsForThisDay": "وجباتك لهذا اليوم",
+  "customerYourMealsAreBeingReviewedByOurTeamPlease": "فريقنا يراجع وجباتك. يرجى العودة قريباً.",
+  "customerSelectedForYou": "تم اختيارها لك",
+  "customerYourChoice": "اختيارك",
+  "customerYourMealChangeHasBeenSaved": "تم حفظ تغيير الوجبة.",
+  "customerTheSelectionDeadlineHasPassedCloseThisSheetTo": "انتهى وقت الاختيار. أغلق النافذة لعرض وجباتك المحفوظة.",
+  "customerYourChoicesOrSelectionDeadlineHaveChangedCloseThis": "تغيرت خياراتك أو موعد الإغلاق. أغلق النافذة وحدّث اليوم.",
+  "customerThatMealIsNoLongerAvailablePleaseChooseAnother": "هذه الوجبة لم تعد متاحة. اختر بديلاً أو حدّث اليوم.",
+  "customerWeCouldntSaveThisChangeYourSavedMealsAre": "تعذر حفظ التغيير. وجباتك المحفوظة لم تتغير. يرجى المحاولة مرة أخرى.",
+  "customerChangeMeal": "تغيير الوجبة",
+  "customerClose": "إغلاق",
+  "customerThereAreNoOtherEligibleDishesForThisSelection": "لا توجد أطباق بديلة متاحة لهذا الاختيار في هذا اليوم.",
+  "customerSelectedReplacement": "البديل المحدد",
+  "customerAvailableForThisDay": "متاح لهذا اليوم",
+  "customerSavingChanges": "جارٍ حفظ التغييرات…",
+  "customerSaveChanges": "حفظ التغييرات",
+  "customerChangeMeal2": "تغيير الوجبة",
+  "customerLoadingMealsForTheSelectedDay": "جارٍ تحميل وجبات اليوم المحدد",
+  "customerAutomaticallySelected": "تم الاختيار تلقائياً",
+  "customerCustomized": "مخصص",
+  "customerDelivered": "تم التوصيل",
+  "customerOurTeamIsReviewingThisDay": "فريقنا يراجع هذا اليوم",
+  "customerEditProfile": "تعديل الملف",
+  "customerFullNameIsRequired": "الاسم الكامل مطلوب.",
+  "customerFullNameMustBeAtLeast2Characters": "يجب أن يتكون الاسم الكامل من حرفين على الأقل.",
+  "customerFullNameMustBe150CharactersOrFewer": "يجب ألا يتجاوز الاسم الكامل 150 حرفاً.",
+  "customerFullName": "الاسم الكامل",
+  "customerMobileNumber": "رقم الهاتف",
+  "customerContactSupportOrUseChangeMobileNumberToUpdate": "تواصل مع الدعم أو استخدم تغيير رقم الهاتف لتحديث رقم الدخول.",
+  "customerDateOfBirth": "تاريخ الميلاد",
+  "customerSaving": "جارٍ الحفظ...",
+  "customerDiscardChanges": "تجاهل التغييرات؟",
+  "customerYouHaveUnsavedChangesAreYouSureYouWant": "لديك تغييرات غير محفوظة. هل تريد المغادرة؟",
+  "customerKeepEditing": "متابعة التعديل",
+  "customerDiscard": "تجاهل",
+  "customerBack": "رجوع",
+  "customerOrderDetails": "تفاصيل الطلب",
+  "customerRequestCancellation": "طلب الإلغاء",
+  "customerTheOrderCouldNotBeCancelledRefreshTheOrder": "تعذر إلغاء الطلب. حدّثه أو تواصل مع دايت تايم.",
+  "customerMEALSINCLUDED": "الوجبات المشمولة",
+  "customerCOLLECTIONDAYS": "أيام الاستلام",
+  "customerDELIVERYDAYS": "أيام التوصيل",
+  "customerDELIVERYADDRESS": "عنوان التوصيل",
+  "customerDELIVERYTIME": "وقت التوصيل",
+  "customerPRICING": "الأسعار",
+  "customerPAYMENTSTATUS": "حالة الدفع",
+  "customerThankYouForYourOrder": "شكراً لطلبك!",
+  "customerYourPlanAndDeliveryScheduleAreConfirmedAbove": "تفاصيل باقتك وجدول التوصيل المؤكدة أعلاه.",
+  "customerNeedHelp": "هل تحتاج مساعدة؟",
+  "customerContactSupport": "تواصل مع الدعم",
+  "customerWeCouldntLoadThisOrder": "تعذر تحميل هذا الطلب.",
+  "customerCancelThisOrder": "إلغاء هذا الطلب؟",
+  "customerReason": "السبب",
+  "customerKeepOrder": "الإبقاء على الطلب",
+  "customerConfirmCancellation": "تأكيد الإلغاء",
+  "customerThisOrderCouldNotBeLoadedForYourAccount": "تعذر تحميل هذا الطلب لحسابك. حدّث لوحة التحكم أو تواصل مع فريقنا برقم الطلب.",
+  "customerWeCouldNotConnectToLoadYourMenuCheck": "تعذر الاتصال لتحميل القائمة. تحقق من الاتصال وحاول مرة أخرى.",
+  "customerTheMenuServiceCouldNotLoadYourOrdersDishes": "تعذر تحميل أطباق طلبك. يرجى التحديث أو التواصل مع فريقنا.",
+  "customerConfirmYourMeals": "تأكيد وجباتك",
+  "customerYourSelectionsCannotBeChangedAfterConfirmation": "لا يمكن تغيير اختياراتك بعد التأكيد.",
+  "customerConfirm": "تأكيد",
+  "customerThe900PMDeadlineHasPassedYourAutomaticMeals": "انتهى موعد الاختيار في التاسعة مساءً. جارٍ تثبيت وجباتك التلقائية.",
+  "customerYourMealsHaveAlreadyBeenFinalizedHereAreYour": "تم تثبيت وجباتك بالفعل. هذه أطباقك المحفوظة.",
+  "customerYourSubscriptionIsNoLongerActiveForThisDelivery": "اشتراكك لم يعد نشطاً لهذا التوصيل.",
+  "customerADishIsNoLongerAvailablePleaseReviewThe": "أحد الأطباق لم يعد متاحاً. يرجى مراجعة القائمة المحدثة.",
+  "customerWeCouldNotVerifyYourConfirmationPleaseCheckYour": "تعذر التحقق من التأكيد. تحقق من الاتصال وحدّث قبل المحاولة مرة أخرى.",
+  "customerUnableToConfirmYourMealsPleaseTryAgain": "تعذر تأكيد وجباتك. يرجى المحاولة مرة أخرى.",
+  "customerTomorrowsMenu": "قائمة الغد",
+  "customerAutomaticallyFinalized": "تم التثبيت تلقائياً",
+  "customerHideConfirmedMeals": "إخفاء الوجبات المؤكدة",
+  "customerSelectionClosesTodayAt900PMQatarTime": "ينتهي الاختيار اليوم الساعة التاسعة مساءً بتوقيت قطر.",
+  "customerMeals": "الوجبات",
+  "customerSnacks": "الوجبات الخفيفة",
+  "customerConfirmMyMeals": "تأكيد وجباتي",
+  "customerReplaceAMeal": "استبدال وجبة",
+  "customerReplaceASnack": "استبدال وجبة خفيفة",
+  "customerNoEligibleDishesAreCurrentlyConfiguredOurTeamWill": "لا توجد أطباق متاحة حالياً. سيراجع فريقنا هذا التوصيل.",
+  "customerUpcomingMeals": "الوجبات القادمة",
+  "customerWeCouldntLoadAllYourDeliveryMeals": "تعذر تحميل جميع وجبات التوصيل.",
+  "customerMealsHaveNotBeenAssignedToThisDeliveryYet": "لم يتم تعيين وجبات لهذا التوصيل بعد. سيراجعه فريقنا.",
+  "customerMealsChosenForYou": "وجبات مختارة لك",
+  "customerYourChoicesConfirmed": "تم تأكيد اختياراتك",
+  "customerServiceDay": "يوم خدمة",
+  "customerNonserviceDay": "يوم بلا خدمة",
+  "customerNonservice": "بلا خدمة",
+  "customerAutoselected": "مختار تلقائياً",
+  "customerDelivery": "التوصيل",
+  "customerScheduled": "مجدول",
+  "customerNoUpcomingDeliveriesAreScheduled": "لا توجد توصيلات قادمة مجدولة.",
+  "customerServiceRunsSaturdayToThursdayFridayIsANonservice": "الخدمة من السبت إلى الخميس. الجمعة يوم بلا خدمة.",
+  "customerBeingPrepared": "قيد التجهيز",
+  "customerOnTheWay": "في الطريق",
+  "customerSkipped": "تم التخطي",
+  "customerChooseYourLanguage": "اختر لغتك",
+  "customerAll": "الكل",
+  "customerYourDraftCouldNotBeSavedPleaseTryAgain": "تعذر حفظ المسودة. يرجى المحاولة مرة أخرى.",
+  "customerUnableToLoadYourSavedProfile": "تعذر تحميل ملفك المحفوظ.",
+  "customerYourProfileChangedElsewhereWeReloadedItPleaseReview": "تم تعديل ملفك من مكان آخر. أعدنا تحميله؛ يرجى المراجعة والمحاولة مرة أخرى.",
+  "customerCouldNotSaveYourProgressCheckYourConnection": "تعذر حفظ تقدمك. تحقق من الاتصال.",
+  "customerSelect": "اختر",
+  "customerNoFoodPreferences": "لا توجد تفضيلات غذائية",
+  "customerSearchAllergies": "ابحث عن الحساسية...",
+  "customerPersonalized": "مخصص لك",
+  "customerBalanced": "متوازن",
+  "customerMadeForYou": "صُنع لك",
+  "customerUnableToLoadAllergens": "تعذر تحميل مسببات الحساسية.",
+  "customerWellAlwaysHighlightMealsThatAreSafeForYou": "سنوضح دائماً الوجبات الآمنة لك.",
+  "customerNoAllergiesFound": "لم يتم العثور على أنواع حساسية.",
+  "customerHeresAQuickOverviewOfYou": "إليك نظرة سريعة على بياناتك.",
+  "customerGoal": "الهدف",
+  "customerActivityLevel": "مستوى النشاط",
+  "customerNotCalculatedYet": "لم يُحسب بعد",
+  "customerProteinTarget": "هدف البروتين",
+  "customerPersonalizeYourDietTimeExperience": "لتخصيص تجربتك مع دايت تايم.",
+  "customerYourGoals": "أهدافك",
+  "customerYourProfile": "ملفك",
+  "customerYourLifestyle": "نمط حياتك",
+  "customerYourFoodPreferences": "تفضيلاتك الغذائية",
+  "customerYourHealthAllergies": "صحتك والحساسية",
+  "customerYoureAllSet": "أنت جاهز!",
+  "customerYouCanNowExploreTheDietTimeMenu": "يمكنك الآن تصفح قائمة دايت تايم.",
+  "customerWeCouldntLoadYourProfile": "تعذر تحميل ملفك.",
+  "customerWhatShouldWeCallYou": "بماذا نناديك؟",
+  "customerYourName": "اسمك",
+  "customerUnableToSaveYourNamePleaseTryAgain": "تعذر حفظ اسمك. يرجى المحاولة مرة أخرى.",
+  "customerYourAnswersAreKeptOnThisPhonePleaseRetry": "إجاباتك محفوظة على هذا الهاتف. يرجى محاولة الحفظ مجدداً.",
+  "customerPickHowManyMealsYoudLikeEachDay": "اختر عدد الوجبات التي ترغب بها يومياً.",
+  "customerSwipeToExploreMealPackagesundefined": "اسحب لاستعراض باقات الوجبات ←",
+  "customerChooseYourDuration": "اختر المدة",
+  "customerCurrentlyUnavailable": "غير متاح حالياً",
+  "customerSwipeToExplorePackageDurationsundefined": "اسحب لاستعراض مدد الباقات ←",
+  "customerPricingUnavailable": "الأسعار غير متاحة",
+  "customerYourAllergenPreferencesAreSaved": "تم حفظ معلومات الحساسية",
+  "customerWellUseYourRecordedAllergenInformationWhenShowingSuitable": "سنستخدم معلومات الحساسية المسجلة لعرض الوجبات المناسبة. يرجى مراجعة تفاصيل حساسية كل وجبة قبل الطلب.",
+  "customerPricingIsTemporarilyUnavailable": "الأسعار غير متاحة مؤقتاً.",
+  "customerNoPackagesAreCurrentlyAvailableForThisMealPlan": "لا توجد باقات متاحة حالياً لخطة الوجبات هذه.",
+  "customerTryAnotherPlanToFindYourDailyMealRoutine": "جرب باقة أخرى لتجد نظام وجباتك اليومي.",
+  "customerChooseAnotherPlan": "اختر باقة أخرى",
+  "customerNoMealPlansAreAvailableYet": "لا توجد باقات وجبات متاحة بعد.",
+  "customerUnableToLoadMealPlans": "تعذر تحميل باقات الوجبات.",
+  "customerChooseANewDeliveryStartDateDeliveryCanStart": "اختر تاريخ بدء جديداً. يمكن أن يبدأ التوصيل غداً أو لاحقاً.",
+  "customerChooseYourStartDate": "اختر تاريخ البدء",
+  "customerTapToChooseAnAvailableServiceDay": "اضغط لاختيار يوم خدمة متاح.",
+  "customerTapToChooseADifferentServiceDay": "اضغط لاختيار يوم خدمة آخر.",
+  "customerContinueundefined": "متابعة ←",
+  "customerStartDate2": "تاريخ البدء",
+  "customerSelectADate": "اختر تاريخاً",
+  "customerEndDate": "تاريخ الانتهاء",
+  "customerCalculatedAutomatically": "يُحسب تلقائياً",
+  "customerSelectYourStartDate": "اختر تاريخ البدء",
+  "customerSelectedStartDate": "تاريخ البدء المحدد",
+  "customerPlanEndDate": "تاريخ انتهاء الباقة",
+  "customerPlanServiceDay": "يوم خدمة الباقة",
+  "customerFridayUnavailable": "الجمعة غير متاح",
+  "customerSelectAStartDate": "اختر تاريخ بدء",
+  "customerConfirmDates": "تأكيد التواريخ",
+  "customerYourSubscription": "اشتراكك",
+  "customerActive": "نشط",
+  "customerCompleted": "مكتمل",
+  "customerPaused": "متوقف مؤقتاً",
+  "customerAwaitingActivation": "بانتظار التفعيل",
+  "customerUnderReview": "قيد المراجعة",
+  "customerUnpaid": "غير مدفوع",
+  "customerPaymentPending": "بانتظار الدفع",
+  "customerPaid": "مدفوع",
+  "customerPaymentFailed": "فشل الدفع",
+  "customerRefundUnderReview": "استرداد المبلغ قيد المراجعة",
+  "customerRefunded": "تم الاسترداد",
+  "customerPartiallyRefunded": "تم استرداد جزء من المبلغ",
+  "customerPaymentUnderReview": "الدفع قيد المراجعة",
+  "customerDietTimeIsReviewingYourOrder": "دايت تايم تراجع طلبك.",
+  "customerDietTimeWillReviewYourOrderAndNotifyYou": "ستراجع دايت تايم طلبك وتخطرك بعد تأكيده.",
+  "customerDaysPerWeek": "{count} أيام في الأسبوع",
+  "@customerDaysPerWeek": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customerActivePlans": "لديك {count} باقات وجبات نشطة",
+  "@customerActivePlans": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customerOrderReference": "يرجى ذكر رقم الطلب {reference}.",
+  "@customerOrderReference": {
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
+  "customerSelectionDeadline": "موعد إغلاق الاختيار",
+  "customerQatarTime": "بتوقيت قطر",
+  "customerOrderStatus": "حالة الطلب",
+  "customerSelected": "محدد",
+  "customerYourOrderIsConfirmedAndAwaitingTheRequiredPayment": "طلبك مؤكد وبانتظار الدفع المطلوب.",
+  "addressHomeLabel": "المنزل",
+  "addressApartmentLabel": "الشقة",
+  "addressOfficeLabel": "المكتب",
+  "addressOtherLabel": "آخر",
+  "reviewPackage": "مراجعة الباقة",
+  "packageUnavailable": "باقة الوجبات المحددة غير متاحة. يرجى مراجعة باقتك.",
+  "durationPricingUnavailable": "السعر غير متاح لهذه المدة. يرجى مراجعة باقتك.",
+  "planPricingMismatch": "الباقة والسعر المحددان غير متطابقين. يرجى مراجعة باقتك.",
+  "planNotFound": "لم يتم العثور على باقة الوجبات هذه. يرجى اختيار باقة أخرى.",
+  "planUnavailable": "باقة الوجبات هذه لم تعد متاحة. يرجى اختيار باقة أخرى.",
+  "availabilityRetry": "تعذر التحقق من هذه الباقة. تحقق من الاتصال وحاول مرة أخرى.",
+  "saveOrderRetry": "تعذر حفظ طلبك. يرجى المحاولة مرة أخرى أو التواصل مع دايت تايم."
 }

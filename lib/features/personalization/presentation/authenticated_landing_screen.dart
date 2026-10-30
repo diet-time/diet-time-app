@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'dart:async';
 
 import 'package:diet_time/app/router/app_router.dart';
@@ -79,8 +80,8 @@ class _AuthenticatedLandingScreenState
           ? Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  "We couldn't load your profile.",
+                Text(
+                  context.customerCopy("We couldn't load your profile."),
                   style: TextStyle(
                     color: AppColors.darkGreen,
                     fontWeight: FontWeight.w800,
@@ -89,7 +90,7 @@ class _AuthenticatedLandingScreenState
                 const SizedBox(height: 14),
                 OutlinedButton(
                   onPressed: () => unawaited(_resolve()),
-                  child: const Text('TRY AGAIN'),
+                  child: Text(context.customerCopy('TRY AGAIN')),
                 ),
               ],
             )

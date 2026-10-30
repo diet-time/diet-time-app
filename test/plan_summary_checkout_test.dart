@@ -17,6 +17,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('invalid pricing disables submission and offers package review', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _summaryApp(
+        _checkoutState.copyWith(
+          configurationErrorCode: 'pricing_not_available',
+          placementError:
+              'Pricing is unavailable for this duration. Please review your package.',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final button = find.descendant(
+      of: find.byKey(const ValueKey('placeOrder')),
+      matching: find.byType(FilledButton),
+    );
+    expect(tester.widget<FilledButton>(button).onPressed, isNull);
+    expect(find.text('Review package'), findsOneWidget);
+  });
+
   testWidgets('placing another order reloads a reused dashboard route', (
     tester,
   ) async {
@@ -238,6 +259,9 @@ class _CheckoutControllerForTest extends CheckoutController {
 
   @override
   CheckoutState build() => initialState;
+
+  @override
+  Future<void> prepareForOrder({required String language}) async {}
 
   @override
   Future<void> loadDeliveryTimeSlots() async {}

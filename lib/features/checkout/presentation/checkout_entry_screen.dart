@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'dart:async';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
@@ -92,14 +93,14 @@ class _CheckoutEntryScreenState extends ConsumerState<CheckoutEntryScreen> {
           ? Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('We could not load your profile.'),
+                Text(context.customerCopy('We could not load your profile.')),
                 TextButton(
                   onPressed: () => unawaited(_resolve()),
-                  child: const Text('TRY AGAIN'),
+                  child: Text(context.customerCopy('TRY AGAIN')),
                 ),
                 TextButton(
                   onPressed: () => context.go(AppRoutes.plans),
-                  child: const Text('Browse plans'),
+                  child: Text(context.customerCopy('Browse plans')),
                 ),
               ],
             )

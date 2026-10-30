@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/checkout/domain/address_validation.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
@@ -80,7 +81,9 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
         ),
         title: Text(
-          _editingForm ? 'Customer Address' : 'Delivery Address',
+          _editingForm
+              ? 'Customer Address'
+              : context.customerCopy('Delivery Address'),
           style: const TextStyle(
             color: AppColors.darkGreen,
             fontWeight: FontWeight.w900,
@@ -141,8 +144,8 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
       children: [
         const _SheetHandle(),
         const SizedBox(height: 18),
-        const Text(
-          'Choose Delivery Address',
+        Text(
+          context.customerCopy('Choose Delivery Address'),
           style: TextStyle(
             color: AppColors.darkGreen,
             fontSize: 20,
@@ -151,7 +154,9 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
         ),
         const SizedBox(height: 5),
         Text(
-          'Select where you would like your meals delivered.',
+          context.customerCopy(
+            'Select where you would like your meals delivered.',
+          ),
           style: TextStyle(
             color: AppColors.darkGreen.withValues(alpha: .58),
             fontSize: 12,
@@ -159,7 +164,9 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
         ),
         const SizedBox(height: 18),
         if (checkout.isLoadingAddresses)
-          const _LoadingBlock(label: 'Loading saved addresses...')
+          _LoadingBlock(
+            label: context.customerCopy('Loading saved addresses...'),
+          )
         else if (checkout.addressError case final error?)
           _ErrorBlock(
             message: error,
@@ -184,7 +191,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
             key: const ValueKey('addAnotherAddress'),
             onPressed: _addAddress,
             icon: const Icon(Icons.add_location_alt_outlined),
-            label: const Text('Add Another Address'),
+            label: Text(context.customerCopy('Add Another Address')),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.emeraldGreen,
               minimumSize: const Size.fromHeight(48),
@@ -204,7 +211,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
         const SizedBox(height: 18),
         AppButton(
           key: const ValueKey('useDeliveryAddress'),
-          label: 'Use This Address',
+          label: context.customerCopy('Use This Address'),
           isLoading: checkout.isSavingAddress,
           onPressed: checkout.isLoadingAddresses || checkout.isSavingAddress
               ? null
@@ -230,9 +237,9 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Address Details',
+                  context.customerCopy('Address Details'),
                   style: TextStyle(
                     color: AppColors.darkGreen,
                     fontSize: 20,
@@ -243,7 +250,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
               if (checkout.addresses.isNotEmpty)
                 TextButton(
                   onPressed: () => setState(() => _editingForm = false),
-                  child: const Text('Saved addresses'),
+                  child: Text(context.customerCopy('Saved addresses')),
                 ),
             ],
           ),
@@ -257,7 +264,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
             ),
           ),
           const SizedBox(height: 22),
-          const _FieldLabel('SAVE AS *'),
+          _FieldLabel(context.customerCopy('SAVE AS *')),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -266,7 +273,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
               for (final type in DeliveryAddressType.values)
                 ChoiceChip(
                   key: ValueKey('addressType-${type.name}'),
-                  label: Text(type.label),
+                  label: Text(context.customerCopy(type.label)),
                   selected: _addressType == type,
                   onSelected: (_) => setState(() {
                     _addressType = type;
@@ -295,7 +302,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
                 child: _AddressField(
                   key: const ValueKey('buildingNoField'),
                   controller: _buildingController,
-                  label: 'Building No *',
+                  label: context.customerCopy('Building No *'),
                   validator: AddressValidation.building,
                   serverError: _fieldError(checkout, 'buildingNo'),
                   onChanged: (_) => ref
@@ -308,7 +315,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
                 child: _AddressField(
                   key: const ValueKey('streetNoField'),
                   controller: _streetController,
-                  label: 'Street *',
+                  label: context.customerCopy('Street *'),
                   validator: AddressValidation.street,
                   serverError: _fieldError(checkout, 'streetNo'),
                   onChanged: (_) => ref
@@ -325,7 +332,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
               Expanded(
                 child: _AddressField(
                   controller: _unitController,
-                  label: 'Unit Number',
+                  label: context.customerCopy('Unit Number'),
                   validator: AddressValidation.unit,
                   serverError: _fieldError(checkout, 'unitNumber'),
                   onChanged: (_) => ref
@@ -338,7 +345,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
                 child: _AddressField(
                   key: const ValueKey('zoneNoField'),
                   controller: _zoneController,
-                  label: 'Zone No *',
+                  label: context.customerCopy('Zone No *'),
                   keyboardType: TextInputType.number,
                   inputFormatters: [AddressValidation.zoneFormatter],
                   validator: AddressValidation.zone,
@@ -354,7 +361,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
           _AddressField(
             key: const ValueKey('areaField'),
             controller: _areaController,
-            label: 'Area *',
+            label: context.customerCopy('Area *'),
             validator: AddressValidation.area,
             serverError: _fieldError(checkout, 'area'),
             onChanged: (_) => ref
@@ -364,13 +371,13 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
           const SizedBox(height: 14),
           _AddressField(
             controller: _directionsController,
-            label: 'Directions To Reach',
+            label: context.customerCopy('Directions To Reach'),
             validator: AddressValidation.directions,
             serverError: _fieldError(checkout, 'directions'),
             onChanged: (_) => ref
                 .read(checkoutControllerProvider.notifier)
                 .clearAddressFieldError('directions'),
-            hint: 'Call me when you arrive',
+            hint: context.customerCopy('Call me when you arrive'),
             maxLines: 3,
           ),
           const SizedBox(height: 24),
@@ -387,8 +394,8 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
           AppButton(
             key: const ValueKey('saveAddress'),
             label: checkout.isSavingAddress
-                ? 'Saving Address...'
-                : 'Save Address',
+                ? context.customerCopy('Saving Address...')
+                : context.customerCopy('Save Address'),
             onPressed: checkout.isSavingAddress ? null : _saveAddress,
           ),
           const SizedBox(height: 8),
@@ -435,7 +442,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
     _zoneController.clear();
     _areaController.clear();
     _directionsController.clear();
-    _formattedAddress = 'Pinned location, Qatar';
+    _formattedAddress = context.customerCopy('Pinned location, Qatar');
     _latitude = 25.285447;
     _longitude = 51.53104;
   }
@@ -446,14 +453,16 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
     if (!valid || _addressType == null) {
       setState(() {
         _localError = _addressType == null
-            ? 'Select an address type before saving.'
-            : 'Complete all required address fields.';
+            ? context.customerCopy('Select an address type before saving.')
+            : context.customerCopy('Complete all required address fields.');
       });
       return;
     }
     if (checkout.selectedDeliveryTimeSlot == null) {
       setState(
-        () => _localError = 'Select a delivery time slot before saving.',
+        () => _localError = context.customerCopy(
+          'Select a delivery time slot before saving.',
+        ),
       );
       return;
     }
@@ -519,7 +528,11 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
   Future<void> _search(String value) async {
     final query = value.trim();
     if (query.isEmpty) {
-      setState(() => _locationError = 'Enter a zone or area to search.');
+      setState(
+        () => _locationError = context.customerCopy(
+          'Enter a zone or area to search.',
+        ),
+      );
       return;
     }
     FocusManager.instance.primaryFocus?.unfocus();
@@ -528,7 +541,11 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
       final results = await locationFromAddress('$query, Qatar');
       if (!mounted) return;
       if (results.isEmpty) {
-        setState(() => _locationError = 'No matching location was found.');
+        setState(
+          () => _locationError = context.customerCopy(
+            'No matching location was found.',
+          ),
+        );
         return;
       }
       if (_areaController.text.trim().isEmpty) _areaController.text = query;
@@ -537,8 +554,9 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => _locationError =
-              'Location search is unavailable. Try again or move the pin.',
+          () => _locationError = context.customerCopy(
+            'Location search is unavailable. Try again or move the pin.',
+          ),
         );
       }
     }
@@ -546,7 +564,11 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
 
   Future<void> _useCurrentAddress() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
-      setState(() => _locationError = 'Turn on location services to continue.');
+      setState(
+        () => _locationError = context.customerCopy(
+          'Turn on location services to continue.',
+        ),
+      );
       return;
     }
     var permission = await Geolocator.checkPermission();
@@ -558,12 +580,20 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
         permission == LocationPermission.deniedForever) {
       setState(
         () => _locationError = permission == LocationPermission.deniedForever
-            ? 'Location access is blocked. Enable it in device settings.'
-            : 'Location permission is needed to find your current address.',
+            ? context.customerCopy(
+                'Location access is blocked. Enable it in device settings.',
+              )
+            : context.customerCopy(
+                'Location permission is needed to find your current address.',
+              ),
       );
       return;
     }
-    setState(() => _locationError = 'Finding your current location...');
+    setState(
+      () => _locationError = context.customerCopy(
+        'Finding your current location...',
+      ),
+    );
     try {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
@@ -574,8 +604,9 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => _locationError =
-              'Could not determine your location. Try again or move the pin.',
+          () => _locationError = context.customerCopy(
+            'Could not determine your location. Try again or move the pin.',
+          ),
         );
       }
     }
@@ -585,7 +616,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
     setState(() {
       _latitude = position.latitude;
       _longitude = position.longitude;
-      _formattedAddress = 'Pinned location';
+      _formattedAddress = context.customerCopy('Pinned location');
       _locationError = null;
     });
     try {
@@ -618,7 +649,7 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
           : place.locality?.trim();
       setState(() {
         _formattedAddress = addressParts.isEmpty
-            ? 'Pinned location'
+            ? context.customerCopy('Pinned location')
             : addressParts.join(', ');
         if (_areaController.text.trim().isEmpty && area != null) {
           _areaController.text = area;
@@ -748,7 +779,7 @@ class _MapAreaState extends State<_MapArea> {
                 onSubmitted: widget.onSearch,
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
-                  hintText: 'Search a Zone',
+                  hintText: context.customerCopy('Search a Zone'),
                   prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon: IconButton(
                     onPressed: () =>
@@ -795,7 +826,7 @@ class _MapAreaState extends State<_MapArea> {
           key: const ValueKey('currentAddress'),
           onPressed: widget.onCurrentAddress,
           icon: const Icon(Icons.my_location_rounded, size: 18),
-          label: const Text('Current Address'),
+          label: Text(context.customerCopy('Current Address')),
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.white,
             foregroundColor: AppColors.emeraldGreen,
@@ -825,8 +856,10 @@ class _MapConfigurationError extends StatelessWidget {
               size: 40,
             ),
             const SizedBox(height: 10),
-            const Text(
-              'Google Maps is not configured for this iOS build.',
+            Text(
+              context.customerCopy(
+                'Google Maps is not configured for this iOS build.',
+              ),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.darkGreen,
@@ -835,7 +868,9 @@ class _MapConfigurationError extends StatelessWidget {
             ),
             const SizedBox(height: 5),
             Text(
-              'Add the iOS API key, then clean and rebuild the app.',
+              context.customerCopy(
+                'Add the iOS API key, then clean and rebuild the app.',
+              ),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.darkGreen.withValues(alpha: .65),
@@ -857,10 +892,10 @@ class _TimeSlotSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const _FieldLabel('DELIVERY TIME *'),
+      _FieldLabel(context.customerCopy('DELIVERY TIME *')),
       const SizedBox(height: 9),
       if (checkout.isLoadingDeliveryTimeSlots)
-        const _LoadingBlock(label: 'Loading delivery times...')
+        _LoadingBlock(label: context.customerCopy('Loading delivery times...'))
       else if (checkout.deliveryTimeSlotError case final error?)
         _ErrorBlock(
           message: error,
@@ -869,7 +904,11 @@ class _TimeSlotSection extends ConsumerWidget {
               .loadDeliveryTimeSlots(),
         )
       else if (checkout.deliveryTimeSlots.isEmpty)
-        const _ErrorText('No delivery time slots are currently available.')
+        _ErrorText(
+          context.customerCopy(
+            'No delivery time slots are currently available.',
+          ),
+        )
       else
         Wrap(
           spacing: 9,
@@ -982,8 +1021,8 @@ class _AddressCard extends StatelessWidget {
                             color: AppColors.emeraldGreen,
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text(
-                            'DEFAULT',
+                          child: Text(
+                            context.customerCopy('DEFAULT'),
                             style: TextStyle(
                               color: AppColors.white,
                               fontSize: 8,
@@ -1095,8 +1134,8 @@ class _EmptyAddresses extends StatelessWidget {
           color: AppColors.emeraldGreen,
         ),
         const SizedBox(height: 10),
-        const Text(
-          'No saved addresses yet',
+        Text(
+          context.customerCopy('No saved addresses yet'),
           style: TextStyle(
             color: AppColors.darkGreen,
             fontWeight: FontWeight.w900,
@@ -1104,7 +1143,7 @@ class _EmptyAddresses extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Add an address for your meal deliveries.',
+          context.customerCopy('Add an address for your meal deliveries.'),
           style: TextStyle(
             color: AppColors.darkGreen.withValues(alpha: .58),
             fontSize: 12,
@@ -1115,7 +1154,7 @@ class _EmptyAddresses extends StatelessWidget {
           key: const ValueKey('addFirstAddress'),
           onPressed: onAdd,
           icon: const Icon(Icons.add_rounded),
-          label: const Text('Add Address'),
+          label: Text(context.customerCopy('Add Address')),
         ),
       ],
     ),
@@ -1162,7 +1201,10 @@ class _ErrorBlock extends StatelessWidget {
     child: Row(
       children: [
         Expanded(child: _ErrorText(message)),
-        TextButton(onPressed: onRetry, child: const Text('Retry')),
+        TextButton(
+          onPressed: onRetry,
+          child: Text(context.customerCopy('Retry')),
+        ),
       ],
     ),
   );

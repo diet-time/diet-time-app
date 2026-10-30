@@ -251,6 +251,8 @@ class _Controller extends CheckoutController {
   @override
   CheckoutState build() => initial;
   @override
+  Future<void> prepareForOrder({required String language}) async {}
+  @override
   Future<void> loadDeliveryTimeSlots() async {}
   @override
   Future<void> loadAddresses() async {}

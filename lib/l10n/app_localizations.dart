@@ -1783,6 +1783,2346 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Resend unavailable in test mode'**
   String get otpResendTestUnavailable;
+
+  /// No description provided for @exploreMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore Menu'**
+  String get exploreMenu;
+
+  /// No description provided for @backToDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to Dashboard'**
+  String get backToDashboard;
+
+  /// No description provided for @dailyNutritionTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily nutrition total'**
+  String get dailyNutritionTotal;
+
+  /// No description provided for @nutritionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Nutrition information unavailable'**
+  String get nutritionUnavailable;
+
+  /// No description provided for @nutritionTotalsIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Totals unavailable for missing nutritional values.'**
+  String get nutritionTotalsIncomplete;
+
+  /// No description provided for @sugarLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sugar'**
+  String get sugarLabel;
+
+  /// No description provided for @saturatedFatLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturated fat'**
+  String get saturatedFatLabel;
+
+  /// No description provided for @transFatLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Trans fat'**
+  String get transFatLabel;
+
+  /// No description provided for @cholesterolLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cholesterol'**
+  String get cholesterolLabel;
+
+  /// No description provided for @nutritionServing.
+  ///
+  /// In en, this message translates to:
+  /// **'Per serving: {portion}'**
+  String nutritionServing(String portion);
+
+  /// No description provided for @customerUnableToSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to sign in'**
+  String get customerUnableToSignIn;
+
+  /// No description provided for @customerWeCouldNotLoadTakeawayBranchesPleaseTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load takeaway branches. Please try again.'**
+  String get customerWeCouldNotLoadTakeawayBranchesPleaseTryAgain;
+
+  /// No description provided for @customerChooseAFutureDeliveryStartDateTodayAndFriday.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a future delivery start date; today and Friday are unavailable.'**
+  String get customerChooseAFutureDeliveryStartDateTodayAndFriday;
+
+  /// No description provided for @customerTheSelectedMealConfigurationIsNoLongerAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected meal configuration is no longer available.'**
+  String get customerTheSelectedMealConfigurationIsNoLongerAvailable;
+
+  /// No description provided for @customerTheSelectedPlanDurationIsNoLongerAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected plan duration is no longer available.'**
+  String get customerTheSelectedPlanDurationIsNoLongerAvailable;
+
+  /// No description provided for @customerWeCouldNotVerifyTheSelectedPlanPleaseTry.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not verify the selected plan. Please try again.'**
+  String get customerWeCouldNotVerifyTheSelectedPlanPleaseTry;
+
+  /// No description provided for @customerDeliveryTimesCouldNotBeLoadedPleaseTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery times could not be loaded. Please try again.'**
+  String get customerDeliveryTimesCouldNotBeLoadedPleaseTryAgain;
+
+  /// No description provided for @customerWeCouldNotLoadYourCustomerProfilePleaseSign.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load your customer profile. Please sign in again.'**
+  String get customerWeCouldNotLoadYourCustomerProfilePleaseSign;
+
+  /// No description provided for @customerSavedAddressesCouldNotBeLoadedPleaseTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved addresses could not be loaded. Please try again.'**
+  String get customerSavedAddressesCouldNotBeLoadedPleaseTryAgain;
+
+  /// No description provided for @customerYourCustomerProfileIsUnavailablePleaseSignInAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Your customer profile is unavailable. Please sign in again.'**
+  String get customerYourCustomerProfileIsUnavailablePleaseSignInAgain;
+
+  /// No description provided for @customerSelectAnActiveDeliveryTimeSlotBeforeSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Select an active delivery time slot before saving.'**
+  String get customerSelectAnActiveDeliveryTimeSlotBeforeSaving;
+
+  /// No description provided for @customerYourAddressCouldNotBeSavedPleaseTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Your address could not be saved. Please try again.'**
+  String get customerYourAddressCouldNotBeSavedPleaseTryAgain;
+
+  /// No description provided for @customerWeCouldntPlaceYourOrderPleaseTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t place your order. Please try again.'**
+  String get customerWeCouldntPlaceYourOrderPleaseTryAgain;
+
+  /// No description provided for @customerPleaseCheckYourConnectionAndTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Please check your connection and try again.'**
+  String get customerPleaseCheckYourConnectionAndTryAgain;
+
+  /// No description provided for @customerThePlanPriceHasChangedPleaseReviewTheUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'The plan price has changed. Please review the updated total before placing your order.'**
+  String get customerThePlanPriceHasChangedPleaseReviewTheUpdated;
+
+  /// No description provided for @customerThisOrderIsAlreadyBeingProcessedPleaseTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'This order is already being processed. Please try again.'**
+  String get customerThisOrderIsAlreadyBeingProcessedPleaseTryAgain;
+
+  /// No description provided for @customerTheSelectedPlanIsNoLongerAvailablePleaseChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected plan is no longer available. Please choose another plan.'**
+  String get customerTheSelectedPlanIsNoLongerAvailablePleaseChoose;
+
+  /// No description provided for @customerTheSelectedDeliveryAddressIsNoLongerAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected delivery address is no longer available.'**
+  String get customerTheSelectedDeliveryAddressIsNoLongerAvailable;
+
+  /// No description provided for @customerTheSelectedDeliveryTimeIsNoLongerAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected delivery time is no longer available.'**
+  String get customerTheSelectedDeliveryTimeIsNoLongerAvailable;
+
+  /// No description provided for @customerASelectedCheckoutOptionIsNoLongerAvailablePlease.
+  ///
+  /// In en, this message translates to:
+  /// **'A selected checkout option is no longer available. Please review your order.'**
+  String get customerASelectedCheckoutOptionIsNoLongerAvailablePlease;
+
+  /// No description provided for @customerPleaseReviewYourSelectedMeals.
+  ///
+  /// In en, this message translates to:
+  /// **'Please review your selected meals.'**
+  String get customerPleaseReviewYourSelectedMeals;
+
+  /// No description provided for @customerPleaseReviewYourSelectedServiceDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Please review your selected service days.'**
+  String get customerPleaseReviewYourSelectedServiceDays;
+
+  /// No description provided for @customerPleaseSelectAnotherPlanStartDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select another plan start date.'**
+  String get customerPleaseSelectAnotherPlanStartDate;
+
+  /// No description provided for @customerCouponCodesAreNotSupportedYetRemoveTheCoupon.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon codes are not supported yet. Remove the coupon and try again.'**
+  String get customerCouponCodesAreNotSupportedYetRemoveTheCoupon;
+
+  /// No description provided for @customerYourOrderResponseCouldNotBeConfirmedPleaseCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Your order response could not be confirmed. Please check your orders before trying again.'**
+  String get customerYourOrderResponseCouldNotBeConfirmedPleaseCheck;
+
+  /// No description provided for @customerSomeAddressInformationWasNotAcceptedPleaseReviewIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Some address information was not accepted. Please review it.'**
+  String get customerSomeAddressInformationWasNotAcceptedPleaseReviewIt;
+
+  /// No description provided for @customerYourSessionExpiredPleaseSignInAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session expired. Please sign in again.'**
+  String get customerYourSessionExpiredPleaseSignInAgain;
+
+  /// No description provided for @customerWeCouldNotLoadYourProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load your profile.'**
+  String get customerWeCouldNotLoadYourProfile;
+
+  /// No description provided for @customerTRYAGAIN.
+  ///
+  /// In en, this message translates to:
+  /// **'TRY AGAIN'**
+  String get customerTRYAGAIN;
+
+  /// No description provided for @customerBrowsePlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse plans'**
+  String get customerBrowsePlans;
+
+  /// No description provided for @customerDohaQatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Doha, Qatar'**
+  String get customerDohaQatar;
+
+  /// No description provided for @customerCustomerAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Address'**
+  String get customerCustomerAddress;
+
+  /// No description provided for @customerDeliveryAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery Address'**
+  String get customerDeliveryAddress;
+
+  /// No description provided for @customerChooseDeliveryAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Delivery Address'**
+  String get customerChooseDeliveryAddress;
+
+  /// No description provided for @customerSelectWhereYouWouldLikeYourMealsDelivered.
+  ///
+  /// In en, this message translates to:
+  /// **'Select where you would like your meals delivered.'**
+  String get customerSelectWhereYouWouldLikeYourMealsDelivered;
+
+  /// No description provided for @customerLoadingSavedAddresses.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading saved addresses...'**
+  String get customerLoadingSavedAddresses;
+
+  /// No description provided for @customerAddAnotherAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Another Address'**
+  String get customerAddAnotherAddress;
+
+  /// No description provided for @customerUseThisAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Use This Address'**
+  String get customerUseThisAddress;
+
+  /// No description provided for @customerAddressDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Address Details'**
+  String get customerAddressDetails;
+
+  /// No description provided for @customerSavedAddresses.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved addresses'**
+  String get customerSavedAddresses;
+
+  /// No description provided for @customerSAVEASundefined.
+  ///
+  /// In en, this message translates to:
+  /// **'SAVE AS *'**
+  String get customerSAVEASundefined;
+
+  /// No description provided for @customerBuildingNoundefined.
+  ///
+  /// In en, this message translates to:
+  /// **'Building No *'**
+  String get customerBuildingNoundefined;
+
+  /// No description provided for @customerStreetundefined.
+  ///
+  /// In en, this message translates to:
+  /// **'Street *'**
+  String get customerStreetundefined;
+
+  /// No description provided for @customerUnitNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit Number'**
+  String get customerUnitNumber;
+
+  /// No description provided for @customerZoneNoundefined.
+  ///
+  /// In en, this message translates to:
+  /// **'Zone No *'**
+  String get customerZoneNoundefined;
+
+  /// No description provided for @customerAreaundefined.
+  ///
+  /// In en, this message translates to:
+  /// **'Area *'**
+  String get customerAreaundefined;
+
+  /// No description provided for @customerDirectionsToReach.
+  ///
+  /// In en, this message translates to:
+  /// **'Directions To Reach'**
+  String get customerDirectionsToReach;
+
+  /// No description provided for @customerCallMeWhenYouArrive.
+  ///
+  /// In en, this message translates to:
+  /// **'Call me when you arrive'**
+  String get customerCallMeWhenYouArrive;
+
+  /// No description provided for @customerSavingAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving Address...'**
+  String get customerSavingAddress;
+
+  /// No description provided for @customerSaveAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Address'**
+  String get customerSaveAddress;
+
+  /// No description provided for @customerPinnedLocationQatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned location, Qatar'**
+  String get customerPinnedLocationQatar;
+
+  /// No description provided for @customerSelectAnAddressTypeBeforeSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Select an address type before saving.'**
+  String get customerSelectAnAddressTypeBeforeSaving;
+
+  /// No description provided for @customerCompleteAllRequiredAddressFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete all required address fields.'**
+  String get customerCompleteAllRequiredAddressFields;
+
+  /// No description provided for @customerSelectADeliveryTimeSlotBeforeSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a delivery time slot before saving.'**
+  String get customerSelectADeliveryTimeSlotBeforeSaving;
+
+  /// No description provided for @customerSelectADeliveryAddressOrAddANewOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a delivery address or add a new one.'**
+  String get customerSelectADeliveryAddressOrAddANewOne;
+
+  /// No description provided for @customerSelectADeliveryTimeSlot.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a delivery time slot.'**
+  String get customerSelectADeliveryTimeSlot;
+
+  /// No description provided for @customerEnterAZoneOrAreaToSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a zone or area to search.'**
+  String get customerEnterAZoneOrAreaToSearch;
+
+  /// No description provided for @customerNoMatchingLocationWasFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching location was found.'**
+  String get customerNoMatchingLocationWasFound;
+
+  /// No description provided for @customerLocationSearchIsUnavailableTryAgainOrMoveThe.
+  ///
+  /// In en, this message translates to:
+  /// **'Location search is unavailable. Try again or move the pin.'**
+  String get customerLocationSearchIsUnavailableTryAgainOrMoveThe;
+
+  /// No description provided for @customerTurnOnLocationServicesToContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on location services to continue.'**
+  String get customerTurnOnLocationServicesToContinue;
+
+  /// No description provided for @customerLocationAccessIsBlockedEnableItInDeviceSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Location access is blocked. Enable it in device settings.'**
+  String get customerLocationAccessIsBlockedEnableItInDeviceSettings;
+
+  /// No description provided for @customerLocationPermissionIsNeededToFindYourCurrentAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission is needed to find your current address.'**
+  String get customerLocationPermissionIsNeededToFindYourCurrentAddress;
+
+  /// No description provided for @customerFindingYourCurrentLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding your current location...'**
+  String get customerFindingYourCurrentLocation;
+
+  /// No description provided for @customerCouldNotDetermineYourLocationTryAgainOrMove.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not determine your location. Try again or move the pin.'**
+  String get customerCouldNotDetermineYourLocationTryAgainOrMove;
+
+  /// No description provided for @customerPinnedLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned location'**
+  String get customerPinnedLocation;
+
+  /// No description provided for @customerSearchAZone.
+  ///
+  /// In en, this message translates to:
+  /// **'Search a Zone'**
+  String get customerSearchAZone;
+
+  /// No description provided for @customerCurrentAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Address'**
+  String get customerCurrentAddress;
+
+  /// No description provided for @customerGoogleMapsIsNotConfiguredForThisIOSBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Maps is not configured for this iOS build.'**
+  String get customerGoogleMapsIsNotConfiguredForThisIOSBuild;
+
+  /// No description provided for @customerAddTheIOSAPIKeyThenCleanAndRebuild.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the iOS API key, then clean and rebuild the app.'**
+  String get customerAddTheIOSAPIKeyThenCleanAndRebuild;
+
+  /// No description provided for @customerDELIVERYTIMEundefined.
+  ///
+  /// In en, this message translates to:
+  /// **'DELIVERY TIME *'**
+  String get customerDELIVERYTIMEundefined;
+
+  /// No description provided for @customerLoadingDeliveryTimes.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading delivery times...'**
+  String get customerLoadingDeliveryTimes;
+
+  /// No description provided for @customerNoDeliveryTimeSlotsAreCurrentlyAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No delivery time slots are currently available.'**
+  String get customerNoDeliveryTimeSlotsAreCurrentlyAvailable;
+
+  /// No description provided for @customerDEFAULT.
+  ///
+  /// In en, this message translates to:
+  /// **'DEFAULT'**
+  String get customerDEFAULT;
+
+  /// No description provided for @customerNoSavedAddressesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved addresses yet'**
+  String get customerNoSavedAddressesYet;
+
+  /// No description provided for @customerAddAnAddressForYourMealDeliveries.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an address for your meal deliveries.'**
+  String get customerAddAnAddressForYourMealDeliveries;
+
+  /// No description provided for @customerAddAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Address'**
+  String get customerAddAddress;
+
+  /// No description provided for @customerOrderSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Submitted'**
+  String get customerOrderSubmitted;
+
+  /// No description provided for @customerOrderConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Confirmed!'**
+  String get customerOrderConfirmed;
+
+  /// No description provided for @customerYourOrderHasBeenReceivedAndIsAwaitingConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your order has been received and is awaiting confirmation from Diet Time. We\'ll notify you once it\'s reviewed.'**
+  String get customerYourOrderHasBeenReceivedAndIsAwaitingConfirmation;
+
+  /// No description provided for @customerGOTODASHBOARD.
+  ///
+  /// In en, this message translates to:
+  /// **'GO TO DASHBOARD'**
+  String get customerGOTODASHBOARD;
+
+  /// No description provided for @customerORDERNUMBER.
+  ///
+  /// In en, this message translates to:
+  /// **'ORDER NUMBER'**
+  String get customerORDERNUMBER;
+
+  /// No description provided for @customerPLAN.
+  ///
+  /// In en, this message translates to:
+  /// **'PLAN'**
+  String get customerPLAN;
+
+  /// No description provided for @customerPAYMENT.
+  ///
+  /// In en, this message translates to:
+  /// **'PAYMENT'**
+  String get customerPAYMENT;
+
+  /// No description provided for @customerPACKAGE.
+  ///
+  /// In en, this message translates to:
+  /// **'PACKAGE'**
+  String get customerPACKAGE;
+
+  /// No description provided for @customerFULFILLMENT.
+  ///
+  /// In en, this message translates to:
+  /// **'FULFILLMENT'**
+  String get customerFULFILLMENT;
+
+  /// No description provided for @customerTakeaway.
+  ///
+  /// In en, this message translates to:
+  /// **'Takeaway'**
+  String get customerTakeaway;
+
+  /// No description provided for @customerPLANPERIOD.
+  ///
+  /// In en, this message translates to:
+  /// **'PLAN PERIOD'**
+  String get customerPLANPERIOD;
+
+  /// No description provided for @customerFIRSTCOLLECTION.
+  ///
+  /// In en, this message translates to:
+  /// **'FIRST COLLECTION'**
+  String get customerFIRSTCOLLECTION;
+
+  /// No description provided for @customerFIRSTDELIVERY.
+  ///
+  /// In en, this message translates to:
+  /// **'FIRST DELIVERY'**
+  String get customerFIRSTDELIVERY;
+
+  /// No description provided for @customerDELIVERYTO.
+  ///
+  /// In en, this message translates to:
+  /// **'DELIVERY TO'**
+  String get customerDELIVERYTO;
+
+  /// No description provided for @customerTOTAL.
+  ///
+  /// In en, this message translates to:
+  /// **'TOTAL'**
+  String get customerTOTAL;
+
+  /// No description provided for @customerSTATUS.
+  ///
+  /// In en, this message translates to:
+  /// **'STATUS'**
+  String get customerSTATUS;
+
+  /// No description provided for @customerOrderConfirmationIsUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Order confirmation is unavailable.'**
+  String get customerOrderConfirmationIsUnavailable;
+
+  /// No description provided for @customerVerifyingYourSelectedPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying your selected plan...'**
+  String get customerVerifyingYourSelectedPlan;
+
+  /// No description provided for @customerYourPlanDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Plan Details'**
+  String get customerYourPlanDetails;
+
+  /// No description provided for @customerThisPackageIsAvailableForTakeawayOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'This package is available for takeaway only.'**
+  String get customerThisPackageIsAvailableForTakeawayOnly;
+
+  /// No description provided for @customerHomeDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Home Delivery'**
+  String get customerHomeDelivery;
+
+  /// No description provided for @customerCOLLECTIONBRANCH.
+  ///
+  /// In en, this message translates to:
+  /// **'COLLECTION BRANCH'**
+  String get customerCOLLECTIONBRANCH;
+
+  /// No description provided for @customerNoTakeawayBranchesAreCurrentlyAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No takeaway branches are currently available.'**
+  String get customerNoTakeawayBranchesAreCurrentlyAvailable;
+
+  /// No description provided for @customerDELIVERYADDRESSTIMESLOT.
+  ///
+  /// In en, this message translates to:
+  /// **'DELIVERY ADDRESS & TIME SLOT'**
+  String get customerDELIVERYADDRESSTIMESLOT;
+
+  /// No description provided for @customerStartDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Date'**
+  String get customerStartDate;
+
+  /// No description provided for @customerSelectYourServiceDates.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your service dates'**
+  String get customerSelectYourServiceDates;
+
+  /// No description provided for @customerOrderTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Total'**
+  String get customerOrderTotal;
+
+  /// No description provided for @customerPLACEORDER.
+  ///
+  /// In en, this message translates to:
+  /// **'PLACE ORDER'**
+  String get customerPLACEORDER;
+
+  /// No description provided for @customerPLACINGORDER.
+  ///
+  /// In en, this message translates to:
+  /// **'PLACING ORDER...'**
+  String get customerPLACINGORDER;
+
+  /// No description provided for @customerPREPARINGORDER.
+  ///
+  /// In en, this message translates to:
+  /// **'PREPARING ORDER...'**
+  String get customerPREPARINGORDER;
+
+  /// No description provided for @customerNoDeliveryAddressSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'No delivery address selected'**
+  String get customerNoDeliveryAddressSelected;
+
+  /// No description provided for @customerAddDeliveryAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Delivery Address'**
+  String get customerAddDeliveryAddress;
+
+  /// No description provided for @customerChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get customerChange;
+
+  /// No description provided for @customerSelectADeliveryTimeSlot2.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a delivery time slot'**
+  String get customerSelectADeliveryTimeSlot2;
+
+  /// No description provided for @customerChooseAMealPlanBeforeReviewingYourSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a meal plan before reviewing your summary.'**
+  String get customerChooseAMealPlanBeforeReviewingYourSummary;
+
+  /// No description provided for @customerBrowsePlans2.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Plans'**
+  String get customerBrowsePlans2;
+
+  /// No description provided for @customerWeCouldNotLoadYourDashboardPleaseTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load your dashboard. Please try again.'**
+  String get customerWeCouldNotLoadYourDashboardPleaseTryAgain;
+
+  /// No description provided for @customerWeCouldNotLoadYourOrdersPleaseTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load your orders. Please try again.'**
+  String get customerWeCouldNotLoadYourOrdersPleaseTryAgain;
+
+  /// No description provided for @customerHOME.
+  ///
+  /// In en, this message translates to:
+  /// **'HOME'**
+  String get customerHOME;
+
+  /// No description provided for @customerORDERS.
+  ///
+  /// In en, this message translates to:
+  /// **'ORDERS'**
+  String get customerORDERS;
+
+  /// No description provided for @customerCALENDAR.
+  ///
+  /// In en, this message translates to:
+  /// **'CALENDAR'**
+  String get customerCALENDAR;
+
+  /// No description provided for @customerPROFILE.
+  ///
+  /// In en, this message translates to:
+  /// **'PROFILE'**
+  String get customerPROFILE;
+
+  /// No description provided for @customerProfileUpdatedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile updated successfully'**
+  String get customerProfileUpdatedSuccessfully;
+
+  /// No description provided for @customerUnableToLoadYourProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load your profile.'**
+  String get customerUnableToLoadYourProfile;
+
+  /// No description provided for @customerQuestionnaireUpdatedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Questionnaire updated successfully'**
+  String get customerQuestionnaireUpdatedSuccessfully;
+
+  /// No description provided for @customerLogout.
+  ///
+  /// In en, this message translates to:
+  /// **'Logout'**
+  String get customerLogout;
+
+  /// No description provided for @customerAreYouSureYouWantToLogout.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to logout?'**
+  String get customerAreYouSureYouWantToLogout;
+
+  /// No description provided for @customerCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get customerCancel;
+
+  /// No description provided for @customerYourSessionHasExpiredPleaseSignInAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has expired. Please sign in again.'**
+  String get customerYourSessionHasExpiredPleaseSignInAgain;
+
+  /// No description provided for @customerSIGNIN.
+  ///
+  /// In en, this message translates to:
+  /// **'SIGN IN'**
+  String get customerSIGNIN;
+
+  /// No description provided for @customerYourCustomerProfileCouldNotBeFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Your customer profile could not be found.'**
+  String get customerYourCustomerProfileCouldNotBeFound;
+
+  /// No description provided for @customerYOURACTIVEPLAN.
+  ///
+  /// In en, this message translates to:
+  /// **'YOUR ACTIVE PLAN'**
+  String get customerYOURACTIVEPLAN;
+
+  /// No description provided for @customerMYACTIVEPLANS.
+  ///
+  /// In en, this message translates to:
+  /// **'MY ACTIVE PLANS'**
+  String get customerMYACTIVEPLANS;
+
+  /// No description provided for @customerORDERANOTHERPLAN.
+  ///
+  /// In en, this message translates to:
+  /// **'ORDER ANOTHER PLAN'**
+  String get customerORDERANOTHERPLAN;
+
+  /// No description provided for @customerQUICKACTIONS.
+  ///
+  /// In en, this message translates to:
+  /// **'QUICK ACTIONS'**
+  String get customerQUICKACTIONS;
+
+  /// No description provided for @customerPREVIOUSORDERS.
+  ///
+  /// In en, this message translates to:
+  /// **'PREVIOUS ORDERS'**
+  String get customerPREVIOUSORDERS;
+
+  /// No description provided for @customerMYORDERS.
+  ///
+  /// In en, this message translates to:
+  /// **'MY ORDERS'**
+  String get customerMYORDERS;
+
+  /// No description provided for @customerVIEWALL.
+  ///
+  /// In en, this message translates to:
+  /// **'VIEW ALL'**
+  String get customerVIEWALL;
+
+  /// No description provided for @customerNOACTIVEPLAN.
+  ///
+  /// In en, this message translates to:
+  /// **'NO ACTIVE PLAN'**
+  String get customerNOACTIVEPLAN;
+
+  /// No description provided for @customerYouDontHaveAnActiveMealPlanRightNow.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have an active meal plan right now.'**
+  String get customerYouDontHaveAnActiveMealPlanRightNow;
+
+  /// No description provided for @customerCHOOSEAPLAN.
+  ///
+  /// In en, this message translates to:
+  /// **'CHOOSE A PLAN'**
+  String get customerCHOOSEAPLAN;
+
+  /// No description provided for @customerScheduleReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule ready'**
+  String get customerScheduleReady;
+
+  /// No description provided for @customerCollectFromDietTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Collect from Diet Time'**
+  String get customerCollectFromDietTime;
+
+  /// No description provided for @customerVIEWPLAN.
+  ///
+  /// In en, this message translates to:
+  /// **'VIEW PLAN'**
+  String get customerVIEWPLAN;
+
+  /// No description provided for @customerDETAILS.
+  ///
+  /// In en, this message translates to:
+  /// **'DETAILS'**
+  String get customerDETAILS;
+
+  /// No description provided for @customerMyPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'My Plan'**
+  String get customerMyPlan;
+
+  /// No description provided for @customerOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Orders'**
+  String get customerOrders;
+
+  /// No description provided for @customerNewPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'New Plan'**
+  String get customerNewPlan;
+
+  /// No description provided for @customerSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Support'**
+  String get customerSupport;
+
+  /// No description provided for @customerSupportWillBeAvailableSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Support will be available soon.'**
+  String get customerSupportWillBeAvailableSoon;
+
+  /// No description provided for @customerDeliveryCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery Calendar'**
+  String get customerDeliveryCalendar;
+
+  /// No description provided for @customerNoActiveDeliveryCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'No active delivery calendar'**
+  String get customerNoActiveDeliveryCalendar;
+
+  /// No description provided for @customerYourDeliveryDatesWillAppearHereWhenAMeal.
+  ///
+  /// In en, this message translates to:
+  /// **'Your delivery dates will appear here when a meal plan is active.'**
+  String get customerYourDeliveryDatesWillAppearHereWhenAMeal;
+
+  /// No description provided for @customerALL.
+  ///
+  /// In en, this message translates to:
+  /// **'ALL'**
+  String get customerALL;
+
+  /// No description provided for @customerMyOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'My Orders'**
+  String get customerMyOrders;
+
+  /// No description provided for @customerAllYourMealOrdersInOnePlace.
+  ///
+  /// In en, this message translates to:
+  /// **'All your meal orders in one place'**
+  String get customerAllYourMealOrdersInOnePlace;
+
+  /// No description provided for @customerAllOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'All Orders'**
+  String get customerAllOrders;
+
+  /// No description provided for @customerPendingConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Confirmation'**
+  String get customerPendingConfirmation;
+
+  /// No description provided for @customerOnHold.
+  ///
+  /// In en, this message translates to:
+  /// **'On Hold'**
+  String get customerOnHold;
+
+  /// No description provided for @customerRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get customerRejected;
+
+  /// No description provided for @customerPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get customerPending;
+
+  /// No description provided for @customerCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get customerCancelled;
+
+  /// No description provided for @customerNoOrdersFoundForThisStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'No orders found for this status.'**
+  String get customerNoOrdersFoundForThisStatus;
+
+  /// No description provided for @customerOrderPlaced.
+  ///
+  /// In en, this message translates to:
+  /// **'Order placed'**
+  String get customerOrderPlaced;
+
+  /// No description provided for @customerViewDetailsundefined.
+  ///
+  /// In en, this message translates to:
+  /// **'View Details  →'**
+  String get customerViewDetailsundefined;
+
+  /// No description provided for @customerGoodMorning.
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning'**
+  String get customerGoodMorning;
+
+  /// No description provided for @customerGoodAfternoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Good afternoon'**
+  String get customerGoodAfternoon;
+
+  /// No description provided for @customerGoodEvening.
+  ///
+  /// In en, this message translates to:
+  /// **'Good evening'**
+  String get customerGoodEvening;
+
+  /// No description provided for @customerYourMealPlanIsActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Your meal plan is active'**
+  String get customerYourMealPlanIsActive;
+
+  /// No description provided for @customerReadyWhenYouAre.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready when you are'**
+  String get customerReadyWhenYouAre;
+
+  /// No description provided for @customerYourMealPlansAtAGlance.
+  ///
+  /// In en, this message translates to:
+  /// **'Your meal plans at a glance'**
+  String get customerYourMealPlansAtAGlance;
+
+  /// No description provided for @customerMon.
+  ///
+  /// In en, this message translates to:
+  /// **'Mon'**
+  String get customerMon;
+
+  /// No description provided for @customerTue.
+  ///
+  /// In en, this message translates to:
+  /// **'Tue'**
+  String get customerTue;
+
+  /// No description provided for @customerWed.
+  ///
+  /// In en, this message translates to:
+  /// **'Wed'**
+  String get customerWed;
+
+  /// No description provided for @customerThu.
+  ///
+  /// In en, this message translates to:
+  /// **'Thu'**
+  String get customerThu;
+
+  /// No description provided for @customerFri.
+  ///
+  /// In en, this message translates to:
+  /// **'Fri'**
+  String get customerFri;
+
+  /// No description provided for @customerSat.
+  ///
+  /// In en, this message translates to:
+  /// **'Sat'**
+  String get customerSat;
+
+  /// No description provided for @customerSun.
+  ///
+  /// In en, this message translates to:
+  /// **'Sun'**
+  String get customerSun;
+
+  /// No description provided for @customerWeCouldntLoadAllYourDeliveryOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t load all your delivery orders.'**
+  String get customerWeCouldntLoadAllYourDeliveryOrders;
+
+  /// No description provided for @customerUnableToUpdateProfilePleaseTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to update profile. Please try again.'**
+  String get customerUnableToUpdateProfilePleaseTryAgain;
+
+  /// No description provided for @customerProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get customerProfile;
+
+  /// No description provided for @customerCustomerProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Profile'**
+  String get customerCustomerProfile;
+
+  /// No description provided for @customerViewOrUpdateYourPersonalInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'View or update your personal information'**
+  String get customerViewOrUpdateYourPersonalInformation;
+
+  /// No description provided for @customerQuestionnaire.
+  ///
+  /// In en, this message translates to:
+  /// **'Questionnaire'**
+  String get customerQuestionnaire;
+
+  /// No description provided for @customerCaptureYourGoalsAndFoodPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture your goals and food preferences'**
+  String get customerCaptureYourGoalsAndFoodPreferences;
+
+  /// No description provided for @customerAddOrEditYourDeliveryAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Add or edit your delivery address'**
+  String get customerAddOrEditYourDeliveryAddress;
+
+  /// No description provided for @customerPleaseSignInAgainToViewYourMeals.
+  ///
+  /// In en, this message translates to:
+  /// **'Please sign in again to view your meals.'**
+  String get customerPleaseSignInAgainToViewYourMeals;
+
+  /// No description provided for @customerWeCouldntLoadYourMealsForThisDayPlease.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t load your meals for this day. Please try again.'**
+  String get customerWeCouldntLoadYourMealsForThisDayPlease;
+
+  /// No description provided for @customerTheMenuForThisDateCouldNotBeConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'The menu for this date could not be confirmed.'**
+  String get customerTheMenuForThisDateCouldNotBeConfirmed;
+
+  /// No description provided for @customerWeveSelectedYourMealsForThisDayYouCan.
+  ///
+  /// In en, this message translates to:
+  /// **'We’ve selected your meals for this day. You can change them before the selection deadline.'**
+  String get customerWeveSelectedYourMealsForThisDayYouCan;
+
+  /// No description provided for @customerTheSelectionDeadlineHasPassedYourMealsAreLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'The selection deadline has passed. Your meals are locked for kitchen preparation.'**
+  String get customerTheSelectionDeadlineHasPassedYourMealsAreLocked;
+
+  /// No description provided for @customerYourMealsAreReadonlyForThisDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Your meals are read-only for this day.'**
+  String get customerYourMealsAreReadonlyForThisDay;
+
+  /// No description provided for @customerYourMealsForThisDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Your meals for this day'**
+  String get customerYourMealsForThisDay;
+
+  /// No description provided for @customerYourMealsAreBeingReviewedByOurTeamPlease.
+  ///
+  /// In en, this message translates to:
+  /// **'Your meals are being reviewed by our team. Please check back shortly.'**
+  String get customerYourMealsAreBeingReviewedByOurTeamPlease;
+
+  /// No description provided for @customerSelectedForYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected for you'**
+  String get customerSelectedForYou;
+
+  /// No description provided for @customerYourChoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Your choice'**
+  String get customerYourChoice;
+
+  /// No description provided for @customerYourMealChangeHasBeenSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Your meal change has been saved.'**
+  String get customerYourMealChangeHasBeenSaved;
+
+  /// No description provided for @customerTheSelectionDeadlineHasPassedCloseThisSheetTo.
+  ///
+  /// In en, this message translates to:
+  /// **'The selection deadline has passed. Close this sheet to view your saved meals.'**
+  String get customerTheSelectionDeadlineHasPassedCloseThisSheetTo;
+
+  /// No description provided for @customerYourChoicesOrSelectionDeadlineHaveChangedCloseThis.
+  ///
+  /// In en, this message translates to:
+  /// **'Your choices or selection deadline have changed. Close this sheet and refresh the day.'**
+  String get customerYourChoicesOrSelectionDeadlineHaveChangedCloseThis;
+
+  /// No description provided for @customerThatMealIsNoLongerAvailablePleaseChooseAnother.
+  ///
+  /// In en, this message translates to:
+  /// **'That meal is no longer available. Please choose another option or refresh the day.'**
+  String get customerThatMealIsNoLongerAvailablePleaseChooseAnother;
+
+  /// No description provided for @customerWeCouldntSaveThisChangeYourSavedMealsAre.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t save this change. Your saved meals are unchanged. Please try again.'**
+  String get customerWeCouldntSaveThisChangeYourSavedMealsAre;
+
+  /// No description provided for @customerChangeMeal.
+  ///
+  /// In en, this message translates to:
+  /// **'Change meal'**
+  String get customerChangeMeal;
+
+  /// No description provided for @customerClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get customerClose;
+
+  /// No description provided for @customerThereAreNoOtherEligibleDishesForThisSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no other eligible dishes for this selection on this day.'**
+  String get customerThereAreNoOtherEligibleDishesForThisSelection;
+
+  /// No description provided for @customerSelectedReplacement.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected replacement'**
+  String get customerSelectedReplacement;
+
+  /// No description provided for @customerAvailableForThisDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Available for this day'**
+  String get customerAvailableForThisDay;
+
+  /// No description provided for @customerSavingChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving changes…'**
+  String get customerSavingChanges;
+
+  /// No description provided for @customerSaveChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Changes'**
+  String get customerSaveChanges;
+
+  /// No description provided for @customerChangeMeal2.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Meal'**
+  String get customerChangeMeal2;
+
+  /// No description provided for @customerLoadingMealsForTheSelectedDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading meals for the selected day'**
+  String get customerLoadingMealsForTheSelectedDay;
+
+  /// No description provided for @customerAutomaticallySelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically Selected'**
+  String get customerAutomaticallySelected;
+
+  /// No description provided for @customerCustomized.
+  ///
+  /// In en, this message translates to:
+  /// **'Customized'**
+  String get customerCustomized;
+
+  /// No description provided for @customerDelivered.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered'**
+  String get customerDelivered;
+
+  /// No description provided for @customerOurTeamIsReviewingThisDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Our team is reviewing this day'**
+  String get customerOurTeamIsReviewingThisDay;
+
+  /// No description provided for @customerEditProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Profile'**
+  String get customerEditProfile;
+
+  /// No description provided for @customerFullNameIsRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Name is required.'**
+  String get customerFullNameIsRequired;
+
+  /// No description provided for @customerFullNameMustBeAtLeast2Characters.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Name must be at least 2 characters.'**
+  String get customerFullNameMustBeAtLeast2Characters;
+
+  /// No description provided for @customerFullNameMustBe150CharactersOrFewer.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Name must be 150 characters or fewer.'**
+  String get customerFullNameMustBe150CharactersOrFewer;
+
+  /// No description provided for @customerFullName.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Name'**
+  String get customerFullName;
+
+  /// No description provided for @customerMobileNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile Number'**
+  String get customerMobileNumber;
+
+  /// No description provided for @customerContactSupportOrUseChangeMobileNumberToUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support or use Change Mobile Number to update your login number.'**
+  String get customerContactSupportOrUseChangeMobileNumberToUpdate;
+
+  /// No description provided for @customerDateOfBirth.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of Birth'**
+  String get customerDateOfBirth;
+
+  /// No description provided for @customerSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving...'**
+  String get customerSaving;
+
+  /// No description provided for @customerDiscardChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard changes?'**
+  String get customerDiscardChanges;
+
+  /// No description provided for @customerYouHaveUnsavedChangesAreYouSureYouWant.
+  ///
+  /// In en, this message translates to:
+  /// **'You have unsaved changes. Are you sure you want to leave?'**
+  String get customerYouHaveUnsavedChangesAreYouSureYouWant;
+
+  /// No description provided for @customerKeepEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep Editing'**
+  String get customerKeepEditing;
+
+  /// No description provided for @customerDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get customerDiscard;
+
+  /// No description provided for @customerBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get customerBack;
+
+  /// No description provided for @customerOrderDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Details'**
+  String get customerOrderDetails;
+
+  /// No description provided for @customerRequestCancellation.
+  ///
+  /// In en, this message translates to:
+  /// **'Request cancellation'**
+  String get customerRequestCancellation;
+
+  /// No description provided for @customerTheOrderCouldNotBeCancelledRefreshTheOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'The order could not be cancelled. Refresh the order or contact Diet Time.'**
+  String get customerTheOrderCouldNotBeCancelledRefreshTheOrder;
+
+  /// No description provided for @customerMEALSINCLUDED.
+  ///
+  /// In en, this message translates to:
+  /// **'MEALS INCLUDED'**
+  String get customerMEALSINCLUDED;
+
+  /// No description provided for @customerCOLLECTIONDAYS.
+  ///
+  /// In en, this message translates to:
+  /// **'COLLECTION DAYS'**
+  String get customerCOLLECTIONDAYS;
+
+  /// No description provided for @customerDELIVERYDAYS.
+  ///
+  /// In en, this message translates to:
+  /// **'DELIVERY DAYS'**
+  String get customerDELIVERYDAYS;
+
+  /// No description provided for @customerDELIVERYADDRESS.
+  ///
+  /// In en, this message translates to:
+  /// **'DELIVERY ADDRESS'**
+  String get customerDELIVERYADDRESS;
+
+  /// No description provided for @customerDELIVERYTIME.
+  ///
+  /// In en, this message translates to:
+  /// **'DELIVERY TIME'**
+  String get customerDELIVERYTIME;
+
+  /// No description provided for @customerPRICING.
+  ///
+  /// In en, this message translates to:
+  /// **'PRICING'**
+  String get customerPRICING;
+
+  /// No description provided for @customerPAYMENTSTATUS.
+  ///
+  /// In en, this message translates to:
+  /// **'PAYMENT STATUS'**
+  String get customerPAYMENTSTATUS;
+
+  /// No description provided for @customerThankYouForYourOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you for your order!'**
+  String get customerThankYouForYourOrder;
+
+  /// No description provided for @customerYourPlanAndDeliveryScheduleAreConfirmedAbove.
+  ///
+  /// In en, this message translates to:
+  /// **'Your plan and delivery schedule are confirmed above.'**
+  String get customerYourPlanAndDeliveryScheduleAreConfirmedAbove;
+
+  /// No description provided for @customerNeedHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Need Help?'**
+  String get customerNeedHelp;
+
+  /// No description provided for @customerContactSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Support'**
+  String get customerContactSupport;
+
+  /// No description provided for @customerWeCouldntLoadThisOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t load this order.'**
+  String get customerWeCouldntLoadThisOrder;
+
+  /// No description provided for @customerCancelThisOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this order?'**
+  String get customerCancelThisOrder;
+
+  /// No description provided for @customerReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get customerReason;
+
+  /// No description provided for @customerKeepOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep order'**
+  String get customerKeepOrder;
+
+  /// No description provided for @customerConfirmCancellation.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm cancellation'**
+  String get customerConfirmCancellation;
+
+  /// No description provided for @customerThisOrderCouldNotBeLoadedForYourAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'This order could not be loaded for your account. Refresh your dashboard or contact our team with your order reference.'**
+  String get customerThisOrderCouldNotBeLoadedForYourAccount;
+
+  /// No description provided for @customerWeCouldNotConnectToLoadYourMenuCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not connect to load your menu. Check your connection and try again.'**
+  String get customerWeCouldNotConnectToLoadYourMenuCheck;
+
+  /// No description provided for @customerTheMenuServiceCouldNotLoadYourOrdersDishes.
+  ///
+  /// In en, this message translates to:
+  /// **'The menu service could not load your order’s dishes. Please refresh or contact our team.'**
+  String get customerTheMenuServiceCouldNotLoadYourOrdersDishes;
+
+  /// No description provided for @customerConfirmYourMeals.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your meals'**
+  String get customerConfirmYourMeals;
+
+  /// No description provided for @customerYourSelectionsCannotBeChangedAfterConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your selections cannot be changed after confirmation.'**
+  String get customerYourSelectionsCannotBeChangedAfterConfirmation;
+
+  /// No description provided for @customerConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get customerConfirm;
+
+  /// No description provided for @customerThe900PMDeadlineHasPassedYourAutomaticMeals.
+  ///
+  /// In en, this message translates to:
+  /// **'The 9:00 PM deadline has passed. Your automatic meals are being finalized.'**
+  String get customerThe900PMDeadlineHasPassedYourAutomaticMeals;
+
+  /// No description provided for @customerYourMealsHaveAlreadyBeenFinalizedHereAreYour.
+  ///
+  /// In en, this message translates to:
+  /// **'Your meals have already been finalized. Here are your saved dishes.'**
+  String get customerYourMealsHaveAlreadyBeenFinalizedHereAreYour;
+
+  /// No description provided for @customerYourSubscriptionIsNoLongerActiveForThisDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Your subscription is no longer active for this delivery.'**
+  String get customerYourSubscriptionIsNoLongerActiveForThisDelivery;
+
+  /// No description provided for @customerADishIsNoLongerAvailablePleaseReviewThe.
+  ///
+  /// In en, this message translates to:
+  /// **'A dish is no longer available. Please review the refreshed menu.'**
+  String get customerADishIsNoLongerAvailablePleaseReviewThe;
+
+  /// No description provided for @customerWeCouldNotVerifyYourConfirmationPleaseCheckYour.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not verify your confirmation. Please check your connection and refresh before trying again.'**
+  String get customerWeCouldNotVerifyYourConfirmationPleaseCheckYour;
+
+  /// No description provided for @customerUnableToConfirmYourMealsPleaseTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to confirm your meals. Please try again.'**
+  String get customerUnableToConfirmYourMealsPleaseTryAgain;
+
+  /// No description provided for @customerTomorrowsMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow’s Menu'**
+  String get customerTomorrowsMenu;
+
+  /// No description provided for @customerAutomaticallyFinalized.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically finalized'**
+  String get customerAutomaticallyFinalized;
+
+  /// No description provided for @customerHideConfirmedMeals.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide confirmed meals'**
+  String get customerHideConfirmedMeals;
+
+  /// No description provided for @customerSelectionClosesTodayAt900PMQatarTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Selection closes today at 9:00 PM Qatar time.'**
+  String get customerSelectionClosesTodayAt900PMQatarTime;
+
+  /// No description provided for @customerMeals.
+  ///
+  /// In en, this message translates to:
+  /// **'Meals'**
+  String get customerMeals;
+
+  /// No description provided for @customerSnacks.
+  ///
+  /// In en, this message translates to:
+  /// **'Snacks'**
+  String get customerSnacks;
+
+  /// No description provided for @customerConfirmMyMeals.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm My Meals'**
+  String get customerConfirmMyMeals;
+
+  /// No description provided for @customerReplaceAMeal.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace a meal'**
+  String get customerReplaceAMeal;
+
+  /// No description provided for @customerReplaceASnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace a snack'**
+  String get customerReplaceASnack;
+
+  /// No description provided for @customerNoEligibleDishesAreCurrentlyConfiguredOurTeamWill.
+  ///
+  /// In en, this message translates to:
+  /// **'No eligible dishes are currently configured. Our team will review this delivery.'**
+  String get customerNoEligibleDishesAreCurrentlyConfiguredOurTeamWill;
+
+  /// No description provided for @customerUpcomingMeals.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming Meals'**
+  String get customerUpcomingMeals;
+
+  /// No description provided for @customerWeCouldntLoadAllYourDeliveryMeals.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t load all your delivery meals.'**
+  String get customerWeCouldntLoadAllYourDeliveryMeals;
+
+  /// No description provided for @customerMealsHaveNotBeenAssignedToThisDeliveryYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Meals have not been assigned to this delivery yet. Our team will review it.'**
+  String get customerMealsHaveNotBeenAssignedToThisDeliveryYet;
+
+  /// No description provided for @customerMealsChosenForYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Meals chosen for you'**
+  String get customerMealsChosenForYou;
+
+  /// No description provided for @customerYourChoicesConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your choices confirmed'**
+  String get customerYourChoicesConfirmed;
+
+  /// No description provided for @customerServiceDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Service day'**
+  String get customerServiceDay;
+
+  /// No description provided for @customerNonserviceDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Non-service day'**
+  String get customerNonserviceDay;
+
+  /// No description provided for @customerNonservice.
+  ///
+  /// In en, this message translates to:
+  /// **'Non-service'**
+  String get customerNonservice;
+
+  /// No description provided for @customerAutoselected.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-selected'**
+  String get customerAutoselected;
+
+  /// No description provided for @customerDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery'**
+  String get customerDelivery;
+
+  /// No description provided for @customerScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled'**
+  String get customerScheduled;
+
+  /// No description provided for @customerNoUpcomingDeliveriesAreScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'No upcoming deliveries are scheduled.'**
+  String get customerNoUpcomingDeliveriesAreScheduled;
+
+  /// No description provided for @customerServiceRunsSaturdayToThursdayFridayIsANonservice.
+  ///
+  /// In en, this message translates to:
+  /// **'Service runs Saturday to Thursday. Friday is a non-service day.'**
+  String get customerServiceRunsSaturdayToThursdayFridayIsANonservice;
+
+  /// No description provided for @customerBeingPrepared.
+  ///
+  /// In en, this message translates to:
+  /// **'Being prepared'**
+  String get customerBeingPrepared;
+
+  /// No description provided for @customerOnTheWay.
+  ///
+  /// In en, this message translates to:
+  /// **'On the way'**
+  String get customerOnTheWay;
+
+  /// No description provided for @customerSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped'**
+  String get customerSkipped;
+
+  /// No description provided for @customerChooseYourLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your language'**
+  String get customerChooseYourLanguage;
+
+  /// No description provided for @customerAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get customerAll;
+
+  /// No description provided for @customerYourDraftCouldNotBeSavedPleaseTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Your draft could not be saved. Please try again.'**
+  String get customerYourDraftCouldNotBeSavedPleaseTryAgain;
+
+  /// No description provided for @customerUnableToLoadYourSavedProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load your saved profile.'**
+  String get customerUnableToLoadYourSavedProfile;
+
+  /// No description provided for @customerYourProfileChangedElsewhereWeReloadedItPleaseReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Your profile changed elsewhere. We reloaded it; please review and retry.'**
+  String get customerYourProfileChangedElsewhereWeReloadedItPleaseReview;
+
+  /// No description provided for @customerCouldNotSaveYourProgressCheckYourConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save your progress. Check your connection.'**
+  String get customerCouldNotSaveYourProgressCheckYourConnection;
+
+  /// No description provided for @customerSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get customerSelect;
+
+  /// No description provided for @customerNoFoodPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'No food preferences'**
+  String get customerNoFoodPreferences;
+
+  /// No description provided for @customerSearchAllergies.
+  ///
+  /// In en, this message translates to:
+  /// **'Search allergies...'**
+  String get customerSearchAllergies;
+
+  /// No description provided for @customerPersonalized.
+  ///
+  /// In en, this message translates to:
+  /// **'Personalized'**
+  String get customerPersonalized;
+
+  /// No description provided for @customerBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced'**
+  String get customerBalanced;
+
+  /// No description provided for @customerMadeForYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Made for you'**
+  String get customerMadeForYou;
+
+  /// No description provided for @customerUnableToLoadAllergens.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load allergens.'**
+  String get customerUnableToLoadAllergens;
+
+  /// No description provided for @customerWellAlwaysHighlightMealsThatAreSafeForYou.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll always highlight meals that are safe for you.'**
+  String get customerWellAlwaysHighlightMealsThatAreSafeForYou;
+
+  /// No description provided for @customerNoAllergiesFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No allergies found.'**
+  String get customerNoAllergiesFound;
+
+  /// No description provided for @customerHeresAQuickOverviewOfYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Here\'s a quick overview of you.'**
+  String get customerHeresAQuickOverviewOfYou;
+
+  /// No description provided for @customerGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get customerGoal;
+
+  /// No description provided for @customerActivityLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Level'**
+  String get customerActivityLevel;
+
+  /// No description provided for @customerNotCalculatedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not calculated yet'**
+  String get customerNotCalculatedYet;
+
+  /// No description provided for @customerProteinTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Protein target'**
+  String get customerProteinTarget;
+
+  /// No description provided for @customerPersonalizeYourDietTimeExperience.
+  ///
+  /// In en, this message translates to:
+  /// **'personalize your Diet Time experience.'**
+  String get customerPersonalizeYourDietTimeExperience;
+
+  /// No description provided for @customerYourGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Your goals'**
+  String get customerYourGoals;
+
+  /// No description provided for @customerYourProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Your profile'**
+  String get customerYourProfile;
+
+  /// No description provided for @customerYourLifestyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your lifestyle'**
+  String get customerYourLifestyle;
+
+  /// No description provided for @customerYourFoodPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Your food preferences'**
+  String get customerYourFoodPreferences;
+
+  /// No description provided for @customerYourHealthAllergies.
+  ///
+  /// In en, this message translates to:
+  /// **'Your health & allergies'**
+  String get customerYourHealthAllergies;
+
+  /// No description provided for @customerYoureAllSet.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re all set!'**
+  String get customerYoureAllSet;
+
+  /// No description provided for @customerYouCanNowExploreTheDietTimeMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'You can now explore the Diet Time menu.'**
+  String get customerYouCanNowExploreTheDietTimeMenu;
+
+  /// No description provided for @customerWeCouldntLoadYourProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t load your profile.'**
+  String get customerWeCouldntLoadYourProfile;
+
+  /// No description provided for @customerWhatShouldWeCallYou.
+  ///
+  /// In en, this message translates to:
+  /// **'What should we call you?'**
+  String get customerWhatShouldWeCallYou;
+
+  /// No description provided for @customerYourName.
+  ///
+  /// In en, this message translates to:
+  /// **'Your name'**
+  String get customerYourName;
+
+  /// No description provided for @customerUnableToSaveYourNamePleaseTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to save your name. Please try again.'**
+  String get customerUnableToSaveYourNamePleaseTryAgain;
+
+  /// No description provided for @customerYourAnswersAreKeptOnThisPhonePleaseRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Your answers are kept on this phone. Please retry saving.'**
+  String get customerYourAnswersAreKeptOnThisPhonePleaseRetry;
+
+  /// No description provided for @customerPickHowManyMealsYoudLikeEachDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick how many meals you\'d like each day.'**
+  String get customerPickHowManyMealsYoudLikeEachDay;
+
+  /// No description provided for @customerSwipeToExploreMealPackagesundefined.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe to explore meal packages →'**
+  String get customerSwipeToExploreMealPackagesundefined;
+
+  /// No description provided for @customerChooseYourDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your duration'**
+  String get customerChooseYourDuration;
+
+  /// No description provided for @customerCurrentlyUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Currently unavailable'**
+  String get customerCurrentlyUnavailable;
+
+  /// No description provided for @customerSwipeToExplorePackageDurationsundefined.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe to explore package durations →'**
+  String get customerSwipeToExplorePackageDurationsundefined;
+
+  /// No description provided for @customerPricingUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Pricing unavailable'**
+  String get customerPricingUnavailable;
+
+  /// No description provided for @customerYourAllergenPreferencesAreSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Your allergen preferences are saved'**
+  String get customerYourAllergenPreferencesAreSaved;
+
+  /// No description provided for @customerWellUseYourRecordedAllergenInformationWhenShowingSuitable.
+  ///
+  /// In en, this message translates to:
+  /// **'We’ll use your recorded allergen information when showing suitable meal choices. Please review each meal’s allergen details before ordering.'**
+  String get customerWellUseYourRecordedAllergenInformationWhenShowingSuitable;
+
+  /// No description provided for @customerPricingIsTemporarilyUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Pricing is temporarily unavailable.'**
+  String get customerPricingIsTemporarilyUnavailable;
+
+  /// No description provided for @customerNoPackagesAreCurrentlyAvailableForThisMealPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'No packages are currently available for this meal plan.'**
+  String get customerNoPackagesAreCurrentlyAvailableForThisMealPlan;
+
+  /// No description provided for @customerTryAnotherPlanToFindYourDailyMealRoutine.
+  ///
+  /// In en, this message translates to:
+  /// **'Try another plan to find your daily meal routine.'**
+  String get customerTryAnotherPlanToFindYourDailyMealRoutine;
+
+  /// No description provided for @customerChooseAnotherPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose another plan'**
+  String get customerChooseAnotherPlan;
+
+  /// No description provided for @customerNoMealPlansAreAvailableYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No meal plans are available yet.'**
+  String get customerNoMealPlansAreAvailableYet;
+
+  /// No description provided for @customerUnableToLoadMealPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load meal plans.'**
+  String get customerUnableToLoadMealPlans;
+
+  /// No description provided for @customerChooseANewDeliveryStartDateDeliveryCanStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a new delivery start date. Delivery can start tomorrow or later.'**
+  String get customerChooseANewDeliveryStartDateDeliveryCanStart;
+
+  /// No description provided for @customerChooseYourStartDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your start date'**
+  String get customerChooseYourStartDate;
+
+  /// No description provided for @customerTapToChooseAnAvailableServiceDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to choose an available service day.'**
+  String get customerTapToChooseAnAvailableServiceDay;
+
+  /// No description provided for @customerTapToChooseADifferentServiceDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to choose a different service day.'**
+  String get customerTapToChooseADifferentServiceDay;
+
+  /// No description provided for @customerContinueundefined.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue →'**
+  String get customerContinueundefined;
+
+  /// No description provided for @customerStartDate2.
+  ///
+  /// In en, this message translates to:
+  /// **'Start date'**
+  String get customerStartDate2;
+
+  /// No description provided for @customerSelectADate.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a date'**
+  String get customerSelectADate;
+
+  /// No description provided for @customerEndDate.
+  ///
+  /// In en, this message translates to:
+  /// **'End date'**
+  String get customerEndDate;
+
+  /// No description provided for @customerCalculatedAutomatically.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculated automatically'**
+  String get customerCalculatedAutomatically;
+
+  /// No description provided for @customerSelectYourStartDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your start date'**
+  String get customerSelectYourStartDate;
+
+  /// No description provided for @customerSelectedStartDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected start date'**
+  String get customerSelectedStartDate;
+
+  /// No description provided for @customerPlanEndDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan end date'**
+  String get customerPlanEndDate;
+
+  /// No description provided for @customerPlanServiceDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan service day'**
+  String get customerPlanServiceDay;
+
+  /// No description provided for @customerFridayUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Friday unavailable'**
+  String get customerFridayUnavailable;
+
+  /// No description provided for @customerSelectAStartDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a start date'**
+  String get customerSelectAStartDate;
+
+  /// No description provided for @customerConfirmDates.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Dates'**
+  String get customerConfirmDates;
+
+  /// No description provided for @customerYourSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your subscription'**
+  String get customerYourSubscription;
+
+  /// No description provided for @customerActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get customerActive;
+
+  /// No description provided for @customerCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get customerCompleted;
+
+  /// No description provided for @customerPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get customerPaused;
+
+  /// No description provided for @customerAwaitingActivation.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting Activation'**
+  String get customerAwaitingActivation;
+
+  /// No description provided for @customerUnderReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under Review'**
+  String get customerUnderReview;
+
+  /// No description provided for @customerUnpaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid'**
+  String get customerUnpaid;
+
+  /// No description provided for @customerPaymentPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Pending'**
+  String get customerPaymentPending;
+
+  /// No description provided for @customerPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get customerPaid;
+
+  /// No description provided for @customerPaymentFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Failed'**
+  String get customerPaymentFailed;
+
+  /// No description provided for @customerRefundUnderReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund Under Review'**
+  String get customerRefundUnderReview;
+
+  /// No description provided for @customerRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunded'**
+  String get customerRefunded;
+
+  /// No description provided for @customerPartiallyRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Partially Refunded'**
+  String get customerPartiallyRefunded;
+
+  /// No description provided for @customerPaymentUnderReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Under Review'**
+  String get customerPaymentUnderReview;
+
+  /// No description provided for @customerDietTimeIsReviewingYourOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet Time is reviewing your order.'**
+  String get customerDietTimeIsReviewingYourOrder;
+
+  /// No description provided for @customerDietTimeWillReviewYourOrderAndNotifyYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet Time will review your order and notify you once it is confirmed.'**
+  String get customerDietTimeWillReviewYourOrderAndNotifyYou;
+
+  /// No description provided for @customerDaysPerWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} Days / Week'**
+  String customerDaysPerWeek(int count);
+
+  /// No description provided for @customerActivePlans.
+  ///
+  /// In en, this message translates to:
+  /// **'You have {count} active meal plans'**
+  String customerActivePlans(int count);
+
+  /// No description provided for @customerOrderReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Please reference order {reference}.'**
+  String customerOrderReference(String reference);
+
+  /// No description provided for @customerSelectionDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Selection deadline'**
+  String get customerSelectionDeadline;
+
+  /// No description provided for @customerQatarTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Qatar time'**
+  String get customerQatarTime;
+
+  /// No description provided for @customerOrderStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Order status'**
+  String get customerOrderStatus;
+
+  /// No description provided for @customerSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'selected'**
+  String get customerSelected;
+
+  /// No description provided for @customerYourOrderIsConfirmedAndAwaitingTheRequiredPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Your order is confirmed and awaiting the required payment.'**
+  String get customerYourOrderIsConfirmedAndAwaitingTheRequiredPayment;
+
+  /// No description provided for @addressHomeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get addressHomeLabel;
+
+  /// No description provided for @addressApartmentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Apartment'**
+  String get addressApartmentLabel;
+
+  /// No description provided for @addressOfficeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Office'**
+  String get addressOfficeLabel;
+
+  /// No description provided for @addressOtherLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get addressOtherLabel;
+
+  /// No description provided for @reviewPackage.
+  ///
+  /// In en, this message translates to:
+  /// **'Review package'**
+  String get reviewPackage;
+
+  /// No description provided for @packageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected meal package is unavailable. Please review your package.'**
+  String get packageUnavailable;
+
+  /// No description provided for @durationPricingUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Pricing is unavailable for this duration. Please review your package.'**
+  String get durationPricingUnavailable;
+
+  /// No description provided for @planPricingMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected plan and pricing do not match. Please review your package.'**
+  String get planPricingMismatch;
+
+  /// No description provided for @planNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This meal plan was not found. Please choose another plan.'**
+  String get planNotFound;
+
+  /// No description provided for @planUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This meal plan is no longer available. Please choose another plan.'**
+  String get planUnavailable;
+
+  /// No description provided for @availabilityRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not verify this package. Check your connection and retry.'**
+  String get availabilityRetry;
+
+  /// No description provided for @saveOrderRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Your order could not be saved. Please retry or contact Diet Time.'**
+  String get saveOrderRetry;
 }
 
 class _AppLocalizationsDelegate

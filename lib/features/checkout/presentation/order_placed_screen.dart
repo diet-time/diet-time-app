@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'dart:async';
 
 import 'package:diet_time/app/router/app_router.dart';
@@ -51,8 +52,8 @@ class OrderPlacedScreen extends ConsumerWidget {
                         const SizedBox(height: 22),
                         Text(
                           confirmation.status == 'PENDING_APPROVAL'
-                              ? 'Order Submitted'
-                              : 'Order Confirmed!',
+                              ? context.customerCopy('Order Submitted')
+                              : context.customerCopy('Order Confirmed!'),
                           key: ValueKey('orderPlacedTitle'),
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -64,7 +65,9 @@ class OrderPlacedScreen extends ConsumerWidget {
                         const SizedBox(height: 7),
                         Text(
                           confirmation.status == 'PENDING_APPROVAL'
-                              ? "Your order has been received and is awaiting confirmation from Diet Time. We'll notify you once it's reviewed."
+                              ? context.customerCopy(
+                                  "Your order has been received and is awaiting confirmation from Diet Time. We'll notify you once it's reviewed.",
+                                )
                               : 'Your ${confirmation.plan.name} Plan is ready.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -90,7 +93,7 @@ class OrderPlacedScreen extends ConsumerWidget {
                     constraints: const BoxConstraints(maxWidth: 620),
                     child: AppButton(
                       key: const ValueKey('orderPlacedHome'),
-                      label: 'GO TO DASHBOARD',
+                      label: context.customerCopy('GO TO DASHBOARD'),
                       backgroundColor: AppColors.black,
                       onPressed: () => _goToDashboard(context, ref),
                     ),
@@ -134,21 +137,30 @@ class _ConfirmationCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _Detail(label: 'ORDER NUMBER', value: confirmation.orderNumber),
-          _Detail(label: 'PLAN', value: confirmation.plan.name),
-          _Detail(label: 'PAYMENT', value: confirmation.paymentLabel),
           _Detail(
-            label: 'PACKAGE',
+            label: context.customerCopy('ORDER NUMBER'),
+            value: confirmation.orderNumber,
+          ),
+          _Detail(
+            label: context.customerCopy('PLAN'),
+            value: confirmation.plan.name,
+          ),
+          _Detail(
+            label: context.customerCopy('PAYMENT'),
+            value: confirmation.paymentLabel,
+          ),
+          _Detail(
+            label: context.customerCopy('PACKAGE'),
             value: confirmation.entitlement.label(
               Localizations.localeOf(context).languageCode,
             ),
           ),
           _Detail(
-            label: 'FULFILLMENT',
+            label: context.customerCopy('FULFILLMENT'),
             value:
                 confirmation.isTakeaway && confirmation.takeawayBranch != null
                 ? [
-                    'Takeaway',
+                    context.customerCopy('Takeaway'),
                     confirmation.takeawayBranch!.name,
                     if (confirmation.takeawayBranch!.address
                             ?.trim()
@@ -159,13 +171,13 @@ class _ConfirmationCard extends StatelessWidget {
                 : confirmation.fulfillmentLabel,
           ),
           _Detail(
-            label: 'PLAN PERIOD',
+            label: context.customerCopy('PLAN PERIOD'),
             value: _period(delivery.startDate, delivery.endDate),
           ),
           _Detail(
             label: confirmation.isTakeaway
-                ? 'FIRST COLLECTION'
-                : 'FIRST DELIVERY',
+                ? context.customerCopy('FIRST COLLECTION')
+                : context.customerCopy('FIRST DELIVERY'),
             value: _firstDelivery(delivery.startDate),
           ),
           if (!confirmation.isTakeaway)
@@ -175,7 +187,7 @@ class _ConfirmationCard extends StatelessWidget {
             ),
           if (!confirmation.isTakeaway)
             _Detail(
-              label: 'DELIVERY TO',
+              label: context.customerCopy('DELIVERY TO'),
               value: [
                 address.displayName,
                 address.area,
@@ -183,13 +195,13 @@ class _ConfirmationCard extends StatelessWidget {
               ].where((value) => value.trim().isNotEmpty).join('\n'),
             ),
           _Detail(
-            label: 'TOTAL',
+            label: context.customerCopy('TOTAL'),
             value:
                 '${formatMealPlanPriceAmount(confirmation.pricing.totalAmount, locale)} ${confirmation.pricing.currencyCode}',
           ),
           _Detail(
-            label: 'STATUS',
-            value: confirmation.statusLabel,
+            label: context.customerCopy('STATUS'),
+            value: context.customerCopy(confirmation.statusLabel),
             isLast: true,
             accent: true,
           ),
@@ -260,8 +272,8 @@ class _MissingConfirmation extends ConsumerWidget {
               color: AppColors.emeraldGreen,
             ),
             const SizedBox(height: 14),
-            const Text(
-              'Order confirmation is unavailable.',
+            Text(
+              context.customerCopy('Order confirmation is unavailable.'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.darkGreen,
@@ -270,7 +282,7 @@ class _MissingConfirmation extends ConsumerWidget {
             ),
             const SizedBox(height: 18),
             AppButton(
-              label: 'GO TO DASHBOARD',
+              label: context.customerCopy('GO TO DASHBOARD'),
               backgroundColor: AppColors.black,
               onPressed: () => _goToDashboard(context, ref),
             ),

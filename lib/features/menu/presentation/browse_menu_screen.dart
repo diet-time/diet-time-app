@@ -1,3 +1,5 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
+import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'dart:async';
 
 import 'package:diet_time/app/router/app_router.dart';
@@ -15,7 +17,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class BrowseMenuScreen extends ConsumerStatefulWidget {
-  const BrowseMenuScreen({super.key});
+  const BrowseMenuScreen({super.key, this.fromDashboard = false});
+  final bool fromDashboard;
 
   @override
   ConsumerState<BrowseMenuScreen> createState() => _BrowseMenuScreenState();
@@ -361,7 +364,10 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
 
   List<GuestMealTime> _filtersFor(GuestMenuData? data) {
     final filters = <GuestMealTime>[
-      GuestMealTime(code: 'ALL', name: _language == 'ar' ? 'الكل' : 'All'),
+      GuestMealTime(
+        code: 'ALL',
+        name: _language == 'ar' ? 'الكل' : context.customerCopy('All'),
+      ),
     ];
     final seen = <String>{'ALL'};
     for (final slot in _configuredMenuSlots(data)) {
@@ -489,6 +495,29 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     await context.push<void>(AppRoutes.plans);
   }
 
+  bool get _dashboardOrigin =>
+      widget.fromDashboard &&
+      ref.watch(otpAuthControllerProvider).isAuthenticated &&
+      context.canPop();
+
+  Widget _menuActions(AppLocalizations l10n) {
+    if (!_dashboardOrigin) return _startPlanButton(l10n);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        FilledButton.tonalIcon(
+          key: const ValueKey('backToDashboard'),
+          onPressed: () => context.pop(),
+          icon: const BackButtonIcon(),
+          label: Text(l10n.backToDashboard),
+        ),
+        const SizedBox(height: 8),
+        _startPlanButton(l10n),
+      ],
+    );
+  }
+
   Widget _startPlanButton(AppLocalizations l10n) {
     return FloatingActionButton.extended(
       key: const ValueKey('guestStartPlan'),
@@ -508,7 +537,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     if (_isHomeLoading || (_homeData == null && !_hasHomeError)) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F8F3),
-        floatingActionButton: _startPlanButton(l10n),
+        floatingActionButton: _menuActions(l10n),
         body: SafeArea(
           child: Stack(
             children: [
@@ -534,7 +563,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     if (_homeData == null) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F8F3),
-        floatingActionButton: _startPlanButton(l10n),
+        floatingActionButton: _menuActions(l10n),
         body: SafeArea(
           child: Stack(
             children: [
@@ -577,7 +606,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8F3),
-      floatingActionButton: _startPlanButton(l10n),
+      floatingActionButton: _menuActions(l10n),
       body: Stack(
         children: [
           SafeArea(
@@ -807,11 +836,11 @@ class _GuestLanguageSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final isArabic = languageCode == 'ar';
     return Semantics(
-      label: 'Language',
+      label: context.customerCopy('Language'),
       button: true,
       child: PopupMenuButton<String>(
         key: const ValueKey('guestLanguageSelector'),
-        tooltip: 'Language',
+        tooltip: context.customerCopy('Language'),
         onSelected: onSelected,
         position: PopupMenuPosition.under,
         color: AppColors.white,
@@ -1646,7 +1675,9 @@ class _GuestMealCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(99),
                       ),
                       child: Text(
-                        l10n.kcal(meal.nutrition.calories.round()),
+                        meal.nutrition.calories == null
+                            ? l10n.nutritionUnavailable
+                            : l10n.kcal(meal.nutrition.calories!.round()),
                         style: const TextStyle(
                           color: AppColors.white,
                           fontSize: 11,
@@ -2003,7 +2034,7 @@ class _GuestMenuError extends StatelessWidget {
               size: 42,
             ),
             const SizedBox(height: 14),
-            Text(message, textAlign: TextAlign.center),
+            Text(context.customerCopy(message), textAlign: TextAlign.center),
             const SizedBox(height: 14),
             FilledButton(onPressed: onRetry, child: Text(retryLabel)),
           ],
@@ -2117,7 +2148,8 @@ IconData _filterIcon(String code) {
   };
 }
 
-String _nutrition(double value) {
+String _nutrition(double? value) {
+  if (value == null) return "—";
   if (value == value.roundToDouble()) return value.toInt().toString();
   return value.toStringAsFixed(1);
 }

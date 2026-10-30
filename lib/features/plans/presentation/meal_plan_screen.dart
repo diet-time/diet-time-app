@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/meal_plan_image.dart';
@@ -303,8 +304,8 @@ class _PlanLoadState extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               empty
-                  ? 'No meal plans are available yet.'
-                  : 'Unable to load meal plans.',
+                  ? context.customerCopy('No meal plans are available yet.')
+                  : context.customerCopy('Unable to load meal plans.'),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: AppColors.darkGreen,
@@ -312,7 +313,10 @@ class _PlanLoadState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(
+              onPressed: onRetry,
+              child: Text(context.customerCopy('Retry')),
+            ),
           ],
         ),
       ),

@@ -1,3 +1,6 @@
+import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
+import 'package:diet_time/app/router/app_router.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:async';
 
 import 'package:diet_time/features/language/presentation/language_controller.dart';
@@ -14,6 +17,73 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  for (final entry in [(true, true), (false, true), (true, false)]) {
+    testWidgets(
+      'dashboard return requires both origin and authentication: $entry',
+      (tester) async {
+        final repository = _FakeGuestMenuRepository(
+          GuestHomeResponse.fromJson(_fixtureJson()),
+        );
+        final router = GoRouter(
+          initialLocation: '/dashboard-test',
+          routes: [
+            GoRoute(
+              path: '/dashboard-test',
+              builder: (context, state) => Scaffold(
+                body: TextButton(
+                  onPressed: () => context.push(
+                    AppRoutes.menu,
+                    extra: entry.$2 ? 'dashboard' : null,
+                  ),
+                  child: const Text('Open existing menu'),
+                ),
+              ),
+            ),
+            GoRoute(
+              path: AppRoutes.menu,
+              builder: (context, state) =>
+                  BrowseMenuScreen(fromDashboard: state.extra == 'dashboard'),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              guestMenuRepositoryProvider.overrideWithValue(repository),
+              otpAuthControllerProvider.overrideWith(
+                () => _MenuTestAuth(entry.$1),
+              ),
+            ],
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+        await tester.tap(find.text('Open existing menu'));
+        await tester.pumpAndSettle();
+        expect(find.byType(BrowseMenuScreen), findsOneWidget);
+        expect(find.byKey(const ValueKey('guestStartPlan')), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('backToDashboard')),
+          entry.$1 && entry.$2 ? findsOneWidget : findsNothing,
+        );
+        final reads = repository.calls.length;
+        if (entry.$1 && entry.$2) {
+          await tester.tap(find.byKey(const ValueKey('backToDashboard')));
+        } else {
+          await tester.binding.handlePopRoute();
+        }
+        await tester.pumpAndSettle();
+        expect(find.text('Open existing menu'), findsOneWidget);
+        expect(router.canPop(), isFalse);
+        expect(repository.calls.length, reads);
+      },
+    );
+  }
+
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   test('home and menu models parse their separate payloads', () {
@@ -1823,4 +1893,11 @@ Map<String, dynamic> _nestedFixtureJson({bool includeImages = true}) {
     },
     'errors': <dynamic>[],
   };
+}
+
+class _MenuTestAuth extends OtpAuthController {
+  _MenuTestAuth(this.authenticated);
+  final bool authenticated;
+  @override
+  OtpAuthState build() => OtpAuthState(isAuthenticated: authenticated);
 }

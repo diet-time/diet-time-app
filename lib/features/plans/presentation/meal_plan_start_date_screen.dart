@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
@@ -129,9 +130,11 @@ class _MealPlanStartDateScreenState
     )) {
       setState(() => _schedule = null);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Choose a new delivery start date. Delivery can start tomorrow or later.',
+            context.customerCopy(
+              'Choose a new delivery start date. Delivery can start tomorrow or later.',
+            ),
           ),
         ),
       );
@@ -164,8 +167,8 @@ class _MealPlanStartDateScreenState
                 context.canPop() ? context.pop() : context.go(AppRoutes.plans),
             icon: const Icon(Icons.arrow_back_rounded),
           ),
-          title: const Text(
-            'Diet Time',
+          title: Text(
+            context.customerCopy('Diet Time'),
             style: TextStyle(
               color: AppColors.darkGreen,
               fontSize: 20,
@@ -184,8 +187,8 @@ class _MealPlanStartDateScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text(
-                          'Choose your start date',
+                        Text(
+                          context.customerCopy('Choose your start date'),
                           key: ValueKey('startDateTitle'),
                           style: TextStyle(
                             color: AppColors.darkGreen,
@@ -217,8 +220,12 @@ class _MealPlanStartDateScreenState
                                 Expanded(
                                   child: Text(
                                     _schedule == null
-                                        ? 'Tap to choose an available service day.'
-                                        : 'Tap to choose a different service day.',
+                                        ? context.customerCopy(
+                                            'Tap to choose an available service day.',
+                                          )
+                                        : context.customerCopy(
+                                            'Tap to choose a different service day.',
+                                          ),
                                     style: TextStyle(
                                       color: AppColors.emeraldGreen.withValues(
                                         alpha: .82,
@@ -282,7 +289,7 @@ class _MealPlanStartDateScreenState
                         const SizedBox(height: 8),
                         AppButton(
                           key: const ValueKey('startDateContinue'),
-                          label: 'Continue →',
+                          label: context.customerCopy('Continue →'),
                           onPressed: _schedule == null ? null : _continue,
                         ),
                       ],
@@ -310,9 +317,9 @@ class _DateFields extends StatelessWidget {
       children: [
         Expanded(
           child: _ReadOnlyDateField(
-            label: 'Start date',
+            label: context.customerCopy('Start date'),
             value: schedule == null
-                ? 'Select a date'
+                ? context.customerCopy('Select a date')
                 : formatter.format(schedule!.startDate),
             active: schedule != null,
             fieldKey: const ValueKey('startDateField'),
@@ -322,9 +329,9 @@ class _DateFields extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: _ReadOnlyDateField(
-            label: 'End date',
+            label: context.customerCopy('End date'),
             value: schedule == null
-                ? 'Calculated automatically'
+                ? context.customerCopy('Calculated automatically')
                 : formatter.format(schedule!.endDate),
             fieldKey: const ValueKey('endDateField'),
           ),
@@ -472,9 +479,9 @@ class _ServiceCalendar extends StatelessWidget {
             child: Row(
               children: [
                 const SizedBox(width: 48),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Select your start date',
+                    context.customerCopy('Select your start date'),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.darkGreen,
@@ -548,21 +555,21 @@ class _ServiceCalendar extends StatelessWidget {
                       spacing: 16,
                       runSpacing: 7,
                       children: [
-                        const _CalendarLegend(
+                        _CalendarLegend(
                           color: AppColors.emeraldGreen,
-                          label: 'Selected start date',
+                          label: context.customerCopy('Selected start date'),
                         ),
-                        const _CalendarLegend(
+                        _CalendarLegend(
                           color: Color(0xFF2F8F75),
-                          label: 'Plan end date',
+                          label: context.customerCopy('Plan end date'),
                         ),
-                        const _CalendarLegend(
+                        _CalendarLegend(
                           color: Color(0xFFDFF1E3),
-                          label: 'Plan service day',
+                          label: context.customerCopy('Plan service day'),
                         ),
-                        const _CalendarLegend(
+                        _CalendarLegend(
                           color: Color(0xFFE9EAEB),
-                          label: 'Friday unavailable',
+                          label: context.customerCopy('Friday unavailable'),
                         ),
                       ],
                     ),
@@ -578,8 +585,8 @@ class _ServiceCalendar extends StatelessWidget {
               child: AppButton(
                 key: const ValueKey('confirmCalendar'),
                 label: schedule == null
-                    ? 'Select a start date'
-                    : 'Confirm Dates',
+                    ? context.customerCopy('Select a start date')
+                    : context.customerCopy('Confirm Dates'),
                 onPressed: onDone,
               ),
             ),

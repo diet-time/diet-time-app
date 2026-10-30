@@ -2,9 +2,21 @@
   "@@locale": "en",
   "deliveriesTitle": "Tomorrow’s Deliveries",
   "deliveriesScheduled": "{count} scheduled {count, plural, =1{order} other{orders}}",
-  "@deliveriesScheduled": {"placeholders": {"count": {"type": "int"}}},
+  "@deliveriesScheduled": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "deliveriesOrder": "Order: {reference}",
-  "@deliveriesOrder": {"placeholders": {"reference": {"type": "String"}}},
+  "@deliveriesOrder": {
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
   "deliveriesConfirmed": "Confirmed",
   "deliveriesPending": "Selection pending",
   "deliveriesReady": "Ready to confirm",
@@ -18,13 +30,37 @@
   "deliveriesActionNeeded": "Action needed",
   "deliveriesWaiting": "Delivery update",
   "deliveriesPackage": "{meals} Meals + {snacks} {snacks, plural, =1{Snack} other{Snacks}}",
-  "@deliveriesPackage": {"placeholders": {"meals": {"type": "int"}, "snacks": {"type": "int"}}},
+  "@deliveriesPackage": {
+    "placeholders": {
+      "meals": {
+        "type": "int"
+      },
+      "snacks": {
+        "type": "int"
+      }
+    }
+  },
   "deliveriesAllConfirmed": "All {count} dishes confirmed",
-  "@deliveriesAllConfirmed": {"placeholders": {"count": {"type": "int"}}},
+  "@deliveriesAllConfirmed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "deliveriesViewDishes": "View your dishes",
   "deliveriesHideDishes": "Hide your dishes",
   "deliveriesProgress": "{selected} of {total} selected",
-  "@deliveriesProgress": {"placeholders": {"selected": {"type": "int"}, "total": {"type": "int"}}},
+  "@deliveriesProgress": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "deliveriesDeadline": "Choose before 9:00 PM",
   "deliveriesChoose": "Choose your meals",
   "deliveriesRefresh": "Refresh menu",
@@ -33,9 +69,21 @@
   "deliveriesSnack": "Snack",
   "deliveriesViewDetails": "View Details",
   "deliveriesFirstDelivery": "First delivery: {date}",
-  "@deliveriesFirstDelivery": {"placeholders": {"date": {"type": "String"}}},
+  "@deliveriesFirstDelivery": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "deliveriesStatus": "{status, select, NO_ORDER{No order is linked to your account.} PENDING_ACTIVATION{Your order is saved and is waiting for activation.} NOT_STARTED{Your plan starts soon. Selection opens the day before your first delivery.} NO_DELIVERY{No delivery is scheduled for tomorrow.} SERVICE_DAYS_MISSING{Your order is saved, but its delivery schedule needs to be initialized by our team.} SERVICE_DAY_INCOMPLETE{Your delivery details need review by our team.} SCHEDULE_NOT_CONFIGURED{Your order’s delivery weekdays need review by our team.} MENU_NOT_CONFIGURED{Your order is saved. Tomorrow’s dishes have not been configured yet.} SELECTION_NOT_OPEN{Selection opens the day before your delivery.} FINALIZATION_PENDING{The 9:00 PM selection window has closed. Your automatic meals are being finalized.} INACTIVE_ORDER{This order is not active for meal selection.} LOCKED{Your meal selections are locked for preparation.} NEEDS_REVIEW{Our team needs to review suitable dishes for your package.} other{Please choose your meals for tomorrow.}}",
-  "@deliveriesStatus": {"placeholders": {"status": {"type": "String"}}},
+  "@deliveriesStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
   "appName": "Diet Time",
   "tagline": "Fuel Right. Feel Light.",
   "healthy": "Healthy",
@@ -198,8 +246,12 @@
   "pageProgress": "Page {current} of {total}",
   "@pageProgress": {
     "placeholders": {
-      "current": {"type": "int"},
-      "total": {"type": "int"}
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "browseMenuTitle": "Fresh choices, made for you",
@@ -215,7 +267,9 @@
   "kcal": "{value} kcal",
   "@kcal": {
     "placeholders": {
-      "value": {"type": "int"}
+      "value": {
+        "type": "int"
+      }
     }
   },
   "choosePlanTitle": "Choose Your Meal Plan",
@@ -231,14 +285,20 @@
   "dailyCalories": "{value} kcal / day",
   "@dailyCalories": {
     "placeholders": {
-      "value": {"type": "int"}
+      "value": {
+        "type": "int"
+      }
     }
   },
   "dailyPlanPrice": "{currency} {amount} / day",
   "@dailyPlanPrice": {
     "placeholders": {
-      "currency": {"type": "String"},
-      "amount": {"type": "String"}
+      "currency": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "dailyPriceLabel": "Daily price",
@@ -246,7 +306,9 @@
   "weeklyPrice": "QAR {value} / week",
   "@weeklyPrice": {
     "placeholders": {
-      "value": {"type": "int"}
+      "value": {
+        "type": "int"
+      }
     }
   },
   "continueLabel": "Continue",
@@ -267,7 +329,9 @@
   "otpResendCountdown": "Resend code in {time}",
   "@otpResendCountdown": {
     "placeholders": {
-      "time": {"type": "String"}
+      "time": {
+        "type": "String"
+      }
     }
   },
   "otpSendViaSms": "Send via SMS",
@@ -276,7 +340,9 @@
   "otpDevelopmentCode": "Development code: {code}",
   "@otpDevelopmentCode": {
     "placeholders": {
-      "code": {"type": "String"}
+      "code": {
+        "type": "String"
+      }
     }
   },
   "otpIncorrectCode": "The verification code is incorrect. Please try again.",
@@ -295,7 +361,9 @@
   "selectMealPlanSemantics": "Select {planName} meal plan",
   "@selectMealPlanSemantics": {
     "placeholders": {
-      "planName": {"type": "String"}
+      "planName": {
+        "type": "String"
+      }
     }
   },
   "guestWeeklyMenuTitle": "This week's menu",
@@ -317,16 +385,38 @@
   "readMore": "Read more",
   "showLess": "Show less",
   "allergenContains": "Contains {name}",
-  "@allergenContains": {"placeholders": {"name": {"type": "String"}}},
+  "@allergenContains": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "allergenMayContain": "May contain {name}",
-  "@allergenMayContain": {"placeholders": {"name": {"type": "String"}}},
+  "@allergenMayContain": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "allergenTraces": "Traces of {name}",
-  "@allergenTraces": {"placeholders": {"name": {"type": "String"}}},
+  "@allergenTraces": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "nutritionItemSemantics": "{label} {value}",
   "@nutritionItemSemantics": {
     "placeholders": {
-      "label": {"type": "String"},
-      "value": {"type": "String"}
+      "label": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
     }
   },
   "mealMicronutrientsTitle": "Micronutrients",
@@ -335,7 +425,9 @@
   "gramsValue": "{value}g",
   "@gramsValue": {
     "placeholders": {
-      "value": {"type": "String"}
+      "value": {
+        "type": "String"
+      }
     }
   },
   "otpInvalidCode": "Invalid OTP. Please try again.",
@@ -343,5 +435,423 @@
   "otpPhoneLoginUnavailable": "Phone login is currently unavailable.",
   "otpConnectionError": "Could not connect. Check your connection and try again.",
   "otpServerError": "Something went wrong. Please try again.",
-  "otpResendTestUnavailable": "Resend unavailable in test mode"
+  "otpResendTestUnavailable": "Resend unavailable in test mode",
+  "exploreMenu": "Explore Menu",
+  "backToDashboard": "Back to Dashboard",
+  "dailyNutritionTotal": "Daily nutrition total",
+  "nutritionUnavailable": "Nutrition information unavailable",
+  "nutritionTotalsIncomplete": "Totals unavailable for missing nutritional values.",
+  "sugarLabel": "Sugar",
+  "saturatedFatLabel": "Saturated fat",
+  "transFatLabel": "Trans fat",
+  "cholesterolLabel": "Cholesterol",
+  "nutritionServing": "Per serving: {portion}",
+  "@nutritionServing": {
+    "placeholders": {
+      "portion": {
+        "type": "String"
+      }
+    }
+  },
+  "customerUnableToSignIn": "Unable to sign in",
+  "customerWeCouldNotLoadTakeawayBranchesPleaseTryAgain": "We could not load takeaway branches. Please try again.",
+  "customerChooseAFutureDeliveryStartDateTodayAndFriday": "Choose a future delivery start date; today and Friday are unavailable.",
+  "customerTheSelectedMealConfigurationIsNoLongerAvailable": "The selected meal configuration is no longer available.",
+  "customerTheSelectedPlanDurationIsNoLongerAvailable": "The selected plan duration is no longer available.",
+  "customerWeCouldNotVerifyTheSelectedPlanPleaseTry": "We could not verify the selected plan. Please try again.",
+  "customerDeliveryTimesCouldNotBeLoadedPleaseTryAgain": "Delivery times could not be loaded. Please try again.",
+  "customerWeCouldNotLoadYourCustomerProfilePleaseSign": "We could not load your customer profile. Please sign in again.",
+  "customerSavedAddressesCouldNotBeLoadedPleaseTryAgain": "Saved addresses could not be loaded. Please try again.",
+  "customerYourCustomerProfileIsUnavailablePleaseSignInAgain": "Your customer profile is unavailable. Please sign in again.",
+  "customerSelectAnActiveDeliveryTimeSlotBeforeSaving": "Select an active delivery time slot before saving.",
+  "customerYourAddressCouldNotBeSavedPleaseTryAgain": "Your address could not be saved. Please try again.",
+  "customerWeCouldntPlaceYourOrderPleaseTryAgain": "We couldn't place your order. Please try again.",
+  "customerPleaseCheckYourConnectionAndTryAgain": "Please check your connection and try again.",
+  "customerThePlanPriceHasChangedPleaseReviewTheUpdated": "The plan price has changed. Please review the updated total before placing your order.",
+  "customerThisOrderIsAlreadyBeingProcessedPleaseTryAgain": "This order is already being processed. Please try again.",
+  "customerTheSelectedPlanIsNoLongerAvailablePleaseChoose": "The selected plan is no longer available. Please choose another plan.",
+  "customerTheSelectedDeliveryAddressIsNoLongerAvailable": "The selected delivery address is no longer available.",
+  "customerTheSelectedDeliveryTimeIsNoLongerAvailable": "The selected delivery time is no longer available.",
+  "customerASelectedCheckoutOptionIsNoLongerAvailablePlease": "A selected checkout option is no longer available. Please review your order.",
+  "customerPleaseReviewYourSelectedMeals": "Please review your selected meals.",
+  "customerPleaseReviewYourSelectedServiceDays": "Please review your selected service days.",
+  "customerPleaseSelectAnotherPlanStartDate": "Please select another plan start date.",
+  "customerCouponCodesAreNotSupportedYetRemoveTheCoupon": "Coupon codes are not supported yet. Remove the coupon and try again.",
+  "customerYourOrderResponseCouldNotBeConfirmedPleaseCheck": "Your order response could not be confirmed. Please check your orders before trying again.",
+  "customerSomeAddressInformationWasNotAcceptedPleaseReviewIt": "Some address information was not accepted. Please review it.",
+  "customerYourSessionExpiredPleaseSignInAgain": "Your session expired. Please sign in again.",
+  "customerWeCouldNotLoadYourProfile": "We could not load your profile.",
+  "customerTRYAGAIN": "TRY AGAIN",
+  "customerBrowsePlans": "Browse plans",
+  "customerDohaQatar": "Doha, Qatar",
+  "customerCustomerAddress": "Customer Address",
+  "customerDeliveryAddress": "Delivery Address",
+  "customerChooseDeliveryAddress": "Choose Delivery Address",
+  "customerSelectWhereYouWouldLikeYourMealsDelivered": "Select where you would like your meals delivered.",
+  "customerLoadingSavedAddresses": "Loading saved addresses...",
+  "customerAddAnotherAddress": "Add Another Address",
+  "customerUseThisAddress": "Use This Address",
+  "customerAddressDetails": "Address Details",
+  "customerSavedAddresses": "Saved addresses",
+  "customerSAVEASundefined": "SAVE AS *",
+  "customerBuildingNoundefined": "Building No *",
+  "customerStreetundefined": "Street *",
+  "customerUnitNumber": "Unit Number",
+  "customerZoneNoundefined": "Zone No *",
+  "customerAreaundefined": "Area *",
+  "customerDirectionsToReach": "Directions To Reach",
+  "customerCallMeWhenYouArrive": "Call me when you arrive",
+  "customerSavingAddress": "Saving Address...",
+  "customerSaveAddress": "Save Address",
+  "customerPinnedLocationQatar": "Pinned location, Qatar",
+  "customerSelectAnAddressTypeBeforeSaving": "Select an address type before saving.",
+  "customerCompleteAllRequiredAddressFields": "Complete all required address fields.",
+  "customerSelectADeliveryTimeSlotBeforeSaving": "Select a delivery time slot before saving.",
+  "customerSelectADeliveryAddressOrAddANewOne": "Select a delivery address or add a new one.",
+  "customerSelectADeliveryTimeSlot": "Select a delivery time slot.",
+  "customerEnterAZoneOrAreaToSearch": "Enter a zone or area to search.",
+  "customerNoMatchingLocationWasFound": "No matching location was found.",
+  "customerLocationSearchIsUnavailableTryAgainOrMoveThe": "Location search is unavailable. Try again or move the pin.",
+  "customerTurnOnLocationServicesToContinue": "Turn on location services to continue.",
+  "customerLocationAccessIsBlockedEnableItInDeviceSettings": "Location access is blocked. Enable it in device settings.",
+  "customerLocationPermissionIsNeededToFindYourCurrentAddress": "Location permission is needed to find your current address.",
+  "customerFindingYourCurrentLocation": "Finding your current location...",
+  "customerCouldNotDetermineYourLocationTryAgainOrMove": "Could not determine your location. Try again or move the pin.",
+  "customerPinnedLocation": "Pinned location",
+  "customerSearchAZone": "Search a Zone",
+  "customerCurrentAddress": "Current Address",
+  "customerGoogleMapsIsNotConfiguredForThisIOSBuild": "Google Maps is not configured for this iOS build.",
+  "customerAddTheIOSAPIKeyThenCleanAndRebuild": "Add the iOS API key, then clean and rebuild the app.",
+  "customerDELIVERYTIMEundefined": "DELIVERY TIME *",
+  "customerLoadingDeliveryTimes": "Loading delivery times...",
+  "customerNoDeliveryTimeSlotsAreCurrentlyAvailable": "No delivery time slots are currently available.",
+  "customerDEFAULT": "DEFAULT",
+  "customerNoSavedAddressesYet": "No saved addresses yet",
+  "customerAddAnAddressForYourMealDeliveries": "Add an address for your meal deliveries.",
+  "customerAddAddress": "Add Address",
+  "customerOrderSubmitted": "Order Submitted",
+  "customerOrderConfirmed": "Order Confirmed!",
+  "customerYourOrderHasBeenReceivedAndIsAwaitingConfirmation": "Your order has been received and is awaiting confirmation from Diet Time. We'll notify you once it's reviewed.",
+  "customerGOTODASHBOARD": "GO TO DASHBOARD",
+  "customerORDERNUMBER": "ORDER NUMBER",
+  "customerPLAN": "PLAN",
+  "customerPAYMENT": "PAYMENT",
+  "customerPACKAGE": "PACKAGE",
+  "customerFULFILLMENT": "FULFILLMENT",
+  "customerTakeaway": "Takeaway",
+  "customerPLANPERIOD": "PLAN PERIOD",
+  "customerFIRSTCOLLECTION": "FIRST COLLECTION",
+  "customerFIRSTDELIVERY": "FIRST DELIVERY",
+  "customerDELIVERYTO": "DELIVERY TO",
+  "customerTOTAL": "TOTAL",
+  "customerSTATUS": "STATUS",
+  "customerOrderConfirmationIsUnavailable": "Order confirmation is unavailable.",
+  "customerVerifyingYourSelectedPlan": "Verifying your selected plan...",
+  "customerYourPlanDetails": "Your Plan Details",
+  "customerThisPackageIsAvailableForTakeawayOnly": "This package is available for takeaway only.",
+  "customerHomeDelivery": "Home Delivery",
+  "customerCOLLECTIONBRANCH": "COLLECTION BRANCH",
+  "customerNoTakeawayBranchesAreCurrentlyAvailable": "No takeaway branches are currently available.",
+  "customerDELIVERYADDRESSTIMESLOT": "DELIVERY ADDRESS & TIME SLOT",
+  "customerStartDate": "Start Date",
+  "customerSelectYourServiceDates": "Select your service dates",
+  "customerOrderTotal": "Order Total",
+  "customerPLACEORDER": "PLACE ORDER",
+  "customerPLACINGORDER": "PLACING ORDER...",
+  "customerPREPARINGORDER": "PREPARING ORDER...",
+  "customerNoDeliveryAddressSelected": "No delivery address selected",
+  "customerAddDeliveryAddress": "Add Delivery Address",
+  "customerChange": "Change",
+  "customerSelectADeliveryTimeSlot2": "Select a delivery time slot",
+  "customerChooseAMealPlanBeforeReviewingYourSummary": "Choose a meal plan before reviewing your summary.",
+  "customerBrowsePlans2": "Browse Plans",
+  "customerWeCouldNotLoadYourDashboardPleaseTryAgain": "We could not load your dashboard. Please try again.",
+  "customerWeCouldNotLoadYourOrdersPleaseTryAgain": "We could not load your orders. Please try again.",
+  "customerHOME": "HOME",
+  "customerORDERS": "ORDERS",
+  "customerCALENDAR": "CALENDAR",
+  "customerPROFILE": "PROFILE",
+  "customerProfileUpdatedSuccessfully": "Profile updated successfully",
+  "customerUnableToLoadYourProfile": "Unable to load your profile.",
+  "customerQuestionnaireUpdatedSuccessfully": "Questionnaire updated successfully",
+  "customerLogout": "Logout",
+  "customerAreYouSureYouWantToLogout": "Are you sure you want to logout?",
+  "customerCancel": "Cancel",
+  "customerYourSessionHasExpiredPleaseSignInAgain": "Your session has expired. Please sign in again.",
+  "customerSIGNIN": "SIGN IN",
+  "customerYourCustomerProfileCouldNotBeFound": "Your customer profile could not be found.",
+  "customerYOURACTIVEPLAN": "YOUR ACTIVE PLAN",
+  "customerMYACTIVEPLANS": "MY ACTIVE PLANS",
+  "customerORDERANOTHERPLAN": "ORDER ANOTHER PLAN",
+  "customerQUICKACTIONS": "QUICK ACTIONS",
+  "customerPREVIOUSORDERS": "PREVIOUS ORDERS",
+  "customerMYORDERS": "MY ORDERS",
+  "customerVIEWALL": "VIEW ALL",
+  "customerNOACTIVEPLAN": "NO ACTIVE PLAN",
+  "customerYouDontHaveAnActiveMealPlanRightNow": "You don't have an active meal plan right now.",
+  "customerCHOOSEAPLAN": "CHOOSE A PLAN",
+  "customerScheduleReady": "Schedule ready",
+  "customerCollectFromDietTime": "Collect from Diet Time",
+  "customerVIEWPLAN": "VIEW PLAN",
+  "customerDETAILS": "DETAILS",
+  "customerMyPlan": "My Plan",
+  "customerOrders": "Orders",
+  "customerNewPlan": "New Plan",
+  "customerSupport": "Support",
+  "customerSupportWillBeAvailableSoon": "Support will be available soon.",
+  "customerDeliveryCalendar": "Delivery Calendar",
+  "customerNoActiveDeliveryCalendar": "No active delivery calendar",
+  "customerYourDeliveryDatesWillAppearHereWhenAMeal": "Your delivery dates will appear here when a meal plan is active.",
+  "customerALL": "ALL",
+  "customerMyOrders": "My Orders",
+  "customerAllYourMealOrdersInOnePlace": "All your meal orders in one place",
+  "customerAllOrders": "All Orders",
+  "customerPendingConfirmation": "Pending Confirmation",
+  "customerOnHold": "On Hold",
+  "customerRejected": "Rejected",
+  "customerPending": "Pending",
+  "customerCancelled": "Cancelled",
+  "customerNoOrdersFoundForThisStatus": "No orders found for this status.",
+  "customerOrderPlaced": "Order placed",
+  "customerViewDetailsundefined": "View Details  →",
+  "customerGoodMorning": "Good morning",
+  "customerGoodAfternoon": "Good afternoon",
+  "customerGoodEvening": "Good evening",
+  "customerYourMealPlanIsActive": "Your meal plan is active",
+  "customerReadyWhenYouAre": "Ready when you are",
+  "customerYourMealPlansAtAGlance": "Your meal plans at a glance",
+  "customerMon": "Mon",
+  "customerTue": "Tue",
+  "customerWed": "Wed",
+  "customerThu": "Thu",
+  "customerFri": "Fri",
+  "customerSat": "Sat",
+  "customerSun": "Sun",
+  "customerWeCouldntLoadAllYourDeliveryOrders": "We couldn’t load all your delivery orders.",
+  "customerUnableToUpdateProfilePleaseTryAgain": "Unable to update profile. Please try again.",
+  "customerProfile": "Profile",
+  "customerCustomerProfile": "Customer Profile",
+  "customerViewOrUpdateYourPersonalInformation": "View or update your personal information",
+  "customerQuestionnaire": "Questionnaire",
+  "customerCaptureYourGoalsAndFoodPreferences": "Capture your goals and food preferences",
+  "customerAddOrEditYourDeliveryAddress": "Add or edit your delivery address",
+  "customerPleaseSignInAgainToViewYourMeals": "Please sign in again to view your meals.",
+  "customerWeCouldntLoadYourMealsForThisDayPlease": "We couldn’t load your meals for this day. Please try again.",
+  "customerTheMenuForThisDateCouldNotBeConfirmed": "The menu for this date could not be confirmed.",
+  "customerWeveSelectedYourMealsForThisDayYouCan": "We’ve selected your meals for this day. You can change them before the selection deadline.",
+  "customerTheSelectionDeadlineHasPassedYourMealsAreLocked": "The selection deadline has passed. Your meals are locked for kitchen preparation.",
+  "customerYourMealsAreReadonlyForThisDay": "Your meals are read-only for this day.",
+  "customerYourMealsForThisDay": "Your meals for this day",
+  "customerYourMealsAreBeingReviewedByOurTeamPlease": "Your meals are being reviewed by our team. Please check back shortly.",
+  "customerSelectedForYou": "Selected for you",
+  "customerYourChoice": "Your choice",
+  "customerYourMealChangeHasBeenSaved": "Your meal change has been saved.",
+  "customerTheSelectionDeadlineHasPassedCloseThisSheetTo": "The selection deadline has passed. Close this sheet to view your saved meals.",
+  "customerYourChoicesOrSelectionDeadlineHaveChangedCloseThis": "Your choices or selection deadline have changed. Close this sheet and refresh the day.",
+  "customerThatMealIsNoLongerAvailablePleaseChooseAnother": "That meal is no longer available. Please choose another option or refresh the day.",
+  "customerWeCouldntSaveThisChangeYourSavedMealsAre": "We couldn’t save this change. Your saved meals are unchanged. Please try again.",
+  "customerChangeMeal": "Change meal",
+  "customerClose": "Close",
+  "customerThereAreNoOtherEligibleDishesForThisSelection": "There are no other eligible dishes for this selection on this day.",
+  "customerSelectedReplacement": "Selected replacement",
+  "customerAvailableForThisDay": "Available for this day",
+  "customerSavingChanges": "Saving changes…",
+  "customerSaveChanges": "Save Changes",
+  "customerChangeMeal2": "Change Meal",
+  "customerLoadingMealsForTheSelectedDay": "Loading meals for the selected day",
+  "customerAutomaticallySelected": "Automatically Selected",
+  "customerCustomized": "Customized",
+  "customerDelivered": "Delivered",
+  "customerOurTeamIsReviewingThisDay": "Our team is reviewing this day",
+  "customerEditProfile": "Edit Profile",
+  "customerFullNameIsRequired": "Full Name is required.",
+  "customerFullNameMustBeAtLeast2Characters": "Full Name must be at least 2 characters.",
+  "customerFullNameMustBe150CharactersOrFewer": "Full Name must be 150 characters or fewer.",
+  "customerFullName": "Full Name",
+  "customerMobileNumber": "Mobile Number",
+  "customerContactSupportOrUseChangeMobileNumberToUpdate": "Contact support or use Change Mobile Number to update your login number.",
+  "customerDateOfBirth": "Date of Birth",
+  "customerSaving": "Saving...",
+  "customerDiscardChanges": "Discard changes?",
+  "customerYouHaveUnsavedChangesAreYouSureYouWant": "You have unsaved changes. Are you sure you want to leave?",
+  "customerKeepEditing": "Keep Editing",
+  "customerDiscard": "Discard",
+  "customerBack": "Back",
+  "customerOrderDetails": "Order Details",
+  "customerRequestCancellation": "Request cancellation",
+  "customerTheOrderCouldNotBeCancelledRefreshTheOrder": "The order could not be cancelled. Refresh the order or contact Diet Time.",
+  "customerMEALSINCLUDED": "MEALS INCLUDED",
+  "customerCOLLECTIONDAYS": "COLLECTION DAYS",
+  "customerDELIVERYDAYS": "DELIVERY DAYS",
+  "customerDELIVERYADDRESS": "DELIVERY ADDRESS",
+  "customerDELIVERYTIME": "DELIVERY TIME",
+  "customerPRICING": "PRICING",
+  "customerPAYMENTSTATUS": "PAYMENT STATUS",
+  "customerThankYouForYourOrder": "Thank you for your order!",
+  "customerYourPlanAndDeliveryScheduleAreConfirmedAbove": "Your plan and delivery schedule are confirmed above.",
+  "customerNeedHelp": "Need Help?",
+  "customerContactSupport": "Contact Support",
+  "customerWeCouldntLoadThisOrder": "We couldn't load this order.",
+  "customerCancelThisOrder": "Cancel this order?",
+  "customerReason": "Reason",
+  "customerKeepOrder": "Keep order",
+  "customerConfirmCancellation": "Confirm cancellation",
+  "customerThisOrderCouldNotBeLoadedForYourAccount": "This order could not be loaded for your account. Refresh your dashboard or contact our team with your order reference.",
+  "customerWeCouldNotConnectToLoadYourMenuCheck": "We could not connect to load your menu. Check your connection and try again.",
+  "customerTheMenuServiceCouldNotLoadYourOrdersDishes": "The menu service could not load your order’s dishes. Please refresh or contact our team.",
+  "customerConfirmYourMeals": "Confirm your meals",
+  "customerYourSelectionsCannotBeChangedAfterConfirmation": "Your selections cannot be changed after confirmation.",
+  "customerConfirm": "Confirm",
+  "customerThe900PMDeadlineHasPassedYourAutomaticMeals": "The 9:00 PM deadline has passed. Your automatic meals are being finalized.",
+  "customerYourMealsHaveAlreadyBeenFinalizedHereAreYour": "Your meals have already been finalized. Here are your saved dishes.",
+  "customerYourSubscriptionIsNoLongerActiveForThisDelivery": "Your subscription is no longer active for this delivery.",
+  "customerADishIsNoLongerAvailablePleaseReviewThe": "A dish is no longer available. Please review the refreshed menu.",
+  "customerWeCouldNotVerifyYourConfirmationPleaseCheckYour": "We could not verify your confirmation. Please check your connection and refresh before trying again.",
+  "customerUnableToConfirmYourMealsPleaseTryAgain": "Unable to confirm your meals. Please try again.",
+  "customerTomorrowsMenu": "Tomorrow’s Menu",
+  "customerAutomaticallyFinalized": "Automatically finalized",
+  "customerHideConfirmedMeals": "Hide confirmed meals",
+  "customerSelectionClosesTodayAt900PMQatarTime": "Selection closes today at 9:00 PM Qatar time.",
+  "customerMeals": "Meals",
+  "customerSnacks": "Snacks",
+  "customerConfirmMyMeals": "Confirm My Meals",
+  "customerReplaceAMeal": "Replace a meal",
+  "customerReplaceASnack": "Replace a snack",
+  "customerNoEligibleDishesAreCurrentlyConfiguredOurTeamWill": "No eligible dishes are currently configured. Our team will review this delivery.",
+  "customerUpcomingMeals": "Upcoming Meals",
+  "customerWeCouldntLoadAllYourDeliveryMeals": "We couldn’t load all your delivery meals.",
+  "customerMealsHaveNotBeenAssignedToThisDeliveryYet": "Meals have not been assigned to this delivery yet. Our team will review it.",
+  "customerMealsChosenForYou": "Meals chosen for you",
+  "customerYourChoicesConfirmed": "Your choices confirmed",
+  "customerServiceDay": "Service day",
+  "customerNonserviceDay": "Non-service day",
+  "customerNonservice": "Non-service",
+  "customerAutoselected": "Auto-selected",
+  "customerDelivery": "Delivery",
+  "customerScheduled": "Scheduled",
+  "customerNoUpcomingDeliveriesAreScheduled": "No upcoming deliveries are scheduled.",
+  "customerServiceRunsSaturdayToThursdayFridayIsANonservice": "Service runs Saturday to Thursday. Friday is a non-service day.",
+  "customerBeingPrepared": "Being prepared",
+  "customerOnTheWay": "On the way",
+  "customerSkipped": "Skipped",
+  "customerChooseYourLanguage": "Choose your language",
+  "customerAll": "All",
+  "customerYourDraftCouldNotBeSavedPleaseTryAgain": "Your draft could not be saved. Please try again.",
+  "customerUnableToLoadYourSavedProfile": "Unable to load your saved profile.",
+  "customerYourProfileChangedElsewhereWeReloadedItPleaseReview": "Your profile changed elsewhere. We reloaded it; please review and retry.",
+  "customerCouldNotSaveYourProgressCheckYourConnection": "Could not save your progress. Check your connection.",
+  "customerSelect": "Select",
+  "customerNoFoodPreferences": "No food preferences",
+  "customerSearchAllergies": "Search allergies...",
+  "customerPersonalized": "Personalized",
+  "customerBalanced": "Balanced",
+  "customerMadeForYou": "Made for you",
+  "customerUnableToLoadAllergens": "Unable to load allergens.",
+  "customerWellAlwaysHighlightMealsThatAreSafeForYou": "We'll always highlight meals that are safe for you.",
+  "customerNoAllergiesFound": "No allergies found.",
+  "customerHeresAQuickOverviewOfYou": "Here's a quick overview of you.",
+  "customerGoal": "Goal",
+  "customerActivityLevel": "Activity Level",
+  "customerNotCalculatedYet": "Not calculated yet",
+  "customerProteinTarget": "Protein target",
+  "customerPersonalizeYourDietTimeExperience": "personalize your Diet Time experience.",
+  "customerYourGoals": "Your goals",
+  "customerYourProfile": "Your profile",
+  "customerYourLifestyle": "Your lifestyle",
+  "customerYourFoodPreferences": "Your food preferences",
+  "customerYourHealthAllergies": "Your health & allergies",
+  "customerYoureAllSet": "You're all set!",
+  "customerYouCanNowExploreTheDietTimeMenu": "You can now explore the Diet Time menu.",
+  "customerWeCouldntLoadYourProfile": "We couldn't load your profile.",
+  "customerWhatShouldWeCallYou": "What should we call you?",
+  "customerYourName": "Your name",
+  "customerUnableToSaveYourNamePleaseTryAgain": "Unable to save your name. Please try again.",
+  "customerYourAnswersAreKeptOnThisPhonePleaseRetry": "Your answers are kept on this phone. Please retry saving.",
+  "customerPickHowManyMealsYoudLikeEachDay": "Pick how many meals you'd like each day.",
+  "customerSwipeToExploreMealPackagesundefined": "Swipe to explore meal packages →",
+  "customerChooseYourDuration": "Choose your duration",
+  "customerCurrentlyUnavailable": "Currently unavailable",
+  "customerSwipeToExplorePackageDurationsundefined": "Swipe to explore package durations →",
+  "customerPricingUnavailable": "Pricing unavailable",
+  "customerYourAllergenPreferencesAreSaved": "Your allergen preferences are saved",
+  "customerWellUseYourRecordedAllergenInformationWhenShowingSuitable": "We’ll use your recorded allergen information when showing suitable meal choices. Please review each meal’s allergen details before ordering.",
+  "customerPricingIsTemporarilyUnavailable": "Pricing is temporarily unavailable.",
+  "customerNoPackagesAreCurrentlyAvailableForThisMealPlan": "No packages are currently available for this meal plan.",
+  "customerTryAnotherPlanToFindYourDailyMealRoutine": "Try another plan to find your daily meal routine.",
+  "customerChooseAnotherPlan": "Choose another plan",
+  "customerNoMealPlansAreAvailableYet": "No meal plans are available yet.",
+  "customerUnableToLoadMealPlans": "Unable to load meal plans.",
+  "customerChooseANewDeliveryStartDateDeliveryCanStart": "Choose a new delivery start date. Delivery can start tomorrow or later.",
+  "customerChooseYourStartDate": "Choose your start date",
+  "customerTapToChooseAnAvailableServiceDay": "Tap to choose an available service day.",
+  "customerTapToChooseADifferentServiceDay": "Tap to choose a different service day.",
+  "customerContinueundefined": "Continue →",
+  "customerStartDate2": "Start date",
+  "customerSelectADate": "Select a date",
+  "customerEndDate": "End date",
+  "customerCalculatedAutomatically": "Calculated automatically",
+  "customerSelectYourStartDate": "Select your start date",
+  "customerSelectedStartDate": "Selected start date",
+  "customerPlanEndDate": "Plan end date",
+  "customerPlanServiceDay": "Plan service day",
+  "customerFridayUnavailable": "Friday unavailable",
+  "customerSelectAStartDate": "Select a start date",
+  "customerConfirmDates": "Confirm Dates",
+  "customerYourSubscription": "Your subscription",
+  "customerActive": "Active",
+  "customerCompleted": "Completed",
+  "customerPaused": "Paused",
+  "customerAwaitingActivation": "Awaiting Activation",
+  "customerUnderReview": "Under Review",
+  "customerUnpaid": "Unpaid",
+  "customerPaymentPending": "Payment Pending",
+  "customerPaid": "Paid",
+  "customerPaymentFailed": "Payment Failed",
+  "customerRefundUnderReview": "Refund Under Review",
+  "customerRefunded": "Refunded",
+  "customerPartiallyRefunded": "Partially Refunded",
+  "customerPaymentUnderReview": "Payment Under Review",
+  "customerDietTimeIsReviewingYourOrder": "Diet Time is reviewing your order.",
+  "customerDietTimeWillReviewYourOrderAndNotifyYou": "Diet Time will review your order and notify you once it is confirmed.",
+  "customerDaysPerWeek": "{count} Days / Week",
+  "@customerDaysPerWeek": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customerActivePlans": "You have {count} active meal plans",
+  "@customerActivePlans": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customerOrderReference": "Please reference order {reference}.",
+  "@customerOrderReference": {
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
+  "customerSelectionDeadline": "Selection deadline",
+  "customerQatarTime": "Qatar time",
+  "customerOrderStatus": "Order status",
+  "customerSelected": "selected",
+  "customerYourOrderIsConfirmedAndAwaitingTheRequiredPayment": "Your order is confirmed and awaiting the required payment.",
+  "addressHomeLabel": "Home",
+  "addressApartmentLabel": "Apartment",
+  "addressOfficeLabel": "Office",
+  "addressOtherLabel": "Other",
+  "reviewPackage": "Review package",
+  "packageUnavailable": "The selected meal package is unavailable. Please review your package.",
+  "durationPricingUnavailable": "Pricing is unavailable for this duration. Please review your package.",
+  "planPricingMismatch": "The selected plan and pricing do not match. Please review your package.",
+  "planNotFound": "This meal plan was not found. Please choose another plan.",
+  "planUnavailable": "This meal plan is no longer available. Please choose another plan.",
+  "availabilityRetry": "We could not verify this package. Check your connection and retry.",
+  "saveOrderRetry": "Your order could not be saved. Please retry or contact Diet Time."
 }

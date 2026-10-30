@@ -1,3 +1,5 @@
+import 'package:diet_time/features/menu/domain/meal_nutrition.dart';
+
 class UpcomingMealDay {
   const UpcomingMealDay({
     required this.id,
@@ -48,7 +50,9 @@ class DailyMealItem {
     this.description,
     this.imageUrl,
     this.calories,
-  });
+    MealNutrition? nutrition,
+    this.quantity = 1,
+  }) : _nutrition = nutrition;
   factory DailyMealItem.fromJson(Map<String, dynamic> json) => DailyMealItem(
     id: json['mealItemId'] as String,
     optionId: json['slotOptionId'] as String,
@@ -57,6 +61,10 @@ class DailyMealItem {
     description: json['description'] as String?,
     imageUrl: json['imageUrl'] as String?,
     calories: (json['calories'] as num?)?.toDouble(),
+    nutrition: json['nutrition'] is Map<String, dynamic>
+        ? MealNutrition.fromJson(json['nutrition'] as Map<String, dynamic>)
+        : MealNutrition(calories: (json['calories'] as num?)?.toDouble()),
+    quantity: (json['quantity'] as num?)?.toInt() ?? 1,
   );
   final String id;
   final String optionId;
@@ -65,6 +73,10 @@ class DailyMealItem {
   final String? description;
   final String? imageUrl;
   final double? calories;
+  final MealNutrition? _nutrition;
+  MealNutrition get nutrition =>
+      _nutrition ?? MealNutrition(calories: calories);
+  final int quantity;
 }
 
 class AssignedDailyMeal {

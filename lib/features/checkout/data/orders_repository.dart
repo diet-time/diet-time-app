@@ -159,6 +159,12 @@ class OrdersRepository {
     if (path.contains('/customer-profiles/') && path.endsWith('/orders')) {
       _logOrders('HTTP ${response.statusCode}');
     }
+    if (method == 'POST' && path == ApiEndpoints.orders && kDebugMode) {
+      final code = response.body['code'];
+      debugPrint(
+        '[OrderPlacement] planId=${body?['mealPlanTemplateId']} priceId=${body?['mealPlanPriceId']} status=${response.statusCode} code=$code',
+      );
+    }
     if (!response.isSuccess) throw ApiException.fromResponse(response);
     return response;
   }

@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
@@ -35,8 +36,8 @@ class CustomerProfileTab extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 8),
-      const Text(
-        'Profile',
+      Text(
+        context.customerCopy('Profile'),
         style: TextStyle(
           color: AppColors.darkGreen,
           fontSize: 23,
@@ -49,24 +50,28 @@ class CustomerProfileTab extends StatelessWidget {
       _ProfileNavigationRow(
         key: const ValueKey('customerProfileOption'),
         icon: Icons.person_outline_rounded,
-        label: 'Customer Profile',
-        description: 'View or update your personal information',
+        label: context.customerCopy('Customer Profile'),
+        description: context.customerCopy(
+          'View or update your personal information',
+        ),
         onTap: onEditProfile,
       ),
       const SizedBox(height: 9),
       _ProfileNavigationRow(
         key: const ValueKey('customerQuestionnaireOption'),
         icon: Icons.assignment_outlined,
-        label: 'Questionnaire',
-        description: 'Capture your goals and food preferences',
+        label: context.customerCopy('Questionnaire'),
+        description: context.customerCopy(
+          'Capture your goals and food preferences',
+        ),
         onTap: onQuestionnaire,
       ),
       const SizedBox(height: 9),
       _ProfileNavigationRow(
         key: const ValueKey('customerAddressOption'),
         icon: Icons.location_on_outlined,
-        label: 'Delivery Address',
-        description: 'Add or edit your delivery address',
+        label: context.customerCopy('Delivery Address'),
+        description: context.customerCopy('Add or edit your delivery address'),
         onTap: onEditAddress,
       ),
       if (onLogout != null) ...[
@@ -76,8 +81,8 @@ class CustomerProfileTab extends StatelessWidget {
           onPressed: onLogout,
           style: TextButton.styleFrom(foregroundColor: AppColors.darkGreen),
           icon: const Icon(Icons.logout_rounded, size: 18),
-          label: const Text(
-            'Logout',
+          label: Text(
+            context.customerCopy('Logout'),
             style: TextStyle(fontWeight: FontWeight.w800),
           ),
         ),
