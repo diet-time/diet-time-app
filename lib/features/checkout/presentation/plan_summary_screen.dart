@@ -5,6 +5,7 @@ import 'package:diet_time/features/checkout/domain/checkout_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
 import 'package:diet_time/features/plans/presentation/package_discount_details.dart';
+import 'package:diet_time/features/dashboard/presentation/customer_dashboard_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -62,7 +63,9 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
           key: const ValueKey('planSummaryBack'),
-          onPressed: () => context.pop(),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppRoutes.planStartDate, extra: checkout.selection),
           icon: const Icon(Icons.arrow_back_rounded),
         ),
         title: const Text(
@@ -197,7 +200,10 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
     final confirmation = await ref
         .read(checkoutControllerProvider.notifier)
         .placeOrder(language: Localizations.localeOf(context).toLanguageTag());
-    if (confirmation != null && mounted) context.go(AppRoutes.orderPlaced);
+    if (confirmation != null && mounted) {
+      ref.invalidate(customerDashboardControllerProvider);
+      context.go(AppRoutes.home);
+    }
   }
 }
 

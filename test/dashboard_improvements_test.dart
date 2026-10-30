@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/core/storage/secure_storage_service.dart';
-import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/checkout/domain/address_validation.dart';
 import 'package:diet_time/features/checkout/domain/checkout_models.dart';
@@ -164,18 +163,18 @@ void main() {
                 onboardingStatus: 'IN_PROGRESS',
               ),
             );
-        PendingAuthDestination? pending;
         final router = GoRouter(
           initialLocation: AppRoutes.personalization,
           routes: [
             GoRoute(
               path: AppRoutes.personalization,
-              builder: (_, _) => const PersonalizationScreen(),
+              builder: (_, _) => PersonalizationScreen(
+                customerProfileMode: session == 'authenticated',
+              ),
             ),
             GoRoute(
               path: AppRoutes.phoneLogin,
               builder: (_, state) {
-                pending = state.extra as PendingAuthDestination?;
                 return const Scaffold(body: Text('Existing Login'));
               },
             ),
@@ -208,19 +207,21 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+        if (session != 'authenticated') {
+          expect(find.text('Existing Login'), findsOneWidget);
+          expect(
+            container.read(personalizationControllerProvider).isCompleted,
+            false,
+          );
+          expect(container.read(questionnaireDeferralProvider), false);
+          await tester.pumpWidget(const SizedBox());
+          return;
+        }
         final skip = find.byKey(const ValueKey('personalizationNotNow'));
         await tester.ensureVisible(skip);
         await tester.tap(skip);
         await tester.pumpAndSettle();
-        expect(
-          find.text(
-            session == 'authenticated'
-                ? 'Customer Dashboard'
-                : 'Existing Login',
-          ),
-          findsOneWidget,
-        );
-        if (session != 'authenticated') expect(pending?.route, AppRoutes.home);
+        expect(find.text('Plans'), findsOneWidget);
         final key = session == 'guest'
             ? 'questionnaire.guest'
             : 'questionnaire.user.customer';
@@ -239,7 +240,7 @@ void main() {
         expect(container.read(questionnaireDeferralProvider), true);
         router.go(AppRoutes.authenticatedLanding);
         await tester.pumpAndSettle();
-        expect(find.text('Customer Dashboard'), findsOneWidget);
+        expect(find.text('Plans'), findsOneWidget);
         await tester.pumpWidget(const SizedBox());
       },
     );

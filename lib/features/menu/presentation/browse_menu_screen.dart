@@ -8,7 +8,6 @@ import 'package:diet_time/features/language/presentation/language_controller.dar
 import 'package:diet_time/features/menu/data/guest_menu_repository.dart';
 import 'package:diet_time/features/menu/domain/guest_home_models.dart';
 import 'package:diet_time/features/menu/presentation/meal_detail_viewer.dart';
-import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -487,12 +486,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   }
 
   Future<void> _startPlan() async {
-    final profile = ref.read(personalizationControllerProvider);
-    await context.push<void>(
-      profile.hasCapturedQuestionnaire
-          ? AppRoutes.plans
-          : AppRoutes.personalization,
-    );
+    await context.push<void>(AppRoutes.plans);
   }
 
   Widget _startPlanButton(AppLocalizations l10n) {

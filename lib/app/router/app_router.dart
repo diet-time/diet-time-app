@@ -24,6 +24,11 @@ import 'package:diet_time/features/plans/presentation/meal_plan_start_date_scree
 import 'package:diet_time/features/personalization/presentation/post_login_name_gate.dart';
 import 'package:diet_time/features/personalization/presentation/authenticated_landing_screen.dart';
 import 'package:diet_time/features/splash/presentation/splash_screen.dart';
+import 'package:diet_time/features/checkout/presentation/checkout_entry_screen.dart';
+import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
+import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
+import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
+import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,6 +46,8 @@ abstract final class AppRoutes {
   static const plans = '/plans';
   static const planDetails = '/plan-details';
   static const planStartDate = '/plan-start-date';
+  static const checkoutEntry = '/checkout-entry';
+  static const checkoutQuestionnaire = '/checkout-questionnaire';
   static const planSummary = '/plan-summary';
   static const customerAddress = '/customer-address';
   static const planCheckoutReady = '/plan-checkout-ready';
@@ -137,20 +144,65 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.planStartDate,
         pageBuilder: (context, state) {
-          final selection = state.extra;
+          final selection =
+              state.extra ?? ref.read(checkoutControllerProvider).selection;
           if (selection is! MealPlanPurchaseSelection) {
             return _slidePage(state: state, child: const MealPlanScreen());
           }
           return _slidePage(
             state: state,
-            child: MealPlanStartDateScreen(selection: selection),
+            child: PopScope(
+              canPop: context.canPop(),
+              onPopInvokedWithResult: (didPop, _) {
+                if (!didPop) context.go(AppRoutes.plans);
+              },
+              child: MealPlanStartDateScreen(selection: selection),
+            ),
           );
         },
       ),
       GoRoute(
+        path: AppRoutes.checkoutEntry,
+        redirect: (context, state) {
+          final cached = ref.read(profilePersistenceControllerProvider);
+          final profile = ref.read(personalizationControllerProvider);
+          final checkout = ref.read(checkoutControllerProvider);
+          if (ref.read(otpAuthControllerProvider).isAuthenticated &&
+              cached.hasLoaded &&
+              cached.errorMessage == null &&
+              profile.isCompleted &&
+              checkout.selection != null &&
+              checkout.customerProfileId == profile.profileId) {
+            return checkout.schedule == null
+                ? AppRoutes.planStartDate
+                : AppRoutes.planSummary;
+          }
+          return null;
+        },
+        builder: (context, state) => const CheckoutEntryScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.checkoutQuestionnaire,
+        builder: (context, state) =>
+            const PersonalizationScreen(checkoutMode: true),
+      ),
+      GoRoute(
         path: AppRoutes.planSummary,
-        pageBuilder: (context, state) =>
-            _slidePage(state: state, child: const PlanSummaryScreen()),
+        pageBuilder: (context, state) => _slidePage(
+          state: state,
+          child: PopScope(
+            canPop: context.canPop(),
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) {
+                context.go(
+                  AppRoutes.planStartDate,
+                  extra: ref.read(checkoutControllerProvider).selection,
+                );
+              }
+            },
+            child: const PlanSummaryScreen(),
+          ),
+        ),
       ),
       GoRoute(
         path: AppRoutes.customerAddress,

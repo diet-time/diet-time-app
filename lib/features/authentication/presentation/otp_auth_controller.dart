@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
+import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 
 import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/features/authentication/data/authentication_repository.dart';
@@ -236,6 +238,8 @@ class OtpAuthController extends Notifier<OtpAuthState> {
 
   Future<void> signOut() async {
     ref.invalidate(questionnaireDeferralProvider);
+    ref.invalidate(profilePersistenceControllerProvider);
+    ref.invalidate(personalizationControllerProvider);
     _resendTimer?.cancel();
     final storage = ref.read(secureStorageServiceProvider);
     await Future.wait([
@@ -353,6 +357,10 @@ class OtpAuthController extends Notifier<OtpAuthState> {
       await Future.wait([
         storage.write(SecureStorageService.accessTokenKey, session.accessToken),
         storage.write(
+          SecureStorageService.authenticatedUserIdKey,
+          session.user.id,
+        ),
+        storage.write(
           SecureStorageService.accessTokenExpiresAtKey,
           session.accessTokenExpiresAt.toIso8601String(),
         ),
@@ -371,6 +379,8 @@ class OtpAuthController extends Notifier<OtpAuthState> {
         // The in-memory development session remains valid.
       }
       _resendTimer?.cancel();
+      ref.invalidate(profilePersistenceControllerProvider);
+      ref.invalidate(personalizationControllerProvider);
       state = state.copyWith(
         isAuthenticated: true,
         otpCode: '',

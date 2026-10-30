@@ -1,8 +1,6 @@
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
-import 'package:diet_time/features/authentication/domain/otp_service.dart';
-import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
@@ -98,6 +96,16 @@ class _MealPlanStartDateScreenState
     extends ConsumerState<MealPlanStartDateScreen> {
   MealPlanServiceSchedule? _schedule;
 
+  @override
+  void initState() {
+    super.initState();
+    final checkout = ref.read(checkoutControllerProvider);
+    if (checkout.mealPlanPriceId ==
+        widget.selection.pricingOption.mealPlanPriceId) {
+      _schedule = checkout.schedule;
+    }
+  }
+
   Future<void> _openStartDatePicker() async {
     final schedule = await showMealPlanStartDatePanel(
       context: context,
@@ -135,24 +143,7 @@ class _MealPlanStartDateScreenState
       callback(widget.selection, schedule);
       return;
     }
-    final authenticated = await ref
-        .read(otpAuthControllerProvider.notifier)
-        .restoreSession();
-    if (!mounted) return;
-    final plan = widget.selection.mealPlan;
-    final destination = PendingAuthDestination(
-      route: AppRoutes.planSummary,
-      planCode: plan.code,
-      planName: plan.name,
-      mealPlanTemplateId: plan.id,
-      mealPlanPriceId: widget.selection.pricingOption.mealPlanPriceId,
-    );
-    if (authenticated) {
-      ref.read(otpAuthControllerProvider.notifier).begin(destination);
-      context.push(AppRoutes.planSummary);
-    } else {
-      context.push(AppRoutes.phoneLogin, extra: destination);
-    }
+    context.pushReplacement(AppRoutes.checkoutEntry);
   }
 
   @override
@@ -167,7 +158,8 @@ class _MealPlanStartDateScreenState
           surfaceTintColor: Colors.transparent,
           leading: IconButton(
             key: const ValueKey('startDateBack'),
-            onPressed: () => context.pop(),
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go(AppRoutes.plans),
             icon: const Icon(Icons.arrow_back_rounded),
           ),
           title: const Text(

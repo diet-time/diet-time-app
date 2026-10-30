@@ -115,8 +115,21 @@ class CustomerProfile {
   final DateTime? updatedAt;
   final int? rowVersion;
 
+  bool get hasRequiredDetails =>
+      genderCode?.trim().isNotEmpty == true &&
+      DateTime.tryParse(dateOfBirth ?? '') != null &&
+      heightCm != null &&
+      heightCm! >= 50 &&
+      heightCm! <= 300 &&
+      weightKg != null &&
+      weightKg! >= 15 &&
+      weightKg! <= 500 &&
+      goalCode?.trim().isNotEmpty == true &&
+      dailyRoutineCode?.trim().isNotEmpty == true &&
+      activityLevelCode?.trim().isNotEmpty == true;
   bool get isCompleted =>
-      !shouldShowOnboarding || nextStepCode == 'PROFILE_COMPLETED';
+      hasRequiredDetails &&
+      (!shouldShowOnboarding || nextStepCode == 'PROFILE_COMPLETED');
   bool get hasCapturedQuestionnaire =>
       genderCode != null &&
       dateOfBirth != null &&

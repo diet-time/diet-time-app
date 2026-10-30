@@ -218,11 +218,7 @@ void main() {
       ),
       'access-token',
     );
-    expect(
-      find.byKey(const ValueKey('otpPostLoginDestination')),
-      findsOneWidget,
-    );
-    await tester.tap(find.byKey(const ValueKey('completePostLogin')));
+    expect(find.byKey(const ValueKey('otpDestination')), findsOneWidget);
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('otpDestination')), findsOneWidget);
     expect(container.read(otpAuthControllerProvider).otpCode, isEmpty);
@@ -275,10 +271,7 @@ void main() {
 
     repository.succeed();
     await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey('otpPostLoginDestination')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('otpDestination')), findsOneWidget);
   });
 
   testWidgets('connection error keeps OTP so verification can be retried', (
@@ -393,7 +386,7 @@ void main() {
   });
 
   testWidgets(
-    'authenticated user skips phone login and continues to schedule',
+    'package selection is retained before checkout authentication and questionnaire checks',
     (tester) async {
       final authentication = _FakeAuthenticationService(loggedIn: true);
       await tester.pumpWidget(_planApp(authentication));
@@ -410,7 +403,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(PhoneLoginPage), findsNothing);
-      expect(find.byKey(const ValueKey('serviceCalendar')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('authenticatedDestination')),
+        findsOneWidget,
+      );
     },
   );
 }
@@ -477,7 +473,7 @@ Widget _app({
         },
       ),
       GoRoute(
-        path: '/destination',
+        path: '/authenticated-landing',
         builder: (context, state) =>
             const SizedBox(key: ValueKey('otpDestination')),
       ),
@@ -522,7 +518,7 @@ Widget _planApp(AuthenticationService authentication) {
             MealPlanDetailsScreen(plan: state.extra! as MealPlanOption),
       ),
       GoRoute(
-        path: '/home',
+        path: '/checkout-entry',
         builder: (context, state) =>
             const SizedBox(key: ValueKey('authenticatedDestination')),
       ),

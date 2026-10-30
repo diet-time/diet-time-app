@@ -47,6 +47,7 @@ final profilePersistenceControllerProvider =
     );
 
 class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
+  Future<CustomerProfile?>? _pendingLoad;
   @override
   ProfilePersistenceState build() => const ProfilePersistenceState();
 
@@ -60,14 +61,16 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
     );
   }
 
-  Future<CustomerProfile?> load() async {
-    if (state.isLoading) return null;
+  Future<CustomerProfile?> load() =>
+      _pendingLoad ??= _load().whenComplete(() => _pendingLoad = null);
+
+  Future<CustomerProfile?> _load() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       final profile = await ref.read(customerProfileServiceProvider).load();
-      if (profile != null) {
-        ref.read(personalizationControllerProvider.notifier).replace(profile);
-      }
+      ref
+          .read(personalizationControllerProvider.notifier)
+          .replace(profile ?? const CustomerProfile());
       state = state.copyWith(
         isLoading: false,
         hasLoaded: true,
@@ -97,7 +100,11 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
                 .read(customerProfileServiceProvider)
                 .saveProgress(profile);
       ref.read(personalizationControllerProvider.notifier).replace(saved);
-      state = state.copyWith(isSaving: false, resumeStep: resumeStepFor(saved));
+      state = state.copyWith(
+        isSaving: false,
+        hasLoaded: true,
+        resumeStep: resumeStepFor(saved),
+      );
       return true;
     } on Object catch (error) {
       state = state.copyWith(

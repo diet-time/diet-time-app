@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
-import 'package:diet_time/features/personalization/presentation/questionnaire_deferral_controller.dart';
+import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
+import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,25 +31,31 @@ class _AuthenticatedLandingScreenState
   }
 
   Future<void> _resolve() async {
-    if (ref.read(questionnaireDeferralProvider)) {
-      context.go(AppRoutes.home);
-      return;
-    }
     if (_hasError) setState(() => _hasError = false);
-    final profile = await ref
-        .read(profilePersistenceControllerProvider.notifier)
-        .load();
-    if (!mounted) return;
-    if (profile == null &&
-        ref.read(profilePersistenceControllerProvider).errorMessage != null) {
-      setState(() => _hasError = true);
-      return;
+    try {
+      final persistence = ref.read(profilePersistenceControllerProvider);
+      final profile = persistence.hasLoaded && persistence.errorMessage == null
+          ? ref.read(personalizationControllerProvider)
+          : await ref
+                .read(profilePersistenceControllerProvider.notifier)
+                .load();
+      if (ref.read(profilePersistenceControllerProvider).errorMessage != null) {
+        throw StateError('profile_load');
+      }
+      final orders = profile?.profileId == null
+          ? null
+          : await ref
+                .read(ordersRepositoryProvider)
+                .getCustomerOrders(profile!.profileId!);
+      if (!mounted) return;
+      context.go(
+        orders?.any((order) => order.isCurrent) == true
+            ? AppRoutes.home
+            : AppRoutes.plans,
+      );
+    } on Object {
+      if (mounted) setState(() => _hasError = true);
     }
-    context.go(
-      profile?.isCompleted == true || ref.read(questionnaireDeferralProvider)
-          ? AppRoutes.home
-          : AppRoutes.personalization,
-    );
   }
 
   @override

@@ -20,9 +20,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class PersonalizationScreen extends ConsumerStatefulWidget {
-  const PersonalizationScreen({this.customerProfileMode = false, super.key});
+  const PersonalizationScreen({
+    this.customerProfileMode = false,
+    this.checkoutMode = false,
+    super.key,
+  });
 
   final bool customerProfileMode;
+  final bool checkoutMode;
 
   @override
   ConsumerState<PersonalizationScreen> createState() =>
@@ -75,31 +80,52 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   }
 
   Future<void> _loadProfile() async {
-    // Loading also synchronizes a locally saved guest draft after sign-in.
-    final profile = await ref
-        .read(profilePersistenceControllerProvider.notifier)
-        .load();
-    if (!mounted || profile == null || _skipping) return;
-    if (widget.customerProfileMode) {
-      _restoreVisibleValues(profile);
+    if (!await ref.read(otpAuthControllerProvider.notifier).restoreSession()) {
+      if (mounted) {
+        context.pushReplacement(
+          AppRoutes.phoneLogin,
+          extra: PendingAuthDestination(
+            route: widget.checkoutMode
+                ? AppRoutes.checkoutEntry
+                : AppRoutes.authenticatedLanding,
+          ),
+        );
+      }
       return;
     }
-    if (profile.isCompleted) {
-      context.go(AppRoutes.plans);
+    final persistence = ref.read(profilePersistenceControllerProvider);
+    final profile = persistence.hasLoaded && persistence.errorMessage == null
+        ? ref.read(personalizationControllerProvider)
+        : await ref.read(profilePersistenceControllerProvider.notifier).load();
+    if (!mounted || profile == null || _skipping) return;
+    if (profile.isCompleted && !widget.customerProfileMode) {
+      context.pushReplacement(
+        widget.checkoutMode ? AppRoutes.checkoutEntry : AppRoutes.plans,
+      );
       return;
     }
     _restoreVisibleValues(profile);
+    if (!widget.customerProfileMode) {
+      final target = profile.goalCode == null
+          ? 1
+          : profile.genderCode == null ||
+                profile.dateOfBirth == null ||
+                profile.heightCm == null ||
+                profile.weightKg == null
+          ? 2
+          : profile.dailyRoutineCode == null
+          ? 3
+          : profile.activityLevelCode == null
+          ? 4
+          : !profile.preferencesConfirmed
+          ? 5
+          : 6;
+      await _goTo(target, recordHistory: false);
+    }
   }
 
   void _restoreVisibleValues(CustomerProfile profile) {
-    final visiblePreferences = profile.preferences
-        .where((value) => value != 'INTERNATIONAL' && value != 'MEDITERRANEAN')
-        .toSet();
-    if (visiblePreferences.length != profile.preferences.length) {
-      ref
-          .read(personalizationControllerProvider.notifier)
-          .replace(profile.copyWith(preferences: visiblePreferences));
-    }
+    final visiblePreferences = profile.preferences.toSet();
     setState(() {
       _goal = profile.goalCode;
       _gender = profile.genderCode?.toLowerCase();
@@ -144,6 +170,16 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   }
 
   Future<void> _continue() async {
+    if (!await ref.read(otpAuthControllerProvider.notifier).restoreSession()) {
+      if (mounted) {
+        context.pushReplacement(
+          AppRoutes.phoneLogin,
+          extra: const PendingAuthDestination(route: AppRoutes.checkoutEntry),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
     final l10n = AppLocalizations.of(context);
     final invalid =
         (_index == 1 && _goal == null) ||
@@ -197,7 +233,9 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       if (widget.customerProfileMode) {
         Navigator.of(context).pop(true);
       } else {
-        context.go(AppRoutes.menu);
+        context.pushReplacement(
+          widget.checkoutMode ? AppRoutes.checkoutEntry : AppRoutes.plans,
+        );
       }
       return;
     }
@@ -205,7 +243,10 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   }
 
   void _previous() {
-    if (_history.isEmpty) return;
+    if (_history.isEmpty) {
+      if (widget.checkoutMode) context.go(AppRoutes.plans);
+      return;
+    }
     final target = _history.removeLast();
     unawaited(_goTo(target, recordHistory: false));
   }
@@ -215,9 +256,6 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     setState(() => _skipping = true);
     try {
       await _profileLoad;
-      final authenticated = await ref
-          .read(otpAuthControllerProvider.notifier)
-          .ensureCurrentSession();
       final profile = ref.read(personalizationControllerProvider);
       final answers = ref.read(personalizationControllerProvider.notifier);
       if (_gender != null && _gender!.toUpperCase() != profile.genderCode) {
@@ -232,14 +270,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       }
       await ref.read(questionnaireDeferralProvider.notifier).defer();
       if (!mounted) return;
-      if (authenticated) {
-        context.go(AppRoutes.home);
-      } else {
-        context.go(
-          AppRoutes.phoneLogin,
-          extra: const PendingAuthDestination(route: AppRoutes.home),
-        );
-      }
+      context.go(AppRoutes.plans);
     } on Object {
       if (mounted) {
         setState(
@@ -420,9 +451,9 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     };
     final errorMessage = _validationMessage ?? persistenceErrorMessage;
     return PopScope(
-      canPop: _history.isEmpty,
+      canPop: _history.isEmpty && !widget.checkoutMode,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _history.isNotEmpty) _previous();
+        if (!didPop) _previous();
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F6F2),
@@ -434,8 +465,11 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
               child: Column(
                 children: [
                   _OnboardingHeader(
-                    showBack: widget.customerProfileMode || _history.isNotEmpty,
-                    onBack: _history.isNotEmpty
+                    showBack:
+                        widget.customerProfileMode ||
+                        widget.checkoutMode ||
+                        _history.isNotEmpty,
+                    onBack: widget.checkoutMode || _history.isNotEmpty
                         ? _previous
                         : () => Navigator.of(context).maybePop(),
                   ),

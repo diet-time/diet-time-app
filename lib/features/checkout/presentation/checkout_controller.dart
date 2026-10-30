@@ -32,6 +32,36 @@ class CheckoutController extends Notifier<CheckoutState> {
 
   void clear() => state = const CheckoutState();
 
+  void useCustomerProfile(String? profileId) {
+    if (state.customerProfileId == profileId) return;
+    state = state.copyWith(
+      customerProfileId: profileId,
+      addresses: [],
+      selectedAddressId: null,
+      selectedAddress: null,
+      selectedDeliveryTimeSlotId: null,
+      selectedDeliveryTimeSlot: null,
+      idempotencyKey: null,
+    );
+  }
+
+  void selectPackage(MealPlanPurchaseSelection selection) {
+    final profile = ref.read(personalizationControllerProvider);
+    if (ref.read(otpAuthControllerProvider).isAuthenticated &&
+        profile.isCompleted) {
+      useCustomerProfile(profile.profileId);
+    }
+    final samePrice =
+        state.mealPlanPriceId == selection.pricingOption.mealPlanPriceId;
+    state = state.copyWith(
+      selection: selection,
+      schedule: samePrice ? state.schedule : null,
+      placementError: null,
+      idempotencyKey: null,
+      orderConfirmation: null,
+    );
+  }
+
   void beginNewOrder() {
     state = CheckoutState(
       customerProfileId: state.customerProfileId,

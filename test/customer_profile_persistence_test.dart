@@ -131,13 +131,13 @@ void main() {
     );
   });
 
-  test('server completion fields are authoritative', () {
+  test('completion fields cannot bypass missing mandatory answers', () {
     expect(
       const CustomerProfile(
         onboardingStatus: 'IN_PROGRESS',
         nextStepCode: 'PROFILE_COMPLETED',
       ).isCompleted,
-      isTrue,
+      isFalse,
     );
     expect(
       const CustomerProfile(

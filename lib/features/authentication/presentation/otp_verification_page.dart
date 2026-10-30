@@ -6,11 +6,8 @@ import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/authentication/presentation/otp_flow_widgets.dart';
-import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
-import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:diet_time/features/personalization/presentation/questionnaire_deferral_controller.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,7 +24,6 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
   final _controllers = List.generate(6, (_) => TextEditingController());
   final _focusNodes = List.generate(6, (_) => FocusNode());
   bool _syncingCells = false;
-  bool _isResolvingDestination = false;
 
   @override
   void initState() {
@@ -112,27 +108,13 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
     if (!mounted || !succeeded) return;
     _setCells('');
     final destination = ref.read(otpAuthControllerProvider).pendingDestination;
-    var route = destination?.route ?? AppRoutes.home;
-    {
-      setState(() => _isResolvingDestination = true);
-      try {
-        final profile = await ref.read(customerProfileServiceProvider).load();
-        if (profile != null) {
-          ref.read(personalizationControllerProvider.notifier).replace(profile);
-          if (profile.isCompleted && route == AppRoutes.personalization) {
-            route = AppRoutes.home;
-          }
-        }
-      } on Object {
-        // Pending local answers stay cached; the questionnaire exposes retry.
-        if (!ref.read(questionnaireDeferralProvider)) {
-          route = AppRoutes.personalization;
-        }
-      }
-    }
-    if (!mounted) return;
-    setState(() => _isResolvingDestination = false);
-    context.go(AppRoutes.postLogin, extra: route);
+    // Checkout keeps its draft; ordinary sign-in resolves active orders separately.
+    final checkout =
+        destination?.route == AppRoutes.checkoutEntry ||
+        destination?.route == AppRoutes.planSummary;
+    context.go(
+      checkout ? AppRoutes.checkoutEntry : AppRoutes.authenticatedLanding,
+    );
   }
 
   Future<void> _resend() async {
@@ -396,13 +378,10 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
                           key: const ValueKey('verifyOtpButton'),
                           label: l10n.otpVerifyCode,
                           onPressed:
-                              auth.otpCode.length == 6 &&
-                                  !auth.isVerifyingOtp &&
-                                  !_isResolvingDestination
+                              auth.otpCode.length == 6 && !auth.isVerifyingOtp
                               ? _verify
                               : null,
-                          isLoading:
-                              auth.isVerifyingOtp || _isResolvingDestination,
+                          isLoading: auth.isVerifyingOtp,
                         ),
                       ],
                     ),

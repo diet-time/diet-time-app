@@ -6,8 +6,6 @@ import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/onboarding/data/journey_state_repository.dart';
-import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
-import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -136,20 +134,7 @@ class _OnboardingCarouselScreenState
   Future<void> _startPlan() async {
     await ref.read(journeyStateRepositoryProvider).markOnboardingComplete();
     if (!mounted) return;
-    var profile = ref.read(personalizationControllerProvider);
-    if (!profile.isCompleted && !profile.hasCapturedQuestionnaire) {
-      profile =
-          await ref
-              .read(profilePersistenceControllerProvider.notifier)
-              .load() ??
-          profile;
-      if (!mounted) return;
-    }
-    await context.push<void>(
-      profile.isCompleted || profile.hasCapturedQuestionnaire
-          ? AppRoutes.plans
-          : AppRoutes.personalization,
-    );
+    await context.push<void>(AppRoutes.plans);
   }
 
   @override

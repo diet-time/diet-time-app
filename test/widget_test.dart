@@ -1,4 +1,9 @@
 import 'package:diet_time/app/app.dart';
+import 'package:go_router/go_router.dart';
+import 'package:diet_time/core/network/api_client.dart';
+import 'package:diet_time/features/checkout/data/orders_repository.dart';
+import 'package:diet_time/features/checkout/domain/order_models.dart';
+import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
 import 'package:diet_time/features/authentication/presentation/login_screen.dart';
 import 'package:diet_time/features/authentication/presentation/phone_login_page.dart';
@@ -140,7 +145,7 @@ void main() {
     );
   });
 
-  testWidgets('carousel start plan supports the guest questionnaire', (
+  testWidgets('carousel start plan opens plans without a questionnaire', (
     tester,
   ) async {
     await tester.pumpWidget(_dietTimeApp());
@@ -153,7 +158,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(PersonalizationScreen), findsOneWidget);
+    expect(find.byType(MealPlanScreen), findsOneWidget);
     expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
@@ -246,26 +251,20 @@ void main() {
     );
     expect(
       container.read(personalizationControllerProvider).preferences,
-      isNot(contains('INTERNATIONAL')),
+      contains('INTERNATIONAL'),
     );
     expect(
       container.read(personalizationControllerProvider).preferences,
-      isNot(contains('MEDITERRANEAN')),
+      contains('MEDITERRANEAN'),
     );
   });
 
   testWidgets(
-    'questionnaire checkpoints answers and final submission opens summary',
+    'authenticated questionnaire checkpoints answers and continues to checkout',
     (tester) async {
       final profileService = _FakeProfilePersistenceService();
-      await tester.pumpWidget(
-        _dietTimeApp(
-          authenticationService: const _AuthenticatedService(),
-          profileService: profileService,
-        ),
-      );
-      await _finishSplash(tester);
-      await _openQuestionnaireFromFirstRun(tester);
+      await tester.pumpWidget(_questionnaireCheckoutApp(profileService));
+      await tester.pump();
 
       // BASIC_DETAILS and BODY_MEASUREMENTS share the existing profile card.
       await _continue(tester);
@@ -316,14 +315,7 @@ void main() {
       expect(find.text("You're all set!"), findsOneWidget);
       expect(find.byKey(const ValueKey('personalizationGoHome')), findsNothing);
       await _continue(tester);
-      expect(find.byType(BrowseMenuScreen), findsOneWidget);
-      expect(find.byType(PhoneLoginPage), findsNothing);
-
-      await tester.tap(
-        find.byKey(const ValueKey('guestStartPlan')).hitTestable(),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('Checkout ready'), findsOneWidget);
       expect(find.byType(PhoneLoginPage), findsNothing);
     },
   );
@@ -362,7 +354,7 @@ void main() {
     expect(find.byType(PersonalizationScreen), findsNothing);
   });
 
-  testWidgets('authenticated incomplete user resumes personalization', (
+  testWidgets('authenticated incomplete user can browse before checkout', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
@@ -380,11 +372,11 @@ void main() {
 
     expect(find.byType(LanguageSelectionPanel), findsNothing);
     expect(find.byType(OnboardingCarouselScreen), findsNothing);
-    expect(find.byType(PersonalizationScreen), findsOneWidget);
+    expect(find.byType(MealPlanScreen), findsOneWidget);
     expect(find.byType(PhoneLoginPage), findsNothing);
   });
 
-  testWidgets('authenticated completed customer opens dashboard', (
+  testWidgets('authenticated customer without active orders opens plans', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
@@ -412,7 +404,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.byType(MealPlanScreen), findsOneWidget);
     expect(find.byType(LanguageSelectionPanel), findsNothing);
     expect(find.byType(OnboardingCarouselScreen), findsNothing);
     expect(find.byType(PersonalizationScreen), findsNothing);
@@ -590,22 +582,6 @@ Future<void> _reachCarouselEnd(WidgetTester tester) async {
   }
 }
 
-Future<void> _openQuestionnaireFromFirstRun(WidgetTester tester) async {
-  await _chooseLanguage(tester, 'English');
-  expect(find.byType(OnboardingCarouselScreen), findsOneWidget);
-  await _reachCarouselEnd(tester);
-  await tester.tap(
-    find.byKey(const ValueKey('onboardingMenuChoice')).hitTestable(),
-  );
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 500));
-  expect(find.byType(BrowseMenuScreen), findsOneWidget);
-  await tester.tap(find.byKey(const ValueKey('guestStartPlan')).hitTestable());
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 500));
-  expect(find.byType(PersonalizationScreen), findsOneWidget);
-}
-
 Future<void> _continue(WidgetTester tester) async {
   await tester.tap(
     find.byKey(const ValueKey('onboardingContinue')).hitTestable(),
@@ -666,6 +642,7 @@ Widget _dietTimeApp({
   return ProviderScope(
     overrides: [
       authenticationServiceProvider.overrideWithValue(authenticationService),
+      ordersRepositoryProvider.overrideWithValue(_NoOrders()),
       customerProfileServiceProvider.overrideWithValue(
         profileService ?? _FakeProfilePersistenceService(),
       ),
@@ -761,3 +738,46 @@ class _AuthenticatedService implements AuthenticationService {
     required String password,
   }) async {}
 }
+
+class _NoOrders extends OrdersRepository {
+  _NoOrders()
+    : super(apiClient: ApiClient(), accessTokenProvider: () async => 'token');
+  @override
+  Future<List<CustomerOrderSummary>> getCustomerOrders(
+    String profileId, {
+    int pageSize = 20,
+  }) async => [];
+}
+
+Widget _questionnaireCheckoutApp(ProfilePersistenceService service) =>
+    ProviderScope(
+      overrides: [
+        authenticationServiceProvider.overrideWithValue(
+          const _AuthenticatedService(),
+        ),
+        customerProfileServiceProvider.overrideWithValue(service),
+      ],
+      child: MaterialApp.router(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: GoRouter(
+          initialLocation: '/checkout-questionnaire',
+          routes: [
+            GoRoute(
+              path: '/checkout-questionnaire',
+              builder: (_, _) =>
+                  const PersonalizationScreen(checkoutMode: true),
+            ),
+            GoRoute(
+              path: '/checkout-entry',
+              builder: (_, _) => const Scaffold(body: Text('Checkout ready')),
+            ),
+          ],
+        ),
+      ),
+    );

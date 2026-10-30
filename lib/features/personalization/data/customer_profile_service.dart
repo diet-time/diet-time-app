@@ -32,12 +32,32 @@ class CustomerProfileService implements ProfilePersistenceService {
   Future<String> _key() async {
     if (storage == null) return 'questionnaire.auth';
     final token = await storage!.read(SecureStorageService.accessTokenKey);
-    final user = await storage!.read(
-      SecureStorageService.authenticatedUserIdKey,
-    );
-    return token == null || token.isEmpty || user == null || user.isEmpty
-        ? guestDraftKey
-        : 'questionnaire.user.$user';
+    var user = await storage!.read(SecureStorageService.authenticatedUserIdKey);
+    if (token == null || token.isEmpty) return guestDraftKey;
+    if (user == null || user.isEmpty) {
+      // Sessions from older app versions may not have persisted the identity key.
+      // This only scopes the local cache; the API always derives ownership from the token.
+      try {
+        final claims =
+            jsonDecode(
+                  utf8.decode(
+                    base64Url.decode(base64Url.normalize(token.split('.')[1])),
+                  ),
+                )
+                as Map<String, dynamic>;
+        user =
+            (claims['sub'] ??
+                    claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'])
+                ?.toString();
+      } on Object {
+        throw const CustomerProfileException(statusCode: 401);
+      }
+      if (user == null || user.isEmpty) {
+        throw const CustomerProfileException(statusCode: 401);
+      }
+      await storage!.write(SecureStorageService.authenticatedUserIdKey, user);
+    }
+    return 'questionnaire.user.$user';
   }
 
   Future<CustomerProfile?> _draft(String key) async {
@@ -73,7 +93,35 @@ class CustomerProfileService implements ProfilePersistenceService {
       await storage?.delete(guestDraftKey);
     }
     final remote = await customerRepository.getProfile();
+    // A guest draft must never overwrite a returning customer's completed answers.
+    if (remote?.isCompleted == true &&
+        pending?.profileId != remote!.profileId) {
+      await storage?.delete(key);
+      return remote;
+    }
     if (pending == null) return remote;
+    if (remote != null) {
+      pending = remote.copyWith(
+        genderCode: pending.genderCode,
+        dateOfBirth: pending.dateOfBirth,
+        heightCm: pending.heightCm,
+        weightKg: pending.weightKg,
+        goalCode: pending.goalCode,
+        dailyRoutineCode: pending.dailyRoutineCode,
+        activityLevelCode: pending.activityLevelCode,
+        preferences: pending.preferencesConfirmed
+            ? pending.preferences
+            : remote.preferences,
+        allergens: pending.allergensConfirmed
+            ? pending.allergens
+            : remote.allergens,
+        preferencesConfirmed:
+            pending.preferencesConfirmed || remote.preferencesConfirmed,
+        allergensConfirmed:
+            pending.allergensConfirmed || remote.allergensConfirmed,
+        onboardingStatus: pending.onboardingStatus,
+      );
+    }
     final saved = await customerRepository.updateProfile(
       pending.copyWith(
         profileId: remote?.profileId,

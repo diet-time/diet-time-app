@@ -7,6 +7,8 @@ import 'package:diet_time/features/plans/presentation/meal_plan_details_screen.d
 import 'package:diet_time/features/plans/presentation/subscription_selection_widgets.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -259,19 +261,52 @@ void main() {
     expect(priceId, 'plus-week');
   });
 
-  testWidgets('Continue opens the calendar panel over plan details', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_app(plan: _plan));
-    await tester.pump();
-
-    await tester.tap(find.byKey(const ValueKey('detailsContinue')));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(MealPlanDetailsScreen), findsOneWidget);
-    expect(find.byKey(const ValueKey('serviceCalendar')), findsOneWidget);
-    expect(find.byKey(const ValueKey('startDateTitle')), findsNothing);
-  });
+  testWidgets(
+    'Continue preserves the package and enters checkout before choosing a date',
+    (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          mealPlanConfigurationsProvider.overrideWith(
+            (ref, request) async => request.plan.mealConfigurations,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = GoRouter(
+        initialLocation: '/details',
+        routes: [
+          GoRoute(
+            path: '/details',
+            builder: (_, _) => MealPlanDetailsScreen(plan: _plan),
+          ),
+          GoRoute(
+            path: '/checkout-entry',
+            builder: (_, _) => const Scaffold(body: Text('Checkout entry')),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('detailsContinue')));
+      await tester.pumpAndSettle();
+      expect(find.text('Checkout entry'), findsOneWidget);
+      expect(
+        container.read(checkoutControllerProvider).mealPlanPriceId,
+        'three-week',
+      );
+      expect(container.read(checkoutControllerProvider).schedule, isNull);
+    },
+  );
 
   testWidgets('Continue is disabled when a displayed price has no ID', (
     tester,

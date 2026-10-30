@@ -7,7 +7,7 @@ import 'package:diet_time/app/theme/app_spacing.dart';
 import 'package:diet_time/app/theme/app_typography.dart';
 import 'package:diet_time/core/widgets/app_logo.dart';
 import 'package:diet_time/core/storage/installation_session_guard.dart';
-import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
+import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/language/data/language_repository.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/features/language/presentation/language_selection_panel.dart';
@@ -177,8 +177,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Future<void> _openAuthenticatedDestination() async {
     final authenticated = await ref
-        .read(authenticationServiceProvider)
-        .isLoggedIn();
+        .read(otpAuthControllerProvider.notifier)
+        .restoreSession();
     if (!mounted) return;
     context.go(
       authenticated ? AppRoutes.authenticatedLanding : AppRoutes.onboarding,
