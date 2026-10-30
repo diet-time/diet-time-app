@@ -86,7 +86,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Place Order stays disabled without a delivery location', (
+  testWidgets('Place Order validates a missing delivery location', (
     tester,
   ) async {
     await tester.pumpWidget(_summaryApp(_checkoutState));
@@ -99,7 +99,10 @@ void main() {
       ),
     );
     expect(find.text('PLACE ORDER'), findsOneWidget);
-    expect(button.onPressed, isNull);
+    expect(button.onPressed, isNotNull);
+    await tester.tap(find.byKey(const ValueKey('placeOrder')));
+    await tester.pump();
+    expect(find.text('Please select a delivery address.'), findsOneWidget);
   });
 
   testWidgets('Place Order enables after address and time selection', (
@@ -165,6 +168,8 @@ class _CheckoutControllerForTest extends CheckoutController {
   Future<void> loadDeliveryTimeSlots() async {}
   @override
   Future<void> loadAddresses() async {}
+  @override
+  Future<void> loadBranches() async {}
 }
 
 final _checkoutState = CheckoutState(

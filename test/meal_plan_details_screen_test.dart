@@ -220,21 +220,30 @@ void main() {
     await tester.pumpWidget(_app(plan: _plan));
     await tester.pump();
     expect(find.text('QAR 100 per delivery day'), findsNothing);
-    expect(find.text('QAR 600'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('packageTotal'))).data,
+      'QAR 600',
+    );
     await _tapChoice(tester, 'configuration-plus');
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('1 Month'), findsOneWidget);
 
     expect(find.text('QAR 120 per delivery day'), findsNothing);
-    expect(find.text('QAR 720'), findsOneWidget);
-    expect(find.textContaining('6 delivery days'), findsWidgets);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('packageTotal'))).data,
+      'QAR 720',
+    );
+    expect(find.textContaining('6 service days'), findsWidgets);
 
     await _scrollTo(tester, const ValueKey('duration-plus-month'));
     await _tapChoice(tester, 'duration-plus-month');
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('QAR 110 per delivery day'), findsNothing);
-    expect(find.text('QAR 2640'), findsOneWidget);
-    expect(find.textContaining('24 delivery days'), findsWidgets);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('packageTotal'))).data,
+      'QAR 2640',
+    );
+    expect(find.textContaining('24 service days'), findsWidgets);
   });
 
   testWidgets('Continue sends template ID and authoritative price ID', (
@@ -442,7 +451,10 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('From QAR'), findsNothing);
-    expect(find.text('QAR 80'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('packageTotal'))).data,
+      'QAR 80',
+    );
     expect(find.textContaining('3.33/day'), findsNothing);
   });
 
@@ -542,12 +554,21 @@ void main() {
     await tester.pumpAndSettle();
     await _tapChoice(tester, 'duration-plus-month');
     await tester.pumpAndSettle();
-    expect(find.text('QAR 2640'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('packageTotal'))).data,
+      'QAR 2640',
+    );
     await _tapChoice(tester, 'configuration-three');
     await tester.pumpAndSettle();
-    expect(find.text('QAR 600'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('packageTotal'))).data,
+      'QAR 600',
+    );
     expect(find.byKey(const ValueKey('duration-plus-month')), findsNothing);
-    expect(find.text('QAR 2640'), findsNothing);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('packageTotal'))).data,
+      isNot('QAR 2640'),
+    );
   });
 
   testWidgets('selection transitions respect reduced motion', (tester) async {

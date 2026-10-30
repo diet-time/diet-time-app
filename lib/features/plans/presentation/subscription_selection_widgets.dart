@@ -1,3 +1,6 @@
+import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
+import 'package:diet_time/features/plans/presentation/package_discount_details.dart';
+import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:flutter/material.dart';
@@ -50,7 +53,7 @@ class SubscriptionSelectionCard extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(18),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,9 +65,11 @@ class SubscriptionSelectionCard extends StatelessWidget {
                       ? AppColors.emeraldGreen
                       : AppColors.darkGreen.withValues(alpha: .25),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Text(
                   title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: AppColors.darkGreen,
                     fontSize: 15,
@@ -99,17 +104,22 @@ class PackageSelectionCard extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.description,
+    this.package,
     super.key,
   });
   final String name;
   final String? description;
+  final MealPlanPackage? package;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => SubscriptionSelectionCard(
     title: name,
-    subtitle: description,
+    subtitle: package == null
+        ? description
+        : '${package!.serviceDays} service days',
+    footer: package == null ? null : PackageCardPrice(package: package!),
     selected: selected,
     onTap: onTap,
     width: 180,
@@ -274,4 +284,32 @@ class SubscriptionPricingSummary extends StatelessWidget {
       ),
     );
   }
+}
+
+class PackageCardPrice extends StatelessWidget {
+  const PackageCardPrice({required this.package, super.key});
+  final MealPlanPackage package;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 8),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: AlignmentDirectional.centerStart,
+          child: Text(
+            '${package.currencyCode} ${formatMealPlanPriceAmount(package.totalPrice, Localizations.localeOf(context).toLanguageTag())}',
+            style: const TextStyle(
+              color: AppColors.darkGreen,
+              fontSize: 19,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        if (package.hasDiscount)
+          PackageDiscountDetails(package: package, showSavings: false),
+      ],
+    ),
+  );
 }

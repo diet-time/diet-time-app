@@ -27,10 +27,11 @@ Future<MealPlanServiceSchedule?> showMealPlanStartDatePanel({
 
   bool isUnavailable(DateTime date) =>
       date.weekday == DateTime.friday ||
-      package.nonDeliveryWeekdays.contains(date.weekday) ||
+      !selection.deliveryWeekdays.contains(date.weekday) ||
       package.unavailableDates.any((item) => dateKey(item) == dateKey(date));
 
   var firstSelectableDate = earliestStartDate;
+  if (selection.deliveryWeekdays.isEmpty) return Future.value(null);
   while (isUnavailable(firstSelectableDate)) {
     firstSelectableDate = firstSelectableDate.add(const Duration(days: 1));
   }
@@ -38,7 +39,7 @@ Future<MealPlanServiceSchedule?> showMealPlanStartDatePanel({
   return showModalBottomSheet<MealPlanServiceSchedule>(
     context: context,
     isScrollControlled: true,
-    useSafeArea: false,
+    useSafeArea: true,
     enableDrag: true,
     backgroundColor: Colors.transparent,
     barrierColor: AppColors.darkGreen.withValues(alpha: .22),
@@ -64,7 +65,8 @@ Future<MealPlanServiceSchedule?> showMealPlanStartDatePanel({
             startDate: date,
             serviceDays: selection.serviceDays,
             nonDeliveryWeekdays: {
-              ...package.nonDeliveryWeekdays,
+              for (var day = 1; day <= 7; day++)
+                if (!selection.deliveryWeekdays.contains(day)) day,
               DateTime.friday,
             },
             unavailableDates: package.unavailableDates,
@@ -215,8 +217,8 @@ class _MealPlanStartDateScreenState
                                 Expanded(
                                   child: Text(
                                     _schedule == null
-                                        ? 'Tap to choose an available delivery day.'
-                                        : 'Tap to choose a different delivery day.',
+                                        ? 'Tap to choose an available service day.'
+                                        : 'Tap to choose a different service day.',
                                     style: TextStyle(
                                       color: AppColors.emeraldGreen.withValues(
                                         alpha: .82,
@@ -472,7 +474,7 @@ class _ServiceCalendar extends StatelessWidget {
                 const SizedBox(width: 48),
                 const Expanded(
                   child: Text(
-                    'Select a delivery day',
+                    'Select your start date',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.darkGreen,
@@ -556,7 +558,7 @@ class _ServiceCalendar extends StatelessWidget {
                         ),
                         const _CalendarLegend(
                           color: Color(0xFFDFF1E3),
-                          label: 'Plan delivery day',
+                          label: 'Plan service day',
                         ),
                         const _CalendarLegend(
                           color: Color(0xFFE9EAEB),
@@ -569,12 +571,17 @@ class _ServiceCalendar extends StatelessWidget {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-            child: AppButton(
-              key: const ValueKey('confirmCalendar'),
-              label: schedule == null ? 'Select a start date' : 'Done',
-              onPressed: onDone,
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: AppButton(
+                key: const ValueKey('confirmCalendar'),
+                label: schedule == null
+                    ? 'Select a start date'
+                    : 'Confirm Dates',
+                onPressed: onDone,
+              ),
             ),
           ),
         ],
@@ -838,7 +845,7 @@ class _SelectedDurationSummary extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${schedule.serviceDates.length} delivery days selected',
+                '${schedule.serviceDates.length} service days selected',
                 style: const TextStyle(
                   color: AppColors.darkGreen,
                   fontWeight: FontWeight.w900,

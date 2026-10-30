@@ -30,6 +30,38 @@ class CheckoutController extends Notifier<CheckoutState> {
     );
   }
 
+  void selectBranch(TakeawayBranch branch) {
+    if (!state.branches.any((item) => item.id == branch.id)) return;
+    state = state.copyWith(
+      selectedBranch: branch,
+      placementError: null,
+      idempotencyKey: null,
+    );
+  }
+
+  Future<void> loadBranches() async {
+    if (state.isLoadingBranches) return;
+    state = state.copyWith(isLoadingBranches: true, branchError: null);
+    try {
+      final branches = await ref
+          .read(checkoutRepositoryProvider)
+          .getTakeawayBranches();
+      final selected = branches.where(
+        (item) => item.id == state.selectedBranch?.id,
+      );
+      state = state.copyWith(
+        branches: branches,
+        selectedBranch: selected.isEmpty ? null : selected.first,
+        isLoadingBranches: false,
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isLoadingBranches: false,
+        branchError: 'We could not load takeaway branches. Please try again.',
+      );
+    }
+  }
+
   void clear() => state = const CheckoutState();
 
   void useCustomerProfile(String? profileId) {
@@ -55,7 +87,17 @@ class CheckoutController extends Notifier<CheckoutState> {
         state.mealPlanPriceId == selection.pricingOption.mealPlanPriceId;
     state = state.copyWith(
       selection: selection,
-      schedule: samePrice ? state.schedule : null,
+      schedule: samePrice || state.schedule == null
+          ? state.schedule
+          : calculateMealPlanServiceSchedule(
+              startDate: state.schedule!.startDate,
+              serviceDays: selection.serviceDays,
+              nonDeliveryWeekdays: {
+                for (var day = 1; day <= 7; day++)
+                  if (!selection.deliveryWeekdays.contains(day)) day,
+              },
+              unavailableDates: selection.pricingOption.unavailableDates,
+            ),
       placementError: null,
       idempotencyKey: null,
       orderConfirmation: null,
@@ -398,10 +440,14 @@ class CheckoutController extends Notifier<CheckoutState> {
           ? null
           : snapshot.selectedAddressId,
       fulfillmentMethod: snapshot.isTakeaway ? 'TAKEAWAY' : 'HOME_DELIVERY',
+      takeawayBranchId: snapshot.isTakeaway
+          ? snapshot.selectedBranch?.id
+          : null,
       deliveryTimeSlotId: snapshot.isTakeaway
           ? null
           : snapshot.selectedDeliveryTimeSlotId,
       startDate: snapshot.startDate!,
+      serviceDates: snapshot.schedule!.serviceDates,
       deliveryDays: snapshot.selectedWeekdays.toList()..sort(),
       // The API snapshots the purchased entitlement from the validated price.
       // Daily dish choices belong to Tomorrow's Menu, after purchase.
@@ -429,6 +475,7 @@ class CheckoutController extends Notifier<CheckoutState> {
         isPlacingOrder: false,
         placementError: null,
         orderConfirmation: confirmation,
+        selectedBranch: null,
       );
       return confirmation;
     } catch (error) {
@@ -540,7 +587,7 @@ class CheckoutController extends Notifier<CheckoutState> {
       return error.message ?? 'Please review your selected meals.';
     }
     if (code == 'invalid_delivery_days') {
-      return error.message ?? 'Please review your selected delivery days.';
+      return error.message ?? 'Please review your selected service days.';
     }
     if (code == 'invalid_start_date') {
       return error.message ?? 'Please select another plan start date.';

@@ -86,7 +86,7 @@ void main() {
       find.byKey(const ValueKey('selectedDurationSummary')),
       findsOneWidget,
     );
-    expect(find.text('24 delivery days selected'), findsOneWidget);
+    expect(find.text('24 service days selected'), findsOneWidget);
     expect(find.byKey(const ValueKey('calendarDay-20260906')), findsOneWidget);
     await tester.ensureVisible(find.byKey(const ValueKey('confirmCalendar')));
     await tester.pumpAndSettle();

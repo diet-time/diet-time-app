@@ -1,3 +1,5 @@
+import 'takeaway_branch.dart';
+export 'takeaway_branch.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
@@ -145,6 +147,10 @@ class DeliveryTimeSlot {
 
 class CheckoutState {
   const CheckoutState({
+    this.selectedBranch,
+    this.branches = const [],
+    this.isLoadingBranches = false,
+    this.branchError,
     this.fulfillmentMethod = 'HOME_DELIVERY',
     this.selection,
     this.schedule,
@@ -170,6 +176,10 @@ class CheckoutState {
     this.orderConfirmation,
   });
 
+  final TakeawayBranch? selectedBranch;
+  final List<TakeawayBranch> branches;
+  final bool isLoadingBranches;
+  final String? branchError;
   final String fulfillmentMethod;
   bool get isDeliveryEnabled =>
       selection?.pricingOption.isDeliveryEnabled ?? true;
@@ -213,13 +223,16 @@ class CheckoutState {
         mealPlanPriceId?.trim().isNotEmpty != true) {
       return 'Please choose a meal plan.';
     }
+    if (isTakeaway && selectedBranch == null) {
+      return 'Please select a takeaway branch.';
+    }
     if (startDate == null) return 'Please select a plan start date.';
     if (selection != null &&
         !eligibleDeliveryStart(startDate!, selection!.pricingOption)) {
-      return 'Choose a new delivery start date. Delivery can start tomorrow or later, excluding Friday.';
+      return 'Choose a new service start date. Service can start tomorrow or later, excluding Friday.';
     }
     if (selectedWeekdays.isEmpty) {
-      return 'Please select your delivery days.';
+      return 'Please select your service days.';
     }
     if (!isTakeaway &&
         (selectedAddressId?.trim().isNotEmpty != true ||
@@ -240,13 +253,18 @@ class CheckoutState {
       placeOrderValidationMessage == null;
 
   bool get isReadyToContinue =>
-      isTakeaway ||
-      selectedAddress != null &&
+      (isTakeaway && selectedBranch != null) ||
+      !isTakeaway &&
+          selectedAddress != null &&
           selectedAddressId?.trim().isNotEmpty == true &&
           selectedDeliveryTimeSlot != null &&
           selectedDeliveryTimeSlotId?.trim().isNotEmpty == true;
 
   CheckoutState copyWith({
+    Object? selectedBranch = _unset,
+    List<TakeawayBranch>? branches,
+    bool? isLoadingBranches,
+    Object? branchError = _unset,
     String? fulfillmentMethod,
     Object? selection = _unset,
     Object? schedule = _unset,
@@ -271,6 +289,14 @@ class CheckoutState {
     Object? placementError = _unset,
     Object? orderConfirmation = _unset,
   }) => CheckoutState(
+    selectedBranch: identical(selectedBranch, _unset)
+        ? this.selectedBranch
+        : selectedBranch as TakeawayBranch?,
+    branches: branches ?? this.branches,
+    isLoadingBranches: isLoadingBranches ?? this.isLoadingBranches,
+    branchError: identical(branchError, _unset)
+        ? this.branchError
+        : branchError as String?,
     fulfillmentMethod:
         (identical(selection, _unset)
                     ? this.selection

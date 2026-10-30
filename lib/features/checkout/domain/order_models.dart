@@ -1,3 +1,5 @@
+import 'takeaway_branch.dart';
+
 class PlaceOrderMealRequest {
   const PlaceOrderMealRequest({
     required this.mealTypeId,
@@ -25,6 +27,8 @@ class PlaceOrderRequest {
     required this.meals,
     this.couponCode,
     this.fulfillmentMethod = 'HOME_DELIVERY',
+    this.takeawayBranchId,
+    this.serviceDates,
     this.expectedTotalAmount,
     this.expectedRegularPrice,
     this.expectedDiscountAmount,
@@ -39,6 +43,8 @@ class PlaceOrderRequest {
   final DateTime startDate;
   final List<int> deliveryDays;
   final List<PlaceOrderMealRequest> meals;
+  final String? takeawayBranchId;
+  final List<DateTime>? serviceDates;
   final String fulfillmentMethod;
   final String? couponCode;
   final double? expectedTotalAmount;
@@ -52,6 +58,9 @@ class PlaceOrderRequest {
     'mealPlanPriceId': mealPlanPriceId,
     'customerAddressId': customerAddressId,
     'fulfillmentMethod': fulfillmentMethod,
+    'takeawayBranchId': takeawayBranchId,
+    if (serviceDates != null)
+      'serviceDates': serviceDates!.map(_date).toList(growable: false),
     'deliveryTimeSlotId': deliveryTimeSlotId,
     'startDate': _date(startDate),
     'deliveryDays': deliveryDays,
@@ -88,6 +97,7 @@ class CustomerOrderSummary {
     required this.endDate,
     required this.placedAt,
     this.fulfillmentMethod = 'HOME_DELIVERY',
+    this.takeawayBranch,
   });
 
   factory CustomerOrderSummary.fromJson(Map<String, dynamic> json) =>
@@ -105,6 +115,9 @@ class CustomerOrderSummary {
         startDate: _dateTime(json['startDate']),
         endDate: _dateTime(json['endDate']),
         placedAt: _dateTime(json['placedAt']),
+        takeawayBranch: json['takeawayBranch'] is Map
+            ? TakeawayBranch.fromJson(_map(json['takeawayBranch']))
+            : null,
         fulfillmentMethod: _text(json['fulfillmentMethod']).isEmpty
             ? 'HOME_DELIVERY'
             : _text(json['fulfillmentMethod']),
@@ -121,6 +134,7 @@ class CustomerOrderSummary {
   final DateTime? startDate;
   final DateTime? endDate;
   final DateTime? placedAt;
+  final TakeawayBranch? takeawayBranch;
   final String fulfillmentMethod;
   bool get isTakeaway => fulfillmentMethod == 'TAKEAWAY';
   String get fulfillmentLabel => isTakeaway ? 'Takeaway' : 'Home Delivery';
@@ -199,6 +213,7 @@ class OrderConfirmation {
     required this.pricing,
     required this.placedAt,
     this.fulfillmentMethod = 'HOME_DELIVERY',
+    this.takeawayBranch,
   });
 
   factory OrderConfirmation.fromJson(Map<String, dynamic> json) =>
@@ -214,6 +229,9 @@ class OrderConfirmation {
         delivery: OrderDelivery.fromJson(_map(json['delivery'])),
         pricing: OrderPricing.fromJson(_map(json['pricing'])),
         placedAt: _dateTime(json['placedAt']),
+        takeawayBranch: json['takeawayBranch'] is Map
+            ? TakeawayBranch.fromJson(_map(json['takeawayBranch']))
+            : null,
         fulfillmentMethod: _text(json['fulfillmentMethod']).isEmpty
             ? 'HOME_DELIVERY'
             : _text(json['fulfillmentMethod']),
@@ -228,6 +246,7 @@ class OrderConfirmation {
   final OrderDelivery delivery;
   final OrderPricing pricing;
   final DateTime? placedAt;
+  final TakeawayBranch? takeawayBranch;
   final String fulfillmentMethod;
   bool get isTakeaway => fulfillmentMethod == 'TAKEAWAY';
   String get fulfillmentLabel => isTakeaway ? 'Takeaway' : 'Home Delivery';

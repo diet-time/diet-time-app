@@ -18,9 +18,7 @@ import 'package:diet_time/features/onboarding/presentation/onboarding_carousel_s
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
-import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_details_screen.dart';
-import 'package:diet_time/features/plans/presentation/meal_plan_start_date_screen.dart';
 import 'package:diet_time/features/personalization/presentation/post_login_name_gate.dart';
 import 'package:diet_time/features/personalization/presentation/authenticated_landing_screen.dart';
 import 'package:diet_time/features/splash/presentation/splash_screen.dart';
@@ -143,23 +141,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.planStartDate,
-        pageBuilder: (context, state) {
-          final selection =
-              state.extra ?? ref.read(checkoutControllerProvider).selection;
-          if (selection is! MealPlanPurchaseSelection) {
-            return _slidePage(state: state, child: const MealPlanScreen());
-          }
-          return _slidePage(
-            state: state,
-            child: PopScope(
-              canPop: context.canPop(),
-              onPopInvokedWithResult: (didPop, _) {
-                if (!didPop) context.go(AppRoutes.plans);
-              },
-              child: MealPlanStartDateScreen(selection: selection),
-            ),
-          );
-        },
+        redirect: (context, state) => AppRoutes.checkoutEntry,
       ),
       GoRoute(
         path: AppRoutes.checkoutEntry,
@@ -173,9 +155,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               profile.isCompleted &&
               checkout.selection != null &&
               checkout.customerProfileId == profile.profileId) {
-            return checkout.schedule == null
-                ? AppRoutes.planStartDate
-                : AppRoutes.planSummary;
+            return AppRoutes.planSummary;
           }
           return null;
         },
@@ -194,10 +174,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             canPop: context.canPop(),
             onPopInvokedWithResult: (didPop, _) {
               if (!didPop) {
-                context.go(
-                  AppRoutes.planStartDate,
-                  extra: ref.read(checkoutControllerProvider).selection,
-                );
+                context.go(AppRoutes.plans);
               }
             },
             child: const PlanSummaryScreen(),

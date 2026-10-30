@@ -31,6 +31,17 @@ class CheckoutRepository {
     return items.map(CustomerDeliveryAddress.fromJson).toList(growable: false);
   }
 
+  Future<List<TakeawayBranch>> getTakeawayBranches() async {
+    final response = await _request(
+      method: 'GET',
+      path: ApiEndpoints.takeawayBranches,
+    );
+    return _listFrom(
+      response.body,
+      keys: const ['items'],
+    ).map(TakeawayBranch.fromJson).toList(growable: false);
+  }
+
   Future<List<DeliveryTimeSlot>> getDeliveryTimeSlots() async {
     final response = await _request(
       method: 'GET',

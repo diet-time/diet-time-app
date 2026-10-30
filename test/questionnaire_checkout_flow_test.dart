@@ -49,7 +49,7 @@ void main() {
       container
           .read(profilePersistenceControllerProvider.notifier)
           .restore(_complete);
-      expect(await access.resolve(), CheckoutAccess.startDate);
+      expect(await access.resolve(), CheckoutAccess.summary);
       expect(profiles.loads, 1);
       checkout.begin(
         _selection,
@@ -73,13 +73,13 @@ void main() {
       checkout.selectPackage(_selection);
       expect(
         await container.read(checkoutAccessProvider).resolve(),
-        CheckoutAccess.startDate,
+        CheckoutAccess.summary,
       );
       checkout.beginNewOrder();
       checkout.selectPackage(_selection);
       expect(
         await container.read(checkoutAccessProvider).resolve(),
-        CheckoutAccess.startDate,
+        CheckoutAccess.summary,
       );
       expect(profiles.loads, 1);
     },

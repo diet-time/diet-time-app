@@ -102,6 +102,8 @@ void main() {
         'mealPlanPriceId': 'price-id',
         'customerAddressId': 'address-id',
         'fulfillmentMethod': 'HOME_DELIVERY',
+        'takeawayBranchId': null,
+        'serviceDates': ['2026-08-11', '2026-09-05'],
         'deliveryTimeSlotId': 'slot-id',
         'startDate': '2026-08-11',
         'deliveryDays': [2, 3, 4, 5, 6],

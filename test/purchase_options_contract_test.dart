@@ -147,7 +147,10 @@ void main() {
       expect(find.text('Choose your meals'), findsOneWidget);
       expect(find.text('Three meals and a snack'), findsWidgets);
       expect(find.byKey(const ValueKey('duration-week-price')), findsOneWidget);
-      expect(find.text('QAR 715'), findsOneWidget);
+      expect(
+        tester.widget<Text>(find.byKey(const ValueKey('packageTotal'))).data,
+        'QAR 715',
+      );
       expect(find.text('Daily price unavailable'), findsNothing);
       await tester.tap(find.byKey(const ValueKey('detailsContinue')));
       expect(chosenPlan, 'live-plan');

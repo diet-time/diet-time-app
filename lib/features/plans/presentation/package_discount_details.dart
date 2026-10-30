@@ -8,9 +8,11 @@ class PackageDiscountDetails extends StatelessWidget {
     super.key,
     required this.package,
     this.showEffectivePrice = false,
+    this.showSavings = true,
   });
   final MealPlanPackage package;
   final bool showEffectivePrice;
+  final bool showSavings;
 
   @override
   Widget build(BuildContext context) {
@@ -66,16 +68,17 @@ class PackageDiscountDetails extends StatelessWidget {
               ),
             ],
           ),
-          Text(
-            arabic
-                ? 'توفر ${package.currencyCode} ${amount(package.discountAmount)}'
-                : 'You save ${package.currencyCode} ${amount(package.discountAmount)}',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.emeraldGreen,
+          if (showSavings)
+            Text(
+              arabic
+                  ? 'توفر ${package.currencyCode} ${amount(package.discountAmount)}'
+                  : 'You save ${package.currencyCode} ${amount(package.discountAmount)}',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.emeraldGreen,
+              ),
             ),
-          ),
         ],
       ),
     );

@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-enum CheckoutAccess { login, questionnaire, startDate, summary, browse }
+enum CheckoutAccess { login, questionnaire, summary, browse }
 
 final checkoutAccessProvider = Provider<CheckoutAccessService>(
   CheckoutAccessService.new,
@@ -37,9 +37,7 @@ class CheckoutAccessService {
         .read(checkoutControllerProvider.notifier)
         .useCustomerProfile(profile?.profileId);
     if (profile?.isCompleted != true) return CheckoutAccess.questionnaire;
-    return ref.read(checkoutControllerProvider).schedule == null
-        ? CheckoutAccess.startDate
-        : CheckoutAccess.summary;
+    return CheckoutAccess.summary;
   }
 }
 
@@ -63,7 +61,6 @@ class _CheckoutEntryScreenState extends ConsumerState<CheckoutEntryScreen> {
     try {
       final access = await ref.read(checkoutAccessProvider).resolve();
       if (!mounted) return;
-      final checkout = ref.read(checkoutControllerProvider);
       switch (access) {
         case CheckoutAccess.browse:
           context.go(AppRoutes.plans);
@@ -74,11 +71,6 @@ class _CheckoutEntryScreenState extends ConsumerState<CheckoutEntryScreen> {
           );
         case CheckoutAccess.questionnaire:
           context.pushReplacement(AppRoutes.checkoutQuestionnaire);
-        case CheckoutAccess.startDate:
-          context.pushReplacement(
-            AppRoutes.planStartDate,
-            extra: checkout.selection,
-          );
         case CheckoutAccess.summary:
           context.pushReplacement(AppRoutes.planSummary);
       }

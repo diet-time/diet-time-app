@@ -112,6 +112,18 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                                 key: ValueKey('configuration-${item.id}'),
                                 name: item.name,
                                 description: item.description,
+                                package:
+                                    item.packages
+                                        .where(
+                                          (p) =>
+                                              p.isValid &&
+                                              p.serviceDays ==
+                                                  package.serviceDays,
+                                        )
+                                        .firstOrNull ??
+                                    item.packages
+                                        .where((p) => p.isValid)
+                                        .firstOrNull,
                                 selected: item.id == configuration.id,
                                 onTap: () => setState(() {
                                   _configurationId = item.id;
@@ -137,7 +149,18 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    if (configurations.length > 1)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Swipe to explore meal packages →',
+                          style: TextStyle(
+                            color: AppColors.darkGreen,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
                     const _SectionTitle(
                       titleEn: 'Choose your duration',
                       titleAr: 'اختر المدة',
@@ -171,11 +194,8 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                                       'duration-${option.selectionKey}',
                                     ),
                                     name: option.name,
-                                    priceDetails: option.hasDiscount
-                                        ? PackageDiscountDetails(
-                                            package: option,
-                                            showEffectivePrice: true,
-                                          )
+                                    priceDetails: option.isValid
+                                        ? PackageCardPrice(package: option)
                                         : null,
                                     deliveryDays: option.isValid
                                         ? _serviceDaysLabel(
@@ -209,7 +229,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                     Text(
                       Directionality.of(context) == TextDirection.rtl
                           ? 'المدد المتاحة لباقة الوجبات المختارة.'
-                          : 'Showing available durations for your meal package.',
+                          : 'Swipe to explore package durations →',
                       style: TextStyle(
                         color: AppColors.darkGreen.withValues(alpha: .7),
                         fontSize: 12,
@@ -722,7 +742,7 @@ class _Skeleton extends StatelessWidget {
 String _serviceDaysLabel(BuildContext context, int days) =>
     Directionality.of(context) == TextDirection.rtl
     ? '$days أيام خدمة'
-    : '$days delivery days';
+    : '$days service days';
 
 String _amount(BuildContext context, double value) => formatMealPlanPriceAmount(
   value,

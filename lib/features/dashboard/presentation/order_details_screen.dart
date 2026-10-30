@@ -90,7 +90,11 @@ class _OrderDetails extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 30),
       children: [
         _OrderHeaderCard(order: order),
-        Text(order.fulfillmentLabel),
+        Text(
+          order.isTakeaway && order.takeawayBranch != null
+              ? 'Takeaway · ${order.takeawayBranch!.name}${order.takeawayBranch!.address == null ? '' : '\n${order.takeawayBranch!.address}'}'
+              : order.fulfillmentLabel,
+        ),
         const SizedBox(height: 12),
         _SectionCard(
           children: [

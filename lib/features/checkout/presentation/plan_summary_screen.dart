@@ -1,3 +1,4 @@
+import 'package:diet_time/features/plans/presentation/meal_plan_start_date_screen.dart';
 import 'dart:async';
 
 import 'package:diet_time/app/router/app_router.dart';
@@ -30,6 +31,7 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
       () => Future.wait([
         ref.read(checkoutControllerProvider.notifier).loadDeliveryTimeSlots(),
         ref.read(checkoutControllerProvider.notifier).loadAddresses(),
+        ref.read(checkoutControllerProvider.notifier).loadBranches(),
       ]),
     );
   }
@@ -51,8 +53,7 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
   Widget build(BuildContext context) {
     final checkout = ref.watch(checkoutControllerProvider);
     final selection = checkout.selection;
-    final schedule = checkout.schedule;
-    if (selection == null || schedule == null) {
+    if (selection == null) {
       return _MissingCheckout(onBack: () => context.go(AppRoutes.plans));
     }
     final summaryMessage = checkout.isResolvingOrderOptions
@@ -65,9 +66,8 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
           key: const ValueKey('planSummaryBack'),
-          onPressed: () => context.canPop()
-              ? context.pop()
-              : context.go(AppRoutes.planStartDate, extra: checkout.selection),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go(AppRoutes.plans),
           icon: const Icon(Icons.arrow_back_rounded),
         ),
         title: const Text(
@@ -93,7 +93,7 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                         checkout: checkout,
                         locale: Localizations.localeOf(context).toLanguageTag(),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                       Text(
                         checkout.fulfillmentLabel,
                         style: const TextStyle(fontWeight: FontWeight.w800),
@@ -123,11 +123,76 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                                     .read(checkoutControllerProvider.notifier)
                                     .selectFulfillmentMethod(values.single),
                         ),
-                      if (checkout.isTakeaway)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 12),
-                          child: Text('Collect your meals from Diet Time.'),
+                      if (checkout.isTakeaway) ...[
+                        const SizedBox(height: 12),
+                        const Text(
+                          'COLLECTION BRANCH',
+                          style: TextStyle(
+                            color: AppColors.darkGreen,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
+                        if (checkout.isLoadingBranches)
+                          const LinearProgressIndicator(),
+                        if (checkout.branchError != null)
+                          TextButton(
+                            onPressed: () => ref
+                                .read(checkoutControllerProvider.notifier)
+                                .loadBranches(),
+                            child: Text(checkout.branchError!),
+                          ),
+                        if (!checkout.isLoadingBranches &&
+                            checkout.branchError == null &&
+                            checkout.branches.isEmpty)
+                          const Text(
+                            'No takeaway branches are currently available.',
+                          ),
+                        for (final branch in checkout.branches)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Material(
+                              color: checkout.selectedBranch?.id == branch.id
+                                  ? const Color(0xFFE6F2E9)
+                                  : AppColors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(
+                                  color:
+                                      checkout.selectedBranch?.id == branch.id
+                                      ? AppColors.emeraldGreen
+                                      : const Color(0xFFD9DFD5),
+                                ),
+                              ),
+                              child: ListTile(
+                                key: ValueKey('branch-${branch.id}'),
+                                leading: Icon(
+                                  checkout.selectedBranch?.id == branch.id
+                                      ? Icons.radio_button_checked
+                                      : Icons.radio_button_off,
+                                  color: AppColors.emeraldGreen,
+                                ),
+                                title: Text(
+                                  branch.name,
+                                  style: const TextStyle(
+                                    color: AppColors.darkGreen,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                subtitle:
+                                    branch.address?.trim().isNotEmpty == true
+                                    ? Text(branch.address!)
+                                    : null,
+                                onTap: checkout.isPlacingOrder
+                                    ? null
+                                    : () => ref
+                                          .read(
+                                            checkoutControllerProvider.notifier,
+                                          )
+                                          .selectBranch(branch),
+                              ),
+                            ),
+                          ),
+                      ],
                       if (!checkout.isTakeaway) ...[
                         const Text(
                           'DELIVERY ADDRESS & TIME SLOT',
@@ -145,6 +210,53 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                               context.push(AppRoutes.customerAddress),
                         ),
                       ],
+                      const SizedBox(height: 16),
+                      Material(
+                        color: AppColors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        child: ListTile(
+                          key: const ValueKey('checkoutStartDate'),
+                          leading: const Icon(
+                            Icons.calendar_month_outlined,
+                            color: AppColors.emeraldGreen,
+                          ),
+                          title: const Text('Start Date'),
+                          subtitle: Text(
+                            checkout.schedule == null
+                                ? 'Select your service dates'
+                                : '${DateFormat('dd MMM yyyy').format(checkout.schedule!.startDate)} – ${DateFormat('dd MMM yyyy').format(checkout.schedule!.endDate)}\n${checkout.schedule!.serviceDates.length} service days',
+                          ),
+                          trailing: const Icon(Icons.expand_more),
+                          onTap: checkout.isPlacingOrder
+                              ? null
+                              : () async {
+                                  final schedule =
+                                      await showMealPlanStartDatePanel(
+                                        context: context,
+                                        selection: selection,
+                                        currentSchedule: checkout.schedule,
+                                      );
+                                  if (schedule != null && mounted) {
+                                    ref
+                                        .read(
+                                          checkoutControllerProvider.notifier,
+                                        )
+                                        .begin(selection, schedule);
+                                  }
+                                },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _SummaryItem(
+                        label: 'ORDER TOTAL',
+                        value:
+                            '${selection.pricingOption.currencyCode} ${formatMealPlanPriceAmount(selection.totalPrice, Localizations.localeOf(context).toLanguageTag())}',
+                        isLast: true,
+                      ),
+                      if (selection.pricingOption.hasDiscount)
+                        PackageDiscountDetails(
+                          package: selection.pricingOption,
+                        ),
                       if (summaryMessage case final message?) ...[
                         const SizedBox(height: 12),
                         _InlineMessage(
@@ -187,7 +299,11 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                         checkout.isPlacingOrder ||
                         checkout.isResolvingOrderOptions,
                     backgroundColor: AppColors.black,
-                    onPressed: checkout.canPlaceOrder ? _placeOrder : null,
+                    onPressed:
+                        checkout.isPlacingOrder ||
+                            checkout.isResolvingOrderOptions
+                        ? null
+                        : _placeOrder,
                   ),
                 ),
               ),
@@ -226,93 +342,39 @@ class _PlanSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selection = checkout.selection!;
-    final schedule = checkout.schedule!;
+
     final price = selection.pricingOption;
-    final date = DateFormat('dd MMM');
     return Container(
       key: const ValueKey('planSummaryCard'),
-      clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.darkGreen.withValues(alpha: .1)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.darkGreen.withValues(alpha: .06),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            color: AppColors.emeraldGreen,
-            child: Row(
-              children: [
-                const Text(
-                  'PLAN TOTAL',
-                  style: TextStyle(
-                    color: Color(0xFFD9F0E6),
-                    fontSize: 11,
-                    letterSpacing: 1,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '${formatMealPlanPriceAmount(selection.totalPrice, locale)} ${price.currencyCode}',
-                  key: const ValueKey('summaryPlanTotal'),
-                  style: const TextStyle(
-                    color: AppColors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
+          Text(
+            selection.mealPlan.name,
+            style: const TextStyle(
+              color: AppColors.darkGreen,
+              fontWeight: FontWeight.w800,
+              fontSize: 20,
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _SummaryItem(label: 'PLAN', value: selection.mealPlan.name),
-                if (price.hasDiscount) PackageDiscountDetails(package: price),
-                _SummaryItem(
-                  label: 'MEALS',
-                  value: checkout.selectedMeals.isEmpty
-                      ? selection.mealCombination.name
-                      : checkout.selectedMeals
-                            .map(
-                              (meal) =>
-                                  '${meal.displayName} x ${meal.quantity}',
-                            )
-                            .join('\n'),
-                ),
-                _SummaryItem(
-                  label: 'DELIVERY DAYS',
-                  value: '${selection.deliveriesPerWeek} Days / Week',
-                ),
-                _SummaryItem(
-                  label: 'DAYS',
-                  value: selection.deliveryWeekdays
-                      .map(_weekdayLabel)
-                      .join(', '),
-                ),
-                _SummaryItem(
-                  label: 'DURATION',
-                  value: selection.pricingOption.name,
-                ),
-                _SummaryItem(
-                  label: 'PLAN PERIOD',
-                  value:
-                      '${date.format(schedule.startDate)} - ${date.format(schedule.endDate)}',
-                  isLast: true,
-                ),
-              ],
+          const SizedBox(height: 6),
+          Text(
+            selection.mealCombination.name,
+            style: const TextStyle(
+              color: AppColors.darkGreen,
+              fontWeight: FontWeight.w600,
             ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${price.name} · ${selection.serviceDays} service days',
+            style: TextStyle(color: AppColors.darkGreen.withValues(alpha: .7)),
           ),
         ],
       ),
@@ -333,7 +395,7 @@ class _SummaryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: EdgeInsets.only(bottom: isLast ? 0 : 17),
+    padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -596,14 +658,3 @@ class _MissingCheckout extends StatelessWidget {
     ),
   );
 }
-
-String _weekdayLabel(int weekday) => switch (weekday) {
-  DateTime.monday => 'Mon',
-  DateTime.tuesday => 'Tue',
-  DateTime.wednesday => 'Wed',
-  DateTime.thursday => 'Thu',
-  DateTime.friday => 'Fri',
-  DateTime.saturday => 'Sat',
-  DateTime.sunday => 'Sun',
-  _ => '',
-};
