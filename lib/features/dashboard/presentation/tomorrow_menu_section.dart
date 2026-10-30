@@ -1,3 +1,4 @@
+import 'package:diet_time/features/plans/domain/meal_entitlement.dart';
 import 'dart:async';
 
 import 'package:diet_time/app/theme/app_colors.dart';
@@ -446,7 +447,10 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
             if (fullSelection && menu.orderStatus != null)
               Text('Order status: ${menu.orderStatus!.replaceAll('_', ' ')}'),
             Text(
-              '${menu.mealCount} Meals + ${menu.snackCount} Snack${menu.snackCount == 1 ? '' : 's'}',
+              MealEntitlement(
+                menu.mealCount,
+                menu.snackCount,
+              ).label(Localizations.localeOf(context).languageCode),
             ),
             const SizedBox(height: 12),
             if (menu.status == 'NOT_STARTED' &&

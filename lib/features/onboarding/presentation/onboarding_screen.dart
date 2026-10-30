@@ -1,3 +1,4 @@
+import 'package:diet_time/core/widgets/bmi_overview.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -2202,8 +2203,7 @@ class _BmiSummaryStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bmi = draft.bmi ?? _bmiFromMeasurements(draft) ?? 0;
-    final marker = ((bmi.clamp(14, 40) - 14) / 26).toDouble();
-    final category = bmi <= 0
+    final calculatedCategory = bmi <= 0
         ? _wellnessCopy(context, 'Pending', 'قيد الحساب')
         : draft.age < 18
         ? l10n.bmiYouthNote
@@ -2214,6 +2214,15 @@ class _BmiSummaryStep extends StatelessWidget {
         : bmi < 30
         ? l10n.bmiAboveRange
         : l10n.bmiWellAboveRange;
+    final category = draft.age < 18
+        ? l10n.bmiYouthNote
+        : switch (draft.bmiCategoryCode) {
+            'UNDERWEIGHT' => l10n.bmiBelowRange,
+            'NORMAL' => l10n.bmiWithinRange,
+            'OVERWEIGHT' => l10n.bmiAboveRange,
+            'OBESE' => l10n.bmiWellAboveRange,
+            _ => calculatedCategory,
+          };
     final language = Localizations.localeOf(context).languageCode;
     final goal = personalizationOptionLabel(
       goalLabels,
@@ -2262,84 +2271,12 @@ class _BmiSummaryStep extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 18),
-              Container(
-                key: const ValueKey('bmiRange'),
-                height: 170,
-                padding: const EdgeInsets.fromLTRB(14, 15, 12, 15),
-                decoration: _wellnessCardDecoration(),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(
-                      width: 103,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _wellnessCopy(
-                              context,
-                              'Your BMI',
-                              'مؤشر كتلة جسمك',
-                            ),
-                            style: TextStyle(
-                              color: AppColors.darkGreen.withValues(alpha: .62),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            bmi.toStringAsFixed(1),
-                            key: const ValueKey('bmiValue'),
-                            textDirection: TextDirection.ltr,
-                            style: const TextStyle(
-                              color: AppColors.darkGreen,
-                              fontSize: 34,
-                              height: 1,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE4F4E5),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              category,
-                              maxLines: 2,
-                              style: const TextStyle(
-                                color: AppColors.emeraldGreen,
-                                fontSize: 9,
-                                height: 1.05,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      width: 1.5,
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 11,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFBFD8CB),
-                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                      ),
-                    ),
-                    Expanded(
-                      child: _BmiScale(marker: marker, bmi: bmi),
-                    ),
-                  ],
-                ),
+              BmiOverview(
+                bmi: bmi > 0 ? bmi : null,
+                age: DateTime.tryParse(draft.dateOfBirth ?? '') == null
+                    ? null
+                    : draft.age,
+                category: category,
               ),
               const SizedBox(height: 12),
               Row(
@@ -2373,7 +2310,11 @@ class _BmiSummaryStep extends StatelessWidget {
                       icon: Icons.local_fire_department_outlined,
                       label: l10n.caloriesLabel,
                       value: calorieTarget == null
-                          ? '—'
+                          ? _wellnessCopy(
+                              context,
+                              'Not calculated yet',
+                              'لم يُحسب بعد',
+                            )
                           : l10n.dailyCalories(calorieTarget),
                     ),
                   ),
@@ -2381,9 +2322,17 @@ class _BmiSummaryStep extends StatelessWidget {
                   Expanded(
                     child: _WellnessTile(
                       icon: Icons.fitness_center_rounded,
-                      label: '${l10n.proteinLabel} Target',
+                      label: _wellnessCopy(
+                        context,
+                        'Protein target',
+                        'البروتين المستهدف',
+                      ),
                       value: proteinTarget == null
-                          ? '—'
+                          ? _wellnessCopy(
+                              context,
+                              'Not calculated yet',
+                              'لم يُحسب بعد',
+                            )
                           : '$proteinTarget g/day',
                     ),
                   ),
@@ -2511,133 +2460,6 @@ class _WellnessSuccessBadge extends StatelessWidget {
   }
 }
 
-class _BmiScale extends StatelessWidget {
-  const _BmiScale({required this.marker, required this.bmi});
-
-  final double marker;
-  final double bmi;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final availableWidth = constraints.maxWidth;
-        const markerWidth = 44.0;
-        final markerLeft =
-            (marker.clamp(0.0, 1.0) * availableWidth - markerWidth / 2)
-                .clamp(0.0, math.max(0.0, availableWidth - markerWidth))
-                .toDouble();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              _wellnessCopy(context, 'BMI Scale', 'مقياس كتلة الجسم'),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.darkGreen.withValues(alpha: .62),
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 7),
-            SizedBox(
-              width: double.infinity,
-              height: 49,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 3,
-                    height: 11,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                      child: const Row(
-                        children: [
-                          Expanded(child: ColoredBox(color: Color(0xFF8EDCF0))),
-                          Expanded(child: ColoredBox(color: Color(0xFF9BCB37))),
-                          Expanded(child: ColoredBox(color: Color(0xFFFFCD3C))),
-                          Expanded(child: ColoredBox(color: Color(0xFFFF5F42))),
-                        ],
-                      ),
-                    ),
-                  ),
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 360),
-                    curve: Curves.easeOutCubic,
-                    left: markerLeft,
-                    top: 0,
-                    child: SizedBox(
-                      key: const ValueKey('bmiScaleMarker'),
-                      width: markerWidth,
-                      child: Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.emeraldGreen,
-                              borderRadius: BorderRadius.circular(
-                                AppRadius.pill,
-                              ),
-                              boxShadow: _cardShadow(.12),
-                            ),
-                            child: Text(
-                              bmi.toStringAsFixed(1),
-                              textDirection: TextDirection.ltr,
-                              style: const TextStyle(
-                                color: AppColors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            width: 2,
-                            height: 7,
-                            color: AppColors.emeraldGreen,
-                          ),
-                          Container(
-                            key: const ValueKey('bmiScaleIndicatorDot'),
-                            width: 17,
-                            height: 17,
-                            decoration: BoxDecoration(
-                              color: AppColors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.emeraldGreen,
-                                width: 4,
-                              ),
-                              boxShadow: _cardShadow(.18),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Row(
-              textDirection: TextDirection.ltr,
-              children: [
-                Expanded(child: _ScaleLabel('Under', '<18.5')),
-                Expanded(child: _ScaleLabel('Normal', '18.5–24.9')),
-                Expanded(child: _ScaleLabel('Over', '25–29.9')),
-                Expanded(child: _ScaleLabel('Obese', '30+')),
-              ],
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
 double? _bmiFromMeasurements(CustomerProfile profile) {
   final heightCm = profile.heightCm;
   final weightKg = profile.weightKg;
@@ -2646,27 +2468,6 @@ double? _bmiFromMeasurements(CustomerProfile profile) {
   }
   final heightM = heightCm / 100;
   return weightKg / (heightM * heightM);
-}
-
-class _ScaleLabel extends StatelessWidget {
-  const _ScaleLabel(this.label, this.range);
-
-  final String label;
-  final String range;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      '$label\n$range',
-      textAlign: TextAlign.center,
-      style: const TextStyle(
-        color: AppColors.darkGreen,
-        fontSize: 6.8,
-        height: 1.25,
-        fontWeight: FontWeight.w700,
-      ),
-    );
-  }
 }
 
 class _WellnessTile extends StatelessWidget {
@@ -2683,7 +2484,7 @@ class _WellnessTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 82,
+      constraints: const BoxConstraints(minHeight: 94),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: _wellnessCardDecoration(),
       child: Row(

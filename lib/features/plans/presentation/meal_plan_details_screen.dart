@@ -110,7 +110,9 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
                                 const SizedBox(width: 10),
                               PackageSelectionCard(
                                 key: ValueKey('configuration-${item.id}'),
-                                name: item.name,
+                                name: item.displayName(
+                                  Localizations.localeOf(context).languageCode,
+                                ),
                                 description: item.description,
                                 package:
                                     item.packages
@@ -250,7 +252,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
               ? PackageDiscountDetails(package: package)
               : null,
           selection:
-              '${configuration.name} · ${package.name} · ${_serviceDaysLabel(context, package.serviceDays)}',
+              '${configuration.displayName(Localizations.localeOf(context).languageCode)} · ${package.name} · ${_serviceDaysLabel(context, package.serviceDays)}',
           total: package.isValid
               ? '${package.currencyCode} ${_amount(context, package.totalPrice)}'
               : Directionality.of(context) == TextDirection.rtl

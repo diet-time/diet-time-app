@@ -172,6 +172,8 @@ class CheckoutController extends Notifier<CheckoutState> {
       final authoritativePackage = matchingPackages.first;
       final authoritativeConfiguration = MealPlanConfiguration(
         id: configuration.id,
+        mealCount: configuration.mealCount,
+        snackCount: configuration.snackCount,
         name: configuration.name,
         description: configuration.description,
         packages: configuration.packages,

@@ -58,24 +58,31 @@ class SubscriptionSelectionCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  selected ? Icons.check_circle : Icons.circle_outlined,
-                  size: 18,
-                  color: selected
-                      ? AppColors.emeraldGreen
-                      : AppColors.darkGreen.withValues(alpha: .25),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.darkGreen,
-                    fontSize: 15,
-                    height: 1.25,
-                    fontWeight: FontWeight.w700,
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.darkGreen,
+                          fontSize: 15,
+                          height: 1.25,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      selected ? Icons.check_circle : Icons.circle_outlined,
+                      size: 17,
+                      color: selected
+                          ? AppColors.emeraldGreen
+                          : const Color(0xFF9CAA99),
+                    ),
+                  ],
                 ),
                 if (subtitle?.isNotEmpty == true) ...[
                   const SizedBox(height: 5),

@@ -1,4 +1,4 @@
-import 'package:diet_time/app/theme/app_colors.dart';
+import 'package:go_router/go_router.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
@@ -53,6 +53,102 @@ void main() {
     expect(find.byKey(const ValueKey('openMealPlans')), findsOneWidget);
   });
 
+  testWidgets('selected plan is retained when returning from details', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      initialLocation: '/plans',
+      routes: [
+        GoRoute(path: '/plans', builder: (_, _) => const MealPlanScreen()),
+        GoRoute(
+          path: '/plan-details',
+          builder: (context, state) => Scaffold(
+            appBar: AppBar(
+              leading: IconButton(
+                key: const ValueKey('returnToPlans'),
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              ),
+            ),
+            body: Text((state.extra as MealPlanOption).code),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mealPlansProvider.overrideWith((ref, language) async => _pricedPlans),
+        ],
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('High Protein').hitTestable(),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('High Protein'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('HIGH_PROTEIN'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('returnToPlans')));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('mealPlan-HIGH_PROTEIN')),
+        matching: find.byKey(const ValueKey('selected')),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('plan cards fit a small phone at text scale $scale', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            mealPlansProvider.overrideWith(
+              (ref, language) async => _pricedPlans,
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (_, child) => MediaQuery(
+              data: MediaQueryData(
+                size: const Size(320, 568),
+                textScaler: TextScaler.linear(scale),
+              ),
+              child: child!,
+            ),
+            home: const MealPlanScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('High Protein').hitTestable(),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   test('one-day package amount is used directly', () {
     final plan = _planFromPrice(
       startingPrice: 55,
@@ -104,31 +200,35 @@ void main() {
     expect(formatMealPlanPriceAmount(41.5, 'en'), '41.50');
   });
 
-  testWidgets('cards show API currency and daily price and still select', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_app(plans: _pricedPlans));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'cards omit daily pricing and calories while retaining plan selection',
+    (tester) async {
+      await tester.pumpWidget(_app(plans: _pricedPlans));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Classic'), findsOneWidget);
-    expect(find.text('High Protein'), findsOneWidget);
-    expect(find.text('1840 kcal / day'), findsOneWidget);
-    expect(find.text('QAR 50 / day'), findsOneWidget);
-    expect(find.text('BHD 41.50 / day'), findsOneWidget);
+      expect(find.text('Classic'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('High Protein').hitTestable(),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('High Protein'), findsOneWidget);
+      expect(find.textContaining('kcal'), findsNothing);
+      expect(find.textContaining('/ day'), findsNothing);
+      expect(find.textContaining('QAR'), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('mealPlan-HIGH_PROTEIN')));
-    await tester.pump(const Duration(milliseconds: 250));
+      await tester.tap(find.text('High Protein'));
+      await tester.pump(const Duration(milliseconds: 250));
 
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('mealPlan-HIGH_PROTEIN')),
-        matching: find.byKey(const ValueKey('selected')),
-      ),
-      findsOneWidget,
-    );
-    final priceText = tester.widget<Text>(find.text('BHD 41.50 / day'));
-    expect(priceText.style?.color, AppColors.emeraldGreen);
-  });
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('mealPlan-HIGH_PROTEIN')),
+          matching: find.byKey(const ValueKey('selected')),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('unavailable pricing is muted and never displays zero', (
     tester,
@@ -147,7 +247,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Daily price unavailable'), findsOneWidget);
+    expect(find.text('Daily price unavailable'), findsNothing);
     expect(find.textContaining('0 / day'), findsNothing);
     expect(find.text('No Price Plan'), findsOneWidget);
   });
@@ -173,7 +273,7 @@ void main() {
       expect(find.text('Visible Plan'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('mealPlanPriceLoading-LOADING')),
-        findsOneWidget,
+        findsNothing,
       );
       expect(find.byType(CircularProgressIndicator), findsNothing);
     },
@@ -191,13 +291,8 @@ void main() {
       Directionality.of(tester.element(find.byType(MealPlanScreen))),
       TextDirection.rtl,
     );
-    final price = find.byKey(const ValueKey('mealPlanDailyPrice-CLASSIC'));
-    final priceText = tester.widget<Text>(
-      find.descendant(of: price, matching: find.byType(Text)),
-    );
-    expect(priceText.data, contains('QAR'));
-    expect(priceText.data, contains('/ يوم'));
-    expect(priceText.textDirection, TextDirection.ltr);
+    expect(find.textContaining('QAR'), findsNothing);
+    expect(find.text('Classic'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

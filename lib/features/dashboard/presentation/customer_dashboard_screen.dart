@@ -565,9 +565,9 @@ class _ReferencePlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
-    final package = detail?.meals
-        .map((meal) => '${meal.name} × ${meal.quantity}')
-        .join(' · ');
+    final package = (detail?.entitlement ?? summary.entitlement)?.label(
+      Localizations.localeOf(context).languageCode,
+    );
     return Container(
       key: ValueKey('activePlan-${summary.id}'),
       height: _activePlanCardHeight(context),
@@ -596,7 +596,7 @@ class _ReferencePlanCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${package?.isNotEmpty == true ? package! : summary.planDurationName} · ${summary.fulfillmentLabel}',
+            '${package?.isNotEmpty == true ? package! : summary.planDurationName} · ${summary.fulfillmentSummary}',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: Color(0xFFD7E7E1), fontSize: 11),
@@ -715,9 +715,9 @@ class _PlanHeroCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      detail.meals
-                          .map((meal) => '${meal.name} x ${meal.quantity}')
-                          .join(' · '),
+                      detail.entitlement.label(
+                        Localizations.localeOf(context).languageCode,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -746,7 +746,7 @@ class _PlanHeroCard extends StatelessWidget {
                   icon: Icons.calendar_month_outlined,
                   value: _period(summary.startDate, summary.endDate),
                   caption:
-                      '${summary.planDurationName} · ${summary.fulfillmentLabel}',
+                      '${summary.planDurationName} · ${summary.fulfillmentSummary}',
                 ),
               ),
               Container(
@@ -1022,9 +1022,9 @@ class _CompactPlanCard extends StatelessWidget {
           Text(
             meals.isEmpty
                 ? summary.planDurationName
-                : meals
-                      .map((meal) => '${meal.name} x ${meal.quantity}')
-                      .join(' · '),
+                : detail!.entitlement.label(
+                    Localizations.localeOf(context).languageCode,
+                  ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -1047,7 +1047,7 @@ class _CompactPlanCard extends StatelessWidget {
                   icon: Icons.calendar_month_outlined,
                   value: _period(summary.startDate, summary.endDate),
                   caption:
-                      '${summary.planDurationName} · ${summary.fulfillmentLabel}',
+                      '${summary.planDurationName} · ${summary.fulfillmentSummary}',
                 ),
               ),
               const SizedBox(width: 10),
@@ -1556,9 +1556,8 @@ class _DetailedOrderCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(orderDetailsProvider(order.id)).value;
     final delivery = detail?.delivery;
-    final mealsPerDay = detail?.meals.fold<int>(
-      0,
-      (total, meal) => total + meal.quantity,
+    final mealSummary = (detail?.entitlement ?? order.entitlement)?.label(
+      Localizations.localeOf(context).languageCode,
     );
     return InkWell(
       key: ValueKey('detailedOrder-${order.id}'),
@@ -1637,7 +1636,7 @@ class _DetailedOrderCard extends ConsumerWidget {
                 const Icon(Icons.more_horiz_rounded, size: 18),
               ],
             ),
-            if (delivery != null || mealsPerDay != null) ...[
+            if (delivery != null || mealSummary != null) ...[
               const SizedBox(height: 12),
               Wrap(
                 spacing: 14,
@@ -1648,10 +1647,10 @@ class _DetailedOrderCard extends ConsumerWidget {
                       icon: Icons.calendar_today_outlined,
                       text: '${delivery.daysPerWeek} Days / Week',
                     ),
-                  if (mealsPerDay != null)
+                  if (mealSummary != null)
                     _OrderFact(
                       icon: Icons.restaurant_outlined,
-                      text: '$mealsPerDay Meals / Day',
+                      text: mealSummary,
                     ),
                 ],
               ),

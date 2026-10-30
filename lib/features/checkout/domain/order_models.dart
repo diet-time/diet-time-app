@@ -1,3 +1,4 @@
+import 'package:diet_time/features/plans/domain/meal_entitlement.dart';
 import 'takeaway_branch.dart';
 
 class PlaceOrderMealRequest {
@@ -98,6 +99,8 @@ class CustomerOrderSummary {
     required this.placedAt,
     this.fulfillmentMethod = 'HOME_DELIVERY',
     this.takeawayBranch,
+    this.mealCount,
+    this.snackCount,
   });
 
   factory CustomerOrderSummary.fromJson(Map<String, dynamic> json) =>
@@ -115,6 +118,8 @@ class CustomerOrderSummary {
         startDate: _dateTime(json['startDate']),
         endDate: _dateTime(json['endDate']),
         placedAt: _dateTime(json['placedAt']),
+        mealCount: _integer(json['mealCount']),
+        snackCount: _integer(json['snackCount']),
         takeawayBranch: json['takeawayBranch'] is Map
             ? TakeawayBranch.fromJson(_map(json['takeawayBranch']))
             : null,
@@ -134,10 +139,17 @@ class CustomerOrderSummary {
   final DateTime? startDate;
   final DateTime? endDate;
   final DateTime? placedAt;
+  final int? mealCount;
+  final int? snackCount;
   final TakeawayBranch? takeawayBranch;
   final String fulfillmentMethod;
+  MealEntitlement? get entitlement =>
+      mealCount == null ? null : MealEntitlement(mealCount!, snackCount ?? 0);
   bool get isTakeaway => fulfillmentMethod == 'TAKEAWAY';
   String get fulfillmentLabel => isTakeaway ? 'Takeaway' : 'Home Delivery';
+  String get fulfillmentSummary => isTakeaway && takeawayBranch != null
+      ? 'Takeaway · ${takeawayBranch!.name}'
+      : fulfillmentLabel;
 
   bool get isValid => id.isNotEmpty && orderNumber.isNotEmpty;
   bool get isCurrent => const {
@@ -214,6 +226,8 @@ class OrderConfirmation {
     required this.placedAt,
     this.fulfillmentMethod = 'HOME_DELIVERY',
     this.takeawayBranch,
+    this.mealCount,
+    this.snackCount,
   });
 
   factory OrderConfirmation.fromJson(Map<String, dynamic> json) =>
@@ -229,6 +243,8 @@ class OrderConfirmation {
         delivery: OrderDelivery.fromJson(_map(json['delivery'])),
         pricing: OrderPricing.fromJson(_map(json['pricing'])),
         placedAt: _dateTime(json['placedAt']),
+        mealCount: _integer(json['mealCount']),
+        snackCount: _integer(json['snackCount']),
         takeawayBranch: json['takeawayBranch'] is Map
             ? TakeawayBranch.fromJson(_map(json['takeawayBranch']))
             : null,
@@ -246,10 +262,20 @@ class OrderConfirmation {
   final OrderDelivery delivery;
   final OrderPricing pricing;
   final DateTime? placedAt;
+  final int? mealCount;
+  final int? snackCount;
   final TakeawayBranch? takeawayBranch;
   final String fulfillmentMethod;
+  MealEntitlement get entitlement => mealCount == null
+      ? MealEntitlement.fromRows(
+          meals.map((m) => (name: m.name, quantity: m.quantity)),
+        )
+      : MealEntitlement(mealCount!, snackCount ?? 0);
   bool get isTakeaway => fulfillmentMethod == 'TAKEAWAY';
   String get fulfillmentLabel => isTakeaway ? 'Takeaway' : 'Home Delivery';
+  String get fulfillmentSummary => isTakeaway && takeawayBranch != null
+      ? 'Takeaway · ${takeawayBranch!.name}'
+      : fulfillmentLabel;
 
   bool get isValid => id.isNotEmpty && orderNumber.isNotEmpty;
 }

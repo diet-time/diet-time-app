@@ -308,7 +308,7 @@ void main() {
       final bmiCardRect = tester.getRect(
         find.byKey(const ValueKey('bmiRange')),
       );
-      expect(indicatorRect.size, const Size(17, 17));
+      expect(indicatorRect.size, const Size(22, 22));
       expect(bmiCardRect.overlaps(indicatorRect), isTrue);
       expect(find.text('24.2'), findsWidgets);
       await _continue(tester);

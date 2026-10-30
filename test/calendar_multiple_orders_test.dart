@@ -234,18 +234,8 @@ void main() {
         ),
         findsOneWidget,
       );
-      final indicator = tester.widget<AnimatedContainer>(
-        find.descendant(
-          of: find.byKey(
-            ValueKey('deliveryDate-${repository.date.toIso8601String()}'),
-          ),
-          matching: find.byType(AnimatedContainer),
-        ),
-      );
-      expect(
-        (indicator.decoration as BoxDecoration).color,
-        const Color(0xFF71867E),
-      );
+      expect(find.byType(Badge), findsNothing);
+      expect(find.byIcon(Icons.layers_outlined), findsWidgets);
       expect(find.textContaining('4 Meals + 1 Snack'), findsWidgets);
       expect(repository.dayRequests, containsAll(['a', 'b']));
       expect(repository.dayRequests, isNot(contains('c')));
@@ -288,7 +278,7 @@ void main() {
       ]);
       expect(find.text('October 2026'), findsOneWidget);
       expect(find.text('2 scheduled deliveries'), findsOneWidget);
-      expect(find.textContaining('DELIVERED'), findsOneWidget);
+      expect(find.textContaining('Delivered'), findsWidgets);
       await tester.scrollUntilVisible(
         find.text('Meal b-5'),
         350,

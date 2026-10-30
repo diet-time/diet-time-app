@@ -133,6 +133,12 @@ class _ConfirmationCard extends StatelessWidget {
           _Detail(label: 'ORDER NUMBER', value: confirmation.orderNumber),
           _Detail(label: 'PLAN', value: confirmation.plan.name),
           _Detail(
+            label: 'PACKAGE',
+            value: confirmation.entitlement.label(
+              Localizations.localeOf(context).languageCode,
+            ),
+          ),
+          _Detail(
             label: 'FULFILLMENT',
             value:
                 confirmation.isTakeaway && confirmation.takeawayBranch != null

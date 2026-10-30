@@ -3,7 +3,6 @@ import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/meal_plan_image.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
-import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -96,7 +95,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                         l10n.choosePlanTitle,
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(
-                              fontSize: 34,
+                              fontSize: 28,
                               height: 1.05,
                               fontWeight: FontWeight.w900,
                               letterSpacing: -1.05,
@@ -137,7 +136,8 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
             child: SizedBox(
-              height: 47,
+              width: double.infinity,
+              height: 50,
               child: FilledButton(
                 onPressed: () =>
                     context.push(AppRoutes.planDetails, extra: selectedPlan),
@@ -170,305 +170,114 @@ class _PlanCard extends StatelessWidget {
     required this.selected,
     required this.onTap,
   });
-
   final MealPlanOption plan;
   final bool selected;
   final VoidCallback onTap;
-
   @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: AppLocalizations.of(context).selectMealPlanSemantics(plan.name),
-      child: InkWell(
-        key: ValueKey('mealPlan-${plan.code}'),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(15),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 240),
-          curve: Curves.easeOut,
-          height: 153,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFFF1F7ED) : AppColors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(
-              color: selected
-                  ? AppColors.emeraldGreen
-                  : AppColors.darkGreen.withValues(alpha: .08),
-              width: selected ? 1.4 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.darkGreen.withValues(alpha: .09),
-                blurRadius: 12,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              PositionedDirectional(
-                top: 0,
-                bottom: 0,
-                end: 0,
-                width: 210,
-                child: _PlanImage(imageUrl: plan.imageUrl),
-              ),
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(13, 17, 10, 11),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 1),
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          child: selected
-                              ? const Icon(
-                                  Icons.check_circle_rounded,
-                                  key: ValueKey('selected'),
-                                  color: AppColors.emeraldGreen,
-                                  size: 22,
-                                )
-                              : Icon(
-                                  Icons.circle_outlined,
-                                  key: const ValueKey('unselected'),
-                                  color: AppColors.darkGreen.withValues(
-                                    alpha: .22,
-                                  ),
-                                  size: 22,
-                                ),
-                        ),
-                      ),
-                      const SizedBox(width: 18),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              plan.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: AppColors.darkGreen,
-                                fontSize: 16,
-                                height: 1.15,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            if (plan.description case final description?) ...[
-                              const SizedBox(height: 6),
-                              SizedBox(
-                                width: 180,
-                                child: Text(
-                                  description,
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: AppColors.darkGreen.withValues(
-                                      alpha: .58,
-                                    ),
-                                    fontSize: 10.5,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ),
-                            ],
-                            const Spacer(),
-                            SizedBox(
-                              width: 190,
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: _Detail(
-                                      icon:
-                                          Icons.local_fire_department_outlined,
-                                      label: _calorieLabel(
-                                        context,
-                                        plan.dailyCaloriesKcal,
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 1,
-                                    height: 31,
-                                    margin: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                    ),
-                                    color: AppColors.darkGreen.withValues(
-                                      alpha: .14,
-                                    ),
-                                  ),
-                                  Expanded(child: _PlanPriceDetail(plan: plan)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    label: AppLocalizations.of(context).selectMealPlanSemantics(plan.name),
+    child: Material(
+      key: ValueKey('mealPlan-${plan.code}'),
+      color: Colors.white,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: selected ? AppColors.emeraldGreen : const Color(0xFFDDE3D8),
+          width: selected ? 1.8 : 1,
         ),
       ),
-    );
-  }
-
-  String _calorieLabel(BuildContext context, double? calories) =>
-      calories == null
-      ? 'Calories unavailable'
-      : AppLocalizations.of(context).dailyCalories(calories.round());
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AspectRatio(
+              aspectRatio: 2.2,
+              child: _PlanImage(imageUrl: plan.imageUrl),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          plan.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.darkGreen,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        if (plan.description?.trim().isNotEmpty == true) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            plan.description!,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF54665B),
+                              fontSize: 13,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(
+                    selected ? Icons.check_circle : Icons.circle_outlined,
+                    key: selected
+                        ? const ValueKey('selected')
+                        : const ValueKey('unselected'),
+                    color: selected
+                        ? AppColors.emeraldGreen
+                        : const Color(0xFF8B9A8B),
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _PlanImage extends StatelessWidget {
   const _PlanImage({this.imageUrl});
-
   final String? imageUrl;
-
   @override
   Widget build(BuildContext context) {
-    final image = _resolveImageUrl(imageUrl);
-    return ShaderMask(
-      blendMode: BlendMode.dstIn,
-      shaderCallback: (bounds) => const LinearGradient(
-        begin: AlignmentDirectional.centerStart,
-        end: AlignmentDirectional.centerEnd,
-        colors: [Colors.transparent, Colors.black, Colors.black],
-        stops: [0, .28, 1],
-      ).createShader(bounds, textDirection: Directionality.of(context)),
-      child: image.isEmpty
-          ? const _ImagePlaceholder()
-          : Image.network(
-              image,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => const _ImagePlaceholder(),
-            ),
-    );
-  }
-}
-
-class _ImagePlaceholder extends StatelessWidget {
-  const _ImagePlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: Color(0xFFE9F1E8),
+    final url = _resolveImageUrl(imageUrl);
+    const placeholder = ColoredBox(
+      color: Color(0xFFEAF0E3),
       child: Center(
         child: Icon(
           Icons.restaurant_rounded,
+          size: 40,
           color: AppColors.emeraldGreen,
-          size: 34,
         ),
       ),
     );
-  }
-}
-
-class _Detail extends StatelessWidget {
-  const _Detail({
-    required this.icon,
-    required this.label,
-    this.muted = false,
-    this.forceLtr = false,
-    super.key,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool muted;
-  final bool forceLtr;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          icon,
-          size: 17,
-          color: muted
-              ? AppColors.darkGreen.withValues(alpha: .42)
-              : AppColors.emeraldGreen,
-        ),
-        const SizedBox(width: 7),
-        Flexible(
-          child: Text(
-            label,
-            textDirection: forceLtr ? TextDirection.ltr : null,
-            maxLines: 2,
-            style: TextStyle(
-              color: muted
-                  ? AppColors.darkGreen.withValues(alpha: .52)
-                  : AppColors.emeraldGreen,
-              fontSize: 9.5,
-              height: 1.25,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PlanPriceDetail extends StatelessWidget {
-  const _PlanPriceDetail({required this.plan});
-
-  final MealPlanOption plan;
-
-  @override
-  Widget build(BuildContext context) {
-    if (plan.isPriceLoading) {
-      return Row(
-        key: ValueKey('mealPlanPriceLoading-${plan.code}'),
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.payments_outlined,
-            size: 14,
-            color: AppColors.emeraldGreen,
-          ),
-          const SizedBox(width: 4),
-          Container(
-            width: 48,
-            height: 11,
-            decoration: BoxDecoration(
-              color: AppColors.darkGreen.withValues(alpha: .10),
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ],
-      );
-    }
-
-    final l10n = AppLocalizations.of(context);
-    final price = plan.dailyPrice;
-    final currency = plan.currencyCode;
-    final hasPrice = plan.hasActivePrice && price != null && currency != null;
-    final label = hasPrice
-        ? l10n.dailyPlanPrice(
-            currency,
-            formatMealPlanPriceAmount(
-              price,
-              Localizations.localeOf(context).toLanguageTag(),
-            ),
-          )
-        : l10n.dailyPriceUnavailable;
-    return _Detail(
-      key: ValueKey('mealPlanDailyPrice-${plan.code}'),
-      icon: Icons.payments_outlined,
-      label: label,
-      muted: !hasPrice,
-      forceLtr: hasPrice,
-    );
+    return url.isEmpty
+        ? placeholder
+        : Image.network(
+            url,
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
+            errorBuilder: (_, _, _) => placeholder,
+          );
   }
 }
 

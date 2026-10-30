@@ -168,6 +168,8 @@ List<MealPlanConfiguration> parseMealPlanConfigurations(
         final snacks = _integer(first['snacksPerDay']) ?? 0;
         return MealPlanConfiguration(
           id: entry.key,
+          mealCount: meals,
+          snackCount: snacks,
           name: _configurationName(
             meals: meals,
             snacks: snacks,

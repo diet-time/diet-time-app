@@ -1,3 +1,5 @@
+import 'package:diet_time/features/plans/domain/meal_entitlement.dart';
+import 'service_date_cell.dart';
 import 'package:diet_time/features/dashboard/domain/calendar_delivery.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
@@ -166,7 +168,7 @@ class _UpcomingDeliveriesScreenState
         const SizedBox(height: 12),
         if (_selectedDate case final date?) ...[
           Text(
-            'Delivery for ${DateFormat('EEE, d MMM').format(date)}',
+            'Meals for ${DateFormat('EEE, d MMM').format(date)}',
             key: const ValueKey('selectedDeliveryTitle'),
             style: const TextStyle(
               color: AppColors.darkGreen,
@@ -271,16 +273,71 @@ class _UpcomingDeliveriesScreenState
               child: ExpansionTile(
                 key: PageStorageKey('calendar-${order.id}-${day.id}'),
                 initiallyExpanded: true,
-                title: Text('${order.orderNumber} · ${order.plan.name}'),
-                subtitle: Text(
-                  [
+                title: Text(
+                  order.plan.name,
+                  style: const TextStyle(
+                    color: AppColors.darkGreen,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 17,
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
                     if (day.mealCount != null)
-                      '${day.mealCount} Meals + ${day.snackCount ?? 0} ${day.snackCount == 1 ? 'Snack' : 'Snacks'}',
-                    mealDayStatusLabel(day.status),
-                    day.selectionStatus?.replaceAll('_', ' ') ??
-                        (day.selectionLocked ? 'Locked' : 'Selection pending'),
-                    day.deliveryStatus,
-                  ].join(' · '),
+                      Text(
+                        MealEntitlement(
+                          day.mealCount!,
+                          day.snackCount ?? 0,
+                        ).label(Localizations.localeOf(context).languageCode),
+                        style: const TextStyle(
+                          color: AppColors.darkGreen,
+                          fontSize: 13,
+                        ),
+                      ),
+                    const SizedBox(height: 4),
+                    Text(
+                      order.orderNumber,
+                      style: const TextStyle(
+                        color: Color(0xFF5E6D60),
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        _StatusChip(
+                          label: mealDayStatusLabel(day.status),
+                          icon: serviceStatusIcon(day.status),
+                        ),
+                        if (day.selectionStatus == 'AUTO_FINALIZED')
+                          const _StatusChip(
+                            label: 'Meals chosen for you',
+                            icon: Icons.auto_awesome_outlined,
+                          ),
+                        if (day.selectionStatus == 'CUSTOMER_CONFIRMED')
+                          const _StatusChip(
+                            label: 'Your choices confirmed',
+                            icon: Icons.check_circle_outline,
+                          ),
+                        if (day.selectionLocked && day.status != 'locked')
+                          const _StatusChip(
+                            label: 'Locked',
+                            icon: Icons.lock_outline_rounded,
+                          ),
+                        if (day.deliveryStatus != 'PLANNED')
+                          _StatusChip(
+                            label: serviceDeliveryLabel(day.deliveryStatus),
+                            icon: day.deliveryStatus == 'DELIVERED'
+                                ? Icons.check_circle_outline
+                                : Icons.local_shipping_outlined,
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
                 children: [
                   Padding(padding: const EdgeInsets.all(12), child: details),
@@ -436,9 +493,15 @@ class _Calendar extends StatelessWidget {
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
-            childAspectRatio: 1.08,
+            mainAxisExtent:
+                64 +
+                (MediaQuery.textScalerOf(context).scale(1) - 1).clamp(
+                      0,
+                      double.infinity,
+                    ) *
+                    32,
           ),
           itemCount: leading + count,
           itemBuilder: (context, index) {
@@ -449,81 +512,19 @@ class _Calendar extends StatelessWidget {
             final count = countForDate(date);
             final selected =
                 selectedDate != null && _sameDay(date, selectedDate!);
-            return Tooltip(
-              message: count > 1
-                  ? '$count scheduled deliveries'
-                  : status == null
-                  ? 'No delivery'
-                  : mealDayStatusLabel(status),
-              child: Semantics(
-                label:
-                    '${DateFormat('d MMMM yyyy').format(date)}${count > 1
-                        ? ', $count scheduled deliveries'
-                        : status == null
-                        ? ''
-                        : ', ${mealDayStatusLabel(status)}'}',
-                selected: selected,
-                child: Center(
-                  child: InkWell(
-                    key: ValueKey('deliveryDate-${date.toIso8601String()}'),
-                    onTap: delivery ? () => onSelect(date) : null,
-                    customBorder: const CircleBorder(),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      width: 36,
-                      height: 36,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: delivery
-                            ? status == 'mixed'
-                                  ? const Color(0xFF71867E)
-                                  : status == 'locked'
-                                  ? const Color(0xFF63776D)
-                                  : status == 'delivered'
-                                  ? const Color(0xFF476A5C)
-                                  : status == 'customized'
-                                  ? const Color(0xFF168176)
-                                  : AppColors.emeraldGreen
-                            : Colors.transparent,
-                        border: selected
-                            ? Border.all(color: AppColors.darkGreen, width: 2)
-                            : null,
-                        boxShadow: selected
-                            ? [
-                                BoxShadow(
-                                  color: AppColors.emeraldGreen.withValues(
-                                    alpha: .24,
-                                  ),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Badge(
-                        isLabelVisible: count > 1,
-                        label: Text(
-                          '$count',
-                          key: ValueKey(
-                            'deliveryCount-${date.toIso8601String()}',
-                          ),
-                        ),
-                        child: Text(
-                          '${date.day}',
-                          style: TextStyle(
-                            color: delivery
-                                ? AppColors.white
-                                : AppColors.darkGreen,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            return ServiceDateCell(
+              date: date,
+              service: delivery,
+              selected: selected,
+              count: count,
+              status: status,
+              label:
+                  '${DateFormat('d MMMM yyyy').format(date)}, ${count > 0
+                      ? '$count scheduled orders'
+                      : delivery
+                      ? 'Service day'
+                      : 'Non-service day'}, ${status == null ? '' : mealDayStatusLabel(status)}',
+              onTap: () => onSelect(date),
             );
           },
         ),
@@ -555,52 +556,37 @@ class _MonthButton extends StatelessWidget {
 
 class _CalendarLegend extends StatelessWidget {
   const _CalendarLegend();
-
   @override
-  Widget build(BuildContext context) => const Wrap(
-    spacing: 24,
-    runSpacing: 8,
-    children: [
-      _LegendItem(color: AppColors.emeraldGreen, label: 'Delivery days'),
-      _LegendItem(color: Color(0xFFE3E3E0), label: 'Non-delivery days'),
-      _LegendItem(
-        color: AppColors.emeraldGreen,
-        label: 'Automatically Selected',
-      ),
-      _LegendItem(color: Color(0xFF168176), label: 'Customized'),
-      _LegendItem(color: Color(0xFF63776D), label: 'Locked'),
-      _LegendItem(color: Color(0xFF476A5C), label: 'Delivered'),
-    ],
-  );
-}
-
-class _LegendItem extends StatelessWidget {
-  const _LegendItem({required this.color, required this.label});
-
-  final Color color;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      _LegendDot(color: color),
-      const SizedBox(width: 6),
-      Flexible(child: Text(label, style: const TextStyle(fontSize: 11))),
-    ],
-  );
-}
-
-class _LegendDot extends StatelessWidget {
-  const _LegendDot({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 10,
-    height: 10,
-    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  Widget build(BuildContext context) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Row(
+      children: [
+        for (final item in const [
+          (Icons.event_outlined, 'Service day'),
+          (Icons.remove, 'Non-service'),
+          (Icons.auto_awesome_outlined, 'Auto-selected'),
+          (Icons.tune_rounded, 'Customized'),
+          (Icons.lock_outline_rounded, 'Locked'),
+          (Icons.check_circle_outline, 'Delivered'),
+        ])
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 16),
+            child: Row(
+              children: [
+                Icon(item.$1, size: 14, color: AppColors.darkGreen),
+                const SizedBox(width: 5),
+                Text(
+                  item.$2,
+                  style: const TextStyle(
+                    color: AppColors.darkGreen,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    ),
   );
 }
 
@@ -612,10 +598,17 @@ class _DeliveryDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (order.isTakeaway) {
-      return const Card(
+      return Card(
         child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('Takeaway — collect from Diet Time'),
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            [
+              'Takeaway',
+              order.takeawayBranch?.name ?? 'Collect from Diet Time',
+              if (order.takeawayBranch?.address?.trim().isNotEmpty == true)
+                order.takeawayBranch!.address!,
+            ].join(' · '),
+          ),
         ),
       );
     }
@@ -744,7 +737,7 @@ class _FridayNotice extends StatelessWidget {
         SizedBox(width: 8),
         Expanded(
           child: Text(
-            'Deliveries run Saturday to Thursday. Friday is a non-delivery day.',
+            'Service runs Saturday to Thursday. Friday is a non-service day.',
             style: TextStyle(
               color: AppColors.jasper,
               fontSize: 10,
@@ -788,3 +781,40 @@ String _addressLine(OrderAddress address) => [
       address.zoneNo.isNotEmpty)
     address.streetLine,
 ].where((value) => value.trim().isNotEmpty).join('\n');
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.label, required this.icon});
+  final String label;
+  final IconData icon;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+    decoration: BoxDecoration(
+      color: const Color(0xFFE9F1E5),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: AppColors.darkGreen),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 11, color: AppColors.darkGreen),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+String serviceDeliveryLabel(String status) => switch (status) {
+  'DELIVERED' => 'Delivered',
+  'PREPARING' => 'Being prepared',
+  'OUT_FOR_DELIVERY' => 'On the way',
+  'CANCELLED' => 'Cancelled',
+  'SKIPPED' => 'Skipped',
+  'CONFIRMED' => 'Scheduled',
+  _ => 'Scheduled',
+};

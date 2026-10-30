@@ -247,16 +247,42 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _SummaryItem(
-                        label: 'ORDER TOTAL',
-                        value:
-                            '${selection.pricingOption.currencyCode} ${formatMealPlanPriceAmount(selection.totalPrice, Localizations.localeOf(context).toLanguageTag())}',
-                        isLast: true,
-                      ),
-                      if (selection.pricingOption.hasDiscount)
-                        PackageDiscountDetails(
-                          package: selection.pricingOption,
+                      Container(
+                        key: const ValueKey('checkoutOrderTotal'),
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE6F1E4),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFCEDFCE)),
                         ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Order Total',
+                              style: TextStyle(
+                                color: AppColors.darkGreen,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${selection.pricingOption.currencyCode} ${formatMealPlanPriceAmount(selection.totalPrice, Localizations.localeOf(context).toLanguageTag())}',
+                              key: const ValueKey('checkoutFinalAmount'),
+                              style: const TextStyle(
+                                color: AppColors.darkGreen,
+                                fontSize: 30,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            if (selection.pricingOption.hasDiscount)
+                              PackageDiscountDetails(
+                                package: selection.pricingOption,
+                              ),
+                          ],
+                        ),
+                      ),
                       if (summaryMessage case final message?) ...[
                         const SizedBox(height: 12),
                         _InlineMessage(
@@ -298,7 +324,7 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                     isLoading:
                         checkout.isPlacingOrder ||
                         checkout.isResolvingOrderOptions,
-                    backgroundColor: AppColors.black,
+                    backgroundColor: AppColors.darkGreen,
                     onPressed:
                         checkout.isPlacingOrder ||
                             checkout.isResolvingOrderOptions
@@ -365,7 +391,9 @@ class _PlanSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            selection.mealCombination.name,
+            selection.mealCombination.entitlementLabel(
+              Localizations.localeOf(context).languageCode,
+            ),
             style: const TextStyle(
               color: AppColors.darkGreen,
               fontWeight: FontWeight.w600,
@@ -380,51 +408,6 @@ class _PlanSummaryCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _SummaryItem extends StatelessWidget {
-  const _SummaryItem({
-    required this.label,
-    required this.value,
-    this.isLast = false,
-  });
-
-  final String label;
-  final String value;
-  final bool isLast;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 112,
-          child: Text(
-            label,
-            style: TextStyle(
-              color: AppColors.darkGreen.withValues(alpha: .52),
-              fontSize: 10,
-              letterSpacing: .7,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.darkGreen,
-              fontSize: 14,
-              height: 1.35,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
 }
 
 class _DeliverySelectionCard extends StatelessWidget {

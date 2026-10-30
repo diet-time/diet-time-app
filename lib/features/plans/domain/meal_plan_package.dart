@@ -1,3 +1,5 @@
+import 'package:diet_time/features/plans/domain/meal_entitlement.dart';
+
 class MealPlanConfiguration {
   const MealPlanConfiguration({
     required this.id,
@@ -5,6 +7,8 @@ class MealPlanConfiguration {
     required this.packages,
     this.description,
     this.selectedMeals = const [],
+    this.mealCount,
+    this.snackCount,
   });
 
   factory MealPlanConfiguration.fromJson(Map<String, dynamic> json) {
@@ -35,6 +39,8 @@ class MealPlanConfiguration {
             json['includedMeals'] ??
             json['includedText'],
       ),
+      mealCount: _integer(json['mealsPerDay'] ?? json['mealCount']),
+      snackCount: _integer(json['snacksPerDay'] ?? json['snackCount']),
       selectedMeals:
           _mapList(json['selectedMeals'] ?? json['meals'] ?? json['mealTypes'])
               .map(MealPlanMealSelection.fromJson)
@@ -49,7 +55,20 @@ class MealPlanConfiguration {
   final String id;
   final String name;
   final String? description;
+  final int? mealCount;
+  final int? snackCount;
   final List<MealPlanMealSelection> selectedMeals;
+  String displayName([String language = 'en']) =>
+      RegExp(r'Meal\s*\d+\s*[×x]', caseSensitive: false).hasMatch(name)
+      ? entitlementLabel(language)
+      : name;
+  String entitlementLabel([String language = 'en']) => mealCount != null
+      ? MealEntitlement(mealCount!, snackCount ?? 0).label(language)
+      : selectedMeals.isEmpty
+      ? name
+      : MealEntitlement.fromRows(
+          selectedMeals.map((m) => (name: m.name, quantity: m.quantity)),
+        ).label(language);
   final List<MealPlanPackage> packages;
 
   bool get isValid => id.isNotEmpty && name.isNotEmpty && packages.isNotEmpty;

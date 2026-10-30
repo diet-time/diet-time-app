@@ -109,29 +109,12 @@ class _OrderDetails extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final meal in order.meals)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 3),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 5,
-                            height: 5,
-                            decoration: const BoxDecoration(
-                              color: AppColors.emeraldGreen,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '${meal.name} x ${meal.quantity}',
-                              style: const _ValueStyle(),
-                            ),
-                          ),
-                        ],
-                      ),
+                  Text(
+                    order.entitlement.label(
+                      Localizations.localeOf(context).languageCode,
                     ),
+                    style: const _ValueStyle(),
+                  ),
                 ],
               ),
             ),

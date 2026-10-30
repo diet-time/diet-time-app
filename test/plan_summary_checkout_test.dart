@@ -124,6 +124,15 @@ void main() {
       ),
     );
     expect(button.onPressed, isNotNull);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('checkoutFinalAmount')),
+    );
+    final total = tester.widget<Text>(
+      find.byKey(const ValueKey('checkoutFinalAmount')),
+    );
+    expect(total.data, 'QAR 3200');
+    expect(total.style?.fontSize, greaterThanOrEqualTo(28));
+    expect(total.style?.fontWeight, FontWeight.w800);
   });
 
   testWidgets('confirmation renders authoritative order response', (

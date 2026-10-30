@@ -1,3 +1,4 @@
+import 'package:diet_time/features/plans/domain/meal_entitlement.dart';
 import 'dart:async';
 
 import 'package:diet_time/app/theme/app_colors.dart';
@@ -80,7 +81,7 @@ class _DailyMealsPanelState extends ConsumerState<DailyMealsPanel> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              '${widget.planName} · ${menu.mealCount} ${menu.mealCount == 1 ? 'Meal' : 'Meals'} + ${menu.snackCount} ${menu.snackCount == 1 ? 'Snack' : 'Snacks'}',
+              '${widget.planName} · ${MealEntitlement(menu.mealCount, menu.snackCount).label(Localizations.localeOf(context).languageCode)}',
               style: const TextStyle(
                 color: AppColors.darkGreen,
                 fontWeight: FontWeight.w700,
