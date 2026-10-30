@@ -1,3 +1,9 @@
+import 'package:go_router/go_router.dart';
+import 'package:diet_time/core/network/api_client.dart';
+import 'package:diet_time/features/checkout/data/orders_repository.dart';
+import 'package:diet_time/features/home/presentation/home_screen.dart';
+import 'package:diet_time/features/dashboard/presentation/customer_dashboard_screen.dart';
+import 'package:diet_time/features/dashboard/presentation/customer_dashboard_controller.dart';
 import 'package:diet_time/features/checkout/domain/checkout_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/features/checkout/presentation/order_placed_screen.dart';
@@ -11,6 +17,75 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('placing another order reloads a reused dashboard route', (
+    tester,
+  ) async {
+    final calls = <String?>[];
+    final ready = _checkoutState.copyWith(
+      selectedAddressId: _address.id,
+      selectedAddress: _address,
+      selectedDeliveryTimeSlotId: _slot.id,
+      selectedDeliveryTimeSlot: _slot,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        checkoutControllerProvider.overrideWith(
+          () => _CheckoutControllerForTest(ready),
+        ),
+        ordersRepositoryProvider.overrideWithValue(_SuccessfulOrders()),
+        customerDashboardControllerProvider.overrideWith(
+          () => _ReloadedDashboard(calls),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    final router = GoRouter(
+      initialLocation: '/home',
+      routes: [
+        GoRoute(
+          path: '/home',
+          builder: (context, _) => Scaffold(
+            body: const HomeScreen(),
+            floatingActionButton: FloatingActionButton(
+              key: const ValueKey('openCheckout'),
+              onPressed: () => context.push('/summary'),
+              child: const Icon(Icons.shopping_cart),
+            ),
+          ),
+        ),
+        GoRoute(path: '/summary', builder: (_, _) => const PlanSummaryScreen()),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final originalDashboard = tester.state(
+      find.byType(CustomerDashboardScreen),
+    );
+    expect(calls, hasLength(1));
+    await tester.tap(find.byKey(const ValueKey('openCheckout')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('placeOrder')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(
+      tester.state(find.byType(CustomerDashboardScreen)),
+      same(originalDashboard),
+    );
+    expect(calls, hasLength(2));
+    expect(calls.last, 'profile-id');
+    expect(
+      container.read(customerDashboardControllerProvider),
+      isA<DashboardNoOrders>(),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Place Order stays disabled without a delivery location', (
     tester,
   ) async {
@@ -187,3 +262,25 @@ final _confirmation = OrderConfirmation(
   ),
   placedAt: DateTime.utc(2026, 8, 10, 14),
 );
+
+class _ReloadedDashboard extends CustomerDashboardController {
+  _ReloadedDashboard(this.calls);
+  final List<String?> calls;
+  @override
+  CustomerDashboardState build() => const DashboardLoading();
+  @override
+  Future<void> initialize({String? profileId, bool force = false}) async {
+    calls.add(profileId);
+    state = const DashboardNoOrders();
+  }
+}
+
+class _SuccessfulOrders extends OrdersRepository {
+  _SuccessfulOrders()
+    : super(apiClient: ApiClient(), accessTokenProvider: () async => 'token');
+  @override
+  Future<OrderConfirmation> placeOrder(
+    PlaceOrderRequest request,
+    String idempotencyKey,
+  ) async => _confirmation;
+}

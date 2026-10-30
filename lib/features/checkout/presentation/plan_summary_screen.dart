@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
@@ -197,11 +199,19 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
   }
 
   Future<void> _placeOrder() async {
+    final profileId = ref.read(checkoutControllerProvider).customerProfileId;
     final confirmation = await ref
         .read(checkoutControllerProvider.notifier)
         .placeOrder(language: Localizations.localeOf(context).toLanguageTag());
     if (confirmation != null && mounted) {
       ref.invalidate(customerDashboardControllerProvider);
+      // /home can reuse its existing widget after another purchase, so its
+      // initState will not run again when the controller is invalidated.
+      unawaited(
+        ref
+            .read(customerDashboardControllerProvider.notifier)
+            .initialize(profileId: profileId, force: true),
+      );
       context.go(AppRoutes.home);
     }
   }
