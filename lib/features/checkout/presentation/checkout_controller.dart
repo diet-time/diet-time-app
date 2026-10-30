@@ -20,6 +20,16 @@ class CheckoutController extends Notifier<CheckoutState> {
   @override
   CheckoutState build() => const CheckoutState();
 
+  void selectFulfillmentMethod(String method) {
+    if (method != 'TAKEAWAY' && method != 'HOME_DELIVERY') return;
+    if (method == 'HOME_DELIVERY' && !state.isDeliveryEnabled) return;
+    state = state.copyWith(
+      fulfillmentMethod: method,
+      idempotencyKey: null,
+      placementError: null,
+    );
+  }
+
   void clear() => state = const CheckoutState();
 
   void beginNewOrder() {
@@ -205,6 +215,7 @@ class CheckoutController extends Notifier<CheckoutState> {
   }
 
   Future<void> _loadAddressesForResolvedProfile(String profileId) async {
+    state = state.copyWith(customerProfileId: profileId);
     final addresses = await ref
         .read(checkoutRepositoryProvider)
         .getAddresses(profileId);
@@ -353,8 +364,13 @@ class CheckoutController extends Notifier<CheckoutState> {
       customerProfileId: snapshot.customerProfileId!,
       mealPlanTemplateId: snapshot.mealPlanTemplateId!,
       mealPlanPriceId: snapshot.mealPlanPriceId!,
-      customerAddressId: snapshot.selectedAddressId!,
-      deliveryTimeSlotId: snapshot.selectedDeliveryTimeSlotId!,
+      customerAddressId: snapshot.isTakeaway
+          ? null
+          : snapshot.selectedAddressId,
+      fulfillmentMethod: snapshot.isTakeaway ? 'TAKEAWAY' : 'HOME_DELIVERY',
+      deliveryTimeSlotId: snapshot.isTakeaway
+          ? null
+          : snapshot.selectedDeliveryTimeSlotId,
       startDate: snapshot.startDate!,
       deliveryDays: snapshot.selectedWeekdays.toList()..sort(),
       // The API snapshots the purchased entitlement from the validated price.

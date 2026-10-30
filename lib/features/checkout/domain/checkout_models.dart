@@ -145,6 +145,7 @@ class DeliveryTimeSlot {
 
 class CheckoutState {
   const CheckoutState({
+    this.fulfillmentMethod = 'HOME_DELIVERY',
     this.selection,
     this.schedule,
     this.customerProfileId,
@@ -169,6 +170,11 @@ class CheckoutState {
     this.orderConfirmation,
   });
 
+  final String fulfillmentMethod;
+  bool get isDeliveryEnabled =>
+      selection?.pricingOption.isDeliveryEnabled ?? true;
+  bool get isTakeaway => !isDeliveryEnabled || fulfillmentMethod == 'TAKEAWAY';
+  String get fulfillmentLabel => isTakeaway ? 'Takeaway' : 'Home Delivery';
   final MealPlanPurchaseSelection? selection;
   final MealPlanServiceSchedule? schedule;
   final String? customerProfileId;
@@ -215,12 +221,14 @@ class CheckoutState {
     if (selectedWeekdays.isEmpty) {
       return 'Please select your delivery days.';
     }
-    if (selectedAddressId?.trim().isNotEmpty != true ||
-        selectedAddress == null) {
+    if (!isTakeaway &&
+        (selectedAddressId?.trim().isNotEmpty != true ||
+            selectedAddress == null)) {
       return 'Please select a delivery address.';
     }
-    if (selectedDeliveryTimeSlotId?.trim().isNotEmpty != true ||
-        selectedDeliveryTimeSlot == null) {
+    if (!isTakeaway &&
+        (selectedDeliveryTimeSlotId?.trim().isNotEmpty != true ||
+            selectedDeliveryTimeSlot == null)) {
       return 'Please select a delivery time.';
     }
     return null;
@@ -232,12 +240,14 @@ class CheckoutState {
       placeOrderValidationMessage == null;
 
   bool get isReadyToContinue =>
+      isTakeaway ||
       selectedAddress != null &&
-      selectedAddressId?.trim().isNotEmpty == true &&
-      selectedDeliveryTimeSlot != null &&
-      selectedDeliveryTimeSlotId?.trim().isNotEmpty == true;
+          selectedAddressId?.trim().isNotEmpty == true &&
+          selectedDeliveryTimeSlot != null &&
+          selectedDeliveryTimeSlotId?.trim().isNotEmpty == true;
 
   CheckoutState copyWith({
+    String? fulfillmentMethod,
     Object? selection = _unset,
     Object? schedule = _unset,
     Object? customerProfileId = _unset,
@@ -261,6 +271,15 @@ class CheckoutState {
     Object? placementError = _unset,
     Object? orderConfirmation = _unset,
   }) => CheckoutState(
+    fulfillmentMethod:
+        (identical(selection, _unset)
+                    ? this.selection
+                    : selection as MealPlanPurchaseSelection?)
+                ?.pricingOption
+                .isDeliveryEnabled ==
+            false
+        ? 'TAKEAWAY'
+        : fulfillmentMethod ?? this.fulfillmentMethod,
     selection: identical(selection, _unset)
         ? this.selection
         : selection as MealPlanPurchaseSelection?,

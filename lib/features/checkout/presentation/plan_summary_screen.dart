@@ -24,8 +24,10 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
   void initState() {
     super.initState();
     Future<void>.microtask(
-      () =>
-          ref.read(checkoutControllerProvider.notifier).loadDeliveryTimeSlots(),
+      () => Future.wait([
+        ref.read(checkoutControllerProvider.notifier).loadDeliveryTimeSlots(),
+        ref.read(checkoutControllerProvider.notifier).loadAddresses(),
+      ]),
     );
   }
 
@@ -52,12 +54,7 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
     }
     final summaryMessage = checkout.isResolvingOrderOptions
         ? 'Verifying your selected plan...'
-        : checkout.placementError ??
-              (checkout.selectedAddress == null
-                  ? 'Please select a delivery address.'
-                  : checkout.selectedDeliveryTimeSlot == null
-                  ? 'Please select a delivery time.'
-                  : checkout.placeOrderValidationMessage);
+        : checkout.placementError ?? checkout.placeOrderValidationMessage;
     return Scaffold(
       backgroundColor: const Color(0xFFF5F3E9),
       appBar: AppBar(
@@ -92,20 +89,57 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                         locale: Localizations.localeOf(context).toLanguageTag(),
                       ),
                       const SizedBox(height: 24),
-                      const Text(
-                        'DELIVERY ADDRESS & TIME SLOT',
-                        style: TextStyle(
-                          color: AppColors.darkGreen,
-                          fontSize: 12,
-                          letterSpacing: .8,
-                          fontWeight: FontWeight.w900,
+                      Text(
+                        checkout.fulfillmentLabel,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      if (!checkout.isDeliveryEnabled)
+                        const Text(
+                          'This package is available for takeaway only.',
+                        )
+                      else
+                        SegmentedButton<String>(
+                          segments: const [
+                            ButtonSegment(
+                              value: 'TAKEAWAY',
+                              label: Text('Takeaway'),
+                            ),
+                            ButtonSegment(
+                              value: 'HOME_DELIVERY',
+                              label: Text('Home Delivery'),
+                            ),
+                          ],
+                          selected: {
+                            checkout.isTakeaway ? 'TAKEAWAY' : 'HOME_DELIVERY',
+                          },
+                          onSelectionChanged: checkout.isPlacingOrder
+                              ? null
+                              : (values) => ref
+                                    .read(checkoutControllerProvider.notifier)
+                                    .selectFulfillmentMethod(values.single),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      _DeliverySelectionCard(
-                        checkout: checkout,
-                        onChange: () => context.push(AppRoutes.customerAddress),
-                      ),
+                      if (checkout.isTakeaway)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 12),
+                          child: Text('Collect your meals from Diet Time.'),
+                        ),
+                      if (!checkout.isTakeaway) ...[
+                        const Text(
+                          'DELIVERY ADDRESS & TIME SLOT',
+                          style: TextStyle(
+                            color: AppColors.darkGreen,
+                            fontSize: 12,
+                            letterSpacing: .8,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _DeliverySelectionCard(
+                          checkout: checkout,
+                          onChange: () =>
+                              context.push(AppRoutes.customerAddress),
+                        ),
+                      ],
                       if (summaryMessage case final message?) ...[
                         const SizedBox(height: 12),
                         _InlineMessage(

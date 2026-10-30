@@ -611,6 +611,14 @@ class _DeliveryDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (order.isTakeaway) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('Takeaway — collect from Diet Time'),
+        ),
+      );
+    }
     final slot = order.delivery.timeSlot;
     final address = order.delivery.address;
     return Container(

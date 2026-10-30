@@ -94,6 +94,7 @@ class MealPlanPackage {
     this.regularPrice,
     this.discountedPrice,
     this.serverDiscountPercentage,
+    this.isDeliveryEnabled = true,
   });
 
   factory MealPlanPackage.fromJson(Map<String, dynamic> json) {
@@ -135,6 +136,7 @@ class MealPlanPackage {
             json['label'],
       ),
       serviceDays: serviceDays,
+      isDeliveryEnabled: json['isDeliveryEnabled'] != false,
       totalPrice: total,
       regularPrice:
           _number(json['regularPrice'] ?? json['originalPrice']) ?? total,
@@ -162,6 +164,7 @@ class MealPlanPackage {
     );
   }
 
+  final bool isDeliveryEnabled;
   final String mealPlanPriceId;
   final String name;
   final int serviceDays;

@@ -132,26 +132,31 @@ class _ConfirmationCard extends StatelessWidget {
         children: [
           _Detail(label: 'ORDER NUMBER', value: confirmation.orderNumber),
           _Detail(label: 'PLAN', value: confirmation.plan.name),
+          _Detail(label: 'FULFILLMENT', value: confirmation.fulfillmentLabel),
           _Detail(
             label: 'PLAN PERIOD',
             value: _period(delivery.startDate, delivery.endDate),
           ),
           _Detail(
-            label: 'FIRST DELIVERY',
+            label: confirmation.isTakeaway
+                ? 'FIRST COLLECTION'
+                : 'FIRST DELIVERY',
             value: _firstDelivery(delivery.startDate),
           ),
-          _Detail(
-            label: slot.name,
-            value: _timeRange(slot.startTime, slot.endTime),
-          ),
-          _Detail(
-            label: 'DELIVERY TO',
-            value: [
-              address.displayName,
-              address.area,
-              address.streetLine,
-            ].where((value) => value.trim().isNotEmpty).join('\n'),
-          ),
+          if (!confirmation.isTakeaway)
+            _Detail(
+              label: slot.name,
+              value: _timeRange(slot.startTime, slot.endTime),
+            ),
+          if (!confirmation.isTakeaway)
+            _Detail(
+              label: 'DELIVERY TO',
+              value: [
+                address.displayName,
+                address.area,
+                address.streetLine,
+              ].where((value) => value.trim().isNotEmpty).join('\n'),
+            ),
           _Detail(
             label: 'TOTAL',
             value:

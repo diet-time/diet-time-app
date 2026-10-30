@@ -24,6 +24,7 @@ class PlaceOrderRequest {
     required this.deliveryDays,
     required this.meals,
     this.couponCode,
+    this.fulfillmentMethod = 'HOME_DELIVERY',
     this.expectedTotalAmount,
     this.expectedRegularPrice,
     this.expectedDiscountAmount,
@@ -33,11 +34,12 @@ class PlaceOrderRequest {
   final String customerProfileId;
   final String mealPlanTemplateId;
   final String mealPlanPriceId;
-  final String customerAddressId;
-  final String deliveryTimeSlotId;
+  final String? customerAddressId;
+  final String? deliveryTimeSlotId;
   final DateTime startDate;
   final List<int> deliveryDays;
   final List<PlaceOrderMealRequest> meals;
+  final String fulfillmentMethod;
   final String? couponCode;
   final double? expectedTotalAmount;
   final double? expectedRegularPrice;
@@ -49,6 +51,7 @@ class PlaceOrderRequest {
     'mealPlanTemplateId': mealPlanTemplateId,
     'mealPlanPriceId': mealPlanPriceId,
     'customerAddressId': customerAddressId,
+    'fulfillmentMethod': fulfillmentMethod,
     'deliveryTimeSlotId': deliveryTimeSlotId,
     'startDate': _date(startDate),
     'deliveryDays': deliveryDays,
@@ -84,6 +87,7 @@ class CustomerOrderSummary {
     required this.startDate,
     required this.endDate,
     required this.placedAt,
+    this.fulfillmentMethod = 'HOME_DELIVERY',
   });
 
   factory CustomerOrderSummary.fromJson(Map<String, dynamic> json) =>
@@ -101,6 +105,9 @@ class CustomerOrderSummary {
         startDate: _dateTime(json['startDate']),
         endDate: _dateTime(json['endDate']),
         placedAt: _dateTime(json['placedAt']),
+        fulfillmentMethod: _text(json['fulfillmentMethod']).isEmpty
+            ? 'HOME_DELIVERY'
+            : _text(json['fulfillmentMethod']),
       );
 
   final String id;
@@ -114,6 +121,9 @@ class CustomerOrderSummary {
   final DateTime? startDate;
   final DateTime? endDate;
   final DateTime? placedAt;
+  final String fulfillmentMethod;
+  bool get isTakeaway => fulfillmentMethod == 'TAKEAWAY';
+  String get fulfillmentLabel => isTakeaway ? 'Takeaway' : 'Home Delivery';
 
   bool get isValid => id.isNotEmpty && orderNumber.isNotEmpty;
   bool get isCurrent => const {
@@ -188,6 +198,7 @@ class OrderConfirmation {
     required this.delivery,
     required this.pricing,
     required this.placedAt,
+    this.fulfillmentMethod = 'HOME_DELIVERY',
   });
 
   factory OrderConfirmation.fromJson(Map<String, dynamic> json) =>
@@ -203,6 +214,9 @@ class OrderConfirmation {
         delivery: OrderDelivery.fromJson(_map(json['delivery'])),
         pricing: OrderPricing.fromJson(_map(json['pricing'])),
         placedAt: _dateTime(json['placedAt']),
+        fulfillmentMethod: _text(json['fulfillmentMethod']).isEmpty
+            ? 'HOME_DELIVERY'
+            : _text(json['fulfillmentMethod']),
       );
 
   final String id;
@@ -214,6 +228,9 @@ class OrderConfirmation {
   final OrderDelivery delivery;
   final OrderPricing pricing;
   final DateTime? placedAt;
+  final String fulfillmentMethod;
+  bool get isTakeaway => fulfillmentMethod == 'TAKEAWAY';
+  String get fulfillmentLabel => isTakeaway ? 'Takeaway' : 'Home Delivery';
 
   bool get isValid => id.isNotEmpty && orderNumber.isNotEmpty;
 }

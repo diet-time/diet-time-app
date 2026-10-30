@@ -88,6 +88,8 @@ class _CheckoutControllerForTest extends CheckoutController {
 
   @override
   Future<void> loadDeliveryTimeSlots() async {}
+  @override
+  Future<void> loadAddresses() async {}
 }
 
 final _checkoutState = CheckoutState(

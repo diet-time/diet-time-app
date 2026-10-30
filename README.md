@@ -845,3 +845,51 @@ src/Apis/DietTime.Meal.Api/Controllers/CustomerAddressesController.cs
 tests/DietTime.UnitTests/CustomerAddressValidationTests.cs
 tests/DietTime.Meal.Api.IntegrationTests/AddressInputValidationTests.cs
 ```
+
+## Twilio runtime diagnostics — 28 October 2026
+
+The configured environment-variable names match `TwilioWhatsApp__Enabled`, `__AccountSid`, `__AuthToken`, `__FromNumber`, `__OperationsNumber`, and `__NewOrderContentSid`. Environment variables can override the disabled checked-in defaults. Local defaults therefore do not establish the configuration of a deployed service. The reported enabled flag and absence of visible Twilio logs are not enough to identify the live delivery failure.
+
+The API now provides this read-only endpoint under its existing Admin authorization:
+
+```http
+GET /api/v1/admin/integrations/whatsapp/twilio/configuration
+Authorization: Bearer <admin-token>
+```
+
+Deploy/restart the updated API before calling it. The response contains `enabled`, `configurationComplete`, boolean `checks` for each setting, `invalidOrMissingSettings`, and a description of the existing operations-recipient/new-order trigger. It returns no configured account SID, template SID, phone number or auth token. `providerVerified` is explicitly false: presence/format checks do not verify credentials, WhatsApp sender approval, recipient sandbox membership, or template approval. The request performs no Twilio call and sends no message. A 404 after updating the caller URL can indicate an older deployment or a different service; 401/403 requires a valid Admin session.
+
+Logging now distinguishes:
+
+- Startup: `Twilio WhatsApp runtime configuration` with enabled/completeness flags and invalid/missing setting names, never their values.
+- Order processing: dispatch after commit, `idempotent_replay` skips, disabled skips, and existing invalid-order-data field warnings.
+- Provider requests: attempts, HTTP rejection status and provider error code, timeouts, network failures, acceptance SID and provider status.
+
+Order replays continue to avoid duplicate notifications. Success logs now say **accepted by Twilio**, rather than claiming a queued request was delivered. A successful HTTP response without a Message SID is rejected as `invalid_provider_response`; an immediate `failed` or `undelivered` provider status is also treated as failure. Queued acceptance still requires later delivery confirmation through Twilio's message status/logs. See the [Twilio Message resource documentation](https://www.twilio.com/docs/messaging/api/message-resource).
+
+The previous log containing the entire template-variable payload, customer name, phone and delivery address was replaced by order identity, template SID and variable count. Provider rejection logs do not include request bodies or credentials.
+
+Validation: **164 API unit tests passed**, including seven new diagnostic/status/logging cases. **Four HTTP endpoint tests passed**, covering enabled/disabled runtime settings, Admin authorization, anonymous/customer rejection, exclusion of configured secret/phone/SID values, and zero send calls. HTTP authorization tests run with JWT authentication outside the development fallback. All sends in unit tests use a fake HTTP handler; the endpoint tests use a provider that throws if sending is attempted. No live messages, database changes, notification resends, or deployment were performed. Live delivery remains unverified pending the running service's diagnostics/provider result.
+
+Modified API files, relative to `../diet-time-api`:
+
+```text
+src/Apis/DietTime.Meal.Api/Program.cs
+src/Apis/DietTime.Meal.Api/Controllers/WhatsAppIntegrationController.cs
+src/BuildingBlocks/DietTime.Application/WhatsApp.cs
+src/BuildingBlocks/DietTime.Infrastructure/TwilioWhatsAppService.cs
+src/BuildingBlocks/DietTime.Persistence/OrderService.cs
+tests/DietTime.UnitTests/WhatsAppTests.cs
+tests/DietTime.Meal.Api.IntegrationTests/TwilioConfigurationApiTests.cs
+```
+
+An Admin can now fetch the final provider status of an accepted message without sending again:
+
+```http
+GET /api/v1/admin/integrations/whatsapp/twilio/messages/MMa84d8c229315011a1ef25296af380a89
+Authorization: Bearer <admin token>
+```
+
+Deploy/restart the updated API before using this route. It returns `messageId`, `status`, `deliveryConfirmed`, `errorCode` and `errorMessage`. `deliveryConfirmed` is true only for `delivered` or `read`. A successful lookup can report an `undelivered` or `failed` message; inspect its error code instead of interpreting HTTP 200 as delivery. The lookup accepts valid SM/MM message IDs, uses the server's account credentials, and does not return message bodies or recipient numbers. It also works when outgoing messaging is disabled. Invalid IDs are rejected before calling Twilio; provider lookup failures return structured errors. No live message was sent or queried during implementation; production delivery remains unverified.
+
+Status lookup validation: **175 API unit tests passed** and **8 Twilio HTTP endpoint tests passed**. These cover queued/delivered/read/failed/undelivered results, SM/MM IDs, provider authentication/not-found errors, timeouts, mismatched records, invalid-ID rejection, Admin-only access and zero sends. No order, pricing, meal-selection or database data was altered.

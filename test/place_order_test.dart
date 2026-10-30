@@ -101,6 +101,7 @@ void main() {
         'mealPlanTemplateId': 'plan-id',
         'mealPlanPriceId': 'price-id',
         'customerAddressId': 'address-id',
+        'fulfillmentMethod': 'HOME_DELIVERY',
         'deliveryTimeSlotId': 'slot-id',
         'startDate': '2026-08-11',
         'deliveryDays': [2, 3, 4, 5, 6],

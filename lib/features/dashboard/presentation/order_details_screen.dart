@@ -90,6 +90,7 @@ class _OrderDetails extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 30),
       children: [
         _OrderHeaderCard(order: order),
+        Text(order.fulfillmentLabel),
         const SizedBox(height: 12),
         _SectionCard(
           children: [
@@ -132,27 +133,29 @@ class _OrderDetails extends StatelessWidget {
             ),
             _InformationRow(
               icon: Icons.event_available_outlined,
-              label: 'DELIVERY DAYS',
+              label: order.isTakeaway ? 'COLLECTION DAYS' : 'DELIVERY DAYS',
               value:
                   '${delivery.daysPerWeek} Days / Week\n${_weekdays(delivery.days)}',
             ),
-            _InformationRow(
-              icon: Icons.location_on_outlined,
-              label: 'DELIVERY ADDRESS',
-              value: [
-                address.displayName,
-                address.area,
-                address.streetLine,
-                address.formattedAddress,
-              ].where((value) => value.trim().isNotEmpty).join('\n'),
-            ),
-            _InformationRow(
-              icon: Icons.schedule_rounded,
-              label: 'DELIVERY TIME',
-              value:
-                  '${delivery.timeSlot.name}\n${_time(delivery.timeSlot.startTime)} - ${_time(delivery.timeSlot.endTime)}',
-              last: true,
-            ),
+            if (!order.isTakeaway)
+              _InformationRow(
+                icon: Icons.location_on_outlined,
+                label: 'DELIVERY ADDRESS',
+                value: [
+                  address.displayName,
+                  address.area,
+                  address.streetLine,
+                  address.formattedAddress,
+                ].where((value) => value.trim().isNotEmpty).join('\n'),
+              ),
+            if (!order.isTakeaway)
+              _InformationRow(
+                icon: Icons.schedule_rounded,
+                label: 'DELIVERY TIME',
+                value:
+                    '${delivery.timeSlot.name}\n${_time(delivery.timeSlot.startTime)} - ${_time(delivery.timeSlot.endTime)}',
+                last: true,
+              ),
           ],
         ),
         const SizedBox(height: 12),

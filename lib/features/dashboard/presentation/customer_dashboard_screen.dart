@@ -597,7 +597,7 @@ class _ReferencePlanCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            package?.isNotEmpty == true ? package! : summary.planDurationName,
+            '${package?.isNotEmpty == true ? package! : summary.planDurationName} · ${summary.fulfillmentLabel}',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: Color(0xFFD7E7E1), fontSize: 11),
@@ -746,7 +746,8 @@ class _PlanHeroCard extends StatelessWidget {
                 child: _HeroDetail(
                   icon: Icons.calendar_month_outlined,
                   value: _period(summary.startDate, summary.endDate),
-                  caption: summary.planDurationName,
+                  caption:
+                      '${summary.planDurationName} · ${summary.fulfillmentLabel}',
                 ),
               ),
               Container(
@@ -776,11 +777,13 @@ class _PlanHeroCard extends StatelessWidget {
           const SizedBox(height: 12),
           _HeroDetail(
             icon: Icons.location_on_outlined,
-            value: address.displayName,
-            caption: [
-              address.area,
-              address.streetLine,
-            ].where((value) => value.trim().isNotEmpty).join(' · '),
+            value: detail.isTakeaway ? 'Takeaway' : address.displayName,
+            caption: detail.isTakeaway
+                ? 'Collect from Diet Time'
+                : [
+                    address.area,
+                    address.streetLine,
+                  ].where((value) => value.trim().isNotEmpty).join(' · '),
           ),
           const SizedBox(height: 16),
           Align(
@@ -1044,7 +1047,8 @@ class _CompactPlanCard extends StatelessWidget {
                 child: _HeroDetail(
                   icon: Icons.calendar_month_outlined,
                   value: _period(summary.startDate, summary.endDate),
-                  caption: summary.planDurationName,
+                  caption:
+                      '${summary.planDurationName} · ${summary.fulfillmentLabel}',
                 ),
               ),
               const SizedBox(width: 10),
