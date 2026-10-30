@@ -354,7 +354,7 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
             .read(customerDashboardControllerProvider.notifier)
             .initialize(profileId: profileId, force: true),
       );
-      context.go(AppRoutes.home);
+      context.pushReplacement(AppRoutes.orderPlaced);
     }
   }
 }

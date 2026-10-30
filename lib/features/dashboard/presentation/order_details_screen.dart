@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
@@ -11,13 +12,46 @@ final orderDetailsProvider = FutureProvider.autoDispose
       (ref, orderId) => ref.watch(ordersRepositoryProvider).getOrder(orderId),
     );
 
-class OrderDetailsScreen extends ConsumerWidget {
+class OrderDetailsScreen extends ConsumerStatefulWidget {
   const OrderDetailsScreen({required this.orderId, super.key});
 
   final String orderId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OrderDetailsScreen> createState() => _OrderDetailsScreenState();
+}
+
+class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
+    with WidgetsBindingObserver {
+  Timer? _refresh;
+  String get orderId => widget.orderId;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    Future.microtask(() => ref.invalidate(orderDetailsProvider(orderId)));
+    _refresh = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => ref.invalidate(orderDetailsProvider(orderId)),
+    );
+  }
+
+  @override
+  void dispose() {
+    _refresh?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(orderDetailsProvider(orderId));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final order = ref.watch(orderDetailsProvider(orderId));
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F1),
@@ -75,13 +109,13 @@ class OrderDetailsScreen extends ConsumerWidget {
   }
 }
 
-class _OrderDetails extends StatelessWidget {
+class _OrderDetails extends ConsumerWidget {
   const _OrderDetails({required this.order});
 
   final OrderConfirmation order;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final locale = Localizations.localeOf(context).toLanguageTag();
     final delivery = order.delivery;
     final address = delivery.address;
@@ -90,6 +124,42 @@ class _OrderDetails extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 30),
       children: [
         _OrderHeaderCard(order: order),
+        if (order.rowVersion > 0 &&
+            ['PENDING_APPROVAL', 'ON_HOLD', 'CONFIRMED'].contains(order.status))
+          TextButton.icon(
+            icon: const Icon(Icons.cancel_outlined),
+            label: const Text('Request cancellation'),
+            onPressed: () async {
+              final reason = await showDialog<String>(
+                context: context,
+                builder: (_) => const _CancelReasonDialog(),
+              );
+              if (reason == null || !context.mounted) return;
+              try {
+                await ref
+                    .read(ordersRepositoryProvider)
+                    .cancelOrder(order.id, order.rowVersion, reason);
+                ref.invalidate(orderDetailsProvider(order.id));
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'The order could not be cancelled. Refresh the order or contact Diet Time.',
+                      ),
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+        if (order.reviewMessage != null)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(order.reviewMessage!),
+            ),
+          ),
         Text(
           order.isTakeaway && order.takeawayBranch != null
               ? 'Takeaway · ${order.takeawayBranch!.name}${order.takeawayBranch!.address == null ? '' : '\n${order.takeawayBranch!.address}'}'
@@ -161,7 +231,7 @@ class _OrderDetails extends StatelessWidget {
               child: _MetricTile(
                 icon: Icons.credit_card_rounded,
                 label: 'PAYMENT STATUS',
-                value: _titleCase(order.paymentStatus),
+                value: order.paymentLabel,
                 accent: true,
               ),
             ),
@@ -696,10 +766,42 @@ String _time(String value) {
   return DateFormat('hh:mm a').format(DateTime(2000, 1, 1, hour, minute));
 }
 
-String _titleCase(String value) {
-  final words = value.replaceAll('_', ' ').trim().toLowerCase().split(' ');
-  return words
-      .where((word) => word.isNotEmpty)
-      .map((word) => '${word[0].toUpperCase()}${word.substring(1)}')
-      .join(' ');
+class _CancelReasonDialog extends StatefulWidget {
+  const _CancelReasonDialog();
+  @override
+  State<_CancelReasonDialog> createState() => _CancelReasonDialogState();
+}
+
+class _CancelReasonDialogState extends State<_CancelReasonDialog> {
+  final reason = TextEditingController();
+  @override
+  void dispose() {
+    reason.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Cancel this order?'),
+    content: TextField(
+      controller: reason,
+      maxLength: 500,
+      minLines: 2,
+      maxLines: 4,
+      decoration: const InputDecoration(labelText: 'Reason'),
+      onChanged: (_) => setState(() {}),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Keep order'),
+      ),
+      FilledButton(
+        onPressed: reason.text.trim().isEmpty
+            ? null
+            : () => Navigator.pop(context, reason.text.trim()),
+        child: const Text('Confirm cancellation'),
+      ),
+    ],
+  );
 }

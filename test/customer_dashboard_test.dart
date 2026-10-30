@@ -210,6 +210,8 @@ void main() {
       find.byKey(const ValueKey('detailedOrder-confirmed')),
       findsOneWidget,
     );
+    await tester.ensureVisible(find.text('Confirmed (1)'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Confirmed (1)'));
     await tester.pump();
     expect(

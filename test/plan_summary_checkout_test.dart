@@ -53,6 +53,10 @@ void main() {
             ),
           ),
         ),
+        GoRoute(
+          path: '/order-placed',
+          builder: (_, _) => const OrderPlacedScreen(),
+        ),
         GoRoute(path: '/summary', builder: (_, _) => const PlanSummaryScreen()),
       ],
     );
@@ -73,11 +77,13 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('placeOrder')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.byKey(const ValueKey('orderPlacedHome')));
+    await tester.pumpAndSettle();
     expect(
       tester.state(find.byType(CustomerDashboardScreen)),
       same(originalDashboard),
     );
-    expect(calls, hasLength(2));
+    expect(calls.length, greaterThanOrEqualTo(2));
     expect(calls.last, 'profile-id');
     expect(
       container.read(customerDashboardControllerProvider),
@@ -134,6 +140,66 @@ void main() {
     expect(total.style?.fontSize, greaterThanOrEqualTo(28));
     expect(total.style?.fontWeight, FontWeight.w800);
   });
+
+  testWidgets(
+    'new submissions show pending confirmation separately from payment',
+    (tester) async {
+      final pending = OrderConfirmation(
+        id: _confirmation.id,
+        orderNumber: _confirmation.orderNumber,
+        status: 'PENDING_APPROVAL',
+        paymentStatus: 'PENDING',
+        plan: _confirmation.plan,
+        meals: _confirmation.meals,
+        delivery: _confirmation.delivery,
+        pricing: _confirmation.pricing,
+        placedAt: _confirmation.placedAt,
+        review: const {'rowVersion': 1, 'canFulfill': false},
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            checkoutControllerProvider.overrideWith(
+              () => _CheckoutControllerForTest(
+                _checkoutState.copyWith(orderConfirmation: pending),
+              ),
+            ),
+          ],
+          child: const MaterialApp(home: OrderPlacedScreen()),
+        ),
+      );
+      expect(find.text('Order Submitted'), findsOneWidget);
+      expect(find.text('Order Confirmed!'), findsNothing);
+      await tester.ensureVisible(find.text('Pending Confirmation'));
+      expect(find.text('Pending Confirmation'), findsOneWidget);
+      expect(find.text('Payment Pending'), findsOneWidget);
+    },
+  );
+
+  test(
+    'pending and held orders cannot appear active and rejection reasons remain readable',
+    () {
+      final pending = CustomerOrderSummary.fromJson({
+        'id': '1',
+        'orderNumber': 'ORD-1',
+        'status': 'PENDING_APPROVAL',
+        'paymentStatus': 'PAID',
+        'review': {'canFulfill': false},
+      });
+      expect(pending.isCurrent, isFalse);
+      expect(pending.statusLabel, 'Pending Confirmation');
+      expect(pending.paymentLabel, 'Paid');
+      final rejected = OrderConfirmation.fromJson({
+        'status': 'REJECTED',
+        'review': {
+          'rejectionReason': 'The requested package is unavailable',
+          'canFulfill': false,
+        },
+      });
+      expect(rejected.reviewMessage, 'The requested package is unavailable');
+      expect(rejected.statusLabel, 'Rejected');
+    },
+  );
 
   testWidgets('confirmation renders authoritative order response', (
     tester,

@@ -49,7 +49,17 @@ class _AuthenticatedLandingScreenState
                 .getCustomerOrders(profile!.profileId!);
       if (!mounted) return;
       context.go(
-        orders?.any((order) => order.isCurrent) == true
+        orders?.any(
+                  (order) =>
+                      order.isCurrent ||
+                      [
+                        'PENDING_APPROVAL',
+                        'ON_HOLD',
+                        'REJECTED',
+                      ].contains(order.status) ||
+                      order.review['awaitingPayment'] == true,
+                ) ==
+                true
             ? AppRoutes.home
             : AppRoutes.plans,
       );

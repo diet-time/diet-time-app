@@ -49,8 +49,10 @@ class OrderPlacedScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 22),
-                        const Text(
-                          'Order Confirmed!',
+                        Text(
+                          confirmation.status == 'PENDING_APPROVAL'
+                              ? 'Order Submitted'
+                              : 'Order Confirmed!',
                           key: ValueKey('orderPlacedTitle'),
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -61,7 +63,9 @@ class OrderPlacedScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 7),
                         Text(
-                          'Your ${confirmation.plan.name} Plan is ready.',
+                          confirmation.status == 'PENDING_APPROVAL'
+                              ? "Your order has been received and is awaiting confirmation from Diet Time. We'll notify you once it's reviewed."
+                              : 'Your ${confirmation.plan.name} Plan is ready.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: AppColors.darkGreen.withValues(alpha: .64),
@@ -132,6 +136,7 @@ class _ConfirmationCard extends StatelessWidget {
         children: [
           _Detail(label: 'ORDER NUMBER', value: confirmation.orderNumber),
           _Detail(label: 'PLAN', value: confirmation.plan.name),
+          _Detail(label: 'PAYMENT', value: confirmation.paymentLabel),
           _Detail(
             label: 'PACKAGE',
             value: confirmation.entitlement.label(
@@ -184,7 +189,7 @@ class _ConfirmationCard extends StatelessWidget {
           ),
           _Detail(
             label: 'STATUS',
-            value: _titleCase(confirmation.status),
+            value: confirmation.statusLabel,
             isLast: true,
             accent: true,
           ),
@@ -283,7 +288,7 @@ void _goToDashboard(BuildContext context, WidgetRef ref) {
     unawaited(
       ref
           .read(customerDashboardControllerProvider.notifier)
-          .load(profileId!.trim(), force: true),
+          .initialize(profileId: profileId!.trim(), force: true),
     );
   }
   context.go(AppRoutes.home);
@@ -308,13 +313,4 @@ String _time(String value) {
   final minute = int.tryParse(parts[1]);
   if (hour == null || minute == null) return value;
   return DateFormat('hh:mm a').format(DateTime(2000, 1, 1, hour, minute));
-}
-
-String _titleCase(String value) {
-  final normalized = value.replaceAll('_', ' ').trim().toLowerCase();
-  if (normalized.isEmpty) return 'Confirmed';
-  return normalized
-      .split(' ')
-      .map((word) => '${word[0].toUpperCase()}${word.substring(1)}')
-      .join(' ');
 }

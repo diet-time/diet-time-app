@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:diet_time/features/checkout/domain/order_status.dart';
 import 'package:diet_time/features/dashboard/presentation/tomorrow_deliveries_section.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:diet_time/app/router/app_router.dart';
@@ -28,17 +30,43 @@ class CustomerDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _CustomerDashboardScreenState
-    extends ConsumerState<CustomerDashboardScreen> {
+    extends ConsumerState<CustomerDashboardScreen>
+    with WidgetsBindingObserver {
+  Timer? _orderRefresh;
   int _tabIndex = 0;
   bool _profileLoadQueued = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _orderRefresh = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) {
+        unawaited(
+          ref.read(customerDashboardControllerProvider.notifier).refresh(),
+        );
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(customerDashboardControllerProvider.notifier).initialize();
     });
+  }
+
+  @override
+  void dispose() {
+    _orderRefresh?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(
+        ref.read(customerDashboardControllerProvider.notifier).refresh(),
+      );
+    }
   }
 
   @override
@@ -263,6 +291,36 @@ class _DashboardHome extends ConsumerWidget {
             subtitle: _dashboardSubtitle(state),
           ),
           const SizedBox(height: 18),
+          for (final order in orders.where(
+            (o) =>
+                [
+                  'PENDING_APPROVAL',
+                  'ON_HOLD',
+                  'REJECTED',
+                ].contains(o.status) ||
+                o.review['awaitingPayment'] == true ||
+                o.review['fulfillmentBlockedReason'] != null,
+          ))
+            Card(
+              child: ListTile(
+                title: Text('${order.planName} · ${order.statusLabel}'),
+                subtitle: Text(
+                  '${order.orderNumber}\n${order.reviewMessage ?? 'Diet Time is reviewing your order.'}\n${order.paymentLabel}',
+                ),
+                isThreeLine: true,
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  await context.push(AppRoutes.orderDetails, extra: order.id);
+                  if (context.mounted) {
+                    unawaited(
+                      ref
+                          .read(customerDashboardControllerProvider.notifier)
+                          .refresh(),
+                    );
+                  }
+                },
+              ),
+            ),
           if (single != null) ...[
             const _SectionTitle('YOUR ACTIVE PLAN'),
             const SizedBox(height: 10),
@@ -875,7 +933,7 @@ class _HeroStatusPill extends StatelessWidget {
       borderRadius: BorderRadius.circular(999),
     ),
     child: Text(
-      status,
+      orderStatusLabel(status),
       style: const TextStyle(
         color: Color(0xFF205A36),
         fontSize: 9,
@@ -1231,7 +1289,7 @@ class _OrderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
     key: ValueKey('order-${order.id}'),
-    onTap: () => context.push(AppRoutes.orderDetails, extra: order.id),
+    onTap: () => _openReviewedOrder(context, order.id),
     child: Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -1467,6 +1525,9 @@ class _CustomerOrdersState extends ConsumerState<_CustomerOrders> {
               children: [
                 for (final filter in const [
                   ('ALL', 'All Orders'),
+                  ('PENDING_APPROVAL', 'Pending Confirmation'),
+                  ('ON_HOLD', 'On Hold'),
+                  ('REJECTED', 'Rejected'),
                   ('CONFIRMED', 'Confirmed'),
                   ('PENDING', 'Pending'),
                   ('CANCELLED', 'Cancelled'),
@@ -1561,7 +1622,7 @@ class _DetailedOrderCard extends ConsumerWidget {
     );
     return InkWell(
       key: ValueKey('detailedOrder-${order.id}'),
-      onTap: () => context.push(AppRoutes.orderDetails, extra: order.id),
+      onTap: () => _openReviewedOrder(context, order.id),
       borderRadius: BorderRadius.circular(18),
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -1906,7 +1967,7 @@ class _StatusPill extends StatelessWidget {
       borderRadius: BorderRadius.circular(999),
     ),
     child: Text(
-      status,
+      orderStatusLabel(status),
       style: TextStyle(
         color: _statusColor(status),
         fontSize: 10,
@@ -2004,3 +2065,12 @@ Color _statusColor(String status) => switch (status) {
   'CANCELLED' => AppColors.jasper,
   _ => AppColors.darkGreen,
 };
+
+Future<void> _openReviewedOrder(BuildContext context, String id) async {
+  await context.push(AppRoutes.orderDetails, extra: id);
+  if (context.mounted) {
+    await ProviderScope.containerOf(
+      context,
+    ).read(customerDashboardControllerProvider.notifier).refresh();
+  }
+}

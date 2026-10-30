@@ -114,6 +114,19 @@ class OrdersRepository {
     }
   }
 
+  Future<OrderConfirmation> cancelOrder(
+    String orderId,
+    int rowVersion,
+    String reason,
+  ) async {
+    final response = await _request(
+      method: 'POST',
+      path: '${ApiEndpoints.order(orderId)}/cancel',
+      body: {'expectedRowVersion': rowVersion, 'reason': reason},
+    );
+    return OrderConfirmation.fromJson(_orderFrom(response.body));
+  }
+
   Future<OrderConfirmation> getOrder(String orderId) async {
     final response = await _request(
       method: 'GET',

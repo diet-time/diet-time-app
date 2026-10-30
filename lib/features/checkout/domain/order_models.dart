@@ -1,3 +1,4 @@
+import 'order_status.dart';
 import 'package:diet_time/features/plans/domain/meal_entitlement.dart';
 import 'takeaway_branch.dart';
 
@@ -99,6 +100,7 @@ class CustomerOrderSummary {
     required this.placedAt,
     this.fulfillmentMethod = 'HOME_DELIVERY',
     this.takeawayBranch,
+    this.review = const {},
     this.mealCount,
     this.snackCount,
   });
@@ -120,6 +122,7 @@ class CustomerOrderSummary {
         placedAt: _dateTime(json['placedAt']),
         mealCount: _integer(json['mealCount']),
         snackCount: _integer(json['snackCount']),
+        review: _map(json['review']),
         takeawayBranch: json['takeawayBranch'] is Map
             ? TakeawayBranch.fromJson(_map(json['takeawayBranch']))
             : null,
@@ -141,6 +144,19 @@ class CustomerOrderSummary {
   final DateTime? placedAt;
   final int? mealCount;
   final int? snackCount;
+  final Map<String, dynamic> review;
+  int get rowVersion => (review['rowVersion'] as num?)?.toInt() ?? 0;
+  String get statusLabel => orderStatusLabel(status);
+  String get paymentLabel => paymentStatusLabel(paymentStatus);
+  String? get reviewMessage =>
+      review['rejectionReason'] as String? ??
+      review['holdReason'] as String? ??
+      review['fulfillmentBlockedReason'] as String? ??
+      (review['awaitingPayment'] == true
+          ? 'Your order is confirmed and awaiting the required payment.'
+          : status == 'PENDING_APPROVAL'
+          ? "Your order has been received and is awaiting confirmation from Diet Time. We'll notify you once it's reviewed."
+          : null);
   final TakeawayBranch? takeawayBranch;
   final String fulfillmentMethod;
   MealEntitlement? get entitlement =>
@@ -152,13 +168,15 @@ class CustomerOrderSummary {
       : fulfillmentLabel;
 
   bool get isValid => id.isNotEmpty && orderNumber.isNotEmpty;
-  bool get isCurrent => const {
-    'CONFIRMED',
-    'ACTIVE',
-    'PAUSED',
-    'PENDING',
-    'PENDING_ACTIVATION',
-  }.contains(status);
+  bool get isCurrent =>
+      review['canFulfill'] != false &&
+      const {
+        'CONFIRMED',
+        'ACTIVE',
+        'PAUSED',
+        'PENDING',
+        'PENDING_ACTIVATION',
+      }.contains(status);
   bool get isCompleted => status == 'COMPLETED';
   bool get isCancelled => status == 'CANCELLED';
 }
@@ -226,6 +244,7 @@ class OrderConfirmation {
     required this.placedAt,
     this.fulfillmentMethod = 'HOME_DELIVERY',
     this.takeawayBranch,
+    this.review = const {},
     this.mealCount,
     this.snackCount,
   });
@@ -245,6 +264,7 @@ class OrderConfirmation {
         placedAt: _dateTime(json['placedAt']),
         mealCount: _integer(json['mealCount']),
         snackCount: _integer(json['snackCount']),
+        review: _map(json['review']),
         takeawayBranch: json['takeawayBranch'] is Map
             ? TakeawayBranch.fromJson(_map(json['takeawayBranch']))
             : null,
@@ -264,6 +284,19 @@ class OrderConfirmation {
   final DateTime? placedAt;
   final int? mealCount;
   final int? snackCount;
+  final Map<String, dynamic> review;
+  int get rowVersion => (review['rowVersion'] as num?)?.toInt() ?? 0;
+  String get statusLabel => orderStatusLabel(status);
+  String get paymentLabel => paymentStatusLabel(paymentStatus);
+  String? get reviewMessage =>
+      review['rejectionReason'] as String? ??
+      review['holdReason'] as String? ??
+      review['fulfillmentBlockedReason'] as String? ??
+      (review['awaitingPayment'] == true
+          ? 'Your order is confirmed and awaiting the required payment.'
+          : status == 'PENDING_APPROVAL'
+          ? "Your order has been received and is awaiting confirmation from Diet Time. We'll notify you once it's reviewed."
+          : null);
   final TakeawayBranch? takeawayBranch;
   final String fulfillmentMethod;
   MealEntitlement get entitlement => mealCount == null
