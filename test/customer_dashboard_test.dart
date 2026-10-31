@@ -179,20 +179,35 @@ void main() {
         expect(card, findsOneWidget);
         expect(find.byKey(const ValueKey('noActivePlan')), findsNothing);
         expect(find.byType(ListTile), findsNothing);
+        expect(find.byKey(const ValueKey('planPayment-pending')), findsNothing);
+        final copy = lookupAppLocalizations(Locale(locale));
         expect(
-          find.byKey(const ValueKey('planPayment-pending')),
+          find.descendant(of: card, matching: find.text(copy.customerPending)),
           findsOneWidget,
         );
-        final copy = lookupAppLocalizations(Locale(locale));
         expect(
           find.descendant(
             of: card,
-            matching: find.text(copy.dashboardPendingApproval),
+            matching: find.text(copy.dashboardAwaitingConfirmation),
           ),
-          findsOneWidget,
+          findsNothing,
         );
-        expect(find.text(copy.dashboardAwaitingConfirmation), findsOneWidget);
-        expect(tester.widget<Material>(card).color, const Color(0xFFFFF5DC));
+        expect(
+          find.descendant(of: card, matching: find.text(pending.orderNumber)),
+          findsNothing,
+        );
+        expect(
+          find.descendant(
+            of: card,
+            matching: find.textContaining(pending.takeawayBranch!.name),
+          ),
+          findsNothing,
+        );
+        expect(
+          find.descendant(of: card, matching: find.text(pending.paymentLabel)),
+          findsNothing,
+        );
+        expect(tester.widget<Material>(card).color, const Color(0xFF8B642D));
         expect(tester.takeException(), isNull);
         await tester.ensureVisible(
           find.byKey(const ValueKey('viewOrder-pending')),
@@ -239,7 +254,7 @@ void main() {
       final activeCard = find.byKey(const ValueKey('activePlan-active'));
       expect(
         tester.widget<Material>(activeCard).color,
-        const Color(0xFF0A7159),
+        const Color(0xFF075A43),
       );
       expect(
         find.descendant(of: activeCard, matching: find.text('Active')),
@@ -271,7 +286,99 @@ void main() {
   );
 
   testWidgets(
-    'held and confirmed cards retain payment status and pagination survives rejection',
+    'approval recolors the same minimal card without changing its dimensions or payment state',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final pending = _reviewSummary('purchase', 'PENDING_APPROVAL');
+      final controller = _DashboardControllerForTest(
+        DashboardWithoutActivePlan([pending]),
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            customerDashboardControllerProvider.overrideWith(() => controller),
+          ],
+          child: const MaterialApp(home: CustomerDashboardScreen()),
+        ),
+      );
+      await tester.pump();
+      final card = find.byKey(const ValueKey('activePlan-purchase'));
+      final originalSize = tester.getSize(card);
+      expect(originalSize.height, lessThan(170));
+      expect(tester.widget<Material>(card).color, const Color(0xFF8B642D));
+      expect(
+        find.descendant(of: card, matching: find.text('Pending')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: card, matching: find.text('Takeaway')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: card,
+          matching: find.text(pending.entitlement!.label('en')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<Text>(
+              find.descendant(of: card, matching: find.text(pending.planName)),
+            )
+            .style
+            ?.color,
+        Colors.white,
+      );
+      for (final status in ['CONFIRMED', 'ACTIVE', 'ON_HOLD']) {
+        final updated = _reviewSummary('purchase', status);
+        controller.show(
+          status == 'ON_HOLD'
+              ? DashboardWithoutActivePlan([updated])
+              : DashboardWithActivePlan(
+                  order: updated,
+                  detail: _detail(updated),
+                  orders: [updated],
+                ),
+        );
+        await tester.pump();
+        expect(card, findsOneWidget);
+        expect(find.text('1 PLAN'), findsOneWidget);
+        expect(tester.getSize(card), originalSize);
+        expect(
+          tester.widget<Material>(card).color,
+          status == 'ON_HOLD'
+              ? const Color(0xFF9B503A)
+              : const Color(0xFF075A43),
+        );
+        expect(
+          find.descendant(of: card, matching: find.text(updated.statusLabel)),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: card, matching: find.text(updated.orderNumber)),
+          findsNothing,
+        );
+        expect(
+          find.descendant(of: card, matching: find.text(updated.paymentLabel)),
+          findsNothing,
+        );
+        expect(
+          find.descendant(
+            of: card,
+            matching: find.textContaining(updated.takeawayBranch!.name),
+          ),
+          findsNothing,
+        );
+        expect(updated.paymentStatus, pending.paymentStatus);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
+  testWidgets(
+    'held and confirmed cards use minimal styling and pagination survives rejection',
     (tester) async {
       final active = _reviewSummary('active', 'ACTIVE');
       final confirmed = _reviewSummary('confirmed', 'CONFIRMED', blocked: true);
@@ -298,16 +405,13 @@ void main() {
       final confirmedCard = find.byKey(const ValueKey('activePlan-confirmed'));
       expect(
         tester.widget<Material>(confirmedCard).color,
-        const Color(0xFFE4F3F2),
+        const Color(0xFF075A43),
       );
-      expect(
-        find.byKey(const ValueKey('planPayment-confirmed')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const ValueKey('planPayment-confirmed')), findsNothing);
       await tester.drag(carousel, const Offset(-700, 0));
       await tester.pumpAndSettle();
       final heldCard = find.byKey(const ValueKey('activePlan-hold'));
-      expect(tester.widget<Material>(heldCard).color, const Color(0xFFFFEBDD));
+      expect(tester.widget<Material>(heldCard).color, const Color(0xFF9B503A));
       expect(
         find.descendant(of: heldCard, matching: find.text('On Hold')),
         findsOneWidget,
@@ -427,7 +531,7 @@ void main() {
     expect(find.text('2 PLANS'), findsOneWidget);
     expect(
       tester.getSize(find.byKey(const ValueKey('activePlan-active'))).height,
-      lessThan(230),
+      lessThan(170),
     );
     await tester.drag(
       find.byKey(const ValueKey('activePlansCarousel')),

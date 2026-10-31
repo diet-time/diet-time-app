@@ -636,12 +636,12 @@ class _NoActivePlanCard extends ConsumerWidget {
 }
 
 double _activePlanCardHeight(BuildContext context) =>
-    210 +
+    164 +
     (MediaQuery.textScalerOf(context).scale(14) - 14).clamp(
           0,
           double.infinity,
         ) *
-        14;
+        10;
 
 class _ReferencePlanCard extends ConsumerWidget {
   const _ReferencePlanCard({required this.summary, this.detail});
@@ -651,45 +651,24 @@ class _ReferencePlanCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
-    final pending = summary.status == 'PENDING_APPROVAL';
-    final (background, foreground, accent, icon) = switch (summary.status) {
-      'PENDING_APPROVAL' => (
-        const Color(0xFFFFF5DC),
-        const Color(0xFF573D12),
-        const Color(0xFF8A5100),
-        Icons.schedule_rounded,
-      ),
-      'ON_HOLD' => (
-        const Color(0xFFFFEBDD),
-        const Color(0xFF623414),
-        const Color(0xFF954515),
-        Icons.pause_circle_outline,
-      ),
-      'CONFIRMED' => (
-        const Color(0xFFE4F3F2),
-        const Color(0xFF134B50),
-        const Color(0xFF145F66),
-        Icons.check_circle_outline,
-      ),
-      _ => (
-        const Color(0xFF0A7159),
-        AppColors.white,
-        const Color(0xFFD7E7E1),
-        Icons.check_circle_outline,
-      ),
+    final pending = const {
+      'PENDING_APPROVAL',
+      'PENDING',
+    }.contains(summary.status);
+    final (background, icon) = switch (summary.status) {
+      'PENDING_APPROVAL' ||
+      'PENDING' => (const Color(0xFF8B642D), Icons.schedule_rounded),
+      'ON_HOLD' ||
+      'PAUSED' => (const Color(0xFF9B503A), Icons.pause_circle_outline),
+      _ => (const Color(0xFF075A43), Icons.check_circle_outline),
     };
     final package = (detail?.entitlement ?? summary.entitlement)?.label(
       Localizations.localeOf(context).languageCode,
     );
-    final address = detail?.delivery.address;
-    final location = summary.isTakeaway
-        ? summary.takeawayBranch?.name
-        : [
-            address?.displayName,
-            address?.area,
-          ].whereType<String>().where((v) => v.trim().isNotEmpty).join(' · ');
+    final status = context.customerCopy(
+      pending ? 'Pending' : summary.statusLabel,
+    );
     Future<void> openDetails() async {
-      // Existing active-plan navigation also uses this canonical purchased-order ID.
       await context.push(AppRoutes.orderDetails, extra: summary.id);
       if (context.mounted) {
         unawaited(
@@ -702,7 +681,7 @@ class _ReferencePlanCard extends ConsumerWidget {
       value,
       maxLines: maxLines,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(color: foreground, fontSize: size),
+      style: TextStyle(color: AppColors.white, fontSize: size),
     );
     return Material(
       key: ValueKey('activePlan-${summary.id}'),
@@ -711,129 +690,111 @@ class _ReferencePlanCard extends ConsumerWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: openDetails,
-        child: Container(
+        child: SizedBox(
           height: _activePlanCardHeight(context),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            gradient: background == const Color(0xFF0A7159)
-                ? const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF0A7159), Color(0xFF064638)],
-                  )
-                : null,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                summary.planName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: foreground,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 5),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Container(
-                    key: ValueKey('planStatus-${summary.id}'),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: .12),
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(icon, size: 13, color: accent),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            pending
-                                ? copy.dashboardPendingApproval
-                                : context.customerCopy(summary.statusLabel),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: accent,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        summary.planName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
                         ),
-                      ],
-                    ),
-                  ),
-                  if (summary.paymentStatus.isNotEmpty)
-                    Text(
-                      context.customerCopy(summary.paymentLabel),
-                      key: ValueKey('planPayment-${summary.id}'),
-                      style: TextStyle(
-                        color: foreground,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                ],
-              ),
-              const SizedBox(height: 5),
-              line(
-                package?.isNotEmpty == true
-                    ? package!
-                    : summary.planDurationName,
-              ),
-              line(
-                '${context.customerCopy(summary.fulfillmentLabel)}${location?.isNotEmpty == true ? ' · $location' : ''}',
-                maxLines: 2,
-              ),
-              if (pending) ...[
-                const SizedBox(height: 4),
-                line(copy.dashboardAwaitingConfirmation),
-                line(summary.orderNumber, size: 10),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      flex: 2,
+                      child: Container(
+                        key: ValueKey('planStatus-${summary.id}'),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withValues(alpha: .14),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(icon, size: 13, color: AppColors.white),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                status,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppColors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                line(
+                  package?.isNotEmpty == true
+                      ? package!
+                      : summary.planDurationName,
+                  size: 12,
+                ),
+                line(context.customerCopy(summary.fulfillmentLabel)),
+                const Spacer(),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_today_outlined,
+                      color: AppColors.white,
+                      size: 12,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: line(
+                        _period(
+                          summary.startDate,
+                          summary.endDate,
+                          locale: Localizations.localeOf(context).languageCode,
+                        ),
+                        maxLines: 2,
+                        size: 10,
+                      ),
+                    ),
+                    TextButton(
+                      key: ValueKey('viewOrder-${summary.id}'),
+                      onPressed: openDetails,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.white,
+                        minimumSize: const Size(0, 44),
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        textStyle: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      child: Text(copy.deliveriesViewDetails),
+                    ),
+                  ],
+                ),
               ],
-              const Spacer(),
-              Row(
-                children: [
-                  Icon(Icons.calendar_today_outlined, color: accent, size: 12),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: line(
-                      _period(
-                        summary.startDate,
-                        summary.endDate,
-                        locale: Localizations.localeOf(context).languageCode,
-                      ),
-                      maxLines: 2,
-                      size: 10,
-                    ),
-                  ),
-                  TextButton(
-                    key: ValueKey('viewOrder-${summary.id}'),
-                    onPressed: openDetails,
-                    style: TextButton.styleFrom(
-                      foregroundColor: foreground,
-                      minimumSize: const Size(0, 44),
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      textStyle: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    child: Text(copy.deliveriesViewDetails),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
       ),
