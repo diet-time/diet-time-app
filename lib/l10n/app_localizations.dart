@@ -4123,6 +4123,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your order could not be saved. Please retry or contact Diet Time.'**
   String get saveOrderRetry;
+
+  /// No description provided for @menuButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Menu'**
+  String get menuButton;
+
+  /// No description provided for @dashboardMyPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'My Plans'**
+  String get dashboardMyPlans;
+
+  /// No description provided for @dashboardPendingApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Approval'**
+  String get dashboardPendingApproval;
+
+  /// No description provided for @dashboardAwaitingConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting Diet Time confirmation'**
+  String get dashboardAwaitingConfirmation;
+
+  /// No description provided for @dashboardPlanCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 PLAN} other{{count} PLANS}}'**
+  String dashboardPlanCount(int count);
 }
 
 class _AppLocalizationsDelegate

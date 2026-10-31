@@ -798,5 +798,17 @@
   "planNotFound": "لم يتم العثور على باقة الوجبات هذه. يرجى اختيار باقة أخرى.",
   "planUnavailable": "باقة الوجبات هذه لم تعد متاحة. يرجى اختيار باقة أخرى.",
   "availabilityRetry": "تعذر التحقق من هذه الباقة. تحقق من الاتصال وحاول مرة أخرى.",
-  "saveOrderRetry": "تعذر حفظ طلبك. يرجى المحاولة مرة أخرى أو التواصل مع دايت تايم."
+  "saveOrderRetry": "تعذر حفظ طلبك. يرجى المحاولة مرة أخرى أو التواصل مع دايت تايم.",
+  "menuButton": "القائمة",
+  "dashboardMyPlans": "خططي",
+  "dashboardPendingApproval": "بانتظار الموافقة",
+  "dashboardAwaitingConfirmation": "بانتظار تأكيد دايت تايم",
+  "dashboardPlanCount": "{count} خطط",
+  "@dashboardPlanCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

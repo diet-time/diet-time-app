@@ -1,3 +1,7 @@
+import 'package:diet_time/features/language/presentation/language_dropdown.dart';
+import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dart'
+    show qatarToday;
+import 'package:intl/intl.dart';
 import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'dart:async';
@@ -16,6 +20,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+// Injectable instant for Qatar-date boundary tests; normal builds use the device's UTC instant.
+final menuNowProvider = Provider<DateTime Function()>((ref) => DateTime.now);
+
 class BrowseMenuScreen extends ConsumerStatefulWidget {
   const BrowseMenuScreen({super.key, this.fromDashboard = false});
   final bool fromDashboard;
@@ -33,6 +40,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   GuestMenuData? _menuData;
   final Map<String, GuestMenuData> _menuCache = {};
   List<GuestMeal> _visibleMeals = const [];
+  DateTime? _dashboardInitialDate;
   String? _language;
   String? _selectedPlanCode;
   DateTime? _selectedDate;
@@ -80,6 +88,9 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     if (!force && (_hasLoaded || _isHomeLoading || _isHomeRefreshing)) {
       return;
     }
+    if (_dashboardOrigin) {
+      _dashboardInitialDate ??= qatarToday(now: ref.read(menuNowProvider)());
+    }
     final selectionRequestId = ++_selectionRequestId;
     final homeRequestId = ++_homeRequestId;
     ++_menuRequestId;
@@ -95,13 +106,12 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       }
     });
     try {
-      final response = await ref
-          .read(guestMenuRepositoryProvider)
-          .getGuestHome(
-            language: _language ?? 'en',
-            date: preserveSelections ? _selectedDate : null,
-            planCode: preserveSelections ? _selectedPlanCode : null,
-          );
+      final response = await _getHomeMetadata(
+        date: preserveSelections
+            ? _selectedDate ?? _dashboardInitialDate
+            : _dashboardInitialDate,
+        planCode: preserveSelections ? _selectedPlanCode : null,
+      );
       if (!mounted ||
           homeRequestId != _homeRequestId ||
           selectionRequestId != _selectionRequestId) {
@@ -117,7 +127,9 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
         preserveSelections ? _selectedDate : null,
       );
       setState(() {
-        _homeData = data;
+        _homeData = _dashboardOrigin && selectedDate != null
+            ? _dashboardWeek(data, selectedDate)
+            : data;
         _selectedPlanCode = planCode;
         _selectedDate = selectedDate;
         _isHomeLoading = false;
@@ -153,6 +165,71 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     }
   }
 
+  Future<GuestHomeResponse> _getHomeMetadata({
+    required DateTime? date,
+    required String? planCode,
+  }) async {
+    final repository = ref.read(guestMenuRepositoryProvider);
+    final dashboardOrigin = _dashboardOrigin;
+    try {
+      return await repository.getGuestHome(
+        language: _language ?? 'en',
+        date: date,
+        planCode: planCode,
+      );
+    } on GuestMenuException catch (error) {
+      if (!dashboardOrigin ||
+          date == null ||
+          error.failure != GuestMenuFailure.unavailable) {
+        rethrow;
+      }
+      // A non-service/unpublished day can lack home metadata. Keep today's selection
+      // and reuse the existing plan catalogue; the date-specific menu still decides availability.
+      return repository.getGuestHome(
+        language: _language ?? 'en',
+        planCode: planCode,
+      );
+    }
+  }
+
+  GuestHomeData _dashboardWeek(GuestHomeData data, DateTime selectedDate) {
+    final today = qatarToday(now: ref.read(menuNowProvider)());
+    final weekStart = selectedDate.subtract(
+      Duration(days: (selectedDate.weekday - DateTime.saturday + 7) % 7),
+    );
+    final language = _language ?? 'en';
+    final loaded = _menuData;
+    final selectedPlan = data.mealPlans
+        .where((plan) => plan.isSelected)
+        .firstOrNull;
+    return GuestHomeData(
+      mealPlans: data.mealPlans,
+      weeklyCalendar: List.generate(7, (index) {
+        final date = weekStart.add(Duration(days: index));
+        final known = data.weeklyCalendar
+            .where((item) => _sameDate(item.date, date))
+            .firstOrNull;
+        // Retain server availability. A successful date-specific menu also confirms its published day.
+        final published =
+            loaded != null &&
+            _sameDate(loaded.date, date) &&
+            loaded.planId.isNotEmpty &&
+            loaded.planId == selectedPlan?.id;
+        return GuestCalendarDate(
+          date: date,
+          dayNumber: date.day,
+          dayName: DateFormat('EEEE', language).format(date),
+          shortDayName: DateFormat('EEE', language).format(date),
+          isToday: _sameDate(date, today),
+          isSelected: _sameDate(date, selectedDate),
+          isAvailable:
+              date.weekday != DateTime.friday &&
+              (known?.isAvailable == true || published),
+        );
+      }),
+    );
+  }
+
   String? _resolvePlan(GuestHomeData data, String? preferredCode) {
     if (preferredCode != null &&
         data.mealPlans.any((plan) => plan.code == preferredCode)) {
@@ -163,6 +240,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   }
 
   DateTime? _resolveDate(GuestHomeData data, DateTime? preferredDate) {
+    if (_dashboardOrigin) return preferredDate ?? _dashboardInitialDate;
     if (preferredDate != null && _isDateAvailable(data, preferredDate)) {
       return preferredDate;
     }
@@ -207,13 +285,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       _hasMenuError = false;
     });
     try {
-      final response = await ref
-          .read(guestMenuRepositoryProvider)
-          .getGuestHome(
-            language: _language ?? 'en',
-            date: date,
-            planCode: planCode,
-          );
+      final response = await _getHomeMetadata(date: date, planCode: planCode);
       if (!mounted ||
           selectionRequestId != _selectionRequestId ||
           homeRequestId != _homeRequestId) {
@@ -225,7 +297,9 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
           _resolvePlan(data, planCode);
       final selectedDate = _resolveDate(data, date);
       setState(() {
-        _homeData = data;
+        _homeData = _dashboardOrigin && selectedDate != null
+            ? _dashboardWeek(data, selectedDate)
+            : data;
         _selectedPlanCode = selectedPlanCode;
         _selectedDate = selectedDate;
         _isHomeRefreshing = false;
@@ -288,6 +362,10 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     required int selectionRequestId,
     bool force = false,
   }) async {
+    if (_dashboardOrigin && date.weekday == DateTime.friday) {
+      _applyMenu(GuestMenuResponse.empty(planCode: planCode, date: date).data);
+      return;
+    }
     final language = _language ?? 'en';
     final plan = _homeData?.mealPlans
         .where((item) => item.code == planCode)
@@ -351,11 +429,31 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     final visibleMeals = _filterMeals(data, selectedMealTimeCode);
     setState(() {
       _menuData = data;
+      if (_dashboardOrigin && _homeData != null && _selectedDate != null) {
+        _homeData = _dashboardWeek(_homeData!, _selectedDate!);
+      }
       _selectedMealTimeCode = selectedMealTimeCode;
       _visibleMeals = visibleMeals;
       _isMenuLoading = false;
       _hasMenuError = false;
     });
+    if (_dashboardOrigin) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_dateScrollController.hasClients) return;
+        final index =
+            _homeData?.weeklyCalendar.indexWhere(
+              (day) => _sameDate(day.date, _selectedDate),
+            ) ??
+            -1;
+        if (index < 0) return;
+        final position = _dateScrollController.position;
+        // Existing date cards are 62px wide with a 10px separator.
+        final offset = (index * 72 - (position.viewportDimension - 62) / 2)
+            .clamp(0.0, position.maxScrollExtent)
+            .toDouble();
+        _dateScrollController.jumpTo(offset);
+      });
+    }
     final home = _homeData;
     if (home != null) {
       _precacheMenuImages(home, _selectedPlanCode, visibleMeals);
@@ -497,26 +595,8 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
 
   bool get _dashboardOrigin =>
       widget.fromDashboard &&
-      ref.watch(otpAuthControllerProvider).isAuthenticated &&
+      ref.read(otpAuthControllerProvider).isAuthenticated &&
       context.canPop();
-
-  Widget _menuActions(AppLocalizations l10n) {
-    if (!_dashboardOrigin) return _startPlanButton(l10n);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        FilledButton.tonalIcon(
-          key: const ValueKey('backToDashboard'),
-          onPressed: () => context.pop(),
-          icon: const BackButtonIcon(),
-          label: Text(l10n.backToDashboard),
-        ),
-        const SizedBox(height: 8),
-        _startPlanButton(l10n),
-      ],
-    );
-  }
 
   Widget _startPlanButton(AppLocalizations l10n) {
     return FloatingActionButton.extended(
@@ -537,7 +617,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     if (_isHomeLoading || (_homeData == null && !_hasHomeError)) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F8F3),
-        floatingActionButton: _menuActions(l10n),
+        floatingActionButton: _startPlanButton(l10n),
         body: SafeArea(
           child: Stack(
             children: [
@@ -563,7 +643,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     if (_homeData == null) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F8F3),
-        floatingActionButton: _menuActions(l10n),
+        floatingActionButton: _startPlanButton(l10n),
         body: SafeArea(
           child: Stack(
             children: [
@@ -606,7 +686,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8F3),
-      floatingActionButton: _menuActions(l10n),
+      floatingActionButton: _startPlanButton(l10n),
       body: Stack(
         children: [
           SafeArea(
@@ -631,7 +711,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
                             else
                               const SizedBox(width: 48),
                             const Spacer(),
-                            _GuestLanguageSelector(
+                            LanguageDropdown(
                               languageCode: _language ?? 'en',
                               onSelected: _changeLanguage,
                             ),
@@ -818,84 +898,6 @@ class _GuestMenuBackButton extends StatelessWidget {
           elevation: 2,
         ),
         icon: const Icon(Icons.arrow_back_rounded, size: 22),
-      ),
-    );
-  }
-}
-
-class _GuestLanguageSelector extends StatelessWidget {
-  const _GuestLanguageSelector({
-    required this.languageCode,
-    required this.onSelected,
-  });
-
-  final String languageCode;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final isArabic = languageCode == 'ar';
-    return Semantics(
-      label: context.customerCopy('Language'),
-      button: true,
-      child: PopupMenuButton<String>(
-        key: const ValueKey('guestLanguageSelector'),
-        tooltip: context.customerCopy('Language'),
-        onSelected: onSelected,
-        position: PopupMenuPosition.under,
-        color: AppColors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        itemBuilder: (context) => [
-          CheckedPopupMenuItem(
-            key: const ValueKey('guest-language-en'),
-            value: 'en',
-            checked: !isArabic,
-            child: const Text('English'),
-          ),
-          CheckedPopupMenuItem(
-            key: const ValueKey('guest-language-ar'),
-            value: 'ar',
-            checked: isArabic,
-            child: const Text('العربية'),
-          ),
-        ],
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 10, 8),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(99),
-            border: Border.all(
-              color: AppColors.emeraldGreen.withValues(alpha: .18),
-            ),
-            boxShadow: _softShadow,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.language_rounded,
-                size: 18,
-                color: AppColors.emeraldGreen,
-              ),
-              const SizedBox(width: 7),
-              Text(
-                isArabic ? 'العربية' : 'English',
-                style: const TextStyle(
-                  color: AppColors.darkGreen,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(width: 4),
-              const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 18,
-                color: AppColors.emeraldGreen,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

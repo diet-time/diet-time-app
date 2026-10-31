@@ -265,3 +265,40 @@ int _newestFirst(CustomerOrderSummary left, CustomerOrderSummary right) =>
     _dateValue(right.placedAt).compareTo(_dateValue(left.placedAt));
 
 int _dateValue(DateTime? value) => value?.millisecondsSinceEpoch ?? 0;
+
+// Display eligibility is deliberately separate from isCurrent/canFulfill.
+// Both the order list and active-plan state use the purchased order's ID.
+List<CustomerOrderSummary> dashboardPlanOrders(CustomerDashboardState state) {
+  final orders = switch (state) {
+    DashboardWithActivePlan(:final orders) => orders,
+    DashboardWithMultipleActivePlans(:final orders) => orders,
+    DashboardWithoutActivePlan(:final orders) => orders,
+    _ => const <CustomerOrderSummary>[],
+  };
+  final active = switch (state) {
+    DashboardWithActivePlan(:final order) => [order],
+    DashboardWithMultipleActivePlans(:final activeOrders) => activeOrders,
+    _ => const <CustomerOrderSummary>[],
+  };
+  final byId = <String, CustomerOrderSummary>{};
+  for (final order in [...active, ...orders]) {
+    final previous = byId[order.id];
+    if (order.id.isNotEmpty &&
+        (previous == null || order.rowVersion >= previous.rowVersion)) {
+      byId[order.id] = order;
+    }
+  }
+  return List.unmodifiable(
+    byId.values.where(
+      (order) => const {
+        'PENDING_APPROVAL',
+        'ON_HOLD',
+        'CONFIRMED',
+        'ACTIVE',
+        'PAUSED',
+        'PENDING',
+        'PENDING_ACTIVATION',
+      }.contains(order.status),
+    ),
+  );
+}

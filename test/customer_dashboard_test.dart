@@ -1,3 +1,6 @@
+import 'package:diet_time/app/router/app_router.dart';
+import 'package:go_router/go_router.dart';
+import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
@@ -14,6 +17,319 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    'plan presentation deduplicates purchases without granting fulfillment',
+    () {
+      final pending = _reviewSummary('purchase', 'PENDING_APPROVAL');
+      final confirmed = _reviewSummary('confirmed', 'CONFIRMED', blocked: true);
+      final active = _reviewSummary('active', 'ACTIVE');
+      final hold = _reviewSummary('hold', 'ON_HOLD');
+      final orders = [
+        pending,
+        pending,
+        confirmed,
+        active,
+        hold,
+        _reviewSummary('rejected', 'REJECTED'),
+        _reviewSummary('cancelled', 'CANCELLED'),
+        _reviewSummary('completed', 'COMPLETED'),
+      ];
+      final state = DashboardWithActivePlan(
+        order: active,
+        detail: _detail(active),
+        orders: orders,
+      );
+      final plans = dashboardPlanOrders(state);
+      expect(plans.map((p) => p.id), [
+        'active',
+        'purchase',
+        'confirmed',
+        'hold',
+      ]);
+      expect(pending.isCurrent, isFalse);
+      expect(hold.isCurrent, isFalse);
+      expect(confirmed.isCurrent, isFalse);
+      expect(active.isCurrent, isTrue);
+      expect(pending.paymentLabel, 'Unpaid');
+      final rejected = CustomerOrderSummary.fromJson({
+        'id': active.id,
+        'status': 'REJECTED',
+        'review': {'rowVersion': 2},
+      });
+      expect(
+        dashboardPlanOrders(
+          DashboardWithActivePlan(
+            order: active,
+            detail: _detail(active),
+            orders: [rejected],
+          ),
+        ).isEmpty,
+        isTrue,
+      );
+    },
+  );
+
+  test(
+    'refresh reflects staff approval and rejection using the same purchase ID',
+    () async {
+      final orders = [_reviewSummary('purchase', 'PENDING_APPROVAL')];
+      final container = ProviderContainer(
+        overrides: [
+          ordersRepositoryProvider.overrideWithValue(
+            _FakeOrdersRepository(orders),
+          ),
+          checkoutControllerProvider.overrideWith(_NoopCheckoutController.new),
+        ],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(
+        customerDashboardControllerProvider.notifier,
+      );
+      await controller.load('profile');
+      expect(
+        container.read(customerDashboardControllerProvider),
+        isA<DashboardWithoutActivePlan>(),
+      );
+      expect(
+        dashboardPlanOrders(
+          container.read(customerDashboardControllerProvider),
+        ).single.status,
+        'PENDING_APPROVAL',
+      );
+      orders[0] = _reviewSummary('purchase', 'CONFIRMED');
+      await controller.refresh();
+      expect(
+        container.read(customerDashboardControllerProvider),
+        isA<DashboardWithActivePlan>(),
+      );
+      expect(
+        dashboardPlanOrders(
+          container.read(customerDashboardControllerProvider),
+        ).single.id,
+        'purchase',
+      );
+      orders[0] = _reviewSummary('purchase', 'REJECTED');
+      await controller.refresh();
+      expect(
+        dashboardPlanOrders(
+          container.read(customerDashboardControllerProvider),
+        ),
+        isEmpty,
+      );
+      expect(
+        (container.read(customerDashboardControllerProvider)
+                as DashboardWithoutActivePlan)
+            .orders
+            .single
+            .status,
+        'REJECTED',
+      );
+    },
+  );
+
+  for (final locale in ['en', 'ar']) {
+    testWidgets(
+      'pending plan fits narrow $locale dashboard with large text and opens existing details',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(320, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final pending = _reviewSummary('pending', 'PENDING_APPROVAL');
+        final appRouter = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, _) => const CustomerDashboardScreen(),
+            ),
+            GoRoute(
+              path: AppRoutes.orderDetails,
+              builder: (_, state) =>
+                  OrderDetailsScreen(orderId: state.extra! as String),
+            ),
+          ],
+        );
+        addTearDown(appRouter.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              customerDashboardControllerProvider.overrideWith(
+                () => _DashboardControllerForTest(
+                  DashboardWithoutActivePlan([pending]),
+                ),
+              ),
+              ordersRepositoryProvider.overrideWithValue(
+                _FakeOrdersRepository([pending]),
+              ),
+            ],
+            child: MaterialApp.router(
+              routerConfig: appRouter,
+              locale: Locale(locale),
+              supportedLocales: AppLocalizations.supportedLocales,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: const TextScaler.linear(1.5)),
+                child: child!,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final card = find.byKey(const ValueKey('activePlan-pending'));
+        expect(card, findsOneWidget);
+        expect(find.byKey(const ValueKey('noActivePlan')), findsNothing);
+        expect(find.byType(ListTile), findsNothing);
+        expect(
+          find.byKey(const ValueKey('planPayment-pending')),
+          findsOneWidget,
+        );
+        final copy = lookupAppLocalizations(Locale(locale));
+        expect(
+          find.descendant(
+            of: card,
+            matching: find.text(copy.dashboardPendingApproval),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text(copy.dashboardAwaitingConfirmation), findsOneWidget);
+        expect(tester.widget<Material>(card).color, const Color(0xFFFFF5DC));
+        expect(tester.takeException(), isNull);
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('viewOrder-pending')),
+        );
+        await tester.tap(find.byKey(const ValueKey('viewOrder-pending')));
+        await tester.pumpAndSettle();
+        expect(find.byType(OrderDetailsScreen), findsOneWidget);
+        expect(
+          tester
+              .widget<OrderDetailsScreen>(find.byType(OrderDetailsScreen))
+              .orderId,
+          'pending',
+        );
+        expect(find.text(copy.dashboardPendingApproval), findsOneWidget);
+        expect(find.text('ORD-pending'), findsWidgets);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'pending and active plans share carousel with distinct status and unchanged meal eligibility',
+    (tester) async {
+      final active = _reviewSummary('active', 'ACTIVE');
+      final pending = _reviewSummary('pending', 'PENDING_APPROVAL');
+      final controller = _DashboardControllerForTest(
+        DashboardWithActivePlan(
+          order: active,
+          detail: _detail(active),
+          orders: [pending, active, pending],
+        ),
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            customerDashboardControllerProvider.overrideWith(() => controller),
+          ],
+          child: const MaterialApp(home: CustomerDashboardScreen()),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('My Plans'), findsOneWidget);
+      expect(find.text('2 PLANS'), findsOneWidget);
+      final activeCard = find.byKey(const ValueKey('activePlan-active'));
+      expect(
+        tester.widget<Material>(activeCard).color,
+        const Color(0xFF0A7159),
+      );
+      expect(
+        find.descendant(of: activeCard, matching: find.text('Active')),
+        findsOneWidget,
+      );
+      await tester.drag(
+        find.byKey(const ValueKey('activePlansCarousel')),
+        const Offset(-700, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('viewOrder-pending')).hitTestable(),
+        findsOneWidget,
+      );
+      expect(find.byType(ListTile), findsNothing);
+      controller.show(
+        DashboardWithActivePlan(
+          order: active,
+          detail: _detail(active),
+          orders: [active, _reviewSummary('pending', 'REJECTED')],
+        ),
+      );
+      await tester.pump();
+      expect(find.text('1 PLAN'), findsOneWidget);
+      expect(find.byKey(const ValueKey('activePlan-pending')), findsNothing);
+      expect(find.byKey(const ValueKey('activePlansCarousel')), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'held and confirmed cards retain payment status and pagination survives rejection',
+    (tester) async {
+      final active = _reviewSummary('active', 'ACTIVE');
+      final confirmed = _reviewSummary('confirmed', 'CONFIRMED', blocked: true);
+      final hold = _reviewSummary('hold', 'ON_HOLD');
+      final controller = _DashboardControllerForTest(
+        DashboardWithActivePlan(
+          order: active,
+          detail: _detail(active),
+          orders: [active, confirmed, hold],
+        ),
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            customerDashboardControllerProvider.overrideWith(() => controller),
+          ],
+          child: const MaterialApp(home: CustomerDashboardScreen()),
+        ),
+      );
+      await tester.pump();
+      final carousel = find.byKey(const ValueKey('activePlansCarousel'));
+      await tester.drag(carousel, const Offset(-700, 0));
+      await tester.pumpAndSettle();
+      final confirmedCard = find.byKey(const ValueKey('activePlan-confirmed'));
+      expect(
+        tester.widget<Material>(confirmedCard).color,
+        const Color(0xFFE4F3F2),
+      );
+      expect(
+        find.byKey(const ValueKey('planPayment-confirmed')),
+        findsOneWidget,
+      );
+      await tester.drag(carousel, const Offset(-700, 0));
+      await tester.pumpAndSettle();
+      final heldCard = find.byKey(const ValueKey('activePlan-hold'));
+      expect(tester.widget<Material>(heldCard).color, const Color(0xFFFFEBDD));
+      expect(
+        find.descendant(of: heldCard, matching: find.text('On Hold')),
+        findsOneWidget,
+      );
+      controller.show(
+        DashboardWithActivePlan(
+          order: active,
+          detail: _detail(active),
+          orders: [active, confirmed, _reviewSummary('hold', 'REJECTED')],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('2 PLANS'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('viewOrder-confirmed')).hitTestable(),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('activePlan-hold')), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('dashboard initialization runs once across widget rebuilds', (
     tester,
   ) async {
@@ -111,7 +427,7 @@ void main() {
     expect(find.text('2 PLANS'), findsOneWidget);
     expect(
       tester.getSize(find.byKey(const ValueKey('activePlan-active'))).height,
-      lessThan(150),
+      lessThan(230),
     );
     await tester.drag(
       find.byKey(const ValueKey('activePlansCarousel')),
@@ -426,6 +742,10 @@ OrderConfirmation _detail(CustomerOrderSummary summary) =>
       'orderNumber': summary.orderNumber,
       'status': summary.status,
       'paymentStatus': summary.paymentStatus,
+      'review': summary.review,
+      'mealCount': summary.mealCount,
+      'snackCount': summary.snackCount,
+      'fulfillmentMethod': summary.fulfillmentMethod,
       'plan': {
         'name': summary.planName,
         'durationName': summary.planDurationName,
@@ -465,6 +785,8 @@ class _DashboardControllerForTest extends CustomerDashboardController {
   _DashboardControllerForTest(this.initialState);
 
   final CustomerDashboardState initialState;
+
+  void show(CustomerDashboardState value) => state = value;
 
   @override
   CustomerDashboardState build() => initialState;
@@ -599,3 +921,31 @@ class _NoopCheckoutController extends CheckoutController {
 }
 
 Future<String?> _noToken() async => null;
+
+CustomerOrderSummary _reviewSummary(
+  String id,
+  String status, {
+  bool blocked = false,
+}) => CustomerOrderSummary.fromJson({
+  'id': id,
+  'orderNumber': 'ORD-$id',
+  'planName': 'Balanced plan with a long name for responsive layout',
+  'planDurationName': '12 Days',
+  'status': status,
+  'paymentStatus': 'UNPAID',
+  'mealCount': 2,
+  'snackCount': 1,
+  'fulfillmentMethod': 'TAKEAWAY',
+  'takeawayBranch': {
+    'id': 'branch',
+    'name': 'Diet Time branch with a long name for responsive layout',
+  },
+  'totalAmount': 750,
+  'currencyCode': 'QAR',
+  'startDate': '2026-11-01',
+  'endDate': '2026-11-14',
+  'placedAt': '2026-10-31',
+  'review': {
+    'canFulfill': !blocked && ['ACTIVE', 'CONFIRMED'].contains(status),
+  },
+});

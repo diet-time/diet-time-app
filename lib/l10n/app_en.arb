@@ -853,5 +853,17 @@
   "planNotFound": "This meal plan was not found. Please choose another plan.",
   "planUnavailable": "This meal plan is no longer available. Please choose another plan.",
   "availabilityRetry": "We could not verify this package. Check your connection and retry.",
-  "saveOrderRetry": "Your order could not be saved. Please retry or contact Diet Time."
+  "saveOrderRetry": "Your order could not be saved. Please retry or contact Diet Time.",
+  "menuButton": "Menu",
+  "dashboardMyPlans": "My Plans",
+  "dashboardPendingApproval": "Pending Approval",
+  "dashboardAwaitingConfirmation": "Awaiting Diet Time confirmation",
+  "dashboardPlanCount": "{count, plural, one{1 PLAN} other{{count} PLANS}}",
+  "@dashboardPlanCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -45,6 +45,9 @@ class HttpGuestMenuRepository implements GuestMenuRepository {
       planCode: planCode,
     );
     final result = await _get(uri);
+    if (result.statusCode == HttpStatus.notFound) {
+      throw const GuestMenuException(GuestMenuFailure.unavailable);
+    }
     if (result.statusCode == HttpStatus.badRequest) {
       throw const GuestMenuException(GuestMenuFailure.invalidRequest);
     }
@@ -149,7 +152,7 @@ Uri buildGuestMenuUri({
       );
 }
 
-enum GuestMenuFailure { network, invalidRequest }
+enum GuestMenuFailure { network, invalidRequest, unavailable }
 
 class GuestMenuException implements Exception {
   const GuestMenuException([this.failure = GuestMenuFailure.network]);

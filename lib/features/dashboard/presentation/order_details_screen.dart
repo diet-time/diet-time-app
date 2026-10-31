@@ -1,3 +1,4 @@
+import 'package:diet_time/features/checkout/domain/order_status.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:diet_time/app/localization/customer_copy.dart';
 import 'dart:async';
@@ -281,7 +282,9 @@ class _OrderDetails extends ConsumerWidget {
                     SizedBox(height: 3),
                     Text(
                       context.customerCopy(
-                        'Your plan and delivery schedule are confirmed above.',
+                        order.status == 'PENDING_APPROVAL'
+                            ? "Your order has been received and is awaiting confirmation from Diet Time. We'll notify you once it's reviewed."
+                            : 'Your plan and delivery schedule are confirmed above.',
                       ),
                       style: TextStyle(
                         color: AppColors.darkGreen,
@@ -681,28 +684,46 @@ class _StatusPill extends StatelessWidget {
 
   final String status;
 
+  Color get color => switch (status) {
+    'PENDING_APPROVAL' => const Color(0xFF8A5100),
+    'ON_HOLD' => const Color(0xFF954515),
+    'REJECTED' => const Color(0xFFB3261E),
+    'CANCELLED' => const Color(0xFF575757),
+    _ => AppColors.emeraldGreen,
+  };
+
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
     decoration: BoxDecoration(
-      color: AppColors.teaGreen.withValues(alpha: .3),
+      color: color.withValues(alpha: .12),
       borderRadius: BorderRadius.circular(99),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(
-          Icons.check_circle_rounded,
-          color: AppColors.emeraldGreen,
+        Icon(
+          switch (status) {
+            'PENDING_APPROVAL' => Icons.schedule_rounded,
+            'ON_HOLD' || 'PAUSED' => Icons.pause_circle_outline,
+            'REJECTED' || 'CANCELLED' => Icons.cancel_outlined,
+            _ => Icons.check_circle_rounded,
+          },
+          color: color,
           size: 12,
         ),
         const SizedBox(width: 4),
         Flexible(
           child: Text(
-            context.customerCopy(status),
+            status == 'PENDING_APPROVAL'
+                ? lookupAppLocalizations(
+                    Localizations.localeOf(context),
+                  ).dashboardPendingApproval
+                : context.customerCopy(orderStatusLabel(status)),
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.emeraldGreen,
+            style: TextStyle(
+              color: color,
               fontSize: 9,
               fontWeight: FontWeight.w900,
             ),

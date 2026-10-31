@@ -17,6 +17,111 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  for (final scenario in ['today', 'unpublished', 'friday']) {
+    testWidgets(
+      'dashboard date uses Qatar current week and preserves $scenario availability',
+      (tester) async {
+        final now = scenario == 'friday'
+            ? DateTime.utc(2026, 11, 5, 22)
+            : DateTime.utc(2026, 10, 30, 22);
+        final today = scenario == 'friday'
+            ? DateTime(2026, 11, 6)
+            : DateTime(2026, 10, 31);
+        final repository = _FakeGuestMenuRepository(
+          GuestHomeResponse.fromJson(_fixtureJson()),
+          unavailableDate: scenario == 'today' ? null : today,
+          menuBuilder: (code, date) => scenario == 'unpublished'
+              ? GuestMenuResponse.empty(planCode: code, date: date)
+              : GuestMenuResponse(
+                  data: GuestMenuData(
+                    planId: 'plan-1',
+                    planCode: code,
+                    date: date,
+                    slots: _menuResponse(
+                      code,
+                      DateTime(2026, 7, 25),
+                    ).data.slots,
+                  ),
+                  errors: const [],
+                ),
+        );
+        final router = GoRouter(
+          initialLocation: '/date-test',
+          routes: [
+            GoRoute(
+              path: '/date-test',
+              builder: (context, state) => Scaffold(
+                body: TextButton(
+                  onPressed: () => context.push('/menu', extra: 'dashboard'),
+                  child: const Text('Open menu'),
+                ),
+              ),
+            ),
+            GoRoute(
+              path: '/menu',
+              builder: (context, state) =>
+                  BrowseMenuScreen(fromDashboard: state.extra == 'dashboard'),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              menuNowProvider.overrideWithValue(() => now),
+              guestMenuRepositoryProvider.overrideWithValue(repository),
+              otpAuthControllerProvider.overrideWith(() => _MenuTestAuth(true)),
+            ],
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+        await tester.tap(find.text('Open menu'));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('backToDashboard')), findsNothing);
+        expect(find.byKey(const ValueKey('guestStartPlan')), findsOneWidget);
+        expect(repository.calls.first.date, today);
+        expect(repository.calls.length, scenario == 'today' ? 1 : 2);
+        if (scenario == 'friday') {
+          expect(repository.menuCalls, isEmpty);
+        } else {
+          expect(repository.menuCalls.single.date, today);
+        }
+        final day = find.byKey(
+          ValueKey('guest-date-${today.toIso8601String()}'),
+        );
+        expect(day, findsOneWidget);
+        final ink = find.descendant(of: day, matching: find.byType(InkWell));
+        expect(
+          tester.widget<InkWell>(ink).onTap,
+          scenario == 'today' ? isNotNull : isNull,
+        );
+        final container = find.descendant(
+          of: day,
+          matching: find.byType(AnimatedContainer),
+        );
+        expect(
+          (tester.widget<AnimatedContainer>(container).decoration
+                  as BoxDecoration)
+              .color,
+          const Color(0xFF00674E),
+        );
+        // This Saturday is in today's Qatar week, rather than the API's July fixture week.
+        final scroller = tester.widget<ListView>(
+          find.byKey(const ValueKey('guestDateScroller')),
+        );
+        expect(
+          scroller.childrenDelegate.estimatedChildCount,
+          13,
+        ); // seven days plus separators
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   for (final entry in [(true, true), (false, true), (true, false)]) {
     testWidgets(
       'dashboard return requires both origin and authentication: $entry',
@@ -66,13 +171,10 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(BrowseMenuScreen), findsOneWidget);
         expect(find.byKey(const ValueKey('guestStartPlan')), findsOneWidget);
-        expect(
-          find.byKey(const ValueKey('backToDashboard')),
-          entry.$1 && entry.$2 ? findsOneWidget : findsNothing,
-        );
+        expect(find.byKey(const ValueKey('backToDashboard')), findsNothing);
         final reads = repository.calls.length;
         if (entry.$1 && entry.$2) {
-          await tester.tap(find.byKey(const ValueKey('backToDashboard')));
+          await tester.tap(find.byKey(const ValueKey('guestMenuBack')));
         } else {
           await tester.binding.handlePopRoute();
         }
@@ -1416,9 +1518,11 @@ class _FakeGuestMenuRepository implements GuestMenuRepository {
     this.response, {
     this.failuresRemaining = 0,
     this.menuBuilder,
+    this.unavailableDate,
   });
 
   final GuestHomeResponse response;
+  final DateTime? unavailableDate;
   final GuestMenuResponse Function(String planCode, DateTime date)? menuBuilder;
   int failuresRemaining;
   final calls = <_Request>[];
@@ -1433,6 +1537,11 @@ class _FakeGuestMenuRepository implements GuestMenuRepository {
   }) async {
     events.add('home');
     calls.add(_Request(language: language, date: date, planCode: planCode));
+    if (date != null &&
+        unavailableDate != null &&
+        _sameTestDate(date, unavailableDate!)) {
+      throw const GuestMenuException(GuestMenuFailure.unavailable);
+    }
     if (failuresRemaining > 0) {
       failuresRemaining--;
       throw const GuestMenuException();

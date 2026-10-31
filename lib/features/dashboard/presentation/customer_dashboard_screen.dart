@@ -291,6 +291,12 @@ class _DashboardHome extends ConsumerWidget {
     final multiple = dashboardState is DashboardWithMultipleActivePlans
         ? dashboardState
         : null;
+    final plans = dashboardPlanOrders(state);
+    final details = {
+      if (single != null) single.order.id: single.detail,
+      if (multiple != null) ...multiple.details,
+    };
+    final copy = lookupAppLocalizations(Localizations.localeOf(context));
     return RefreshIndicator(
       onRefresh: () =>
           ref.read(customerDashboardControllerProvider.notifier).refresh(),
@@ -300,96 +306,84 @@ class _DashboardHome extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
         children: [
-          const Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: DashboardLanguageSwitcher(),
+          Wrap(
+            key: const ValueKey('dashboardHeaderControls'),
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              FilledButton.tonalIcon(
+                key: const ValueKey('dashboardMenuButton'),
+                onPressed: () =>
+                    context.push(AppRoutes.menu, extra: 'dashboard'),
+                icon: const Icon(Icons.restaurant_menu_rounded, size: 18),
+                label: Text(
+                  lookupAppLocalizations(
+                    Localizations.localeOf(context),
+                  ).menuButton,
+                ),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 44),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  foregroundColor: AppColors.emeraldGreen,
+                  backgroundColor: AppColors.white,
+                  shape: const StadiumBorder(),
+                  side: BorderSide(
+                    color: AppColors.emeraldGreen.withValues(alpha: .18),
+                  ),
+                ),
+              ),
+              const DashboardLanguageSwitcher(),
+            ],
           ),
+          const SizedBox(height: 8),
           _ReferenceDashboardHeader(
             name: name,
             subtitle: _dashboardSubtitle(context, state),
           ),
           const SizedBox(height: 18),
-          Card(
-            child: ListTile(
-              key: const ValueKey('dashboardExploreMenu'),
-              leading: const Icon(Icons.restaurant_menu),
-              title: Text(
-                lookupAppLocalizations(
-                  Localizations.localeOf(context),
-                ).exploreMenu,
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push(AppRoutes.menu, extra: 'dashboard'),
-            ),
-          ),
-          for (final order in orders.where(
-            (o) =>
-                [
-                  'PENDING_APPROVAL',
-                  'ON_HOLD',
-                  'REJECTED',
-                ].contains(o.status) ||
-                o.review['awaitingPayment'] == true ||
-                o.review['fulfillmentBlockedReason'] != null,
-          ))
-            Card(
-              child: ListTile(
-                title: Text(
-                  '${order.planName} · ${context.customerCopy(order.statusLabel)}',
-                ),
-                subtitle: Text(
-                  '${order.orderNumber}\n${context.customerCopy(order.reviewMessage ?? 'Diet Time is reviewing your order.')}\n${context.customerCopy(order.paymentLabel)}',
-                ),
-                isThreeLine: true,
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () async {
-                  await context.push(AppRoutes.orderDetails, extra: order.id);
-                  if (context.mounted) {
-                    unawaited(
-                      ref
-                          .read(customerDashboardControllerProvider.notifier)
-                          .refresh(),
-                    );
-                  }
-                },
-              ),
-            ),
-          if (single != null) ...[
-            _SectionTitle(context.customerCopy('YOUR ACTIVE PLAN')),
-            const SizedBox(height: 10),
-            _ReferencePlanCard(summary: single.order, detail: single.detail),
-            const SizedBox(height: 16),
-            TomorrowDeliveriesSection(orders: [single.order]),
-          ] else if (multiple != null) ...[
+          if (plans.isNotEmpty) ...[
             Row(
               children: [
-                _SectionTitle(context.customerCopy('MY ACTIVE PLANS')),
+                Expanded(child: _SectionTitle(copy.dashboardMyPlans)),
                 const Spacer(),
                 Text(
-                  '${multiple.activeOrders.length} PLANS',
-                  style: TextStyle(
-                    color: AppColors.emeraldGreen.withValues(alpha: .75),
+                  copy.dashboardPlanCount(plans.length),
+                  key: const ValueKey('dashboardPlanCount'),
+                  style: const TextStyle(
+                    color: AppColors.emeraldGreen,
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: .7,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 10),
-            _MultiPlanCarousel(
-              orders: multiple.activeOrders,
-              details: multiple.details,
-            ),
-            const SizedBox(height: 16),
-            TomorrowDeliveriesSection(orders: multiple.activeOrders),
+            if (plans.length == 1)
+              _ReferencePlanCard(
+                summary: plans.single,
+                detail: details[plans.single.id],
+              )
+            else
+              _MultiPlanCarousel(orders: plans, details: details),
+            if (single != null || multiple != null) ...[
+              const SizedBox(height: 16),
+              TomorrowDeliveriesSection(
+                orders: single != null
+                    ? [single.order]
+                    : multiple!.activeOrders,
+              ),
+            ],
           ] else if (state is DashboardWithoutActivePlan ||
               state is DashboardNoOrders) ...[
             const _NoActivePlanCard(),
           ],
           const SizedBox(height: 22),
-          if (state is! DashboardWithoutActivePlan &&
-              state is! DashboardNoOrders)
+          if (plans.isNotEmpty)
             OutlinedButton.icon(
               key: const ValueKey('orderAnotherPlan'),
               onPressed: () => _startNewOrder(context, ref),
@@ -409,8 +403,7 @@ class _DashboardHome extends ConsumerWidget {
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
               ),
             ),
-          if (state is! DashboardWithoutActivePlan &&
-              state is! DashboardNoOrders) ...[
+          if (plans.isNotEmpty) ...[
             const SizedBox(height: 24),
             _SectionTitle(context.customerCopy('QUICK ACTIONS')),
             const SizedBox(height: 10),
@@ -429,13 +422,13 @@ class _DashboardHome extends ConsumerWidget {
             const SizedBox(height: 28),
             Row(
               children: [
-                _SectionTitle(
-                  state is DashboardWithoutActivePlan ||
-                          state is DashboardNoOrders
-                      ? context.customerCopy('PREVIOUS ORDERS')
-                      : context.customerCopy('MY ORDERS'),
+                Expanded(
+                  child: _SectionTitle(
+                    plans.isEmpty
+                        ? context.customerCopy('PREVIOUS ORDERS')
+                        : context.customerCopy('MY ORDERS'),
+                  ),
                 ),
-                const Spacer(),
                 TextButton(
                   onPressed: onViewAll,
                   child: Text(context.customerCopy('VIEW ALL')),
@@ -643,105 +636,206 @@ class _NoActivePlanCard extends ConsumerWidget {
 }
 
 double _activePlanCardHeight(BuildContext context) =>
-    132 +
+    210 +
     (MediaQuery.textScalerOf(context).scale(14) - 14).clamp(
           0,
           double.infinity,
         ) *
-        5;
+        14;
 
-class _ReferencePlanCard extends StatelessWidget {
+class _ReferencePlanCard extends ConsumerWidget {
   const _ReferencePlanCard({required this.summary, this.detail});
-
   final CustomerOrderSummary summary;
   final OrderConfirmation? detail;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
+    final pending = summary.status == 'PENDING_APPROVAL';
+    final (background, foreground, accent, icon) = switch (summary.status) {
+      'PENDING_APPROVAL' => (
+        const Color(0xFFFFF5DC),
+        const Color(0xFF573D12),
+        const Color(0xFF8A5100),
+        Icons.schedule_rounded,
+      ),
+      'ON_HOLD' => (
+        const Color(0xFFFFEBDD),
+        const Color(0xFF623414),
+        const Color(0xFF954515),
+        Icons.pause_circle_outline,
+      ),
+      'CONFIRMED' => (
+        const Color(0xFFE4F3F2),
+        const Color(0xFF134B50),
+        const Color(0xFF145F66),
+        Icons.check_circle_outline,
+      ),
+      _ => (
+        const Color(0xFF0A7159),
+        AppColors.white,
+        const Color(0xFFD7E7E1),
+        Icons.check_circle_outline,
+      ),
+    };
     final package = (detail?.entitlement ?? summary.entitlement)?.label(
       Localizations.localeOf(context).languageCode,
     );
-    return Container(
+    final address = detail?.delivery.address;
+    final location = summary.isTakeaway
+        ? summary.takeawayBranch?.name
+        : [
+            address?.displayName,
+            address?.area,
+          ].whereType<String>().where((v) => v.trim().isNotEmpty).join(' · ');
+    Future<void> openDetails() async {
+      // Existing active-plan navigation also uses this canonical purchased-order ID.
+      await context.push(AppRoutes.orderDetails, extra: summary.id);
+      if (context.mounted) {
+        unawaited(
+          ref.read(customerDashboardControllerProvider.notifier).refresh(),
+        );
+      }
+    }
+
+    Widget line(String value, {int maxLines = 1, double size = 11}) => Text(
+      value,
+      maxLines: maxLines,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(color: foreground, fontSize: size),
+    );
+    return Material(
       key: ValueKey('activePlan-${summary.id}'),
-      height: _activePlanCardHeight(context),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0A7159), Color(0xFF064638)],
-        ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.white.withValues(alpha: .12)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            summary.planName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.white,
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-            ),
+      color: background,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: openDetails,
+        child: Container(
+          height: _activePlanCardHeight(context),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: background == const Color(0xFF0A7159)
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF0A7159), Color(0xFF064638)],
+                  )
+                : null,
           ),
-          const SizedBox(height: 4),
-          Text(
-            '${package?.isNotEmpty == true ? package! : summary.planDurationName} · ${context.customerCopy(summary.fulfillmentLabel)}${summary.takeawayBranch == null ? '' : ' · ${summary.takeawayBranch!.name}'}',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFFD7E7E1), fontSize: 11),
-          ),
-          const Spacer(),
-          Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(
-                Icons.calendar_today_outlined,
-                color: Color(0xFFB7D5CA),
-                size: 12,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  _period(
-                    summary.startDate,
-                    summary.endDate,
-                    locale: Localizations.localeOf(context).languageCode,
-                  ),
-                  style: const TextStyle(
-                    color: Color(0xFFD7E7E1),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                  ),
+              Text(
+                summary.planName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: foreground,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(width: 6),
-              TextButton(
-                key: ValueKey('viewOrder-${summary.id}'),
-                onPressed: () =>
-                    context.push(AppRoutes.orderDetails, extra: summary.id),
-                style:
-                    TextButton.styleFrom(
-                      foregroundColor: AppColors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+              const SizedBox(height: 5),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Container(
+                    key: ValueKey('planStatus-${summary.id}'),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: .12),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(icon, size: 13, color: accent),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            pending
+                                ? copy.dashboardPendingApproval
+                                : context.customerCopy(summary.statusLabel),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: accent,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (summary.paymentStatus.isNotEmpty)
+                    Text(
+                      context.customerCopy(summary.paymentLabel),
+                      key: ValueKey('planPayment-${summary.id}'),
+                      style: TextStyle(
+                        color: foreground,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              line(
+                package?.isNotEmpty == true
+                    ? package!
+                    : summary.planDurationName,
+              ),
+              line(
+                '${context.customerCopy(summary.fulfillmentLabel)}${location?.isNotEmpty == true ? ' · $location' : ''}',
+                maxLines: 2,
+              ),
+              if (pending) ...[
+                const SizedBox(height: 4),
+                line(copy.dashboardAwaitingConfirmation),
+                line(summary.orderNumber, size: 10),
+              ],
+              const Spacer(),
+              Row(
+                children: [
+                  Icon(Icons.calendar_today_outlined, color: accent, size: 12),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: line(
+                      _period(
+                        summary.startDate,
+                        summary.endDate,
+                        locale: Localizations.localeOf(context).languageCode,
+                      ),
+                      maxLines: 2,
+                      size: 10,
+                    ),
+                  ),
+                  TextButton(
+                    key: ValueKey('viewOrder-${summary.id}'),
+                    onPressed: openDetails,
+                    style: TextButton.styleFrom(
+                      foregroundColor: foreground,
                       minimumSize: const Size(0, 44),
-                      side: BorderSide.none,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
                       textStyle: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
                       ),
-                    ).copyWith(
-                      backgroundBuilder: (_, _, child) =>
-                          child ?? const SizedBox(),
                     ),
-                child: Text(copy.deliveriesViewDetails),
+                    child: Text(copy.deliveriesViewDetails),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -996,6 +1090,17 @@ class _MultiPlanCarousel extends StatefulWidget {
 class _MultiPlanCarouselState extends State<_MultiPlanCarousel> {
   late final PageController _controller = PageController(viewportFraction: .93);
   int _page = 0;
+
+  @override
+  void didUpdateWidget(covariant _MultiPlanCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_page >= widget.orders.length) {
+      _page = widget.orders.length - 1;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _controller.hasClients) _controller.jumpToPage(_page);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -1356,6 +1461,8 @@ class _OrderRow extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '${order.planName} · ${_period(order.startDate, order.endDate)}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -1368,7 +1475,7 @@ class _OrderRow extends StatelessWidget {
               ],
             ),
           ),
-          _StatusPill(order.status),
+          Flexible(child: _StatusPill(order.status)),
           const SizedBox(width: 4),
           const Icon(Icons.chevron_right_rounded),
         ],
@@ -2033,7 +2140,13 @@ class _StatusPill extends StatelessWidget {
       borderRadius: BorderRadius.circular(999),
     ),
     child: Text(
-      orderStatusLabel(status),
+      status == 'PENDING_APPROVAL'
+          ? lookupAppLocalizations(
+              Localizations.localeOf(context),
+            ).dashboardPendingApproval
+          : context.customerCopy(orderStatusLabel(status)),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
       style: TextStyle(
         color: _statusColor(status),
         fontSize: 10,

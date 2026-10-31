@@ -2253,4 +2253,21 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get saveOrderRetry =>
       'تعذر حفظ طلبك. يرجى المحاولة مرة أخرى أو التواصل مع دايت تايم.';
+
+  @override
+  String get menuButton => 'القائمة';
+
+  @override
+  String get dashboardMyPlans => 'خططي';
+
+  @override
+  String get dashboardPendingApproval => 'بانتظار الموافقة';
+
+  @override
+  String get dashboardAwaitingConfirmation => 'بانتظار تأكيد دايت تايم';
+
+  @override
+  String dashboardPlanCount(int count) {
+    return '$count خطط';
+  }
 }

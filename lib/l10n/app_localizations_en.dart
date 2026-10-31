@@ -2292,4 +2292,27 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get saveOrderRetry =>
       'Your order could not be saved. Please retry or contact Diet Time.';
+
+  @override
+  String get menuButton => 'Menu';
+
+  @override
+  String get dashboardMyPlans => 'My Plans';
+
+  @override
+  String get dashboardPendingApproval => 'Pending Approval';
+
+  @override
+  String get dashboardAwaitingConfirmation => 'Awaiting Diet Time confirmation';
+
+  @override
+  String dashboardPlanCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count PLANS',
+      one: '1 PLAN',
+    );
+    return '$_temp0';
+  }
 }
