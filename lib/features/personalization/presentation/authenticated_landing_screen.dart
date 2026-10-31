@@ -4,8 +4,6 @@ import 'dart:async';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
-import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
-import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -35,36 +33,16 @@ class _AuthenticatedLandingScreenState
     if (_hasError) setState(() => _hasError = false);
     try {
       final persistence = ref.read(profilePersistenceControllerProvider);
-      final profile = persistence.hasLoaded && persistence.errorMessage == null
-          ? ref.read(personalizationControllerProvider)
-          : await ref
-                .read(profilePersistenceControllerProvider.notifier)
-                .load();
+      if (!persistence.hasLoaded || persistence.errorMessage != null) {
+        await ref.read(profilePersistenceControllerProvider.notifier).load();
+      }
       if (ref.read(profilePersistenceControllerProvider).errorMessage != null) {
         throw StateError('profile_load');
       }
-      final orders = profile?.profileId == null
-          ? null
-          : await ref
-                .read(ordersRepositoryProvider)
-                .getCustomerOrders(profile!.profileId!);
       if (!mounted) return;
-      context.go(
-        profile?.isAppTourEnabled == true ||
-                orders?.any(
-                      (order) =>
-                          order.isCurrent ||
-                          [
-                            'PENDING_APPROVAL',
-                            'ON_HOLD',
-                            'REJECTED',
-                          ].contains(order.status) ||
-                          order.review['awaitingPayment'] == true,
-                    ) ==
-                    true
-            ? AppRoutes.home
-            : AppRoutes.plans,
-      );
+      // Ordinary and restored sign-in always open the dashboard. Customers can
+      // choose a subscription there; checkout sign-in keeps its own destination.
+      context.go(AppRoutes.home);
     } on Object {
       if (mounted) setState(() => _hasError = true);
     }

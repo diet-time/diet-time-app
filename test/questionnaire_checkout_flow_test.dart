@@ -98,44 +98,51 @@ void main() {
   });
 
   for (final hasOrders in [false, true]) {
-    testWidgets('ordinary login honors active subscriptions: $hasOrders', (
-      tester,
-    ) async {
-      final profiles = _Profiles(
-        const CustomerProfile(profileId: 'profile-id', goalCode: 'LOSE_WEIGHT'),
-      );
-      final container = _container(profiles, orders: _Orders(hasOrders));
-      addTearDown(container.dispose);
-      final router = GoRouter(
-        initialLocation: '/entry',
-        routes: [
-          GoRoute(
-            path: '/entry',
-            builder: (_, _) => const AuthenticatedLandingScreen(),
+    testWidgets(
+      'ordinary or restored login opens dashboard with orders: $hasOrders',
+      (tester) async {
+        final profiles = _Profiles(
+          const CustomerProfile(
+            profileId: 'profile-id',
+            goalCode: 'LOSE_WEIGHT',
           ),
-          GoRoute(
-            path: AppRoutes.plans,
-            builder: (_, _) => const Text('Browse plans'),
+        );
+        final orders = _Orders(hasOrders);
+        final container = _container(profiles, orders: orders);
+        addTearDown(container.dispose);
+        final router = GoRouter(
+          initialLocation: '/entry',
+          routes: [
+            GoRoute(
+              path: '/entry',
+              builder: (_, _) => const AuthenticatedLandingScreen(),
+            ),
+            GoRoute(
+              path: AppRoutes.plans,
+              builder: (_, _) => const Text('Browse plans'),
+            ),
+            GoRoute(
+              path: AppRoutes.home,
+              builder: (_, _) => const Text('Dashboard'),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(routerConfig: router),
           ),
-          GoRoute(
-            path: AppRoutes.home,
-            builder: (_, _) => const Text('Dashboard'),
-          ),
-        ],
-      );
-      addTearDown(router.dispose);
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(routerConfig: router),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(
-        find.text(hasOrders ? 'Dashboard' : 'Browse plans'),
-        findsOneWidget,
-      );
-    });
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Dashboard'), findsOneWidget);
+        expect(find.text('Browse plans'), findsNothing);
+        expect(
+          orders.loads,
+          0,
+        ); // Routing does not depend on order availability.
+      },
+    );
   }
 }
 
@@ -183,27 +190,31 @@ class _Orders extends OrdersRepository {
   _Orders(this.hasOrders)
     : super(apiClient: ApiClient(), accessTokenProvider: () async => 'token');
   final bool hasOrders;
+  int loads = 0;
   @override
   Future<List<CustomerOrderSummary>> getCustomerOrders(
     String profileId, {
     int pageSize = 20,
-  }) async => hasOrders
-      ? [
-          CustomerOrderSummary(
-            id: 'order-id',
-            orderNumber: 'ORD-1',
-            planName: 'Plan',
-            planDurationName: 'Package',
-            status: 'CONFIRMED',
-            paymentStatus: 'PENDING',
-            totalAmount: 900,
-            currencyCode: 'QAR',
-            startDate: DateTime(2026, 10, 27),
-            endDate: DateTime(2026, 11, 20),
-            placedAt: DateTime(2026, 10, 26),
-          ),
-        ]
-      : [];
+  }) async {
+    loads++;
+    return hasOrders
+        ? [
+            CustomerOrderSummary(
+              id: 'order-id',
+              orderNumber: 'ORD-1',
+              planName: 'Plan',
+              planDurationName: 'Package',
+              status: 'CONFIRMED',
+              paymentStatus: 'PENDING',
+              totalAmount: 900,
+              currencyCode: 'QAR',
+              startDate: DateTime(2026, 10, 27),
+              endDate: DateTime(2026, 11, 20),
+              placedAt: DateTime(2026, 10, 26),
+            ),
+          ]
+        : [];
+  }
 }
 
 const _complete = CustomerProfile(

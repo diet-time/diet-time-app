@@ -354,29 +354,31 @@ void main() {
     expect(find.byType(PersonalizationScreen), findsNothing);
   });
 
-  testWidgets('authenticated incomplete user can browse before checkout', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues({
-      'preferredLanguage': 'en',
-      'languageSelectionCompletedV2': true,
-      'hasCompletedOnboarding': true,
-      'hasCompletedProfile': false,
-    });
-    await tester.pumpWidget(
-      _dietTimeApp(authenticationService: const _AuthenticatedService()),
-    );
-    await _finishSplash(tester);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+  testWidgets(
+    'restored incomplete user opens dashboard before choosing checkout',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'preferredLanguage': 'en',
+        'languageSelectionCompletedV2': true,
+        'hasCompletedOnboarding': true,
+        'hasCompletedProfile': false,
+      });
+      await tester.pumpWidget(
+        _dietTimeApp(authenticationService: const _AuthenticatedService()),
+      );
+      await _finishSplash(tester);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(LanguageSelectionPanel), findsNothing);
-    expect(find.byType(OnboardingCarouselScreen), findsNothing);
-    expect(find.byType(MealPlanScreen), findsOneWidget);
-    expect(find.byType(PhoneLoginPage), findsNothing);
-  });
+      expect(find.byType(LanguageSelectionPanel), findsNothing);
+      expect(find.byType(OnboardingCarouselScreen), findsNothing);
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.byType(MealPlanScreen), findsNothing);
+      expect(find.byType(PhoneLoginPage), findsNothing);
+    },
+  );
 
-  testWidgets('authenticated customer without active orders opens plans', (
+  testWidgets('restored customer without active orders opens dashboard', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({
@@ -404,7 +406,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(MealPlanScreen), findsOneWidget);
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.byType(MealPlanScreen), findsNothing);
     expect(find.byType(LanguageSelectionPanel), findsNothing);
     expect(find.byType(OnboardingCarouselScreen), findsNothing);
     expect(find.byType(PersonalizationScreen), findsNothing);

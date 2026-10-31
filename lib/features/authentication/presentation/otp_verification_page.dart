@@ -108,7 +108,7 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
     if (!mounted || !succeeded) return;
     _setCells('');
     final destination = ref.read(otpAuthControllerProvider).pendingDestination;
-    // Checkout keeps its draft; ordinary sign-in resolves active orders separately.
+    // Checkout keeps its draft; ordinary sign-in opens the customer dashboard.
     final checkout =
         destination?.route == AppRoutes.checkoutEntry ||
         destination?.route == AppRoutes.planSummary;
