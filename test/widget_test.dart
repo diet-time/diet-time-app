@@ -146,7 +146,7 @@ void main() {
     );
   });
 
-  testWidgets('carousel start plan opens plans without a questionnaire', (
+  testWidgets('carousel start plan prompts login before plan selection', (
     tester,
   ) async {
     await tester.pumpWidget(_dietTimeApp());
@@ -159,8 +159,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(MealPlanScreen), findsOneWidget);
-    expect(find.byType(PhoneLoginPage), findsNothing);
+    await tester.pumpAndSettle();
+    expect(find.byType(MealPlanScreen), findsNothing);
+    expect(find.byType(PhoneLoginPage), findsOneWidget);
   });
 
   testWidgets('goal selection is required and preserved when navigating back', (
@@ -322,7 +323,7 @@ void main() {
   );
 
   testWidgets(
-    'Start Your Plan resumes saved answers and completes at dashboard',
+    'Start Your Plan resumes saved answers and continues to plan selection',
     (tester) async {
       final service = _FakeProfilePersistenceService(
         profile: const CustomerProfile(
@@ -354,7 +355,7 @@ void main() {
       expect(service.lastSubmitted!.allergens, {'MILK'});
       expect(service.lastSubmitted!.preferences, {'HIGH_PROTEIN'});
       expect(service.lastSubmitted!.allergensConfirmed, isTrue);
-      expect(find.text('Dashboard ready'), findsOneWidget);
+      expect(find.text('Plan selection ready'), findsOneWidget);
       expect(find.byType(PersonalizationScreen), findsNothing);
       expect(find.byType(PhoneLoginPage), findsNothing);
     },
@@ -872,13 +873,17 @@ Widget _questionnaireCheckoutApp(
           path: '/checkout-questionnaire',
           builder: (_, _) => PersonalizationScreen(
             checkoutMode: true,
-            startPlanMode: startPlan,
-            accountSetupMode: accountSetup,
+            startNewPlan: startPlan,
+            accountSetupMode: accountSetup || startPlan,
           ),
         ),
         GoRoute(
           path: '/checkout-entry',
           builder: (_, _) => const Scaffold(body: Text('Checkout ready')),
+        ),
+        GoRoute(
+          path: '/plans',
+          builder: (_, _) => const Scaffold(body: Text('Plan selection ready')),
         ),
         GoRoute(
           path: '/home',

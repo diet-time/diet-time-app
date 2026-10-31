@@ -7,7 +7,6 @@ import 'package:diet_time/features/dashboard/domain/customer_account_profile.dar
 import 'package:diet_time/features/dashboard/presentation/customer_dashboard_controller.dart';
 import 'package:diet_time/features/personalization/data/display_name_repository.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
-import 'package:diet_time/features/personalization/presentation/plan_selection_controller.dart';
 import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -142,7 +141,6 @@ class CustomerProfileController extends Notifier<CustomerProfileState> {
     ref.read(personalizationControllerProvider.notifier).clear();
     ref.read(checkoutControllerProvider.notifier).clear();
     ref.read(customerDashboardControllerProvider.notifier).clear();
-    ref.invalidate(planSelectionControllerProvider);
     ref.invalidate(profilePersistenceControllerProvider);
     state = const CustomerProfileState(requiresLogin: true);
   }

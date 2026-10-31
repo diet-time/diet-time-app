@@ -108,16 +108,12 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
     if (!mounted || !succeeded) return;
     _setCells('');
     final destination = ref.read(otpAuthControllerProvider).pendingDestination;
-    // Checkout keeps its draft; ordinary sign-in opens the customer dashboard.
-    final checkout =
+    final startNewPlan =
+        destination?.route == AppRoutes.startPlan ||
         destination?.route == AppRoutes.checkoutEntry ||
         destination?.route == AppRoutes.planSummary;
     context.go(
-      destination?.route == AppRoutes.startPlan
-          ? AppRoutes.startPlan
-          : checkout
-          ? AppRoutes.checkoutEntry
-          : AppRoutes.authenticatedLanding,
+      startNewPlan ? AppRoutes.startPlan : AppRoutes.authenticatedLanding,
     );
   }
 

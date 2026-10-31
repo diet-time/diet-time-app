@@ -39,6 +39,41 @@ void main() {
   for (final profile in <CustomerProfile?>[
     null,
     const CustomerProfile(profileId: 'profile'),
+    completeProfile,
+  ]) {
+    testWidgets(
+      'new-plan intent survives onboarding for ${profile?.onboardingStatus ?? 'missing'}',
+      (tester) async {
+        final service = _Profiles(profile);
+        final container = _container(service);
+        addTearDown(container.dispose);
+        final router = _router(startNewPlan: true);
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            profile?.isCompleted == true
+                ? 'Plan selection'
+                : 'Profile and questionnaire',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Dashboard'), findsNothing);
+        expect(router.routerDelegate.currentConfiguration.extra, isTrue);
+        expect(service.loads, 1);
+        expect(service.saves, 0);
+      },
+    );
+  }
+  for (final profile in <CustomerProfile?>[
+    null,
+    const CustomerProfile(profileId: 'profile'),
   ]) {
     test(
       'dashboard defers dependent requests for ${profile == null ? 'missing' : 'incomplete'} profile',
@@ -250,12 +285,16 @@ void main() {
   });
 }
 
-GoRouter _router() => GoRouter(
+GoRouter _router({bool startNewPlan = false}) => GoRouter(
   initialLocation: '/entry',
   routes: [
     GoRoute(
       path: '/entry',
-      builder: (_, _) => const AuthenticatedLandingScreen(),
+      builder: (_, _) => AuthenticatedLandingScreen(startNewPlan: startNewPlan),
+    ),
+    GoRoute(
+      path: AppRoutes.plans,
+      builder: (_, _) => const Text('Plan selection'),
     ),
     GoRoute(path: AppRoutes.home, builder: (_, _) => const Text('Dashboard')),
     GoRoute(

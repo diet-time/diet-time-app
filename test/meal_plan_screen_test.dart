@@ -1,3 +1,6 @@
+import 'support/ordering_customer.dart';
+import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
+import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:go_router/go_router.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
@@ -10,6 +13,50 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets(
+    'guest can browse but tapping a plan enters authentication without storing a selection',
+    (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          mealPlansProvider.overrideWith((ref, language) async => _pricedPlans),
+          otpAuthControllerProvider.overrideWith(GuestOrderingAuth.new),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = GoRouter(
+        initialLocation: '/plans',
+        routes: [
+          GoRoute(path: '/plans', builder: (_, _) => const MealPlanScreen()),
+          GoRoute(
+            path: '/start-plan',
+            builder: (_, _) => const Text('Authentication required'),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(MealPlanScreen), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('High Protein').hitTestable(),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('High Protein'));
+      await tester.pumpAndSettle();
+      expect(find.text('Authentication required'), findsOneWidget);
+      expect(container.read(checkoutControllerProvider).selection, isNull);
+    },
+  );
   testWidgets('meal selection shows a working back button when pushed', (
     tester,
   ) async {
@@ -76,11 +123,17 @@ void main() {
       ],
     );
     addTearDown(router.dispose);
+    final container = ProviderContainer(
+      overrides: [
+        mealPlansProvider.overrideWith((ref, language) async => _pricedPlans),
+        otpAuthControllerProvider.overrideWith(OrderingAuth.new),
+      ],
+    );
+    addTearDown(container.dispose);
+    prepareOrderingCustomer(container);
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          mealPlansProvider.overrideWith((ref, language) async => _pricedPlans),
-        ],
+      UncontrolledProviderScope(
+        container: container,
         child: MaterialApp.router(
           routerConfig: router,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -344,17 +397,27 @@ const _pricedPlans = [
 Widget _app({
   required List<MealPlanOption> plans,
   Locale locale = const Locale('en'),
-}) => ProviderScope(
-  overrides: [mealPlansProvider.overrideWith((ref, language) async => plans)],
-  child: MaterialApp(
-    locale: locale,
-    localizationsDelegates: const [
-      AppLocalizations.delegate,
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
+}) {
+  final container = ProviderContainer(
+    overrides: [
+      mealPlansProvider.overrideWith((ref, language) async => plans),
+      otpAuthControllerProvider.overrideWith(OrderingAuth.new),
     ],
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: const MealPlanScreen(),
-  ),
-);
+  );
+  addTearDown(container.dispose);
+  prepareOrderingCustomer(container);
+  return UncontrolledProviderScope(
+    container: container,
+    child: MaterialApp(
+      locale: locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const MealPlanScreen(),
+    ),
+  );
+}

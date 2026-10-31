@@ -83,7 +83,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.customerSetup,
         pageBuilder: (context, state) => _slidePage(
           state: state,
-          child: const PersonalizationScreen(accountSetupMode: true),
+          child: PersonalizationScreen(
+            accountSetupMode: true,
+            startNewPlan: state.extra == true,
+          ),
         ),
       ),
       GoRoute(
@@ -120,7 +123,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           final destination =
               state.extra as PendingAuthDestination? ??
-              const PendingAuthDestination(route: AppRoutes.plans);
+              const PendingAuthDestination(
+                route: AppRoutes.authenticatedLanding,
+              );
           return _slidePage(
             state: state,
             child: PhoneLoginPage(pendingDestination: destination),
@@ -139,6 +144,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.planDetails,
+        redirect: (context, state) {
+          final cached = ref.read(profilePersistenceControllerProvider);
+          return ref.read(otpAuthControllerProvider).isAuthenticated &&
+                  cached.hasLoaded &&
+                  cached.errorMessage == null &&
+                  ref.read(personalizationControllerProvider).isCompleted
+              ? null
+              : AppRoutes.startPlan;
+        },
         pageBuilder: (context, state) {
           final plan = state.extra;
           if (plan is! MealPlanOption) {
@@ -156,7 +170,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.startPlan,
-        builder: (context, state) => const CheckoutEntryScreen(startPlan: true),
+        builder: (context, state) =>
+            const AuthenticatedLandingScreen(startNewPlan: true),
       ),
       GoRoute(
         path: AppRoutes.checkoutEntry,
@@ -178,10 +193,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.checkoutQuestionnaire,
-        builder: (context, state) => PersonalizationScreen(
-          checkoutMode: true,
-          startPlanMode: state.extra == true,
-        ),
+        builder: (context, state) =>
+            const PersonalizationScreen(checkoutMode: true),
       ),
       GoRoute(
         path: AppRoutes.planSummary,

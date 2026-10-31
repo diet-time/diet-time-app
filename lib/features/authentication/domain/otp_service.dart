@@ -41,21 +41,7 @@ abstract interface class OtpService {
 }
 
 class PendingAuthDestination {
-  const PendingAuthDestination({
-    required this.route,
-    this.planCode,
-    this.planName,
-    this.selectedDate,
-    this.mealTimePreference,
-    this.mealPlanTemplateId,
-    this.mealPlanPriceId,
-  });
+  const PendingAuthDestination({required this.route});
 
   final String route;
-  final String? planCode;
-  final String? planName;
-  final DateTime? selectedDate;
-  final String? mealTimePreference;
-  final String? mealPlanTemplateId;
-  final String? mealPlanPriceId;
 }

@@ -28,6 +28,20 @@ final _testOtp = List.generate(6, (index) => (index + 1).toString()).join();
 final _invalidOtp = List.filled(6, '9').join();
 
 void main() {
+  testWidgets(
+    'Start Your Plan OTP returns to the new-plan gate, not the dashboard',
+    (tester) async {
+      await tester.pumpWidget(_app(otp: _FakeOtpService(), startNewPlan: true));
+      await _openOtp(tester);
+      await tester.enterText(find.byKey(const ValueKey('otpCell0')), _testOtp);
+      await tester.pump();
+      await tester.ensureVisible(find.byKey(const ValueKey('verifyOtpButton')));
+      await tester.tap(find.byKey(const ValueKey('verifyOtpButton')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('newPlanDestination')), findsOneWidget);
+      expect(find.byKey(const ValueKey('otpDestination')), findsNothing);
+    },
+  );
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     FlutterSecureStorage.setMockInitialValues({});
@@ -203,8 +217,7 @@ void main() {
     final pending = container
         .read(otpAuthControllerProvider)
         .pendingDestination;
-    expect(pending?.planCode, 'KETO');
-    expect(pending?.planName, 'Keto');
+    expect(pending?.route, '/destination');
 
     await tester.ensureVisible(verify);
     await tester.tap(verify);
@@ -386,9 +399,9 @@ void main() {
   });
 
   testWidgets(
-    'package selection is retained before checkout authentication and questionnaire checks',
+    'guest plan entry gates authentication before package selection',
     (tester) async {
-      final authentication = _FakeAuthenticationService(loggedIn: true);
+      final authentication = _FakeAuthenticationService(loggedIn: false);
       await tester.pumpWidget(_planApp(authentication));
       await tester.pump();
       await tester.pump();
@@ -398,9 +411,7 @@ void main() {
       await tester.tap(continueButton);
       await tester.pumpAndSettle();
 
-      expect(find.byType(MealPlanDetailsScreen), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('detailsContinue')));
-      await tester.pumpAndSettle();
+      expect(find.byType(MealPlanDetailsScreen), findsNothing);
 
       expect(find.byType(PhoneLoginPage), findsNothing);
       expect(
@@ -436,17 +447,16 @@ Widget _app({
   AuthenticationService? authentication,
   AuthenticationRepository? repository,
   Locale locale = const Locale('en'),
+  bool startNewPlan = false,
 }) {
   final router = GoRouter(
     initialLocation: '/phone',
     routes: [
       GoRoute(
         path: '/phone',
-        builder: (context, state) => const PhoneLoginPage(
+        builder: (context, state) => PhoneLoginPage(
           pendingDestination: PendingAuthDestination(
-            route: '/destination',
-            planCode: 'KETO',
-            planName: 'Keto',
+            route: startNewPlan ? '/start-plan' : '/destination',
           ),
         ),
       ),
@@ -476,6 +486,10 @@ Widget _app({
         path: '/authenticated-landing',
         builder: (context, state) =>
             const SizedBox(key: ValueKey('otpDestination')),
+      ),
+      GoRoute(
+        path: '/start-plan',
+        builder: (_, _) => const SizedBox(key: ValueKey('newPlanDestination')),
       ),
     ],
   );

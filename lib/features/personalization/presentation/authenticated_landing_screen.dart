@@ -7,12 +7,14 @@ import 'package:diet_time/features/personalization/presentation/profile_persiste
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
+import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class AuthenticatedLandingScreen extends ConsumerStatefulWidget {
-  const AuthenticatedLandingScreen({super.key});
+  const AuthenticatedLandingScreen({this.startNewPlan = false, super.key});
+  final bool startNewPlan;
 
   @override
   ConsumerState<AuthenticatedLandingScreen> createState() =>
@@ -30,7 +32,13 @@ class _AuthenticatedLandingScreenState
     super.didChangeDependencies();
     if (_started) return;
     _started = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_resolve()));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.startNewPlan) {
+        ref.read(checkoutControllerProvider.notifier).beginNewOrder();
+      }
+      unawaited(_resolve());
+    });
   }
 
   Future<void> _resolve() async {
@@ -38,37 +46,55 @@ class _AuthenticatedLandingScreenState
     _resolving = true;
     if (_hasError) setState(() => _hasError = false);
     try {
+      if (!await ref
+          .read(otpAuthControllerProvider.notifier)
+          .restoreSession()) {
+        if (mounted) _signIn();
+        return;
+      }
       final persistence = ref.read(profilePersistenceControllerProvider);
-      if (!persistence.hasLoaded || persistence.errorMessage != null) {
+      if (widget.startNewPlan ||
+          !persistence.hasLoaded ||
+          persistence.errorMessage != null) {
         await ref.read(profilePersistenceControllerProvider.notifier).load();
       }
       if (!mounted) return;
       final loaded = ref.read(profilePersistenceControllerProvider);
       if (loaded.requiresLogin ||
           !ref.read(otpAuthControllerProvider).isAuthenticated) {
-        context.go(
-          AppRoutes.phoneLogin,
-          extra: const PendingAuthDestination(
-            route: AppRoutes.authenticatedLanding,
-          ),
-        );
+        _signIn();
         return;
       }
       if (loaded.errorMessage != null) {
         throw StateError('profile_load');
       }
       if (!mounted) return;
-      context.go(
-        ref.read(personalizationControllerProvider).isCompleted
-            ? AppRoutes.home
-            : AppRoutes.customerSetup,
-      );
+      final destination =
+          ref.read(personalizationControllerProvider).isCompleted
+          ? widget.startNewPlan
+                ? AppRoutes.plans
+                : AppRoutes.home
+          : AppRoutes.customerSetup;
+      if (widget.startNewPlan) {
+        context.pushReplacement(destination, extra: true);
+      } else {
+        context.go(destination);
+      }
     } on Object {
       if (mounted) setState(() => _hasError = true);
     } finally {
       _resolving = false;
     }
   }
+
+  void _signIn() => context.go(
+    AppRoutes.phoneLogin,
+    extra: PendingAuthDestination(
+      route: widget.startNewPlan
+          ? AppRoutes.startPlan
+          : AppRoutes.authenticatedLanding,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => Scaffold(

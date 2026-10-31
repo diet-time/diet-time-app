@@ -1,3 +1,5 @@
+import 'support/ordering_customer.dart';
+import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/core/network/api_endpoints.dart';
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
@@ -275,12 +277,14 @@ void main() {
     (tester) async {
       final container = ProviderContainer(
         overrides: [
+          otpAuthControllerProvider.overrideWith(OrderingAuth.new),
           mealPlanConfigurationsProvider.overrideWith(
             (ref, request) async => request.plan.mealConfigurations,
           ),
         ],
       );
       addTearDown(container.dispose);
+      prepareOrderingCustomer(container);
       final router = GoRouter(
         initialLocation: '/details',
         routes: [
@@ -289,7 +293,7 @@ void main() {
             builder: (_, _) => MealPlanDetailsScreen(plan: _plan),
           ),
           GoRoute(
-            path: '/start-plan',
+            path: '/checkout-entry',
             builder: (_, _) => const Scaffold(body: Text('Checkout entry')),
           ),
         ],

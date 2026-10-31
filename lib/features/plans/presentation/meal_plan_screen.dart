@@ -8,6 +8,10 @@ import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
+import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
+import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
+import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 
 class MealPlanScreen extends ConsumerStatefulWidget {
   const MealPlanScreen({super.key});
@@ -18,6 +22,30 @@ class MealPlanScreen extends ConsumerStatefulWidget {
 
 class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
   String? _selectedCode;
+  bool _opening = false;
+
+  bool get _canSelectPlan {
+    final cached = ref.read(profilePersistenceControllerProvider);
+    return ref.read(otpAuthControllerProvider).isAuthenticated &&
+        cached.hasLoaded &&
+        cached.errorMessage == null &&
+        ref.read(personalizationControllerProvider).isCompleted;
+  }
+
+  Future<void> _continue(MealPlanOption plan) async {
+    if (_opening) return;
+    _opening = true;
+    try {
+      if (!_canSelectPlan) {
+        context.go(AppRoutes.startPlan);
+        return;
+      }
+      ref.read(checkoutControllerProvider.notifier).beginNewOrder();
+      await context.push(AppRoutes.planDetails, extra: plan);
+    } finally {
+      _opening = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,8 +151,13 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
                         child: _PlanCard(
                           plan: plan,
                           selected: selectedCode == plan.code,
-                          onTap: () =>
-                              setState(() => _selectedCode = plan.code),
+                          onTap: () {
+                            if (_canSelectPlan) {
+                              setState(() => _selectedCode = plan.code);
+                            } else {
+                              _continue(plan);
+                            }
+                          },
                         ),
                       ),
                   ],
@@ -141,8 +174,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
               width: double.infinity,
               height: 50,
               child: FilledButton(
-                onPressed: () =>
-                    context.push(AppRoutes.planDetails, extra: selectedPlan),
+                onPressed: () => _continue(selectedPlan),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.emeraldGreen,
                   foregroundColor: AppColors.white,

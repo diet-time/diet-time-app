@@ -12,7 +12,7 @@ import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
 import 'package:diet_time/features/personalization/domain/customer_profile.dart';
 import 'package:diet_time/features/personalization/presentation/authenticated_landing_screen.dart';
-import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
+
 import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
@@ -23,61 +23,72 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
-  testWidgets('dashboard offers explicit resume while a selection is pending', (
-    tester,
-  ) async {
-    final container = ProviderContainer(
-      overrides: [
-        otpAuthControllerProvider.overrideWith(() => _Auth(true)),
-        customerDashboardControllerProvider.overrideWith(_Dashboard.new),
-      ],
+  for (final status in ['ACTIVE', 'PENDING_APPROVAL', 'CONFIRMED']) {
+    testWidgets(
+      'dashboard starts a fresh plan with an existing $status order',
+      (tester) async {
+        final orders = await _Orders(
+          true,
+          status: status,
+        ).getCustomerOrders('profile-id');
+        final container = ProviderContainer(
+          overrides: [
+            otpAuthControllerProvider.overrideWith(() => _Auth(true)),
+            customerDashboardControllerProvider.overrideWith(
+              () => _Dashboard(orders),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        container
+            .read(checkoutControllerProvider.notifier)
+            .selectPackage(_selection);
+        final router = GoRouter(
+          initialLocation: AppRoutes.home,
+          routes: [
+            GoRoute(
+              path: AppRoutes.home,
+              builder: (_, _) => const CustomerDashboardScreen(),
+            ),
+            GoRoute(
+              path: AppRoutes.startPlan,
+              builder: (_, _) => const Text('Fresh plan selection'),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('resumeSelectedPlan')), findsNothing);
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('orderAnotherPlan')),
+        );
+        await tester.tap(find.byKey(const ValueKey('orderAnotherPlan')));
+        await tester.pumpAndSettle();
+        expect(find.text('Fresh plan selection'), findsOneWidget);
+        expect(container.read(checkoutControllerProvider).selection, isNull);
+        expect(
+          container.read(checkoutControllerProvider).orderConfirmation,
+          isNull,
+        );
+        expect(
+          (container.read(customerDashboardControllerProvider)
+                  as DashboardWithoutActivePlan)
+              .orders,
+          same(orders),
+        );
+      },
     );
-    addTearDown(container.dispose);
-    container
-        .read(checkoutControllerProvider.notifier)
-        .selectPackage(_selection);
-    final router = GoRouter(
-      initialLocation: AppRoutes.home,
-      routes: [
-        GoRoute(
-          path: AppRoutes.home,
-          builder: (_, _) => const CustomerDashboardScreen(),
-        ),
-        GoRoute(
-          path: AppRoutes.checkoutEntry,
-          builder: (_, _) => const Text('Checkout resumed'),
-        ),
-      ],
-    );
-    addTearDown(router.dispose);
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: MaterialApp.router(
-          routerConfig: router,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('resumeSelectedPlan')), findsOneWidget);
-    expect(
-      container.read(checkoutControllerProvider).orderConfirmation,
-      isNull,
-    );
-    await tester.tap(find.byKey(const ValueKey('resumeSelectedPlan')));
-    await tester.pumpAndSettle();
-    expect(find.text('Checkout resumed'), findsOneWidget);
-    expect(
-      container.read(checkoutControllerProvider).selection,
-      same(_selection),
-    );
-    container.read(checkoutControllerProvider.notifier).clear();
-    router.go(AppRoutes.home);
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('resumeSelectedPlan')), findsNothing);
-  });
+  }
   for (final authenticated in [false, true]) {
     for (final completed in [false, true]) {
       testWidgets(
@@ -93,10 +104,7 @@ void main() {
           container
               .read(checkoutControllerProvider.notifier)
               .selectPackage(_selection);
-          // A locally changed profile must not replace the backend completion check.
-          container
-              .read(profilePersistenceControllerProvider.notifier)
-              .restore(_complete);
+          // The gate must clear this legacy in-memory selection before authentication.
           PendingAuthDestination? destination;
           late final GoRouter router;
           router = GoRouter(
@@ -104,7 +112,8 @@ void main() {
             routes: [
               GoRoute(
                 path: AppRoutes.startPlan,
-                builder: (_, _) => const CheckoutEntryScreen(startPlan: true),
+                builder: (_, _) =>
+                    const AuthenticatedLandingScreen(startNewPlan: true),
               ),
               GoRoute(
                 path: AppRoutes.phoneLogin,
@@ -151,16 +160,13 @@ void main() {
             expect(destination!.route, AppRoutes.startPlan);
           }
           expect(
-            find.text(completed ? 'Dashboard' : 'Resume questionnaire'),
+            find.text(completed ? 'Plans' : 'Resume questionnaire'),
             findsOneWidget,
           );
           expect(find.text('Sign in'), findsNothing);
           expect(router.canPop(), isFalse);
           expect(profiles.loads, 1);
-          expect(
-            container.read(checkoutControllerProvider).selection,
-            same(_selection),
-          );
+          expect(container.read(checkoutControllerProvider).selection, isNull);
           expect(
             container.read(checkoutControllerProvider).orderConfirmation,
             isNull,
@@ -206,50 +212,6 @@ void main() {
       );
     },
   );
-  test(
-    'guest keeps selected plan, package and price through login and partial questionnaire',
-    () async {
-      final profiles = _Profiles(
-        const CustomerProfile(goalCode: 'LOSE_WEIGHT'),
-      );
-      final container = _container(profiles, authenticated: false);
-      addTearDown(container.dispose);
-      final checkout = container.read(checkoutControllerProvider.notifier);
-      checkout.selectPackage(_selection);
-      final access = container.read(checkoutAccessProvider);
-      expect(await access.resolve(), CheckoutAccess.login);
-      expect(profiles.loads, 0);
-      (container.read(otpAuthControllerProvider.notifier) as _Auth).signIn();
-      expect(await access.resolve(), CheckoutAccess.questionnaire);
-      expect(
-        container.read(personalizationControllerProvider).goalCode,
-        'LOSE_WEIGHT',
-      );
-      expect(
-        container.read(checkoutControllerProvider).selection,
-        same(_selection),
-      );
-      expect(
-        container.read(checkoutControllerProvider).selection!.totalPrice,
-        900,
-      );
-      container
-          .read(profilePersistenceControllerProvider.notifier)
-          .restore(_complete);
-      expect(await access.resolve(), CheckoutAccess.summary);
-      expect(profiles.loads, 1);
-      checkout.begin(
-        _selection,
-        MealPlanServiceSchedule(serviceDates: [DateTime(2026, 10, 27)]),
-      );
-      expect(await access.resolve(), CheckoutAccess.summary);
-      expect(
-        container.read(checkoutControllerProvider).mealPlanPriceId,
-        'price-id',
-      );
-    },
-  );
-
   test(
     'completed questionnaire is reused for additional orders without another profile load',
     () async {
@@ -356,8 +318,10 @@ class _Auth extends OtpAuthController {
 }
 
 class _Dashboard extends CustomerDashboardController {
+  _Dashboard([this.orders = const []]);
+  final List<CustomerOrderSummary> orders;
   @override
-  CustomerDashboardState build() => const DashboardWithoutActivePlan([]);
+  CustomerDashboardState build() => DashboardWithoutActivePlan(orders);
   @override
   Future<void> initialize({String? profileId, bool force = false}) async {}
 }
@@ -383,9 +347,10 @@ class _Profiles implements ProfilePersistenceService {
 }
 
 class _Orders extends OrdersRepository {
-  _Orders(this.hasOrders)
+  _Orders(this.hasOrders, {this.status = 'CONFIRMED'})
     : super(apiClient: ApiClient(), accessTokenProvider: () async => 'token');
   final bool hasOrders;
+  final String status;
   int loads = 0;
   @override
   Future<List<CustomerOrderSummary>> getCustomerOrders(
@@ -400,7 +365,7 @@ class _Orders extends OrdersRepository {
               orderNumber: 'ORD-1',
               planName: 'Plan',
               planDurationName: 'Package',
-              status: 'CONFIRMED',
+              status: status,
               paymentStatus: 'PENDING',
               totalAmount: 900,
               currencyCode: 'QAR',

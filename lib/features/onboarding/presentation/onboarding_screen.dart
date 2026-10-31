@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:diet_time/app/router/app_router.dart';
+import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
@@ -25,22 +26,20 @@ class PersonalizationScreen extends ConsumerStatefulWidget {
   const PersonalizationScreen({
     this.customerProfileMode = false,
     this.checkoutMode = false,
-    this.startPlanMode = false,
+    this.startNewPlan = false,
     this.accountSetupMode = false,
     super.key,
   });
 
   final bool customerProfileMode;
   final bool checkoutMode;
-  final bool startPlanMode;
+  final bool startNewPlan;
   final bool accountSetupMode;
 
-  String get entryRoute => accountSetupMode
-      ? AppRoutes.authenticatedLanding
-      : startPlanMode
+  String get entryRoute => startNewPlan || checkoutMode
       ? AppRoutes.startPlan
-      : AppRoutes.checkoutEntry;
-
+      : AppRoutes.authenticatedLanding;
+  String get completionRoute => startNewPlan ? AppRoutes.plans : AppRoutes.home;
   @override
   ConsumerState<PersonalizationScreen> createState() =>
       _PersonalizationScreenState();
@@ -95,14 +94,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   Future<void> _loadProfile() async {
     if (!await ref.read(otpAuthControllerProvider.notifier).restoreSession()) {
       if (mounted) {
-        context.pushReplacement(
-          AppRoutes.phoneLogin,
-          extra: PendingAuthDestination(
-            route: widget.checkoutMode
-                ? widget.entryRoute
-                : AppRoutes.authenticatedLanding,
-          ),
-        );
+        _signIn();
       }
       return;
     }
@@ -123,7 +115,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         profile ?? ref.read(personalizationControllerProvider);
     if (widget.accountSetupMode) {
       if (restored.isCompleted) {
-        context.go(AppRoutes.home);
+        context.go(widget.completionRoute);
         return;
       }
       _restoreVisibleValues(restored);
@@ -133,11 +125,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     if (profile == null) return;
     if (profile.isCompleted && !widget.customerProfileMode) {
       context.pushReplacement(
-        widget.startPlanMode
-            ? AppRoutes.home
-            : widget.checkoutMode
-            ? AppRoutes.checkoutEntry
-            : AppRoutes.plans,
+        widget.checkoutMode ? AppRoutes.checkoutEntry : AppRoutes.plans,
       );
       return;
     }
@@ -229,10 +217,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     }
     if (!await ref.read(otpAuthControllerProvider.notifier).restoreSession()) {
       if (mounted) {
-        context.pushReplacement(
-          AppRoutes.phoneLogin,
-          extra: PendingAuthDestination(route: widget.entryRoute),
-        );
+        _signIn();
       }
       return;
     }
@@ -292,8 +277,8 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         }
         return;
       }
-      if (_index == 6 && (widget.startPlanMode || widget.accountSetupMode)) {
-        context.go(AppRoutes.home);
+      if (_index == 6 && widget.accountSetupMode) {
+        context.go(widget.completionRoute);
         return;
       }
       if (widget.accountSetupMode) {
@@ -310,11 +295,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         Navigator.of(context).pop(true);
       } else {
         context.pushReplacement(
-          widget.startPlanMode
-              ? AppRoutes.home
-              : widget.checkoutMode
-              ? AppRoutes.checkoutEntry
-              : AppRoutes.plans,
+          widget.checkoutMode ? AppRoutes.checkoutEntry : AppRoutes.plans,
         );
       }
       return;
@@ -334,6 +315,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   }
 
   void _signIn() {
+    ref.read(checkoutControllerProvider.notifier).beginNewOrder();
     context.go(
       AppRoutes.phoneLogin,
       extra: PendingAuthDestination(route: widget.entryRoute),
@@ -347,7 +329,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop(false);
       } else {
-        context.go(AppRoutes.home);
+        context.go(widget.completionRoute);
       }
       return;
     }

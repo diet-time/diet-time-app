@@ -134,7 +134,7 @@ class _OnboardingCarouselScreenState
   Future<void> _startPlan() async {
     await ref.read(journeyStateRepositoryProvider).markOnboardingComplete();
     if (!mounted) return;
-    await context.push<void>(AppRoutes.plans);
+    await context.push<void>(AppRoutes.startPlan);
   }
 
   @override

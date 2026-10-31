@@ -554,7 +554,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   }
 
   Future<void> _startPlan() async {
-    await context.push<void>(AppRoutes.plans);
+    await context.push<void>(AppRoutes.startPlan);
   }
 
   bool get _dashboardOrigin =>
