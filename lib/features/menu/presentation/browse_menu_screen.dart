@@ -616,6 +616,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     final l10n = AppLocalizations.of(context);
     if (_isHomeLoading || (_homeData == null && !_hasHomeError)) {
       return Scaffold(
+        key: const ValueKey('tourMenuScreen'),
         backgroundColor: const Color(0xFFF8F8F3),
         floatingActionButton: _startPlanButton(l10n),
         body: SafeArea(
@@ -642,6 +643,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     }
     if (_homeData == null) {
       return Scaffold(
+        key: const ValueKey('tourMenuScreen'),
         backgroundColor: const Color(0xFFF8F8F3),
         floatingActionButton: _startPlanButton(l10n),
         body: SafeArea(
@@ -685,6 +687,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
         : 365 + ((textScale - 1) * 220);
 
     return Scaffold(
+      key: const ValueKey('tourMenuScreen'),
       backgroundColor: const Color(0xFFF8F8F3),
       floatingActionButton: _startPlanButton(l10n),
       body: Stack(
@@ -1728,6 +1731,7 @@ class _GuestMealCard extends StatelessWidget {
                         ),
                       ),
                       Row(
+                        key: ValueKey('tourMenuNutrition-${meal.id}'),
                         children: [
                           _NutritionValue(
                             value: l10n.gramsValue(

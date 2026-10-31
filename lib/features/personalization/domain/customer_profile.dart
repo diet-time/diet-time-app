@@ -1,6 +1,8 @@
 class CustomerProfile {
   const CustomerProfile({
     this.profileId,
+    this.userId,
+    this.isAppTourEnabled = false,
     this.preferredName,
     this.genderCode,
     this.dateOfBirth,
@@ -44,6 +46,10 @@ class CustomerProfile {
             json['profileId'] ?? json['customerProfileId'] ?? json['id'],
           ) ??
           fallback.profileId,
+      userId: _string(json['userId']) ?? fallback.userId,
+      isAppTourEnabled: json.containsKey('isAppTourEnabled')
+          ? json['isAppTourEnabled'] == true
+          : fallback.isAppTourEnabled,
       preferredName: _string(json['preferredName']) ?? fallback.preferredName,
       genderCode: _string(json['genderCode']) ?? fallback.genderCode,
       dateOfBirth: _string(json['dateOfBirth']) ?? fallback.dateOfBirth,
@@ -92,6 +98,8 @@ class CustomerProfile {
   }
 
   final String? profileId;
+  final String? userId;
+  final bool isAppTourEnabled;
   final String? preferredName;
   final String? genderCode;
   final String? dateOfBirth;
@@ -189,6 +197,8 @@ class CustomerProfile {
 
   CustomerProfile copyWith({
     String? profileId,
+    String? userId,
+    bool? isAppTourEnabled,
     String? preferredName,
     String? genderCode,
     String? dateOfBirth,
@@ -214,6 +224,8 @@ class CustomerProfile {
   }) {
     return CustomerProfile(
       profileId: profileId ?? this.profileId,
+      userId: userId ?? this.userId,
+      isAppTourEnabled: isAppTourEnabled ?? this.isAppTourEnabled,
       preferredName: preferredName ?? this.preferredName,
       genderCode: genderCode ?? this.genderCode,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,

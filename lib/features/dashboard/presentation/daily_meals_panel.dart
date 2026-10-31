@@ -155,6 +155,7 @@ class _DailyMealsPanelState extends ConsumerState<DailyMealsPanel> {
             ),
             const SizedBox(height: 10),
             MealNutritionView(
+              key: const ValueKey('tourDailyNutrition'),
               total: true,
               nutrition: MealNutrition.total(
                 menu.selected.map(
@@ -522,6 +523,7 @@ class DailyMealCard extends StatelessWidget {
               Align(
                 alignment: AlignmentDirectional.centerEnd,
                 child: TextButton(
+                  key: const ValueKey('tourChangeMeal'),
                   onPressed: onChange,
                   child: Text(context.customerCopy('Change Meal')),
                 ),

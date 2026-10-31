@@ -43,6 +43,7 @@ class ApiClient {
         _ => throw ArgumentError.value(method, 'method'),
       }.timeout(const Duration(seconds: 15));
       request.headers
+        ..set('X-Client-App', 'FLUTTER')
         ..set(HttpHeaders.acceptHeader, 'application/json')
         ..set(HttpHeaders.contentTypeHeader, 'application/json');
       if (_languageCode != null) {

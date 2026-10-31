@@ -1,6 +1,9 @@
 import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/language/presentation/dashboard_language_switcher.dart';
 import 'dart:async';
+import 'package:diet_time/features/app_tour/app_tour_controller.dart';
+import 'package:diet_time/features/app_tour/app_tour_host.dart';
+import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/checkout/domain/order_status.dart';
 import 'package:diet_time/features/dashboard/presentation/tomorrow_deliveries_section.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
@@ -37,6 +40,7 @@ class _CustomerDashboardScreenState
   Timer? _orderRefresh;
   int _tabIndex = 0;
   bool _profileLoadQueued = false;
+  String? _tourDestination;
 
   @override
   void initState() {
@@ -82,6 +86,24 @@ class _CustomerDashboardScreenState
       },
     );
     _ensureProfileLoaded();
+    ref.watch(appTourControllerProvider);
+    ref.read(appTourControllerProvider.notifier).navigate = _tourNavigate;
+    final ready =
+        state is DashboardNoOrders ||
+        state is DashboardWithoutActivePlan ||
+        state is DashboardWithActivePlan ||
+        state is DashboardWithMultipleActivePlans;
+    if (ready && _tabIndex == 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            GoRouter.maybeOf(
+                  context,
+                )?.routerDelegate.currentConfiguration.lastOrNull?.route.path ==
+                AppRoutes.home) {
+          ref.read(appTourControllerProvider.notifier).maybeStart();
+        }
+      });
+    }
     final pages = [
       _DashboardHome(
         state: state,
@@ -96,6 +118,7 @@ class _CustomerDashboardScreenState
         onEditProfile: _openCustomerProfile,
         onQuestionnaire: _openQuestionnaire,
         onLogout: _confirmLogout,
+        tourSetting: const AppTourSetting(),
       ),
     ];
     return Scaffold(
@@ -104,6 +127,7 @@ class _CustomerDashboardScreenState
         child: IndexedStack(index: _tabIndex, children: pages),
       ),
       bottomNavigationBar: NavigationBar(
+        key: const ValueKey('dashboardNavigation'),
         selectedIndex: _tabIndex,
         onDestinationSelected: (index) => setState(() => _tabIndex = index),
         backgroundColor: AppColors.white,
@@ -136,6 +160,52 @@ class _CustomerDashboardScreenState
         ],
       ),
     );
+  }
+
+  Future<void> _tourNavigate(String destination) async {
+    if (!mounted || !ref.read(otpAuthControllerProvider).isAuthenticated) {
+      return;
+    }
+    final router = GoRouter.of(context);
+    // Return through the existing stack; never create another dashboard route.
+    final expectedPath = switch (destination) {
+      'menu' => AppRoutes.menu,
+      'plans' => AppRoutes.plans,
+      'orderDetails' => AppRoutes.orderDetails,
+      _ => AppRoutes.home,
+    };
+    if (_tourDestination == destination &&
+        router.routerDelegate.currentConfiguration.lastOrNull?.route.path ==
+            expectedPath) {
+      return;
+    }
+    if (_tourDestination != null &&
+        !['home', 'orders', 'calendar', 'profile'].contains(_tourDestination) &&
+        router.canPop()) {
+      router.pop();
+    }
+    _tourDestination = destination;
+    if (!mounted) return;
+    setState(
+      () => _tabIndex = switch (destination) {
+        'orders' => 1,
+        'calendar' => 2,
+        'profile' => 3,
+        _ => 0,
+      },
+    );
+    if (destination == 'menu') {
+      unawaited(context.push(AppRoutes.menu, extra: 'dashboard'));
+    }
+    if (destination == 'plans') unawaited(context.push(AppRoutes.plans));
+    if (destination == 'orderDetails') {
+      final orders = dashboardPlanOrders(
+        ref.read(customerDashboardControllerProvider),
+      );
+      if (orders.isNotEmpty) {
+        unawaited(context.push(AppRoutes.orderDetails, extra: orders.first.id));
+      }
+    }
   }
 
   void _ensureProfileLoaded() {
@@ -1601,6 +1671,7 @@ class _CustomerOrdersState extends ConsumerState<_CustomerOrders> {
       onRefresh: () =>
           ref.read(customerDashboardControllerProvider.notifier).refresh(),
       child: ListView(
+        key: const ValueKey('tourOrdersList'),
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
         children: [

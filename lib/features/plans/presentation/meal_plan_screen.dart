@@ -25,6 +25,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
     final plans = ref.watch(mealPlansProvider(language));
     final canPop = Navigator.of(context).canPop();
     return Scaffold(
+      key: const ValueKey('tourPlanSelection'),
       backgroundColor: const Color(0xFFF5F3E9),
       body: SafeArea(
         child: Column(

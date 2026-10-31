@@ -143,6 +143,7 @@ class _UpcomingDeliveriesScreenState
           const SizedBox(height: 14),
         ],
         _Calendar(
+          key: const ValueKey('tourCalendarGrid'),
           month: _visibleMonth,
           selectedDate: _selectedDate,
           isDeliveryDay: _isDeliveryDay,
@@ -163,7 +164,10 @@ class _UpcomingDeliveriesScreenState
           onSelect: (date) => setState(() => _selectedDate = date),
         ),
         const SizedBox(height: 16),
-        const _CalendarLegend(),
+        const KeyedSubtree(
+          key: ValueKey('tourCalendarLegend'),
+          child: _CalendarLegend(),
+        ),
         const SizedBox(height: 18),
         Divider(color: AppColors.darkGreen.withValues(alpha: .09)),
         const SizedBox(height: 12),
@@ -426,6 +430,7 @@ class _UpcomingDeliveriesScreenState
 
 class _Calendar extends StatelessWidget {
   const _Calendar({
+    super.key,
     required this.month,
     required this.selectedDate,
     required this.isDeliveryDay,

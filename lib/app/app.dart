@@ -3,6 +3,7 @@ import 'package:diet_time/app/theme/app_theme.dart';
 import 'package:diet_time/features/language/presentation/language_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:diet_time/features/app_tour/app_tour_host.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -27,6 +28,7 @@ class DietTimeApp extends ConsumerWidget {
       ],
       theme: AppTheme.light(locale),
       routerConfig: router,
+      builder: (context, child) => AppTourHost(child: child!),
     );
   }
 }

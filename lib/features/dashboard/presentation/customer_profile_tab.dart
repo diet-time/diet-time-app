@@ -9,6 +9,7 @@ class CustomerProfileTab extends StatelessWidget {
     required this.onEditProfile,
     required this.onQuestionnaire,
     this.onLogout,
+    this.tourSetting,
     super.key,
   });
 
@@ -17,6 +18,7 @@ class CustomerProfileTab extends StatelessWidget {
   final VoidCallback onEditProfile;
   final VoidCallback onQuestionnaire;
   final VoidCallback? onLogout;
+  final Widget? tourSetting;
 
   @override
   Widget build(BuildContext context) => ListView(
@@ -74,6 +76,7 @@ class CustomerProfileTab extends StatelessWidget {
         description: context.customerCopy('Add or edit your delivery address'),
         onTap: onEditAddress,
       ),
+      ?tourSetting,
       if (onLogout != null) ...[
         const SizedBox(height: 18),
         TextButton.icon(
