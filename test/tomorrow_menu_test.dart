@@ -84,6 +84,190 @@ TomorrowMenu menu({
 );
 
 void main() {
+  Future<void> show(
+    WidgetTester tester,
+    FakeRepository repository, {
+    bool openSelection = true,
+    Locale locale = const Locale('en'),
+    double textScale = 1,
+  }) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tomorrowMenuRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: MaterialApp(
+          locale: locale,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(
+            body: SingleChildScrollView(
+              child: TomorrowMenuSection(orderId: 'order'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    final choose = find.byKey(const ValueKey('chooseTomorrowMeals'));
+    if (openSelection &&
+        choose.evaluate().isNotEmpty &&
+        tester.widget<FilledButton>(choose).onPressed != null) {
+      await tester.ensureVisible(choose);
+      await tester.tap(choose);
+      await tester.pumpAndSettle();
+    }
+  }
+
+  test(
+    'meal-type metadata is parsed without deriving order from names or IDs',
+    () {
+      final item = DailyMealItem.fromJson({
+        'mealItemId': 'dish',
+        'slotOptionId': 'option',
+        'mealName': 'Dish',
+        'category': 'meal',
+        'mealTypes': [
+          {
+            'id': 'z-type',
+            'code': 'CUSTOM',
+            'name': 'Configured category',
+            'displayOrder': -5,
+          },
+          {
+            'id': 'a-type',
+            'code': 'OTHER',
+            'name': 'Another category',
+            'displayOrder': 80,
+          },
+        ],
+      });
+      expect(item.mealTypes.map((t) => t.displayOrder), [-5, 80]);
+      expect(item.mealTypes.map((t) => t.id), ['z-type', 'a-type']);
+    },
+  );
+
+  for (final language in ['en', 'ar']) {
+    for (final count in [1, 2, 3]) {
+      testWidgets(
+        'configured groups preserve shared dishes for $count meals in $language',
+        (tester) async {
+          final early = DailyMealType(
+            id: 'z-type',
+            name: language == 'ar' ? 'وجبة مسائية' : 'Z category',
+            displayOrder: -10,
+          );
+          final late = DailyMealType(
+            id: 'a-type',
+            name: language == 'ar' ? 'وجبة الصباح' : 'A category',
+            displayOrder: 60,
+          );
+          final options = List.generate(
+            3,
+            (index) => DailyMealItem(
+              id: 'group-$index',
+              optionId: 'option-$index',
+              category: 'meal',
+              name: language == 'ar'
+                  ? 'وجبة صحية طازجة مع الخضروات رقم $index'
+                  : 'Fresh healthy meal with vegetables $index',
+              description: 'Full dish description stays in details',
+              mealTypes: index == 0 ? [late, early] : [late],
+              nutrition: const MealNutrition(
+                calories: 100,
+                protein: 10,
+                carbs: 12,
+                fat: 3,
+              ),
+            ),
+          );
+          final repository = FakeRepository()
+            ..response = menu(
+              mealCount: count,
+              mealOptions: options,
+              selectedItems: [...options.take(count), snack],
+            );
+          await show(
+            tester,
+            repository,
+            locale: Locale(language),
+            textScale: 1.5,
+          );
+          expect(find.text(early.name), findsOneWidget);
+          expect(find.text(late.name), findsOneWidget);
+          expect(
+            tester.getTopLeft(find.text(early.name)).dy,
+            lessThan(tester.getTopLeft(find.text(late.name)).dy),
+          );
+          expect(find.text(options[0].name), findsNWidgets(2));
+          expect(
+            find.text('Full dish description stays in details'),
+            findsNothing,
+          );
+          final copy = lookupAppLocalizations(Locale(language));
+          expect(
+            find.text(copy.deliveriesProgress(count + 1, count + 1)),
+            findsOneWidget,
+          );
+          expect(find.text(copy.chooserSaved), findsOneWidget);
+          expect(
+            tester
+                .widget<FilledButton>(
+                  find.byKey(const ValueKey('confirmTomorrowMeals')),
+                )
+                .onPressed,
+            isNotNull,
+          );
+          expect(
+            tester
+                .getRect(find.byKey(const ValueKey('confirmTomorrowMeals')))
+                .bottom,
+            lessThanOrEqualTo(844),
+          );
+          await tester.ensureVisible(find.text(options[0].name).first);
+          final details = find.text(copy.deliveriesViewDetails).first;
+          await tester.ensureVisible(details);
+          await tester.tap(details);
+          await tester.pumpAndSettle();
+          expect(find.byType(MealDetailViewer), findsOneWidget);
+          await tester.tap(find.byKey(const ValueKey('mealDetailClose')));
+          await tester.pumpAndSettle();
+          expect(
+            find.text(copy.deliveriesProgress(count + 1, count + 1)),
+            findsOneWidget,
+          );
+          await tester.ensureVisible(find.text(options[0].name).first);
+          await tester.tap(find.text(options[0].name).first);
+          await tester.pump();
+          expect(
+            find.text(copy.deliveriesProgress(count, count + 1)),
+            findsOneWidget,
+          );
+          expect(find.text(copy.chooserUnsaved), findsOneWidget);
+          expect(
+            tester
+                .widget<FilledButton>(
+                  find.byKey(const ValueKey('confirmTomorrowMeals')),
+                )
+                .onPressed,
+            isNull,
+          );
+          expect(repository.confirms, 0);
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox());
+        },
+      );
+    }
+  }
+
   testWidgets(
     'finalized meals refresh the same orders cached calendar status',
     (tester) async {
@@ -179,40 +363,6 @@ void main() {
       false,
     );
   });
-
-  Future<void> show(
-    WidgetTester tester,
-    FakeRepository repository, {
-    bool openSelection = true,
-  }) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          tomorrowMenuRepositoryProvider.overrideWithValue(repository),
-        ],
-        child: const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: TomorrowMenuSection(orderId: 'order'),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pump();
-    final choose = find.byKey(const ValueKey('chooseTomorrowMeals'));
-    if (openSelection &&
-        choose.evaluate().isNotEmpty &&
-        tester.widget<FilledButton>(choose).onPressed != null) {
-      await tester.ensureVisible(choose);
-      await tester.tap(choose);
-      await tester.pumpAndSettle();
-    }
-  }
 
   testWidgets(
     'draft replacement updates its nutrition total without saving an order or selection',
@@ -349,7 +499,7 @@ void main() {
       expect(find.text('2 of 3 selected'), findsOneWidget);
       await tester.tap(find.text('Choose your meals'));
       await tester.pumpAndSettle();
-      expect(find.text('Meals: 1/2 selected'), findsOneWidget);
+      expect(find.text('2 of 3 selected'), findsOneWidget);
       expect(repository.gets, 1);
       expect(repository.confirms, 0);
       await tester.pumpWidget(const SizedBox());
@@ -368,7 +518,7 @@ void main() {
     await tester.tap(find.text('Grilled chicken').last);
     await tester.pumpAndSettle();
     expect(find.text('Replace a meal'), findsNothing);
-    expect(find.text('Meals: 2/2 selected'), findsOneWidget);
+    expect(find.text('3 of 3 selected'), findsOneWidget);
     expect(repository.confirms, 0);
     await tester.pumpWidget(const SizedBox());
   });
@@ -389,13 +539,16 @@ void main() {
         final repository = FakeRepository()
           ..response = menu(mealCount: count, mealOptions: options);
         await show(tester, repository);
-        expect(find.text('Meals: 0/$count selected'), findsOneWidget);
+        expect(find.text('1 of ${count + 1} selected'), findsOneWidget);
         for (var index = 0; index < count; index++) {
           await tester.ensureVisible(find.text('Available dish $index'));
           await tester.tap(find.text('Available dish $index'));
           await tester.pump();
         }
-        expect(find.text('Meals: $count/$count selected'), findsOneWidget);
+        expect(
+          find.text('${count + 1} of ${count + 1} selected'),
+          findsOneWidget,
+        );
         expect(find.text('Available dish 5'), findsOneWidget);
         await tester.ensureVisible(find.text('Available dish 5'));
         await tester.tap(find.text('Available dish 5'));
@@ -407,8 +560,14 @@ void main() {
         await tester.tap(find.text('Available dish 0').last);
         await tester.pumpAndSettle();
         expect(find.text('Replace a meal'), findsNothing);
-        expect(find.text('Meals: $count/$count selected'), findsOneWidget);
-        expect(find.text('Snacks: 1/1 selected'), findsOneWidget);
+        expect(
+          find.text('${count + 1} of ${count + 1} selected'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('All meals selected – ready to confirm.'),
+          findsOneWidget,
+        );
         expect(repository.confirms, 0);
         expect(
           tester
@@ -451,7 +610,10 @@ void main() {
       await tester.tap(find.text('Fruit cup'));
       await tester.pumpAndSettle();
       expect(find.text('Replace a snack'), findsNothing);
-      expect(find.text('Snacks: 1/1 selected'), findsOneWidget);
+      expect(
+        find.text('All meals selected – ready to confirm.'),
+        findsOneWidget,
+      );
       final selected = tester
           .widgetList<Semantics>(
             find.ancestor(
@@ -539,12 +701,15 @@ void main() {
         snacks: [snack],
       );
       await show(tester, FakeRepository()..response = response);
-      expect(find.text('Meals: 0/2 selected'), findsOneWidget);
-      expect(find.text('Snacks: 0/1 selected'), findsOneWidget);
+      expect(find.text('0 of 3 selected'), findsOneWidget);
+      expect(
+        find.text('Meals remaining: 2 · Snacks remaining: 1'),
+        findsOneWidget,
+      );
       expect(find.text('Grilled chicken'), findsOneWidget);
       await tester.tap(find.text('Grilled chicken'));
       await tester.pump();
-      expect(find.text('Meals: 1/2 selected'), findsOneWidget);
+      expect(find.text('1 of 3 selected'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     },
   );
@@ -640,11 +805,11 @@ void main() {
     (tester) async {
       final repository = FakeRepository();
       await show(tester, repository);
-      expect(find.text('Meals: 2/2 selected'), findsOneWidget);
+      expect(find.text('3 of 3 selected'), findsOneWidget);
       expect(repository.confirms, 0);
       await tester.tap(find.text('Grilled chicken'));
       await tester.pump();
-      expect(find.text('Meals: 1/2 selected'), findsOneWidget);
+      expect(find.text('2 of 3 selected'), findsOneWidget);
       final disabled = tester.widget<FilledButton>(
         find.byKey(const ValueKey('confirmTomorrowMeals')),
       );

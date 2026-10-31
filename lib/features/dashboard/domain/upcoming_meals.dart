@@ -41,6 +41,22 @@ class UpcomingMealDay {
   final String deliveryStatus;
 }
 
+class DailyMealType {
+  const DailyMealType({
+    required this.id,
+    required this.name,
+    required this.displayOrder,
+  });
+  factory DailyMealType.fromJson(Map<String, dynamic> json) => DailyMealType(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    displayOrder: (json['displayOrder'] as num).toInt(),
+  );
+  final String id;
+  final String name;
+  final int displayOrder;
+}
+
 class DailyMealItem {
   const DailyMealItem({
     required this.id,
@@ -52,6 +68,7 @@ class DailyMealItem {
     this.calories,
     MealNutrition? nutrition,
     this.quantity = 1,
+    this.mealTypes = const [],
   }) : _nutrition = nutrition;
   factory DailyMealItem.fromJson(Map<String, dynamic> json) => DailyMealItem(
     id: json['mealItemId'] as String,
@@ -65,6 +82,9 @@ class DailyMealItem {
         ? MealNutrition.fromJson(json['nutrition'] as Map<String, dynamic>)
         : MealNutrition(calories: (json['calories'] as num?)?.toDouble()),
     quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+    mealTypes: (json['mealTypes'] as List? ?? const [])
+        .map((type) => DailyMealType.fromJson(type as Map<String, dynamic>))
+        .toList(),
   );
   final String id;
   final String optionId;
@@ -77,6 +97,7 @@ class DailyMealItem {
   MealNutrition get nutrition =>
       _nutrition ?? MealNutrition(calories: calories);
   final int quantity;
+  final List<DailyMealType> mealTypes;
 }
 
 class AssignedDailyMeal {

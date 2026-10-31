@@ -8,6 +8,7 @@ import 'package:diet_time/features/checkout/presentation/checkout_controller.dar
 import 'package:diet_time/features/personalization/data/customer_profile_repository.dart';
 import 'package:diet_time/features/personalization/domain/customer_profile.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
+import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 sealed class CustomerDashboardState {
@@ -30,6 +31,10 @@ class DashboardAuthenticationFailure extends CustomerDashboardState {
 
 class DashboardProfileNotFound extends CustomerDashboardState {
   const DashboardProfileNotFound();
+}
+
+class DashboardNeedsOnboarding extends CustomerDashboardState {
+  const DashboardNeedsOnboarding();
 }
 
 class DashboardNoOrders extends CustomerDashboardState {
@@ -96,11 +101,26 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
       var resolvedProfileId = profileId?.trim() ?? '';
       if (resolvedProfileId.isEmpty) {
         final profile = await _loadAuthenticatedProfile();
-        if (profile == null || profile.profileId?.trim().isNotEmpty != true) {
+        if (profile == null) {
+          ref
+              .read(profilePersistenceControllerProvider.notifier)
+              .restore(const CustomerProfile());
           state = const DashboardProfileNotFound();
           return;
         }
-        ref.read(personalizationControllerProvider.notifier).replace(profile);
+        if (profile.profileId?.trim().isNotEmpty != true) {
+          state = const DashboardError(
+            'We could not load your dashboard. Please try again.',
+          );
+          return;
+        }
+        ref
+            .read(profilePersistenceControllerProvider.notifier)
+            .restore(profile);
+        if (!profile.isCompleted) {
+          state = const DashboardNeedsOnboarding();
+          return;
+        }
         resolvedProfileId = profile.profileId!.trim();
       }
       _profileId = resolvedProfileId;
@@ -114,7 +134,6 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
     } on CustomerProfileException catch (error) {
       state = switch (error.statusCode) {
         401 => const DashboardAuthenticationFailure(),
-        404 => const DashboardProfileNotFound(),
         _ => const DashboardError(
           'We could not load your dashboard. Please try again.',
         ),
@@ -219,6 +238,11 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
   }
 
   Future<CustomerProfile?> _loadAuthenticatedProfile() async {
+    final cached = ref.read(profilePersistenceControllerProvider);
+    if (cached.hasLoaded && cached.errorMessage == null) {
+      final profile = ref.read(personalizationControllerProvider);
+      return profile.profileId == null ? null : profile;
+    }
     final repository = ref.read(customerProfileRepositoryProvider);
     try {
       return await repository.getProfile();
@@ -237,7 +261,6 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
   CustomerDashboardState _errorState(ApiException error) =>
       switch (error.failure) {
         ApiFailure.unauthorized => const DashboardAuthenticationFailure(),
-        ApiFailure.notFound => const DashboardProfileNotFound(),
         _ => DashboardError(
           error.message?.trim().isNotEmpty == true
               ? error.message!.trim()

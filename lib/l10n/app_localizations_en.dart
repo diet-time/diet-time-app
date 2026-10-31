@@ -2323,4 +2323,25 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get customerOrderRejectedMessage =>
       'Your order was declined by Diet Time. Please contact us for help.';
+
+  @override
+  String get chooserReady => 'All meals selected – ready to confirm.';
+
+  @override
+  String get chooserUnsaved => 'Unsaved changes';
+
+  @override
+  String get chooserSaved => 'Saved selections · review before confirming';
+
+  @override
+  String chooserRemaining(Object meals, Object snacks) {
+    return 'Meals remaining: $meals · Snacks remaining: $snacks';
+  }
+
+  @override
+  String get chooserSelected => 'Selected';
+
+  @override
+  String get chooserLimitHint =>
+      'Your meal limit is reached. Choose a selected dish to replace, or go back and deselect one.';
 }

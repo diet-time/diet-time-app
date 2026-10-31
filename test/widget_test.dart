@@ -15,6 +15,7 @@ import 'package:diet_time/features/menu/presentation/browse_menu_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_carousel_screen.dart';
 import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
+import 'package:diet_time/features/personalization/data/customer_profile_repository.dart';
 import 'package:diet_time/features/personalization/domain/customer_profile.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
@@ -359,6 +360,50 @@ void main() {
     },
   );
 
+  testWidgets(
+    'missing profile creates from real basic details then completes questionnaire',
+    (tester) async {
+      final service = _FakeProfilePersistenceService();
+      await tester.pumpWidget(
+        _questionnaireCheckoutApp(service, accountSetup: true),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('onboardingStep-2')), findsOneWidget);
+      expect(service.saveProgressCalls, 0);
+      await _fillRequiredProfile(tester);
+      service.failSave = true;
+      await _continue(tester);
+      expect(find.byKey(const ValueKey('onboardingStep-2')), findsOneWidget);
+      expect(find.text('Dashboard ready'), findsNothing);
+      expect(service.profile, isNull);
+      service.failSave = false;
+      await _continue(tester);
+      expect(service.profile!.profileId, 'profile-id');
+      expect(service.profile!.genderCode, isNotNull);
+      expect(find.byKey(const ValueKey('onboardingStep-1')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('goal-lose')).hitTestable());
+      await _continue(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('lifestyle-office')).hitTestable(),
+      );
+      await _continue(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('activity-sitting')).hitTestable(),
+      );
+      await _continue(tester);
+      await tester.tap(find.byKey(const ValueKey('choice-HIGH_PROTEIN')));
+      await _continue(tester);
+      await tester.tap(find.byKey(const ValueKey('choice-none')));
+      await _continue(tester);
+      await tester.pumpAndSettle();
+      expect(service.completeCalls, 1);
+      expect(service.profile!.isCompleted, isTrue);
+      expect(find.text('Dashboard ready'), findsOneWidget);
+      expect(find.byType(PersonalizationScreen), findsNothing);
+      expect(find.byType(PhoneLoginPage), findsNothing);
+    },
+  );
+
   testWidgets('returning incomplete guest still sees image onboarding', (
     tester,
   ) async {
@@ -393,29 +438,29 @@ void main() {
     expect(find.byType(PersonalizationScreen), findsNothing);
   });
 
-  testWidgets(
-    'restored incomplete user opens dashboard before choosing checkout',
-    (tester) async {
-      SharedPreferences.setMockInitialValues({
-        'preferredLanguage': 'en',
-        'languageSelectionCompletedV2': true,
-        'hasCompletedOnboarding': true,
-        'hasCompletedProfile': false,
-      });
-      await tester.pumpWidget(
-        _dietTimeApp(authenticationService: const _AuthenticatedService()),
-      );
-      await _finishSplash(tester);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+  testWidgets('restored new user opens profile creation before dashboard', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'preferredLanguage': 'en',
+      'languageSelectionCompletedV2': true,
+      'hasCompletedOnboarding': true,
+      'hasCompletedProfile': false,
+    });
+    await tester.pumpWidget(
+      _dietTimeApp(authenticationService: const _AuthenticatedService()),
+    );
+    await _finishSplash(tester);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.byType(LanguageSelectionPanel), findsNothing);
-      expect(find.byType(OnboardingCarouselScreen), findsNothing);
-      expect(find.byType(HomeScreen), findsOneWidget);
-      expect(find.byType(MealPlanScreen), findsNothing);
-      expect(find.byType(PhoneLoginPage), findsNothing);
-    },
-  );
+    expect(find.byType(LanguageSelectionPanel), findsNothing);
+    expect(find.byType(OnboardingCarouselScreen), findsNothing);
+    expect(find.byType(PersonalizationScreen), findsOneWidget);
+    expect(find.byType(HomeScreen), findsNothing);
+    expect(find.byType(MealPlanScreen), findsNothing);
+    expect(find.byType(PhoneLoginPage), findsNothing);
+  });
 
   testWidgets('restored customer without active orders opens dashboard', (
     tester,
@@ -433,6 +478,13 @@ void main() {
         profileService: _FakeProfilePersistenceService(
           profile: const CustomerProfile(
             profileId: 'profile-id',
+            genderCode: 'FEMALE',
+            dateOfBirth: '1995-03-17',
+            heightCm: 165,
+            weightKg: 70,
+            goalCode: 'LOSE_WEIGHT',
+            dailyRoutineCode: 'OFFICE_WORK',
+            activityLevelCode: 'MOSTLY_SITTING',
             onboardingStatus: 'COMPLETED',
             nextStepCode: 'PROFILE_COMPLETED',
             completionPercentage: 100,
@@ -700,6 +752,7 @@ class _FakeProfilePersistenceService implements ProfilePersistenceService {
   CustomerProfile? lastSubmitted;
   int saveProgressCalls = 0;
   int completeCalls = 0;
+  bool failSave = false;
 
   @override
   Future<CustomerProfile?> load() async => profile;
@@ -708,6 +761,7 @@ class _FakeProfilePersistenceService implements ProfilePersistenceService {
   Future<CustomerProfile> saveProgress(CustomerProfile profile) async {
     saveProgressCalls++;
     lastSubmitted = profile;
+    if (failSave) throw const CustomerProfileException(statusCode: 500);
     return _save(profile);
   }
 
@@ -731,12 +785,13 @@ class _FakeProfilePersistenceService implements ProfilePersistenceService {
       (_, null, _, _, _, _) => 'GOAL',
       (_, _, null, _, _, _) => 'DAILY_ROUTINE',
       (_, _, _, null, _, _) => 'ACTIVITY_LEVEL',
+      (_, _, _, _, _, false) => 'PREFERENCES',
       (_, _, _, _, false, _) => 'ALLERGENS',
-      (_, _, _, _, true, false) => 'PREFERENCES',
       _ => 'PROFILE_COMPLETED',
     };
     final completed = nextStep == 'PROFILE_COMPLETED';
     this.profile = profile.copyWith(
+      profileId: profile.profileId ?? 'profile-id',
       nutritionTargets: const NutritionTargets(
         calories: 2450,
         proteinGrams: 160,
@@ -794,6 +849,7 @@ class _NoOrders extends OrdersRepository {
 Widget _questionnaireCheckoutApp(
   ProfilePersistenceService service, {
   bool startPlan = false,
+  bool accountSetup = false,
 }) => ProviderScope(
   overrides: [
     authenticationServiceProvider.overrideWithValue(
@@ -817,6 +873,7 @@ Widget _questionnaireCheckoutApp(
           builder: (_, _) => PersonalizationScreen(
             checkoutMode: true,
             startPlanMode: startPlan,
+            accountSetupMode: accountSetup,
           ),
         ),
         GoRoute(

@@ -867,5 +867,11 @@
       }
     }
   },
-  "customerOrderRejectedMessage": "Your order was declined by Diet Time. Please contact us for help."
+  "customerOrderRejectedMessage": "Your order was declined by Diet Time. Please contact us for help.",
+"chooserReady":  "All meals selected – ready to confirm.",
+    "chooserUnsaved":  "Unsaved changes",
+    "chooserSaved":  "Saved selections · review before confirming",
+    "chooserRemaining":  "Meals remaining: {meals} · Snacks remaining: {snacks}",
+    "chooserSelected":  "Selected",
+    "chooserLimitHint":  "Your meal limit is reached. Choose a selected dish to replace, or go back and deselect one."
 }

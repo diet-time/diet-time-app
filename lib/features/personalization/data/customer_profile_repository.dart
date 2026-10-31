@@ -41,28 +41,47 @@ class HttpCustomerProfileRepository implements CustomerProfileRepository {
   @override
   Future<CustomerProfile?> getProfile() async {
     final result = await _request(method: 'GET');
-    if (result.statusCode == HttpStatus.notFound) return null;
-    if (result.statusCode < 200 || result.statusCode >= 300) {
-      throw CustomerProfileException(statusCode: result.statusCode);
+    if (result.statusCode == HttpStatus.notFound &&
+        _errorCode(result.body) == 'profile_not_found') {
+      return null;
     }
-    return _profileFromEnvelope(result.body);
+    if (result.statusCode < 200 || result.statusCode >= 300) {
+      throw CustomerProfileException(
+        statusCode: result.statusCode,
+        code: _errorCode(result.body),
+      );
+    }
+    final profile = _profileFromEnvelope(result.body);
+    if (profile == null || profile.profileId == null) {
+      throw const CustomerProfileException(statusCode: 502);
+    }
+    return profile;
   }
 
   @override
   Future<CustomerProfile> updateProfile(CustomerProfile profile) async {
-    final result = await _request(method: 'PUT', body: profile.toJson());
+    final result = await _request(
+      method: 'PUT',
+      body: {
+        ...profile.toJson(),
+        if (profile.profileId == null) 'createOnly': true,
+      },
+    );
     if (result.statusCode < 200 || result.statusCode >= 300) {
       throw CustomerProfileException(statusCode: result.statusCode);
     }
-    return _profileFromEnvelope(
-          result.body,
-          fallback: profile.copyWith(
-            onboardingStatus: 'IN_PROGRESS',
-            nextStepCode: 'BASIC_DETAILS',
-            shouldShowOnboarding: true,
-          ),
-        ) ??
-        (throw const CustomerProfileException(statusCode: 502));
+    final saved = _profileFromEnvelope(
+      result.body,
+      fallback: profile.copyWith(
+        onboardingStatus: 'IN_PROGRESS',
+        nextStepCode: 'BASIC_DETAILS',
+        shouldShowOnboarding: true,
+      ),
+    );
+    if (saved == null || saved.profileId == null) {
+      throw const CustomerProfileException(statusCode: 502);
+    }
+    return saved;
   }
 
   Future<_ProfileHttpResult> _request({
@@ -154,9 +173,10 @@ CustomerProfile? _profileFromEnvelope(
 }
 
 class CustomerProfileException implements Exception {
-  const CustomerProfileException({this.statusCode});
+  const CustomerProfileException({this.statusCode, this.code});
 
   final int? statusCode;
+  final String? code;
   String get message => switch (statusCode) {
     400 || 422 =>
       'Some answers could not be accepted. Review your selections and retry.',
@@ -170,6 +190,12 @@ class CustomerProfileException implements Exception {
     _ =>
       'The server could not save your answers. Your answers are kept; please retry.',
   };
+}
+
+String? _errorCode(Map<String, dynamic> body) {
+  final errors = body['errors'];
+  if (errors is! List || errors.isEmpty || errors.first is! Map) return null;
+  return (errors.first as Map)['code']?.toString();
 }
 
 class _ProfileHttpResult {

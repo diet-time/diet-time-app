@@ -39,6 +39,7 @@ class _CustomerDashboardScreenState
     with WidgetsBindingObserver {
   int _tabIndex = 0;
   bool _profileLoadQueued = false;
+  bool _setupRedirectQueued = false;
   String? _tourDestination;
 
   @override
@@ -70,6 +71,16 @@ class _CustomerDashboardScreenState
   Widget build(BuildContext context) {
     final profile = ref.watch(personalizationControllerProvider);
     final state = ref.watch(customerDashboardControllerProvider);
+    if (state is DashboardProfileNotFound ||
+        state is DashboardNeedsOnboarding) {
+      if (!_setupRedirectQueued) {
+        _setupRedirectQueued = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) context.go(AppRoutes.customerSetup);
+        });
+      }
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     ref.listen(
       customerProfileControllerProvider.select((value) => value.requiresLogin),
       (_, requiresLogin) {
@@ -85,7 +96,7 @@ class _CustomerDashboardScreenState
         state is DashboardWithoutActivePlan ||
         state is DashboardWithActivePlan ||
         state is DashboardWithMultipleActivePlans;
-    if (ready && _tabIndex == 0) {
+    if (ready && profile.isCompleted && _tabIndex == 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted &&
             GoRouter.maybeOf(
@@ -362,14 +373,9 @@ class _DashboardHome extends ConsumerWidget {
         ),
       );
     }
-    if (state is DashboardProfileNotFound) {
-      return _DashboardErrorView(
-        message: context.customerCopy(
-          'Your customer profile could not be found.',
-        ),
-        onRetry: () =>
-            ref.read(customerDashboardControllerProvider.notifier).refresh(),
-      );
+    if (state is DashboardProfileNotFound ||
+        state is DashboardNeedsOnboarding) {
+      return const Center(child: CircularProgressIndicator());
     }
     final orders = _ordersFrom(state);
     final dashboardState = state;
@@ -1538,14 +1544,9 @@ class _DashboardCalendar extends ConsumerWidget {
         ),
       );
     }
-    if (state is DashboardProfileNotFound) {
-      return _DashboardErrorView(
-        message: context.customerCopy(
-          'Your customer profile could not be found.',
-        ),
-        onRetry: () =>
-            ref.read(customerDashboardControllerProvider.notifier).refresh(),
-      );
+    if (state is DashboardProfileNotFound ||
+        state is DashboardNeedsOnboarding) {
+      return const Center(child: CircularProgressIndicator());
     }
     final orders = _ordersFrom(
       state,
@@ -1639,14 +1640,9 @@ class _CustomerOrdersState extends ConsumerState<_CustomerOrders> {
         ),
       );
     }
-    if (state is DashboardProfileNotFound) {
-      return _DashboardErrorView(
-        message: context.customerCopy(
-          'Your customer profile could not be found.',
-        ),
-        onRetry: () =>
-            ref.read(customerDashboardControllerProvider.notifier).refresh(),
-      );
+    if (state is DashboardProfileNotFound ||
+        state is DashboardNeedsOnboarding) {
+      return const Center(child: CircularProgressIndicator());
     }
     final orders = _ordersFrom(state);
     final filtered = _filter == 'ALL'

@@ -4165,6 +4165,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your order was declined by Diet Time. Please contact us for help.'**
   String get customerOrderRejectedMessage;
+
+  /// No description provided for @chooserReady.
+  ///
+  /// In en, this message translates to:
+  /// **'All meals selected – ready to confirm.'**
+  String get chooserReady;
+
+  /// No description provided for @chooserUnsaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsaved changes'**
+  String get chooserUnsaved;
+
+  /// No description provided for @chooserSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved selections · review before confirming'**
+  String get chooserSaved;
+
+  /// No description provided for @chooserRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Meals remaining: {meals} · Snacks remaining: {snacks}'**
+  String chooserRemaining(Object meals, Object snacks);
+
+  /// No description provided for @chooserSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected'**
+  String get chooserSelected;
+
+  /// No description provided for @chooserLimitHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your meal limit is reached. Choose a selected dish to replace, or go back and deselect one.'**
+  String get chooserLimitHint;
 }
 
 class _AppLocalizationsDelegate

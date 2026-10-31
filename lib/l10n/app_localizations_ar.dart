@@ -2277,4 +2277,25 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get customerOrderRejectedMessage =>
       'نعتذر، لم تتم الموافقة على طلبك من دايت تايم. يرجى التواصل معنا للمساعدة.';
+
+  @override
+  String get chooserReady => 'تم اختيار جميع الوجبات – جاهزة للتأكيد.';
+
+  @override
+  String get chooserUnsaved => 'تغييرات غير محفوظة';
+
+  @override
+  String get chooserSaved => 'الاختيارات المحفوظة · راجعها قبل التأكيد';
+
+  @override
+  String chooserRemaining(Object meals, Object snacks) {
+    return 'المتبقي: $meals وجبات · $snacks وجبات خفيفة';
+  }
+
+  @override
+  String get chooserSelected => 'تم الاختيار';
+
+  @override
+  String get chooserLimitHint =>
+      'وصلت إلى الحد المسموح من الوجبات. اختر وجبة محددة لاستبدالها، أو ارجع وألغِ اختيار إحداها.';
 }

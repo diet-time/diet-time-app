@@ -100,6 +100,26 @@ class CustomerProfileService implements ProfilePersistenceService {
     }
     if (pending == null) return remote;
     if (remote != null) {
+      // Import a new/guest draft only into unanswered sections. A profile created
+      // by another request or device remains authoritative for existing answers.
+      if (pending.profileId != remote.profileId) {
+        pending = pending.copyWith(
+          genderCode: remote.genderCode,
+          dateOfBirth: remote.dateOfBirth,
+          heightCm: remote.heightCm,
+          weightKg: remote.weightKg,
+          goalCode: remote.goalCode,
+          dailyRoutineCode: remote.dailyRoutineCode,
+          activityLevelCode: remote.activityLevelCode,
+          preferences: remote.preferencesConfirmed
+              ? remote.preferences
+              : pending.preferences,
+          allergens: remote.allergensConfirmed
+              ? remote.allergens
+              : pending.allergens,
+          onboardingStatus: remote.onboardingStatus,
+        );
+      }
       pending = remote.copyWith(
         genderCode: pending.genderCode,
         dateOfBirth: pending.dateOfBirth,

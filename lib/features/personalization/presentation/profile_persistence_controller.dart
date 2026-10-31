@@ -4,6 +4,7 @@ import 'package:diet_time/features/personalization/domain/customer_profile.dart'
 import 'package:diet_time/features/personalization/domain/onboarding_route_resolver.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 
 class ProfilePersistenceState {
   const ProfilePersistenceState({
@@ -12,6 +13,7 @@ class ProfilePersistenceState {
     this.hasLoaded = false,
     this.errorMessage,
     this.resumeStep = 0,
+    this.requiresLogin = false,
   });
 
   final bool isLoading;
@@ -19,6 +21,7 @@ class ProfilePersistenceState {
   final bool hasLoaded;
   final String? errorMessage;
   final int resumeStep;
+  final bool requiresLogin;
 
   ProfilePersistenceState copyWith({
     bool? isLoading,
@@ -26,6 +29,7 @@ class ProfilePersistenceState {
     bool? hasLoaded,
     Object? errorMessage = _unset,
     int? resumeStep,
+    bool? requiresLogin,
   }) {
     return ProfilePersistenceState(
       isLoading: isLoading ?? this.isLoading,
@@ -35,6 +39,7 @@ class ProfilePersistenceState {
           ? this.errorMessage
           : errorMessage as String?,
       resumeStep: resumeStep ?? this.resumeStep,
+      requiresLogin: requiresLogin ?? this.requiresLogin,
     );
   }
 }
@@ -58,6 +63,7 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
       hasLoaded: true,
       resumeStep: resumeStepFor(profile),
       errorMessage: null,
+      requiresLogin: false,
     );
   }
 
@@ -65,9 +71,16 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
       _pendingLoad ??= _load().whenComplete(() => _pendingLoad = null);
 
   Future<CustomerProfile?> _load() async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(
+      isLoading: true,
+      errorMessage: null,
+      requiresLogin: false,
+    );
     try {
-      final profile = await ref.read(customerProfileServiceProvider).load();
+      final profile = await _withSessionRecovery(
+        () => ref.read(customerProfileServiceProvider).load(),
+      );
+      if (!ref.mounted) return null;
       ref
           .read(personalizationControllerProvider.notifier)
           .replace(profile ?? const CustomerProfile());
@@ -79,11 +92,14 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
             : resumeStepFor(profile),
       );
       return profile;
-    } on Object {
+    } on Object catch (error) {
+      if (!ref.mounted) return null;
       state = state.copyWith(
         isLoading: false,
         hasLoaded: true,
         errorMessage: 'profile_load',
+        requiresLogin:
+            error is CustomerProfileException && error.statusCode == 401,
       );
       return null;
     }
@@ -91,14 +107,21 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
 
   Future<bool> save({required bool complete}) async {
     if (state.isSaving) return false;
-    state = state.copyWith(isSaving: true, errorMessage: null);
+    state = state.copyWith(
+      isSaving: true,
+      errorMessage: null,
+      requiresLogin: false,
+    );
     try {
       final profile = ref.read(personalizationControllerProvider);
-      final saved = complete
-          ? await ref.read(customerProfileServiceProvider).complete(profile)
-          : await ref
-                .read(customerProfileServiceProvider)
-                .saveProgress(profile);
+      final saved = await _withSessionRecovery(
+        () async => complete
+            ? await ref.read(customerProfileServiceProvider).complete(profile)
+            : await ref
+                  .read(customerProfileServiceProvider)
+                  .saveProgress(profile),
+      );
+      if (!ref.mounted) return false;
       ref.read(personalizationControllerProvider.notifier).replace(saved);
       if (complete && !saved.isCompleted) {
         throw const CustomerProfileException(statusCode: 422);
@@ -110,8 +133,11 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
       );
       return true;
     } on Object catch (error) {
+      if (!ref.mounted) return false;
       state = state.copyWith(
         isSaving: false,
+        requiresLogin:
+            error is CustomerProfileException && error.statusCode == 401,
         errorMessage: error is CustomerProfileException
             ? error.message
             : 'Your answers are kept on this phone. Please retry saving.',
@@ -121,6 +147,20 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
   }
 
   void clearError() => state = state.copyWith(errorMessage: null);
+
+  Future<T> _withSessionRecovery<T>(Future<T> Function() action) async {
+    try {
+      return await action();
+    } on CustomerProfileException catch (error) {
+      if (error.statusCode != 401) rethrow;
+      if (!await ref
+          .read(otpAuthControllerProvider.notifier)
+          .refreshAfterUnauthorized()) {
+        rethrow;
+      }
+      return action();
+    }
+  }
 }
 
 int resumeStepFor(CustomerProfile profile) {

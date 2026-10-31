@@ -71,6 +71,16 @@ ProviderContainer setup(TourRepository repository, {bool enabled = true}) {
       .read(personalizationControllerProvider.notifier)
       .replace(
         CustomerProfile(
+          genderCode: 'FEMALE',
+          dateOfBirth: '1995-03-17',
+          heightCm: 165,
+          weightKg: 70,
+          goalCode: 'LOSE_WEIGHT',
+          dailyRoutineCode: 'OFFICE_WORK',
+          activityLevelCode: 'MOSTLY_SITTING',
+          onboardingStatus: 'COMPLETED',
+          nextStepCode: 'PROFILE_COMPLETED',
+          shouldShowOnboarding: false,
           profileId: 'profile-a',
           userId: 'a',
           isAppTourEnabled: enabled,
@@ -111,6 +121,30 @@ class TourStorage extends SecureStorageService {
 }
 
 void main() {
+  test(
+    'tour waits for questionnaire completion without consuming first-login eligibility',
+    () {
+      final container = setup(TourRepository());
+      final profile = container.read(personalizationControllerProvider);
+      container
+          .read(personalizationControllerProvider.notifier)
+          .replace(
+            profile.copyWith(
+              onboardingStatus: 'IN_PROGRESS',
+              nextStepCode: 'ALLERGENS',
+              shouldShowOnboarding: true,
+            ),
+          );
+      final controller = container.read(appTourControllerProvider.notifier);
+      controller.maybeStart();
+      expect(container.read(appTourControllerProvider).running, isFalse);
+      container
+          .read(personalizationControllerProvider.notifier)
+          .replace(profile);
+      controller.maybeStart();
+      expect(container.read(appTourControllerProvider).running, isTrue);
+    },
+  );
   test(
     'customers without plans skip unavailable actions even after enabling detailed guidance',
     () {
@@ -199,6 +233,16 @@ void main() {
           .read(personalizationControllerProvider.notifier)
           .replace(
             const CustomerProfile(
+              genderCode: 'FEMALE',
+              dateOfBirth: '1995-03-17',
+              heightCm: 165,
+              weightKg: 70,
+              goalCode: 'LOSE_WEIGHT',
+              dailyRoutineCode: 'OFFICE_WORK',
+              activityLevelCode: 'MOSTLY_SITTING',
+              onboardingStatus: 'COMPLETED',
+              nextStepCode: 'PROFILE_COMPLETED',
+              shouldShowOnboarding: false,
               profileId: 'profile-a',
               userId: 'a',
               isAppTourEnabled: false,
@@ -292,6 +336,16 @@ void main() {
           .read(personalizationControllerProvider.notifier)
           .replace(
             const CustomerProfile(
+              genderCode: 'FEMALE',
+              dateOfBirth: '1995-03-17',
+              heightCm: 165,
+              weightKg: 70,
+              goalCode: 'LOSE_WEIGHT',
+              dailyRoutineCode: 'OFFICE_WORK',
+              activityLevelCode: 'MOSTLY_SITTING',
+              onboardingStatus: 'COMPLETED',
+              nextStepCode: 'PROFILE_COMPLETED',
+              shouldShowOnboarding: false,
               profileId: 'profile-a',
               userId: 'a',
               isAppTourEnabled: true,
@@ -320,7 +374,22 @@ void main() {
       addTearDown(c.dispose);
       c
           .read(personalizationControllerProvider.notifier)
-          .replace(const CustomerProfile(profileId: 'profile-a', userId: 'a'));
+          .replace(
+            const CustomerProfile(
+              genderCode: 'FEMALE',
+              dateOfBirth: '1995-03-17',
+              heightCm: 165,
+              weightKg: 70,
+              goalCode: 'LOSE_WEIGHT',
+              dailyRoutineCode: 'OFFICE_WORK',
+              activityLevelCode: 'MOSTLY_SITTING',
+              onboardingStatus: 'COMPLETED',
+              nextStepCode: 'PROFILE_COMPLETED',
+              shouldShowOnboarding: false,
+              profileId: 'profile-a',
+              userId: 'a',
+            ),
+          );
       expect(
         await c.read(appTourControllerProvider.notifier).setEnabled(true),
         isFalse,
@@ -351,6 +420,16 @@ void main() {
           .read(personalizationControllerProvider.notifier)
           .replace(
             const CustomerProfile(
+              genderCode: 'FEMALE',
+              dateOfBirth: '1995-03-17',
+              heightCm: 165,
+              weightKg: 70,
+              goalCode: 'LOSE_WEIGHT',
+              dailyRoutineCode: 'OFFICE_WORK',
+              activityLevelCode: 'MOSTLY_SITTING',
+              onboardingStatus: 'COMPLETED',
+              nextStepCode: 'PROFILE_COMPLETED',
+              shouldShowOnboarding: false,
               profileId: 'profile-a',
               userId: 'a',
               isAppTourEnabled: true,
@@ -573,6 +652,16 @@ void main() {
           .read(personalizationControllerProvider.notifier)
           .replace(
             const CustomerProfile(
+              genderCode: 'FEMALE',
+              dateOfBirth: '1995-03-17',
+              heightCm: 165,
+              weightKg: 70,
+              goalCode: 'LOSE_WEIGHT',
+              dailyRoutineCode: 'OFFICE_WORK',
+              activityLevelCode: 'MOSTLY_SITTING',
+              onboardingStatus: 'COMPLETED',
+              nextStepCode: 'PROFILE_COMPLETED',
+              shouldShowOnboarding: false,
               profileId: 'profile-b',
               userId: 'b',
               isAppTourEnabled: true,

@@ -1,4 +1,3 @@
-import 'package:diet_time/features/checkout/domain/order_status.dart';
 import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/menu/domain/meal_nutrition.dart';
 import 'package:diet_time/features/menu/presentation/meal_nutrition_view.dart';
@@ -75,7 +74,9 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && !_submitting) _load();
+    if (state == AppLifecycleState.resumed && !_submitting) {
+      _load(preserveDraft: true);
+    }
   }
 
   @override
@@ -148,11 +149,14 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
       if (preserveDraft &&
           previous != null &&
           previous.menu.dayId == menu.dayId &&
+          previous.menu.subscriptionId == menu.subscriptionId &&
           !menu.readOnly) {
         _draft!.mealIds.clear();
         _draft!.snackIds.clear();
         for (final item in [...menu.meals, ...menu.snacks]) {
-          if (previous.contains(item.id)) _draft!.toggle(item);
+          if (previous.contains(item.id) && !_draft!.contains(item.id)) {
+            _draft!.toggle(item);
+          }
         }
       }
       _loading = false;
@@ -201,6 +205,8 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
             builder: (routeContext, refresh) {
               _selectionRebuild = refresh;
               return Scaffold(
+                backgroundColor: const Color(0xFFF8F6EF),
+                bottomNavigationBar: _buildAction(routeContext),
                 appBar: AppBar(
                   title: Text(
                     lookupAppLocalizations(
@@ -210,7 +216,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
                 ),
                 body: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
-                  child: _buildPanel(routeContext, fullSelection: true),
+                  child: _buildPanel(routeContext),
                 ),
               );
             },
@@ -413,192 +419,205 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
     );
   }
 
-  Widget _buildPanel(BuildContext context, {bool fullSelection = false}) {
+  Widget _buildAction(BuildContext context) {
     final menu = _menu;
     final draft = _draft;
-    return Container(
-      key: ValueKey('tomorrowMenu-${widget.orderId}'),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            context.customerCopy('Tomorrow’s Menu'),
-            style: TextStyle(
-              color: AppColors.darkGreen,
-              fontSize: 21,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (_loading) ...[
-            for (final width in [180.0, 120.0, double.infinity])
-              Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                width: width,
-                height: width == double.infinity ? 100 : 18,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEDF5EF),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-          ] else if (menu != null && draft != null) ...[
+    if (_loading || menu == null || draft == null || menu.readOnly) {
+      return const SizedBox.shrink();
+    }
+    final copy = lookupAppLocalizations(Localizations.localeOf(context));
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             Text(
-              DateFormat('EEEE, d MMMM').format(menu.deliveryDate),
-              style: const TextStyle(fontWeight: FontWeight.w700),
+              draft.hasChanges
+                  ? copy.chooserUnsaved
+                  : menu.selected.isNotEmpty
+                  ? copy.chooserSaved
+                  : copy.deliveriesPending,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, color: AppColors.darkGreen),
             ),
-            const SizedBox(height: 4),
-            Text(menu.planName),
-            if (fullSelection && menu.orderStatus != null)
-              Text(
-                '${context.customerCopy('Order status')}: ${context.customerCopy(orderStatusLabel(menu.orderStatus!))}',
-              ),
-            Text(
-              MealEntitlement(
-                menu.mealCount,
-                menu.snackCount,
-              ).label(Localizations.localeOf(context).languageCode),
-            ),
-            const SizedBox(height: 12),
-            MealNutritionView(
-              total: true,
-              nutrition: MealNutrition.total(
-                (menu.readOnly
-                        ? menu.selected
-                        : [
-                            ...menu.meals,
-                            ...menu.snacks,
-                          ].where((m) => draft.contains(m.id)))
-                    .map((m) => (nutrition: m.nutrition, quantity: m.quantity)),
-              ),
-            ),
-            if (menu.status == 'NOT_STARTED' &&
-                (menu.firstDeliveryDate ?? menu.orderStartDate) != null)
-              Text(
-                lookupAppLocalizations(
-                  Localizations.localeOf(context),
-                ).deliveriesFirstDelivery(
-                  DateFormat(
-                    'EEEE, d MMMM',
-                  ).format((menu.firstDeliveryDate ?? menu.orderStartDate)!),
-                ),
-              ),
-            if (menu.finalized) ...[
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Chip(
-                    avatar: const Icon(
-                      Icons.check_circle,
-                      color: AppColors.darkGreen,
-                      size: 18,
-                    ),
-                    backgroundColor: const Color(0xFFDDF3E6),
-                    label: Text(
-                      menu.status == 'CUSTOMER_CONFIRMED'
-                          ? context.customerCopy('Confirmed')
-                          : context.customerCopy('Automatically finalized'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    lookupAppLocalizations(
-                      Localizations.localeOf(context),
-                    ).deliveriesAllConfirmed(menu.selected.length),
-                  ),
-                ],
-              ),
-              if (!fullSelection)
-                TextButton(
-                  key: const ValueKey('toggleConfirmedMeals'),
-                  onPressed: () =>
-                      _update(() => _showConfirmed = !_showConfirmed),
-                  child: Text(
-                    _showConfirmed
-                        ? context.customerCopy('Hide confirmed meals')
-                        : context.customerCopy('View confirmed meals'),
-                  ),
-                ),
-              if (fullSelection || _showConfirmed)
-                for (final item in menu.selected) _CompactMealRow(item: item),
-            ] else ...[
-              if (menu.canConfirm)
-                Text(context.customerCopy('Selection pending')),
-              if (menu.dayId != null) ...[
-                Text(
-                  '${context.customerCopy('Meals')}: ${draft.mealIds.length}/${menu.mealCount} ${context.customerCopy('selected')}',
-                ),
-                Text(
-                  '${context.customerCopy('Snacks')}: ${draft.snackIds.length}/${menu.snackCount} ${context.customerCopy('selected')}',
-                ),
-              ],
-              if (menu.canConfirm && !_expired)
-                Text(
-                  context.customerCopy(
-                    'Selection closes today at 9:00 PM Qatar time.',
-                  ),
-                )
-              else
-                Text(
-                  menu.emptyReason ?? menu.reviewReason ?? menu.statusMessage,
-                ),
-              const SizedBox(height: 12),
-              if (!fullSelection && menu.dayId != null)
-                FilledButton(
-                  key: const ValueKey('chooseTomorrowMeals'),
-                  onPressed:
-                      !menu.locked &&
-                          (menu.meals.isNotEmpty || menu.snacks.isNotEmpty)
-                      ? _openSelection
-                      : null,
-                  child: Text(context.customerCopy('Choose your meals')),
-                ),
-              if (fullSelection) ...[
-                if (!menu.locked &&
-                    (menu.meals.isNotEmpty || menu.snacks.isNotEmpty)) ...[
-                  _group(context.customerCopy('Meals'), menu.meals, draft),
-                  _group(context.customerCopy('Snacks'), menu.snacks, draft),
-                  FilledButton(
-                    key: const ValueKey('confirmTomorrowMeals'),
-                    onPressed: _editable && draft.complete ? _confirm : null,
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(context.customerCopy('Confirm My Meals')),
-                  ),
-                ] else
-                  for (final item in menu.selected) _CompactMealRow(item: item),
-              ],
-            ],
-            if (!menu.canConfirm && !menu.finalized && _error == null)
-              TextButton(
-                onPressed: _submitting ? null : () => _load(),
-                child: Text(context.customerCopy('Refresh menu')),
-              ),
-          ],
-          if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              context.customerCopy(_error!),
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-            TextButton(
-              onPressed: _loading || _submitting ? null : () => _load(),
-              child: Text(context.customerCopy('Refresh menu')),
+            const SizedBox(height: 6),
+            FilledButton(
+              key: const ValueKey('confirmTomorrowMeals'),
+              onPressed: _editable && draft.complete ? _confirm : null,
+              child: _submitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(context.customerCopy('Confirm My Meals')),
             ),
           ],
-        ],
+        ),
       ),
     );
+  }
+
+  Widget _buildPanel(BuildContext context) {
+    final menu = _menu;
+    final draft = _draft;
+    final copy = lookupAppLocalizations(Localizations.localeOf(context));
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (menu == null || draft == null) {
+      return Column(
+        children: [
+          if (_error != null) Text(_error!),
+          TextButton(
+            onPressed: () => _load(preserveDraft: true),
+            child: Text(copy.deliveriesRefresh),
+          ),
+        ],
+      );
+    }
+    final selected = menu.readOnly
+        ? menu.selected
+        : [
+            ...menu.meals.where((m) => draft.mealIds.contains(m.id)),
+            ...menu.snacks.where((m) => draft.snackIds.contains(m.id)),
+          ];
+    final count = menu.readOnly
+        ? menu.savedMealCount + menu.savedSnackCount
+        : draft.mealIds.length + draft.snackIds.length;
+    final total = menu.mealCount + menu.snackCount;
+    return Column(
+      key: ValueKey('tomorrowMenu-${widget.orderId}'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          DateFormat(
+            'EEEE, d MMMM',
+            Localizations.localeOf(context).toLanguageTag(),
+          ).format(menu.deliveryDate),
+          style: const TextStyle(
+            color: AppColors.darkGreen,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          menu.planName,
+          style: const TextStyle(
+            color: AppColors.darkGreen,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        Text(
+          MealEntitlement(
+            menu.mealCount,
+            menu.snackCount,
+          ).label(Localizations.localeOf(context).languageCode),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          copy.deliveriesProgress(count, total),
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 6),
+        LinearProgressIndicator(
+          value: total > 0 ? (count / total).clamp(0, 1) : 0,
+          color: AppColors.emeraldGreen,
+          backgroundColor: const Color(0xFFE0E9DE),
+          borderRadius: BorderRadius.circular(8),
+          minHeight: 6,
+        ),
+        const SizedBox(height: 8),
+        if (menu.finalized)
+          Text(
+            context.customerCopy(
+              menu.status == 'CUSTOMER_CONFIRMED'
+                  ? 'Confirmed'
+                  : 'Automatically finalized',
+            ),
+            style: const TextStyle(
+              color: AppColors.emeraldGreen,
+              fontWeight: FontWeight.w800,
+            ),
+          )
+        else if (menu.canConfirm && !_expired) ...[
+          Text(
+            draft.complete
+                ? copy.chooserReady
+                : copy.chooserRemaining(
+                    menu.mealCount - draft.mealIds.length,
+                    menu.snackCount - draft.snackIds.length,
+                  ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            context.customerCopy(
+              'Selection closes today at 9:00 PM Qatar time.',
+            ),
+            style: const TextStyle(fontSize: 12),
+          ),
+        ] else if (!menu.readOnly)
+          Text(menu.emptyReason ?? menu.reviewReason ?? menu.statusMessage),
+        if (menu.readOnly) Text(copy.deliveriesStatus('LOCKED')),
+        const SizedBox(height: 12),
+        MealNutritionView(
+          total: true,
+          nutrition: MealNutrition.total(
+            selected.map((m) => (nutrition: m.nutrition, quantity: m.quantity)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        ..._mealGroups(menu, draft),
+        if (_error != null) ...[
+          Text(
+            _error!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+          TextButton(
+            onPressed: _submitting ? null : () => _load(preserveDraft: true),
+            child: Text(copy.deliveriesRefresh),
+          ),
+        ],
+      ],
+    );
+  }
+
+  List<Widget> _mealGroups(TomorrowMenu menu, TomorrowMealDraft draft) {
+    final types = <String, DailyMealType>{};
+    final groups = <String, List<DailyMealItem>>{};
+    final ungrouped = <String, List<DailyMealItem>>{};
+    final items = menu.readOnly
+        ? menu.selected
+        : [...menu.meals, ...menu.snacks];
+    for (final item in items) {
+      if (item.mealTypes.isEmpty) (ungrouped[item.category] ??= []).add(item);
+      for (final type in item.mealTypes) {
+        types[type.id] = type;
+        final items = groups[type.id] ??= [];
+        if (!items.any((existing) => existing.id == item.id)) items.add(item);
+      }
+    }
+    // Resolve ties using response order, without sorting by IDs or names.
+    final ordered = types.values.toList();
+    final positions = {
+      for (var i = 0; i < ordered.length; i++) ordered[i].id: i,
+    };
+    ordered.sort((a, b) {
+      final order = a.displayOrder.compareTo(b.displayOrder);
+      return order != 0 ? order : positions[a.id]!.compareTo(positions[b.id]!);
+    });
+    return [
+      for (final type in ordered) _group(type.name, groups[type.id]!, draft),
+      // Older APIs without meal-type metadata retain their meal/snack grouping.
+      for (final entry in ungrouped.entries)
+        _group(
+          context.customerCopy(entry.key == 'snack' ? 'Snacks' : 'Meals'),
+          entry.value,
+          draft,
+        ),
+    ];
   }
 
   Future<void> _selectDraft(DailyMealItem item, TomorrowMealDraft draft) async {
@@ -633,6 +652,11 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 12),
+                    Text(
+                      lookupAppLocalizations(
+                        Localizations.localeOf(context),
+                      ).chooserLimitHint,
+                    ),
                     for (final selected in options.where(
                       (option) => ids.contains(option.id),
                     ))
@@ -679,67 +703,13 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
       for (final item in items)
         _MealCard(
           item: item,
-          selected: draft.contains(item.id),
+          selected: draft.menu.readOnly
+              ? draft.menu.selected.any((saved) => saved.id == item.id)
+              : draft.contains(item.id),
           onTap: _editable ? () => _selectDraft(item, draft) : null,
         ),
       const SizedBox(height: 8),
     ],
-  );
-}
-
-class _CompactMealRow extends StatelessWidget {
-  const _CompactMealRow({required this.item});
-  final DailyMealItem item;
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Row(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: SizedBox(
-            width: 44,
-            height: 44,
-            child: item.imageUrl?.isNotEmpty == true
-                ? Image.network(
-                    item.imageUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const Icon(
-                      Icons.restaurant,
-                      color: AppColors.emeraldGreen,
-                    ),
-                  )
-                : const Icon(Icons.restaurant, color: AppColors.emeraldGreen),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.name,
-                style: const TextStyle(
-                  color: AppColors.darkGreen,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                item.category == 'snack'
-                    ? lookupAppLocalizations(
-                        Localizations.localeOf(context),
-                      ).deliveriesSnack
-                    : lookupAppLocalizations(
-                        Localizations.localeOf(context),
-                      ).deliveriesMeal,
-                style: const TextStyle(fontSize: 12),
-              ),
-              MealNutritionDetails(meal: item),
-            ],
-          ),
-        ),
-      ],
-    ),
   );
 }
 
@@ -756,7 +726,7 @@ class _MealCard extends StatelessWidget {
     child: Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: selected ? const Color(0xFFEDF8F1) : const Color(0xFFFAF9F5),
+        color: selected ? const Color(0xFFEDF8F1) : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
@@ -803,18 +773,22 @@ class _MealCard extends StatelessWidget {
                           color: AppColors.darkGreen,
                         ),
                       ),
-                      if (item.description?.isNotEmpty == true)
+                      if (selected)
                         Text(
-                          item.description!,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12),
+                          lookupAppLocalizations(
+                            Localizations.localeOf(context),
+                          ).chooserSelected,
+                          style: const TextStyle(
+                            color: AppColors.emeraldGreen,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      MealNutritionDetails(meal: item),
+                      MealNutritionDetails(meal: item, compact: true),
                     ],
                   ),
                 ),
-                if (onTap != null) ...[
+                ...[
                   const SizedBox(width: 8),
                   Icon(
                     selected

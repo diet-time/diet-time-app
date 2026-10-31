@@ -10,9 +10,11 @@ class MealNutritionView extends StatelessWidget {
     super.key,
     required this.nutrition,
     this.total = false,
+    this.compact = false,
   });
   final MealNutrition nutrition;
   final bool total;
+  final bool compact;
   @override
   Widget build(BuildContext context) {
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
@@ -23,9 +25,9 @@ class MealNutritionView extends StatelessWidget {
       if (nutrition.calories != null) copy.kcal(nutrition.calories!.round()),
       if (nutrition.protein != null)
         '${copy.proteinLabel} ${copy.gramsValue(number(nutrition.protein!))}',
-      if (nutrition.carbs != null)
+      if (!compact && nutrition.carbs != null)
         '${copy.carbsLabel} ${copy.gramsValue(number(nutrition.carbs!))}',
-      if (nutrition.fat != null)
+      if (!compact && nutrition.fat != null)
         '${copy.fatLabel} ${copy.gramsValue(number(nutrition.fat!))}',
     ];
     return Column(
@@ -46,7 +48,7 @@ class MealNutritionView extends StatelessWidget {
                 )
                 .toList(),
           ),
-        if (!nutrition.complete)
+        if (compact ? !nutrition.hasValues : !nutrition.complete)
           Text(
             total ? copy.nutritionTotalsIncomplete : copy.nutritionUnavailable,
             style: TextStyle(
@@ -60,8 +62,13 @@ class MealNutritionView extends StatelessWidget {
 }
 
 class MealNutritionDetails extends StatelessWidget {
-  const MealNutritionDetails({super.key, required this.meal});
+  const MealNutritionDetails({
+    super.key,
+    required this.meal,
+    this.compact = false,
+  });
   final DailyMealItem meal;
+  final bool compact;
   @override
   Widget build(BuildContext context) {
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
@@ -69,6 +76,7 @@ class MealNutritionDetails extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         MealNutritionView(
+          compact: compact,
           nutrition: MealNutrition.total([
             (nutrition: meal.nutrition, quantity: meal.quantity),
           ]),

@@ -211,6 +211,7 @@ class AppTourController extends Notifier<AppTourState> {
         current == _attemptedOwner ||
         state.running ||
         state.saving ||
+        !ref.read(personalizationControllerProvider).isCompleted ||
         !ref.read(personalizationControllerProvider).isAppTourEnabled ||
         navigate == null) {
       return;

@@ -34,7 +34,13 @@ class CheckoutAccessService {
             persistence.errorMessage == null
         ? ref.read(personalizationControllerProvider)
         : await ref.read(profilePersistenceControllerProvider.notifier).load();
+    if (!ref.read(otpAuthControllerProvider).isAuthenticated) {
+      return CheckoutAccess.login;
+    }
     if (ref.read(profilePersistenceControllerProvider).errorMessage != null) {
+      if (ref.read(profilePersistenceControllerProvider).requiresLogin) {
+        return CheckoutAccess.login;
+      }
       throw StateError('profile_load');
     }
     ref
@@ -84,7 +90,11 @@ class _CheckoutEntryScreenState extends ConsumerState<CheckoutEntryScreen> {
             ),
           );
         case CheckoutAccess.questionnaire:
-          context.go(AppRoutes.checkoutQuestionnaire, extra: widget.startPlan);
+          context.go(
+            widget.startPlan
+                ? AppRoutes.customerSetup
+                : AppRoutes.checkoutQuestionnaire,
+          );
         case CheckoutAccess.summary:
           context.go(widget.startPlan ? AppRoutes.home : AppRoutes.planSummary);
       }

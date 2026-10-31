@@ -26,15 +26,20 @@ class PersonalizationScreen extends ConsumerStatefulWidget {
     this.customerProfileMode = false,
     this.checkoutMode = false,
     this.startPlanMode = false,
+    this.accountSetupMode = false,
     super.key,
   });
 
   final bool customerProfileMode;
   final bool checkoutMode;
   final bool startPlanMode;
+  final bool accountSetupMode;
 
-  String get entryRoute =>
-      startPlanMode ? AppRoutes.startPlan : AppRoutes.checkoutEntry;
+  String get entryRoute => accountSetupMode
+      ? AppRoutes.authenticatedLanding
+      : startPlanMode
+      ? AppRoutes.startPlan
+      : AppRoutes.checkoutEntry;
 
   @override
   ConsumerState<PersonalizationScreen> createState() =>
@@ -106,7 +111,26 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     final profile = persistence.hasLoaded && persistence.errorMessage == null
         ? ref.read(personalizationControllerProvider)
         : await ref.read(profilePersistenceControllerProvider.notifier).load();
-    if (!mounted || profile == null || _skipping) return;
+    if (!mounted || _skipping) return;
+    final loaded = ref.read(profilePersistenceControllerProvider);
+    if (loaded.requiresLogin ||
+        !ref.read(otpAuthControllerProvider).isAuthenticated) {
+      _signIn();
+      return;
+    }
+    if (loaded.errorMessage != null) return;
+    final CustomerProfile restored =
+        profile ?? ref.read(personalizationControllerProvider);
+    if (widget.accountSetupMode) {
+      if (restored.isCompleted) {
+        context.go(AppRoutes.home);
+        return;
+      }
+      _restoreVisibleValues(restored);
+      await _goTo(resumeStepFor(restored), recordHistory: false);
+      return;
+    }
+    if (profile == null) return;
     if (profile.isCompleted && !widget.customerProfileMode) {
       context.pushReplacement(
         widget.startPlanMode
@@ -257,14 +281,25 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
           .save(complete: _index == 6);
       if (!mounted) return;
       if (!saved) {
+        if (ref.read(profilePersistenceControllerProvider).requiresLogin ||
+            !ref.read(otpAuthControllerProvider).isAuthenticated) {
+          _signIn();
+          return;
+        }
         if (ref.read(profilePersistenceControllerProvider).errorMessage ==
             'profile_conflict') {
           _restoreVisibleValues(ref.read(personalizationControllerProvider));
         }
         return;
       }
-      if (_index == 6 && widget.startPlanMode) {
+      if (_index == 6 && (widget.startPlanMode || widget.accountSetupMode)) {
         context.go(AppRoutes.home);
+        return;
+      }
+      if (widget.accountSetupMode) {
+        final persisted = ref.read(personalizationControllerProvider);
+        _restoreVisibleValues(persisted);
+        await _goTo(resumeStepFor(persisted));
         return;
       }
       await _goTo(_index + 1);
@@ -289,11 +324,20 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
 
   void _previous() {
     if (_history.isEmpty) {
-      if (widget.checkoutMode) context.go(AppRoutes.plans);
+      if (widget.checkoutMode || widget.accountSetupMode) {
+        context.go(AppRoutes.plans);
+      }
       return;
     }
     final target = _history.removeLast();
     unawaited(_goTo(target, recordHistory: false));
+  }
+
+  void _signIn() {
+    context.go(
+      AppRoutes.phoneLogin,
+      extra: PendingAuthDestination(route: widget.entryRoute),
+    );
   }
 
   Future<void> _notNow() async {
@@ -509,7 +553,8 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     };
     final errorMessage = _validationMessage ?? persistenceErrorMessage;
     return PopScope(
-      canPop: _history.isEmpty && !widget.checkoutMode,
+      canPop:
+          _history.isEmpty && !widget.checkoutMode && !widget.accountSetupMode,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _previous();
       },
@@ -526,8 +571,12 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                     showBack:
                         widget.customerProfileMode ||
                         widget.checkoutMode ||
+                        widget.accountSetupMode ||
                         _history.isNotEmpty,
-                    onBack: widget.checkoutMode || _history.isNotEmpty
+                    onBack:
+                        widget.checkoutMode ||
+                            widget.accountSetupMode ||
+                            _history.isNotEmpty
                         ? _previous
                         : () => Navigator.of(context).maybePop(),
                   ),

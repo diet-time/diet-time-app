@@ -122,12 +122,8 @@ void main() {
                 },
               ),
               GoRoute(
-                path: AppRoutes.checkoutQuestionnaire,
-                builder: (_, state) => Text(
-                  state.extra == true
-                      ? 'Resume questionnaire'
-                      : 'Unexpected questionnaire',
-                ),
+                path: AppRoutes.customerSetup,
+                builder: (_, state) => const Text('Resume questionnaire'),
               ),
               GoRoute(
                 path: AppRoutes.home,
@@ -290,7 +286,7 @@ void main() {
 
   for (final hasOrders in [false, true]) {
     testWidgets(
-      'ordinary or restored login opens dashboard with orders: $hasOrders',
+      'ordinary incomplete login resumes questionnaire with orders: $hasOrders',
       (tester) async {
         final profiles = _Profiles(
           const CustomerProfile(
@@ -309,8 +305,8 @@ void main() {
               builder: (_, _) => const AuthenticatedLandingScreen(),
             ),
             GoRoute(
-              path: AppRoutes.plans,
-              builder: (_, _) => const Text('Browse plans'),
+              path: AppRoutes.customerSetup,
+              builder: (_, _) => const Text('Resume questionnaire'),
             ),
             GoRoute(
               path: AppRoutes.home,
@@ -326,7 +322,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.text('Dashboard'), findsOneWidget);
+        expect(find.text('Resume questionnaire'), findsOneWidget);
         expect(find.text('Browse plans'), findsNothing);
         expect(
           orders.loads,

@@ -1163,7 +1163,19 @@ class _GetOnlyProfileRepository implements CustomerProfileRepository {
   @override
   Future<CustomerProfile?> getProfile() async {
     getCalls++;
-    return const CustomerProfile(profileId: 'profile-from-get');
+    return const CustomerProfile(
+      genderCode: 'FEMALE',
+      dateOfBirth: '1995-03-17',
+      heightCm: 165,
+      weightKg: 70,
+      goalCode: 'LOSE_WEIGHT',
+      dailyRoutineCode: 'OFFICE_WORK',
+      activityLevelCode: 'MOSTLY_SITTING',
+      onboardingStatus: 'COMPLETED',
+      nextStepCode: 'PROFILE_COMPLETED',
+      shouldShowOnboarding: false,
+      profileId: 'profile-from-get',
+    );
   }
 
   @override

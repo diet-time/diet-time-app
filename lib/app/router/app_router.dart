@@ -37,6 +37,7 @@ abstract final class AppRoutes {
   static const onboarding = '/onboarding';
   static const personalization = '/personalization';
   static const customerQuestionnaire = '/customer-questionnaire';
+  static const customerSetup = '/customer-setup';
   static const menu = '/menu';
   static const language = '/language';
   static const phoneLogin = '/phone-login';
@@ -77,6 +78,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.personalization,
         pageBuilder: (context, state) =>
             _slidePage(state: state, child: const PersonalizationScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.customerSetup,
+        pageBuilder: (context, state) => _slidePage(
+          state: state,
+          child: const PersonalizationScreen(accountSetupMode: true),
+        ),
       ),
       GoRoute(
         path: AppRoutes.customerQuestionnaire,

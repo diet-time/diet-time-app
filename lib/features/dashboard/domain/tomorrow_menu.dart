@@ -208,6 +208,14 @@ class TomorrowMealDraft {
 
   bool get complete =>
       mealIds.length == menu.mealCount && snackIds.length == menu.snackCount;
+  bool get hasChanges {
+    final saved = TomorrowMealDraft(menu);
+    return mealIds.length != saved.mealIds.length ||
+        snackIds.length != saved.snackIds.length ||
+        !mealIds.containsAll(saved.mealIds) ||
+        !snackIds.containsAll(saved.snackIds);
+  }
+
   bool contains(String id) => mealIds.contains(id) || snackIds.contains(id);
 
   bool replace(DailyMealItem item, String previousId) {
