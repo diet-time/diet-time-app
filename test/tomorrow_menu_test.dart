@@ -687,6 +687,19 @@ void main() {
     },
   );
 
+  testWidgets('unavailable tomorrow menu does not retry every thirty seconds', (
+    tester,
+  ) async {
+    final repository = FakeRepository()..response = menu(shortage: true);
+    await show(tester, repository, openSelection: false);
+    final calls = repository.gets;
+    await tester.pump(const Duration(seconds: 61));
+    await tester.pump();
+    expect(repository.gets, calls);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('no delivery has no selection form', (tester) async {
     await show(tester, FakeRepository()..response = menu(noDelivery: true));
     expect(find.text('No delivery is scheduled for tomorrow.'), findsOneWidget);

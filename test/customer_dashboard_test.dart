@@ -17,6 +17,55 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets(
+    'dashboard does not poll while idle and still allows explicit refresh',
+    (tester) async {
+      final controller = _RecordingDashboardController();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            customerDashboardControllerProvider.overrideWith(() => controller),
+          ],
+          child: const MaterialApp(home: CustomerDashboardScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(controller.initializeCalls, 1);
+      await tester.pump(const Duration(seconds: 61));
+      await tester.pump();
+      expect(controller.refreshCalls, 0);
+      await controller.refresh();
+      expect(controller.refreshCalls, 1);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets('order details do not refetch every thirty seconds', (
+    tester,
+  ) async {
+    final repository = _FakeOrdersRepository([
+      _reviewSummary('pending', 'PENDING_APPROVAL'),
+    ]);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [ordersRepositoryProvider.overrideWithValue(repository)],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: OrderDetailsScreen(orderId: 'pending'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final calls = repository.getOrderCalls;
+    expect(calls, greaterThan(0));
+    await tester.pump(const Duration(seconds: 61));
+    await tester.pump();
+    expect(repository.getOrderCalls, calls);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   test(
     'plan presentation deduplicates purchases without granting fulfillment',
     () {
@@ -873,6 +922,7 @@ class _FakeOrdersRepository extends OrdersRepository {
     : super(apiClient: ApiClient(), accessTokenProvider: _noToken);
 
   final List<CustomerOrderSummary> orders;
+  int getOrderCalls = 0;
 
   @override
   Future<List<CustomerOrderSummary>> getCustomerOrders(
@@ -881,8 +931,10 @@ class _FakeOrdersRepository extends OrdersRepository {
   }) async => orders;
 
   @override
-  Future<OrderConfirmation> getOrder(String orderId) async =>
-      _detail(orders.singleWhere((order) => order.id == orderId));
+  Future<OrderConfirmation> getOrder(String orderId) async {
+    getOrderCalls++;
+    return _detail(orders.singleWhere((order) => order.id == orderId));
+  }
 }
 
 class _DashboardControllerForTest extends CustomerDashboardController {
@@ -904,6 +956,12 @@ class _DashboardControllerForTest extends CustomerDashboardController {
 
 class _RecordingDashboardController extends CustomerDashboardController {
   int initializeCalls = 0;
+  int refreshCalls = 0;
+
+  @override
+  Future<void> refresh() async {
+    refreshCalls++;
+  }
 
   @override
   CustomerDashboardState build() => const DashboardLoading();

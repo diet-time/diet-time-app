@@ -1,7 +1,6 @@
 import 'package:diet_time/features/checkout/domain/order_status.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:diet_time/app/localization/customer_copy.dart';
-import 'dart:async';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
@@ -26,22 +25,16 @@ class OrderDetailsScreen extends ConsumerStatefulWidget {
 
 class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
     with WidgetsBindingObserver {
-  Timer? _refresh;
   String get orderId => widget.orderId;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     Future.microtask(() => ref.invalidate(orderDetailsProvider(orderId)));
-    _refresh = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => ref.invalidate(orderDetailsProvider(orderId)),
-    );
   }
 
   @override
   void dispose() {
-    _refresh?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

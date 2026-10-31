@@ -37,7 +37,6 @@ class CustomerDashboardScreen extends ConsumerStatefulWidget {
 class _CustomerDashboardScreenState
     extends ConsumerState<CustomerDashboardScreen>
     with WidgetsBindingObserver {
-  Timer? _orderRefresh;
   int _tabIndex = 0;
   bool _profileLoadQueued = false;
   String? _tourDestination;
@@ -46,13 +45,6 @@ class _CustomerDashboardScreenState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _orderRefresh = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) {
-        unawaited(
-          ref.read(customerDashboardControllerProvider.notifier).refresh(),
-        );
-      }
-    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(customerDashboardControllerProvider.notifier).initialize();
@@ -61,7 +53,6 @@ class _CustomerDashboardScreenState
 
   @override
   void dispose() {
-    _orderRefresh?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -87,6 +78,7 @@ class _CustomerDashboardScreenState
     );
     _ensureProfileLoaded();
     ref.watch(appTourControllerProvider);
+    ref.watch(appTourIdentityProvider);
     ref.read(appTourControllerProvider.notifier).navigate = _tourNavigate;
     final ready =
         state is DashboardNoOrders ||

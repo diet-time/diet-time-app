@@ -178,14 +178,6 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
     );
     final delay = menu.canConfirm && untilCutoff > Duration.zero
         ? untilCutoff
-        : const {
-            'FINALIZATION_PENDING',
-            'NEEDS_REVIEW',
-            'MENU_NOT_CONFIGURED',
-            'SERVICE_DAYS_MISSING',
-            'SERVICE_DAY_INCOMPLETE',
-          }.contains(menu.status)
-        ? const Duration(seconds: 30)
         : untilMidnight;
     _refreshTimer = Timer(delay, () {
       if (!mounted) return;

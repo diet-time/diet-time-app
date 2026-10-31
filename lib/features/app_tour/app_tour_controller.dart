@@ -1,8 +1,59 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:diet_time/core/storage/secure_storage_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
+
+class AppTourIdentity {
+  const AppTourIdentity(this.userId, this.accessToken);
+  final String userId, accessToken;
+}
+
+// App restarts restore authentication from secure storage without recreating
+// AuthSession. Use that existing credential source, just like the other APIs.
+final appTourIdentityProvider = FutureProvider<AppTourIdentity?>((ref) async {
+  final auth = ref.watch(otpAuthControllerProvider);
+  if (!auth.isAuthenticated) return null;
+  if (auth.session case final session?) {
+    return AppTourIdentity(session.user.id, session.accessToken);
+  }
+  return _storedTourIdentity(ref.watch(secureStorageServiceProvider));
+});
+
+Future<AppTourIdentity?> _storedTourIdentity(
+  SecureStorageService storage,
+) async {
+  final values = await Future.wait([
+    storage.read(SecureStorageService.authenticatedUserIdKey),
+    storage.read(SecureStorageService.accessTokenKey),
+  ]);
+  var userId = values[0]?.trim() ?? '';
+  final token = values[1]?.trim() ?? '';
+  if (token.isEmpty) return null;
+  if (userId.isEmpty) {
+    // Older sessions may predate the identity cache. Claims only scope local
+    // state; the API still validates the token and authorizes every update.
+    try {
+      final claims =
+          jsonDecode(
+                utf8.decode(
+                  base64Url.decode(base64Url.normalize(token.split('.')[1])),
+                ),
+              )
+              as Map<String, dynamic>;
+      userId =
+          (claims['sub'] ??
+                  claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'])
+              ?.toString() ??
+          '';
+    } catch (_) {
+      return null;
+    }
+  }
+  return userId.isEmpty ? null : AppTourIdentity(userId, token);
+}
 
 typedef TourNavigator = Future<void> Function(String destination);
 
@@ -110,27 +161,30 @@ class AppTourController extends Notifier<AppTourState> {
   String? get owner {
     final auth = ref.read(otpAuthControllerProvider);
     final profile = ref.read(personalizationControllerProvider);
+    final identity = auth.session == null
+        ? ref.read(appTourIdentityProvider).value
+        : AppTourIdentity(auth.user!.id, auth.session!.accessToken);
     if (!auth.isAuthenticated ||
-        auth.session == null ||
+        identity == null ||
         profile.profileId == null ||
-        profile.userId != auth.user?.id) {
+        profile.userId != identity.userId) {
       return null;
     }
-    return '${auth.user!.id}:${profile.profileId}';
+    return '${identity.userId}:${profile.profileId}';
   }
 
   @override
   AppTourState build() {
-    ref.listen(otpAuthControllerProvider.select((v) => v.user?.id), (
-      previous,
-      next,
-    ) {
-      if (previous == next) return;
-      _generation++;
-      _attemptedOwner = null;
-      navigate = null;
-      state = const AppTourState();
-    });
+    ref.listen(
+      otpAuthControllerProvider.select((v) => (v.isAuthenticated, v.user?.id)),
+      (previous, next) {
+        if (previous == next) return;
+        _generation++;
+        _attemptedOwner = null;
+        navigate = null;
+        state = const AppTourState();
+      },
+    );
     return const AppTourState();
   }
 
@@ -194,38 +248,59 @@ class AppTourController extends Notifier<AppTourState> {
     await setEnabled(false);
   }
 
-  Future<void> setEnabled(bool enabled) async {
-    final current = owner;
-    if (current == null || state.saving) return;
+  Future<bool> setEnabled(bool enabled) async {
+    if (state.saving) return false;
     final generation = ++_generation;
+    final originalProfile = ref.read(personalizationControllerProvider);
     if (!enabled && state.running) {
       unawaited(navigate?.call('home') ?? Future.value());
     }
     state = const AppTourState(saving: true);
     try {
+      final session = ref.read(otpAuthControllerProvider).session;
+      final identity = session != null
+          ? AppTourIdentity(session.user.id, session.accessToken)
+          : await _storedTourIdentity(ref.read(secureStorageServiceProvider));
+      if (generation != _generation) return false;
+      final profile = ref.read(personalizationControllerProvider);
+      if (identity == null ||
+          !ref.read(otpAuthControllerProvider).isAuthenticated ||
+          profile.profileId == null ||
+          profile.profileId != originalProfile.profileId ||
+          profile.userId != originalProfile.userId ||
+          profile.userId != identity.userId) {
+        throw const ApiException(ApiFailure.unauthorized);
+      }
       final result = await ref
           .read(appTourRepositoryProvider)
-          .save(
-            ref.read(otpAuthControllerProvider).session!.accessToken,
-            enabled,
-          );
-      if (generation != _generation || current != owner) return;
-      final profile = ref.read(personalizationControllerProvider);
+          .save(identity.accessToken, enabled);
+      if (generation != _generation) return false;
+      final latestProfile = ref.read(personalizationControllerProvider);
+      final latestAuth = ref.read(otpAuthControllerProvider);
+      if (!latestAuth.isAuthenticated ||
+          latestProfile.profileId != originalProfile.profileId ||
+          latestProfile.userId != identity.userId ||
+          latestAuth.user != null && latestAuth.user!.id != identity.userId) {
+        state = AppTourState(failedValue: enabled);
+        return false;
+      }
       ref
           .read(personalizationControllerProvider.notifier)
           .replace(
-            profile.copyWith(
-              isAppTourEnabled: result['isAppTourEnabled'] as bool,
-              rowVersion: (result['rowVersion'] as num?)?.toInt(),
-              updatedAt: DateTime.tryParse('${result['updatedAt']}'),
-            ),
+            ref
+                .read(personalizationControllerProvider)
+                .copyWith(
+                  isAppTourEnabled: result['isAppTourEnabled'] as bool,
+                  rowVersion: (result['rowVersion'] as num?)?.toInt(),
+                  updatedAt: DateTime.tryParse('${result['updatedAt']}'),
+                ),
           );
       if (enabled) _attemptedOwner = null;
       state = const AppTourState();
+      return result['isAppTourEnabled'] == enabled;
     } catch (_) {
-      if (generation == _generation && current == owner) {
-        state = AppTourState(failedValue: enabled);
-      }
+      if (generation == _generation) state = AppTourState(failedValue: enabled);
+      return false;
     }
   }
 }

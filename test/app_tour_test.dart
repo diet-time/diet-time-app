@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:diet_time/core/storage/secure_storage_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_dashboard_screen.dart';
@@ -96,7 +98,177 @@ class TourAccount extends CustomerProfileController {
   CustomerProfileState build() => const CustomerProfileState(hasLoaded: true);
 }
 
+class RestoredTourAuth extends TourAuth {
+  @override
+  OtpAuthState build() => const OtpAuthState(isAuthenticated: true);
+}
+
+class TourStorage extends SecureStorageService {
+  TourStorage(this.values);
+  final Map<String, String> values;
+  @override
+  Future<String?> read(String key) async => values[key];
+}
+
 void main() {
+  testWidgets(
+    'restored session can enable from Profile and launch on returning Home',
+    (tester) async {
+      final repository = TourRepository();
+      final container = ProviderContainer(
+        overrides: [
+          otpAuthControllerProvider.overrideWith(RestoredTourAuth.new),
+          secureStorageServiceProvider.overrideWithValue(
+            TourStorage({
+              SecureStorageService.authenticatedUserIdKey: 'a',
+              SecureStorageService.accessTokenKey: 'stored-token',
+            }),
+          ),
+          appTourRepositoryProvider.overrideWithValue(repository),
+          customerDashboardControllerProvider.overrideWith(TourDashboard.new),
+          customerProfileControllerProvider.overrideWith(TourAccount.new),
+        ],
+      );
+      addTearDown(container.dispose);
+      container
+          .read(personalizationControllerProvider.notifier)
+          .replace(
+            const CustomerProfile(
+              profileId: 'profile-a',
+              userId: 'a',
+              isAppTourEnabled: false,
+            ),
+          );
+      final router = GoRouter(
+        initialLocation: AppRoutes.home,
+        routes: [
+          GoRoute(
+            path: AppRoutes.home,
+            builder: (_, _) => const CustomerDashboardScreen(),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (_, child) => AppTourHost(child: child!),
+          ),
+        ),
+      );
+      (container.read(customerDashboardControllerProvider.notifier)
+              as TourDashboard)
+          .ready();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump();
+      expect(container.read(otpAuthControllerProvider).session, isNull);
+      expect(find.byKey(const ValueKey('appTourTooltip')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('dashboardProfileTab')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const ValueKey('appTourSetting')));
+      await tester.tap(find.byKey(const ValueKey('appTourSetting')));
+      await tester.pumpAndSettle();
+      expect(repository.values, [true]);
+      expect(
+        container.read(personalizationControllerProvider).isAppTourEnabled,
+        isTrue,
+      );
+      expect(
+        find.text('Tour enabled. Return to Home to start.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('appTourTooltip')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('dashboardHomeTab')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('appTourTooltip')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('tourSkip')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+      await tester.pump();
+      expect(repository.values, [true, false]);
+      expect(
+        container.read(personalizationControllerProvider).isAppTourEnabled,
+        isFalse,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 3));
+    },
+  );
+  test(
+    'older restored session resolves identity from token without sharing preference',
+    () async {
+      final token =
+          'header.${base64Url.encode(utf8.encode(jsonEncode({'sub': 'a'})))}.signature';
+      final repo = TourRepository();
+      final c = ProviderContainer(
+        overrides: [
+          otpAuthControllerProvider.overrideWith(RestoredTourAuth.new),
+          secureStorageServiceProvider.overrideWithValue(
+            TourStorage({SecureStorageService.accessTokenKey: token}),
+          ),
+          appTourRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      addTearDown(c.dispose);
+      c
+          .read(personalizationControllerProvider.notifier)
+          .replace(
+            const CustomerProfile(
+              profileId: 'profile-a',
+              userId: 'a',
+              isAppTourEnabled: true,
+            ),
+          );
+      final controller = c.read(appTourControllerProvider.notifier);
+      controller.navigate = (_) async {};
+      await c.read(appTourIdentityProvider.future);
+      controller.maybeStart();
+      expect(c.read(appTourControllerProvider).running, isTrue);
+      expect(await controller.setEnabled(false), isTrue);
+      expect(repo.values, [false]);
+    },
+  );
+  test(
+    'missing restored credentials does not report a successful preference save',
+    () async {
+      final repo = TourRepository();
+      final c = ProviderContainer(
+        overrides: [
+          otpAuthControllerProvider.overrideWith(RestoredTourAuth.new),
+          secureStorageServiceProvider.overrideWithValue(TourStorage({})),
+          appTourRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      addTearDown(c.dispose);
+      c
+          .read(personalizationControllerProvider.notifier)
+          .replace(const CustomerProfile(profileId: 'profile-a', userId: 'a'));
+      expect(
+        await c.read(appTourControllerProvider.notifier).setEnabled(true),
+        isFalse,
+      );
+      expect(c.read(appTourControllerProvider).failedValue, isTrue);
+      expect(
+        c.read(personalizationControllerProvider).isAppTourEnabled,
+        isFalse,
+      );
+      expect(repo.values, isEmpty);
+    },
+  );
+
   testWidgets(
     'dashboard waits for readiness, navigates existing routes and returns without duplicates',
     (tester) async {

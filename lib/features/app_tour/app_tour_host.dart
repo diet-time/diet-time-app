@@ -22,12 +22,9 @@ class AppTourSetting extends ConsumerWidget {
       onChanged: state.saving
           ? null
           : (value) async {
-              await ref
-                  .read(appTourControllerProvider.notifier)
-                  .setEnabled(value);
-              if (context.mounted &&
-                  value &&
-                  ref.read(appTourControllerProvider).failedValue == null) {
+              final controller = ref.read(appTourControllerProvider.notifier);
+              final saved = await controller.setEnabled(value);
+              if (context.mounted && saved && value) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(tourCopy(context, 'enabled'))),
                 );
@@ -154,7 +151,8 @@ class _AppTourHostState extends ConsumerState<AppTourHost>
           continue;
         }
         final animation = ModalRoute.of(target)?.animation;
-        if (animation != null && animation.status != AnimationStatus.completed) {
+        if (animation != null &&
+            animation.status != AnimationStatus.completed) {
           continue;
         }
         await Scrollable.ensureVisible(
