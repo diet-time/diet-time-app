@@ -17,6 +17,8 @@ import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:diet_time/features/personalization/domain/customer_onboarding.dart';
+import 'package:diet_time/features/personalization/presentation/customer_onboarding_coordinator.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({this.showLoginInitially = false, super.key});
@@ -88,6 +90,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
     if (!mounted) return;
     if (succeeded) {
+      ref
+          .read(customerOnboardingCoordinatorProvider.notifier)
+          .begin(CustomerJourneyIntent.normalLogin);
       context.go(AppRoutes.postLogin, extra: AppRoutes.authenticatedLanding);
       return;
     }

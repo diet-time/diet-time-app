@@ -8,9 +8,7 @@ import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
-import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
-import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
+import 'package:diet_time/features/personalization/presentation/customer_onboarding_coordinator.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 
 class MealPlanScreen extends ConsumerStatefulWidget {
@@ -24,13 +22,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
   String? _selectedCode;
   bool _opening = false;
 
-  bool get _canSelectPlan {
-    final cached = ref.read(profilePersistenceControllerProvider);
-    return ref.read(otpAuthControllerProvider).isAuthenticated &&
-        cached.hasLoaded &&
-        cached.errorMessage == null &&
-        ref.read(personalizationControllerProvider).isCompleted;
-  }
+  bool get _canSelectPlan => ref.read(customerOnboardingReadyProvider);
 
   Future<void> _continue(MealPlanOption plan) async {
     if (_opening) return;

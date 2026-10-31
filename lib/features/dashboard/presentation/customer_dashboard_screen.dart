@@ -76,7 +76,7 @@ class _CustomerDashboardScreenState
       if (!_setupRedirectQueued) {
         _setupRedirectQueued = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) context.go(AppRoutes.customerSetup);
+          if (mounted) context.go(AppRoutes.authenticatedLanding);
         });
       }
       return const Scaffold(body: Center(child: CircularProgressIndicator()));

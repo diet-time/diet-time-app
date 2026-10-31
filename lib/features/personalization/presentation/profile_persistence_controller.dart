@@ -1,7 +1,7 @@
 import 'package:diet_time/features/personalization/data/customer_profile_repository.dart';
 import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
 import 'package:diet_time/features/personalization/domain/customer_profile.dart';
-import 'package:diet_time/features/personalization/domain/onboarding_route_resolver.dart';
+import 'package:diet_time/features/personalization/domain/customer_onboarding.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
@@ -14,6 +14,7 @@ class ProfilePersistenceState {
     this.errorMessage,
     this.resumeStep = 0,
     this.requiresLogin = false,
+    this.persistedProfile,
   });
 
   final bool isLoading;
@@ -22,6 +23,7 @@ class ProfilePersistenceState {
   final String? errorMessage;
   final int resumeStep;
   final bool requiresLogin;
+  final CustomerProfile? persistedProfile;
 
   ProfilePersistenceState copyWith({
     bool? isLoading,
@@ -30,6 +32,7 @@ class ProfilePersistenceState {
     Object? errorMessage = _unset,
     int? resumeStep,
     bool? requiresLogin,
+    Object? persistedProfile = _unset,
   }) {
     return ProfilePersistenceState(
       isLoading: isLoading ?? this.isLoading,
@@ -40,6 +43,9 @@ class ProfilePersistenceState {
           : errorMessage as String?,
       resumeStep: resumeStep ?? this.resumeStep,
       requiresLogin: requiresLogin ?? this.requiresLogin,
+      persistedProfile: identical(persistedProfile, _unset)
+          ? this.persistedProfile
+          : persistedProfile as CustomerProfile?,
     );
   }
 }
@@ -53,10 +59,18 @@ final profilePersistenceControllerProvider =
 
 class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
   Future<CustomerProfile?>? _pendingLoad;
+  int _generation = 0;
   @override
-  ProfilePersistenceState build() => const ProfilePersistenceState();
+  ProfilePersistenceState build() {
+    _generation++;
+    _pendingLoad = null;
+    ref.onDispose(() => _generation++);
+    return const ProfilePersistenceState();
+  }
 
   void restore(CustomerProfile profile) {
+    _generation++;
+    _pendingLoad = null;
     ref.read(personalizationControllerProvider.notifier).replace(profile);
     state = state.copyWith(
       isLoading: false,
@@ -64,13 +78,21 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
       resumeStep: resumeStepFor(profile),
       errorMessage: null,
       requiresLogin: false,
+      persistedProfile: profile.profileId == null ? null : profile,
     );
   }
 
-  Future<CustomerProfile?> load() =>
-      _pendingLoad ??= _load().whenComplete(() => _pendingLoad = null);
+  Future<CustomerProfile?> load() {
+    if (_pendingLoad != null) return _pendingLoad!;
+    final request = _load();
+    _pendingLoad = request;
+    return request.whenComplete(() {
+      if (identical(_pendingLoad, request)) _pendingLoad = null;
+    });
+  }
 
   Future<CustomerProfile?> _load() async {
+    final generation = _generation;
     state = state.copyWith(
       isLoading: true,
       errorMessage: null,
@@ -80,20 +102,19 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
       final profile = await _withSessionRecovery(
         () => ref.read(customerProfileServiceProvider).load(),
       );
-      if (!ref.mounted) return null;
+      if (!ref.mounted || generation != _generation) return null;
       ref
           .read(personalizationControllerProvider.notifier)
           .replace(profile ?? const CustomerProfile());
       state = state.copyWith(
         isLoading: false,
         hasLoaded: true,
-        resumeStep: profile == null
-            ? OnboardingRouteResolver.pageFor(OnboardingStepCode.basicDetails)
-            : resumeStepFor(profile),
+        persistedProfile: profile,
+        resumeStep: resumeStepFor(profile ?? const CustomerProfile()),
       );
       return profile;
     } on Object catch (error) {
-      if (!ref.mounted) return null;
+      if (!ref.mounted || generation != _generation) return null;
       state = state.copyWith(
         isLoading: false,
         hasLoaded: true,
@@ -107,6 +128,7 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
 
   Future<bool> save({required bool complete}) async {
     if (state.isSaving) return false;
+    final generation = _generation;
     state = state.copyWith(
       isSaving: true,
       errorMessage: null,
@@ -121,7 +143,7 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
                   .read(customerProfileServiceProvider)
                   .saveProgress(profile),
       );
-      if (!ref.mounted) return false;
+      if (!ref.mounted || generation != _generation) return false;
       ref.read(personalizationControllerProvider.notifier).replace(saved);
       if (complete && !saved.isCompleted) {
         throw const CustomerProfileException(statusCode: 422);
@@ -130,10 +152,11 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
         isSaving: false,
         hasLoaded: true,
         resumeStep: resumeStepFor(saved),
+        persistedProfile: saved,
       );
       return true;
     } on Object catch (error) {
-      if (!ref.mounted) return false;
+      if (!ref.mounted || generation != _generation) return false;
       state = state.copyWith(
         isSaving: false,
         requiresLogin:
@@ -164,5 +187,5 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
 }
 
 int resumeStepFor(CustomerProfile profile) {
-  return OnboardingRouteResolver.pageFor(profile.nextStepCode);
+  return CustomerQuestionnaire.firstIncompletePage(profile);
 }

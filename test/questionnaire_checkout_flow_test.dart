@@ -97,7 +97,11 @@ void main() {
           final profiles = _Profiles(
             completed
                 ? _complete
-                : const CustomerProfile(goalCode: 'LOSE_WEIGHT'),
+                : const CustomerProfile(
+                    preferredName: 'Noor',
+                    profileId: 'profile-id',
+                    goalCode: 'LOSE_WEIGHT',
+                  ),
           );
           final container = _container(profiles, authenticated: authenticated);
           addTearDown(container.dispose);
@@ -198,7 +202,9 @@ void main() {
   test(
     'successful save with incomplete backend response is not completion',
     () async {
-      final container = _container(_Profiles(const CustomerProfile()));
+      final container = _container(
+        _Profiles(const CustomerProfile(preferredName: 'Noor')),
+      );
       addTearDown(container.dispose);
       expect(
         await container
@@ -237,6 +243,7 @@ void main() {
   test('a completion flag cannot bypass missing mandatory answers', () {
     expect(
       const CustomerProfile(
+        preferredName: 'Noor',
         onboardingStatus: 'COMPLETED',
         nextStepCode: 'PROFILE_COMPLETED',
         shouldShowOnboarding: false,
@@ -252,6 +259,7 @@ void main() {
       (tester) async {
         final profiles = _Profiles(
           const CustomerProfile(
+            preferredName: 'Noor',
             profileId: 'profile-id',
             goalCode: 'LOSE_WEIGHT',
           ),
@@ -379,6 +387,7 @@ class _Orders extends OrdersRepository {
 }
 
 const _complete = CustomerProfile(
+  preferredName: 'Noor',
   profileId: 'profile-id',
   genderCode: 'FEMALE',
   dateOfBirth: '1995-01-01',

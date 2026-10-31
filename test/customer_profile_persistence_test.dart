@@ -123,11 +123,11 @@ void main() {
   );
 
   test('resume chooses the first incomplete required step', () {
-    expect(resumeStepFor(const CustomerProfile()), 2);
-    expect(resumeStepFor(const CustomerProfile(nextStepCode: 'ALLERGENS')), 6);
+    expect(resumeStepFor(const CustomerProfile()), 1);
+    expect(resumeStepFor(const CustomerProfile(nextStepCode: 'ALLERGENS')), 1);
     expect(
       resumeStepFor(const CustomerProfile(nextStepCode: 'PREFERENCES')),
-      5,
+      1,
     );
   });
 
@@ -171,11 +171,26 @@ void main() {
 
   test('empty optional selections remain distinct from confirmation', () {
     const incomplete = CustomerProfile(
+      genderCode: 'FEMALE',
+      dateOfBirth: '1995-03-17',
+      heightCm: 165,
+      weightKg: 70,
+      goalCode: 'LOSE_WEIGHT',
+      dailyRoutineCode: 'OFFICE_WORK',
+      activityLevelCode: 'MOSTLY_SITTING',
+      preferencesConfirmed: true,
       nextStepCode: 'ALLERGENS',
       allergens: {},
       allergensConfirmed: false,
     );
     const confirmedEmpty = CustomerProfile(
+      genderCode: 'FEMALE',
+      dateOfBirth: '1995-03-17',
+      heightCm: 165,
+      weightKg: 70,
+      goalCode: 'LOSE_WEIGHT',
+      dailyRoutineCode: 'OFFICE_WORK',
+      activityLevelCode: 'MOSTLY_SITTING',
       nextStepCode: 'PREFERENCES',
       allergens: {},
       allergensConfirmed: true,

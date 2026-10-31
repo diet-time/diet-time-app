@@ -1,11 +1,10 @@
+import 'package:diet_time/features/personalization/domain/customer_onboarding.dart';
+import 'package:diet_time/features/personalization/presentation/customer_onboarding_coordinator.dart';
 import 'package:diet_time/app/localization/customer_copy.dart';
 import 'dart:async';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
-import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
-import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
-import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,29 +23,21 @@ class CheckoutAccessService {
     if (ref.read(checkoutControllerProvider).selection == null) {
       return CheckoutAccess.browse;
     }
-    if (!await ref.read(otpAuthControllerProvider.notifier).restoreSession()) {
+    final decision = await ref
+        .read(customerOnboardingCoordinatorProvider.notifier)
+        .check(refresh: refreshProfile);
+    if (decision.phase == CustomerOnboardingPhase.unauthenticated) {
       return CheckoutAccess.login;
     }
-    final persistence = ref.read(profilePersistenceControllerProvider);
-    final profile =
-        !refreshProfile &&
-            persistence.hasLoaded &&
-            persistence.errorMessage == null
-        ? ref.read(personalizationControllerProvider)
-        : await ref.read(profilePersistenceControllerProvider.notifier).load();
-    if (!ref.read(otpAuthControllerProvider).isAuthenticated) {
-      return CheckoutAccess.login;
-    }
-    if (ref.read(profilePersistenceControllerProvider).errorMessage != null) {
-      if (ref.read(profilePersistenceControllerProvider).requiresLogin) {
-        return CheckoutAccess.login;
-      }
+    if (decision.phase == CustomerOnboardingPhase.recoverableError) {
       throw StateError('profile_load');
+    }
+    if (decision.phase != CustomerOnboardingPhase.ready) {
+      return CheckoutAccess.questionnaire;
     }
     ref
         .read(checkoutControllerProvider.notifier)
-        .useCustomerProfile(profile?.profileId);
-    if (profile?.isCompleted != true) return CheckoutAccess.questionnaire;
+        .useCustomerProfile(decision.profile!.profileId);
     return CheckoutAccess.summary;
   }
 }
@@ -84,7 +75,7 @@ class _CheckoutEntryScreenState extends ConsumerState<CheckoutEntryScreen> {
             extra: const PendingAuthDestination(route: AppRoutes.startPlan),
           );
         case CheckoutAccess.questionnaire:
-          context.go(AppRoutes.checkoutQuestionnaire);
+          context.go(AppRoutes.startPlan);
         case CheckoutAccess.summary:
           context.go(AppRoutes.planSummary);
       }

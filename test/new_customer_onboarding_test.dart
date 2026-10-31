@@ -1,8 +1,11 @@
+import 'package:diet_time/features/personalization/domain/customer_onboarding.dart';
+import 'package:diet_time/features/personalization/presentation/customer_onboarding_coordinator.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:diet_time/app/router/app_router.dart';
+import 'package:diet_time/features/personalization/presentation/display_name_panel.dart';
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
@@ -20,6 +23,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 const completeProfile = CustomerProfile(
+  preferredName: 'Noor',
   profileId: 'profile',
   genderCode: 'FEMALE',
   dateOfBirth: '1995-03-17',
@@ -60,12 +64,17 @@ void main() {
           find.text(
             profile?.isCompleted == true
                 ? 'Plan selection'
-                : 'Profile and questionnaire',
+                : 'What should we call you?',
           ),
           findsOneWidget,
         );
         expect(find.text('Dashboard'), findsNothing);
-        expect(router.routerDelegate.currentConfiguration.extra, isTrue);
+        expect(
+          container.read(customerOnboardingCoordinatorProvider).intent,
+          profile?.isCompleted == true
+              ? CustomerJourneyIntent.normalLogin
+              : CustomerJourneyIntent.startNewPlan,
+        );
         expect(service.loads, 1);
         expect(service.saves, 0);
       },
@@ -78,11 +87,12 @@ void main() {
     test(
       'dashboard defers dependent requests for ${profile == null ? 'missing' : 'incomplete'} profile',
       () async {
-        final profiles = _Repository(profile);
+        final profiles = _Profiles(profile);
         final orders = _Orders();
         final container = ProviderContainer(
           overrides: [
-            customerProfileRepositoryProvider.overrideWithValue(profiles),
+            customerProfileServiceProvider.overrideWithValue(profiles),
+            otpAuthControllerProvider.overrideWith(() => _Auth(profiles, true)),
             ordersRepositoryProvider.overrideWithValue(orders),
           ],
         );
@@ -98,7 +108,7 @@ void main() {
               : isA<DashboardNeedsOnboarding>(),
         );
         await dashboard.initialize();
-        expect(profiles.gets, 1);
+        expect(profiles.loads, 1);
         expect(orders.gets, 0);
       },
     );
@@ -127,7 +137,7 @@ void main() {
           find.text(
             profile?.isCompleted == true
                 ? 'Dashboard'
-                : 'Profile and questionnaire',
+                : 'What should we call you?',
           ),
           findsOneWidget,
         );
@@ -137,7 +147,11 @@ void main() {
           container.read(otpAuthControllerProvider).isAuthenticated,
           isTrue,
         );
-        expect(router.canPop(), isFalse);
+        if (profile?.isCompleted == true) {
+          expect(router.canPop(), isFalse);
+        } else {
+          expect(find.byType(DisplayNamePanel), findsOneWidget);
+        }
         if (profile != null) {
           expect(
             container.read(personalizationControllerProvider).goalCode,
@@ -367,21 +381,6 @@ class _Headers implements HttpHeaders {
   String? value(String name) => null;
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
-}
-
-class _Repository implements CustomerProfileRepository {
-  _Repository(this.profile);
-  final CustomerProfile? profile;
-  int gets = 0;
-  @override
-  Future<CustomerProfile?> getProfile() async {
-    gets++;
-    return profile;
-  }
-
-  @override
-  Future<CustomerProfile> updateProfile(CustomerProfile profile) async =>
-      throw StateError('dashboard must not create');
 }
 
 class _Orders extends OrdersRepository {

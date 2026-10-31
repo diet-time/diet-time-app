@@ -28,7 +28,16 @@ class DietTimeApp extends ConsumerWidget {
       ],
       theme: AppTheme.light(locale),
       routerConfig: router,
-      builder: (context, child) => AppTourHost(child: child!),
+      builder: (context, child) => AppTourHost(
+        navigation: router.routeInformationProvider,
+        canRun: () => const {
+          AppRoutes.home,
+          AppRoutes.plans,
+          AppRoutes.menu,
+          AppRoutes.orderDetails,
+        }.contains(router.routeInformationProvider.value.uri.path),
+        child: child!,
+      ),
     );
   }
 }

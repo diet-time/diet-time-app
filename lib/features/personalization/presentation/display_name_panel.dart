@@ -3,9 +3,11 @@ import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:flutter/material.dart';
+import 'package:diet_time/features/personalization/domain/customer_onboarding.dart';
 
 class DisplayNamePanel extends StatefulWidget {
-  const DisplayNamePanel({super.key});
+  const DisplayNamePanel({this.onSave, super.key});
+  final Future<bool> Function(String name)? onSave;
 
   @override
   State<DisplayNamePanel> createState() => _DisplayNamePanelState();
@@ -14,6 +16,8 @@ class DisplayNamePanel extends StatefulWidget {
 class _DisplayNamePanelState extends State<DisplayNamePanel> {
   final _controller = TextEditingController();
   bool _canContinue = false;
+  bool _saving = false;
+  String? _saveError;
 
   @override
   void dispose() {
@@ -83,12 +87,14 @@ class _DisplayNamePanelState extends State<DisplayNamePanel> {
                       TextField(
                         key: const ValueKey('displayNameInput'),
                         controller: _controller,
+                        readOnly: _saving,
                         autofocus: true,
                         textCapitalization: TextCapitalization.words,
                         textInputAction: TextInputAction.done,
                         autofillHints: const [AutofillHints.name],
                         onChanged: (value) {
-                          final canContinue = value.trim().isNotEmpty;
+                          final canContinue =
+                              CustomerOnboardingPolicy.validName(value);
                           if (canContinue != _canContinue) {
                             setState(() => _canContinue = canContinue);
                           }
@@ -102,12 +108,19 @@ class _DisplayNamePanelState extends State<DisplayNamePanel> {
                         ),
                       ),
                       const SizedBox(height: 18),
+                      if (_saveError != null)
+                        Text(
+                          _saveError!,
+                          key: const ValueKey('displayNameSaveError'),
+                          textAlign: TextAlign.center,
+                        ),
                       AppButton(
                         key: const ValueKey('displayNameContinue'),
                         label: isArabic
                             ? 'متابعة'
                             : context.customerCopy('Continue'),
                         onPressed: _canContinue ? _submit : null,
+                        isLoading: _saving,
                       ),
                     ],
                   ),
@@ -120,9 +133,35 @@ class _DisplayNamePanelState extends State<DisplayNamePanel> {
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final name = _controller.text.trim();
-    if (name.isEmpty) return;
-    Navigator.of(context).pop(name);
+    if (_saving || !CustomerOnboardingPolicy.validName(name)) return;
+    setState(() {
+      _saving = true;
+      _saveError = null;
+    });
+    try {
+      final saved = await widget.onSave?.call(name) ?? true;
+      if (!mounted) return;
+      if (saved) {
+        Navigator.of(context).pop(name);
+      } else {
+        setState(
+          () => _saveError = context.customerCopy(
+            'Unable to save your name. Please try again.',
+          ),
+        );
+      }
+    } on Object {
+      if (mounted) {
+        setState(
+          () => _saveError = context.customerCopy(
+            'Unable to save your name. Please try again.',
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 }

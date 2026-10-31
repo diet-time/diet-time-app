@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:diet_time/features/personalization/domain/customer_onboarding.dart';
+import 'package:diet_time/features/personalization/presentation/customer_onboarding_coordinator.dart';
 
 class PhoneLoginPage extends ConsumerStatefulWidget {
   const PhoneLoginPage({required this.pendingDestination, super.key});
@@ -37,6 +39,13 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
     _phoneController.text = _localNumber(auth.phoneNumber, _country);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        ref
+            .read(customerOnboardingCoordinatorProvider.notifier)
+            .begin(
+              widget.pendingDestination.route == AppRoutes.startPlan
+                  ? CustomerJourneyIntent.startNewPlan
+                  : CustomerJourneyIntent.normalLogin,
+            );
         ref
             .read(otpAuthControllerProvider.notifier)
             .begin(widget.pendingDestination);

@@ -1,3 +1,7 @@
+import 'package:diet_time/core/storage/secure_storage_service.dart';
+import 'package:diet_time/features/personalization/data/display_name_repository.dart';
+import 'package:diet_time/features/personalization/presentation/authenticated_landing_screen.dart';
+import 'package:diet_time/features/personalization/presentation/display_name_panel.dart';
 import 'package:diet_time/app/app.dart';
 import 'package:go_router/go_router.dart';
 import 'package:diet_time/core/network/api_client.dart';
@@ -175,7 +179,7 @@ void main() {
     await _continue(tester);
 
     expect(find.text('What would you like to achieve?'), findsOneWidget);
-    expect(find.text('13%'), findsOneWidget);
+    expect(find.text('0%'), findsOneWidget);
     await _continue(tester);
     expect(find.text('Choose an option to continue.'), findsOneWidget);
 
@@ -183,7 +187,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
     await _continue(tester);
     expect(find.text("Let's get to know you"), findsOneWidget);
-    expect(find.text('25%'), findsOneWidget);
+    expect(find.text('17%'), findsOneWidget);
     await _continue(tester);
     expect(find.text('Choose an option to continue.'), findsOneWidget);
     expect(find.text("Let's get to know you"), findsOneWidget);
@@ -207,6 +211,7 @@ void main() {
   ) async {
     final service = _FakeProfilePersistenceService(
       profile: const CustomerProfile(
+        preferredName: 'Noor',
         profileId: 'profile-id',
         genderCode: 'FEMALE',
         dateOfBirth: '1990-05-12',
@@ -327,6 +332,7 @@ void main() {
     (tester) async {
       final service = _FakeProfilePersistenceService(
         profile: const CustomerProfile(
+          preferredName: 'Noor',
           profileId: 'profile-id',
           goalCode: 'LOSE_WEIGHT',
           genderCode: 'FEMALE',
@@ -362,27 +368,36 @@ void main() {
   );
 
   testWidgets(
-    'missing profile creates from real basic details then completes questionnaire',
+    'missing profile collects name then goal and basic details in order',
     (tester) async {
       final service = _FakeProfilePersistenceService();
       await tester.pumpWidget(
         _questionnaireCheckoutApp(service, accountSetup: true),
       );
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('onboardingStep-2')), findsOneWidget);
+      expect(find.byType(DisplayNamePanel), findsOneWidget);
+      expect(find.byType(PersonalizationScreen), findsNothing);
+      await tester.enterText(
+        find.byKey(const ValueKey('displayNameInput')),
+        'Noor',
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('displayNameContinue')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('onboardingStep-1')), findsOneWidget);
+      expect(find.text('0%'), findsOneWidget);
       expect(service.saveProgressCalls, 0);
-      await _fillRequiredProfile(tester);
+      await tester.tap(find.byKey(const ValueKey('goal-lose')).hitTestable());
       service.failSave = true;
       await _continue(tester);
-      expect(find.byKey(const ValueKey('onboardingStep-2')), findsOneWidget);
+      expect(find.byKey(const ValueKey('onboardingStep-1')), findsOneWidget);
       expect(find.text('Dashboard ready'), findsNothing);
-      expect(service.profile, isNull);
+      expect(service.profile!.goalCode, isNull);
       service.failSave = false;
       await _continue(tester);
-      expect(service.profile!.profileId, 'profile-id');
-      expect(service.profile!.genderCode, isNotNull);
-      expect(find.byKey(const ValueKey('onboardingStep-1')), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('goal-lose')).hitTestable());
+      expect(find.byKey(const ValueKey('onboardingStep-2')), findsOneWidget);
+      expect(find.text('17%'), findsOneWidget);
+      await _fillRequiredProfile(tester);
       await _continue(tester);
       await tester.tap(
         find.byKey(const ValueKey('lifestyle-office')).hitTestable(),
@@ -457,7 +472,8 @@ void main() {
 
     expect(find.byType(LanguageSelectionPanel), findsNothing);
     expect(find.byType(OnboardingCarouselScreen), findsNothing);
-    expect(find.byType(PersonalizationScreen), findsOneWidget);
+    expect(find.byType(DisplayNamePanel), findsOneWidget);
+    expect(find.byType(PersonalizationScreen), findsNothing);
     expect(find.byType(HomeScreen), findsNothing);
     expect(find.byType(MealPlanScreen), findsNothing);
     expect(find.byType(PhoneLoginPage), findsNothing);
@@ -478,6 +494,7 @@ void main() {
         authenticationService: const _AuthenticatedService(),
         profileService: _FakeProfilePersistenceService(
           profile: const CustomerProfile(
+            preferredName: 'Noor',
             profileId: 'profile-id',
             genderCode: 'FEMALE',
             dateOfBirth: '1995-03-17',
@@ -782,22 +799,26 @@ class _FakeProfilePersistenceService implements ProfilePersistenceService {
       profile.allergensConfirmed,
       profile.preferencesConfirmed,
     )) {
-      (null, _, _, _, _, _) => 'BASIC_DETAILS',
       (_, null, _, _, _, _) => 'GOAL',
+      (null, _, _, _, _, _) => 'BASIC_DETAILS',
       (_, _, null, _, _, _) => 'DAILY_ROUTINE',
       (_, _, _, null, _, _) => 'ACTIVITY_LEVEL',
       (_, _, _, _, _, false) => 'PREFERENCES',
       (_, _, _, _, false, _) => 'ALLERGENS',
       _ => 'PROFILE_COMPLETED',
     };
-    final completed = nextStep == 'PROFILE_COMPLETED';
+    final completed =
+        nextStep == 'PROFILE_COMPLETED' &&
+        profile.onboardingStatus == 'COMPLETED';
     this.profile = profile.copyWith(
       profileId: profile.profileId ?? 'profile-id',
       nutritionTargets: const NutritionTargets(
         calories: 2450,
         proteinGrams: 160,
       ),
-      nextStepCode: nextStep,
+      nextStepCode: nextStep == 'PROFILE_COMPLETED' && !completed
+          ? 'ALLERGENS'
+          : nextStep,
       completionPercentage: completed ? 100 : 50,
       shouldShowOnboarding: !completed,
     );
@@ -857,6 +878,9 @@ Widget _questionnaireCheckoutApp(
       const _AuthenticatedService(),
     ),
     customerProfileServiceProvider.overrideWithValue(service),
+    displayNameRepositoryProvider.overrideWithValue(
+      _QuestionnaireNames(service as _FakeProfilePersistenceService),
+    ),
   ],
   child: MaterialApp.router(
     localizationsDelegates: const [
@@ -867,8 +891,20 @@ Widget _questionnaireCheckoutApp(
     ],
     supportedLocales: AppLocalizations.supportedLocales,
     routerConfig: GoRouter(
-      initialLocation: '/checkout-questionnaire',
+      initialLocation: accountSetup || startPlan
+          ? '/authenticated-landing'
+          : '/checkout-questionnaire',
       routes: [
+        GoRoute(
+          path: '/authenticated-landing',
+          builder: (_, _) =>
+              AuthenticatedLandingScreen(startNewPlan: startPlan),
+        ),
+        GoRoute(
+          path: '/customer-setup',
+          builder: (_, _) =>
+              const PersonalizationScreen(accountSetupMode: true),
+        ),
         GoRoute(
           path: '/checkout-questionnaire',
           builder: (_, _) => PersonalizationScreen(
@@ -893,3 +929,15 @@ Widget _questionnaireCheckoutApp(
     ),
   ),
 );
+
+class _QuestionnaireNames extends DisplayNameRepository {
+  _QuestionnaireNames(this.service)
+    : super(apiClient: ApiClient(), secureStorage: SecureStorageService());
+  final _FakeProfilePersistenceService service;
+  @override
+  Future<CustomerProfile> saveAuthenticatedProfileName(String name) async {
+    return service.profile =
+        (service.profile ?? const CustomerProfile(profileId: 'profile-id'))
+            .copyWith(preferredName: name);
+  }
+}

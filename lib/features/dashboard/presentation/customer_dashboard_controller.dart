@@ -1,3 +1,5 @@
+import 'package:diet_time/features/personalization/domain/customer_onboarding.dart';
+import 'package:diet_time/features/personalization/presentation/customer_onboarding_coordinator.dart';
 import 'dart:async';
 
 import 'package:diet_time/core/network/api_client.dart';
@@ -6,9 +8,6 @@ import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/features/personalization/data/customer_profile_repository.dart';
-import 'package:diet_time/features/personalization/domain/customer_profile.dart';
-import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
-import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 sealed class CustomerDashboardState {
@@ -100,27 +99,27 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
     try {
       var resolvedProfileId = profileId?.trim() ?? '';
       if (resolvedProfileId.isEmpty) {
-        final profile = await _loadAuthenticatedProfile();
-        if (profile == null) {
-          ref
-              .read(profilePersistenceControllerProvider.notifier)
-              .restore(const CustomerProfile());
-          state = const DashboardProfileNotFound();
+        final decision = await ref
+            .read(customerOnboardingCoordinatorProvider.notifier)
+            .check(refresh: force);
+        if (!ref.mounted) return;
+        if (decision.phase == CustomerOnboardingPhase.unauthenticated) {
+          state = const DashboardAuthenticationFailure();
           return;
         }
-        if (profile.profileId?.trim().isNotEmpty != true) {
+        if (decision.phase == CustomerOnboardingPhase.recoverableError) {
           state = const DashboardError(
             'We could not load your dashboard. Please try again.',
           );
           return;
         }
-        ref
-            .read(profilePersistenceControllerProvider.notifier)
-            .restore(profile);
-        if (!profile.isCompleted) {
-          state = const DashboardNeedsOnboarding();
+        if (decision.phase != CustomerOnboardingPhase.ready) {
+          state = decision.phase == CustomerOnboardingPhase.profileRequired
+              ? const DashboardProfileNotFound()
+              : const DashboardNeedsOnboarding();
           return;
         }
+        final profile = decision.profile!;
         resolvedProfileId = profile.profileId!.trim();
       }
       _profileId = resolvedProfileId;
@@ -234,27 +233,6 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
       await load(profileId, force: true);
     } else {
       await initialize(force: true);
-    }
-  }
-
-  Future<CustomerProfile?> _loadAuthenticatedProfile() async {
-    final cached = ref.read(profilePersistenceControllerProvider);
-    if (cached.hasLoaded && cached.errorMessage == null) {
-      final profile = ref.read(personalizationControllerProvider);
-      return profile.profileId == null ? null : profile;
-    }
-    final repository = ref.read(customerProfileRepositoryProvider);
-    try {
-      return await repository.getProfile();
-    } on CustomerProfileException catch (error) {
-      if (error.statusCode != 401) rethrow;
-      final refreshed = await ref
-          .read(otpAuthControllerProvider.notifier)
-          .refreshAfterUnauthorized();
-      if (!refreshed) {
-        throw const CustomerProfileException(statusCode: 401);
-      }
-      return repository.getProfile();
     }
   }
 

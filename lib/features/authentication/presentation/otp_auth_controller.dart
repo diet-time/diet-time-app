@@ -27,6 +27,7 @@ enum OtpUiError {
 class OtpAuthState {
   const OtpAuthState({
     this.isAuthenticated = false,
+    this.sessionExpired = false,
     this.phoneNumber = '',
     this.otpCode = '',
     this.otpChannel = OtpChannel.sms,
@@ -44,6 +45,7 @@ class OtpAuthState {
   });
 
   final bool isAuthenticated;
+  final bool sessionExpired;
   final String phoneNumber;
   final String otpCode;
   final OtpChannel otpChannel;
@@ -62,6 +64,7 @@ class OtpAuthState {
 
   OtpAuthState copyWith({
     bool? isAuthenticated,
+    bool? sessionExpired,
     String? phoneNumber,
     String? otpCode,
     OtpChannel? otpChannel,
@@ -79,6 +82,7 @@ class OtpAuthState {
   }) {
     return OtpAuthState(
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
+      sessionExpired: sessionExpired ?? this.sessionExpired,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       otpCode: otpCode ?? this.otpCode,
       otpChannel: otpChannel ?? this.otpChannel,
@@ -118,6 +122,8 @@ final otpAuthControllerProvider =
 class OtpAuthController extends Notifier<OtpAuthState> {
   Timer? _resendTimer;
   Future<bool>? _sessionRestore;
+  int _sessionGeneration = 0;
+  Future<void>? _credentialWrite;
 
   @override
   OtpAuthState build() {
@@ -135,6 +141,7 @@ class OtpAuthController extends Notifier<OtpAuthState> {
 
   /// Recheck expiry even if this controller previously restored the session.
   Future<bool> ensureCurrentSession() async {
+    final generation = _sessionGeneration;
     await _sessionRestore;
     final session = state.session;
     final valid =
@@ -142,6 +149,7 @@ class OtpAuthController extends Notifier<OtpAuthState> {
             !session.accessTokenExpiresAt.isAfter(DateTime.now().toUtc())
         ? await _refreshStoredSession(preserveSessionOnTransientFailure: false)
         : await _restoreSession();
+    if (!ref.mounted || generation != _sessionGeneration) return false;
     state = state.copyWith(
       isAuthenticated: valid,
       session: valid ? state.session : null,
@@ -150,10 +158,12 @@ class OtpAuthController extends Notifier<OtpAuthState> {
   }
 
   Future<bool> _restoreSession() async {
+    final generation = _sessionGeneration;
     try {
       final authenticated = await ref
           .read(authenticationServiceProvider)
           .isLoggedIn();
+      if (!ref.mounted || generation != _sessionGeneration) return false;
       if (authenticated) {
         state = state.copyWith(isAuthenticated: true);
         return true;
@@ -168,11 +178,13 @@ class OtpAuthController extends Notifier<OtpAuthState> {
   Future<bool> _refreshStoredSession({
     bool preserveSessionOnTransientFailure = true,
   }) async {
+    final generation = _sessionGeneration;
     final storage = ref.read(secureStorageServiceProvider);
     final values = await Future.wait([
       storage.read(SecureStorageService.refreshTokenKey),
       storage.read(SecureStorageService.refreshTokenExpiresAtKey),
     ]);
+    if (!ref.mounted || generation != _sessionGeneration) return false;
     final refreshToken = values[0]?.trim() ?? '';
     final refreshExpiresAt = DateTime.tryParse(values[1] ?? '');
     if (refreshToken.isEmpty ||
@@ -189,28 +201,33 @@ class OtpAuthController extends Notifier<OtpAuthState> {
         refreshToken: refreshToken,
         refreshTokenExpiresAt: refreshExpiresAt,
       );
-      await Future.wait([
-        storage.write(
-          SecureStorageService.accessTokenKey,
-          refreshed.accessToken,
-        ),
-        storage.write(
-          SecureStorageService.accessTokenExpiresAtKey,
-          refreshed.accessTokenExpiresAt.toIso8601String(),
-        ),
-        storage.write(
-          SecureStorageService.refreshTokenKey,
-          refreshed.refreshToken,
-        ),
-        storage.write(
-          SecureStorageService.refreshTokenExpiresAtKey,
-          refreshed.refreshTokenExpiresAt.toIso8601String(),
-        ),
-      ]);
-      await ref.read(authenticationServiceProvider).markAuthenticated();
+      if (!await _persistSession(generation, () async {
+        await Future.wait([
+          storage.write(
+            SecureStorageService.accessTokenKey,
+            refreshed.accessToken,
+          ),
+          storage.write(
+            SecureStorageService.accessTokenExpiresAtKey,
+            refreshed.accessTokenExpiresAt.toIso8601String(),
+          ),
+          storage.write(
+            SecureStorageService.refreshTokenKey,
+            refreshed.refreshToken,
+          ),
+          storage.write(
+            SecureStorageService.refreshTokenExpiresAtKey,
+            refreshed.refreshTokenExpiresAt.toIso8601String(),
+          ),
+        ]);
+        await ref.read(authenticationServiceProvider).markAuthenticated();
+      })) {
+        return false;
+      }
       state = state.copyWith(isAuthenticated: true);
       return true;
     } on PhoneOtpException catch (error) {
+      if (!ref.mounted || generation != _sessionGeneration) return false;
       if (error.failure == PhoneOtpFailure.invalidOtp ||
           error.failure == PhoneOtpFailure.invalidResponse ||
           !preserveSessionOnTransientFailure) {
@@ -227,16 +244,22 @@ class OtpAuthController extends Notifier<OtpAuthState> {
   /// Retries the application's existing refresh-token flow after a protected
   /// endpoint returns 401. A failed refresh clears the resumable session.
   Future<bool> refreshAfterUnauthorized() async {
+    final generation = _sessionGeneration;
     final refreshed = await _refreshStoredSession(
       preserveSessionOnTransientFailure: false,
     );
+    if (!ref.mounted || generation != _sessionGeneration) return false;
     if (!refreshed) {
-      await signOut();
+      await signOut(sessionExpired: true);
     }
     return refreshed;
   }
 
-  Future<void> signOut() async {
+  Future<void> signOut({bool sessionExpired = false}) async {
+    _sessionGeneration++;
+    try {
+      await _credentialWrite;
+    } catch (_) {}
     ref.invalidate(questionnaireDeferralProvider);
     ref.invalidate(profilePersistenceControllerProvider);
     ref.invalidate(personalizationControllerProvider);
@@ -251,7 +274,25 @@ class OtpAuthController extends Notifier<OtpAuthState> {
     if (authentication is SignOutAuthenticationService) {
       await (authentication as SignOutAuthenticationService).signOut();
     }
-    state = const OtpAuthState();
+    state = OtpAuthState(sessionExpired: sessionExpired);
+  }
+
+  Future<bool> _persistSession(
+    int generation,
+    Future<void> Function() write,
+  ) async {
+    if (!ref.mounted || generation != _sessionGeneration) return false;
+    final previous = _credentialWrite;
+    final pending = () async {
+      try {
+        await previous;
+      } catch (_) {}
+      if (!ref.mounted || generation != _sessionGeneration) return;
+      await write();
+    }();
+    _credentialWrite = pending;
+    await pending;
+    return ref.mounted && generation == _sessionGeneration;
   }
 
   Future<void> _clearStoredSession(SecureStorageService storage) =>
@@ -270,6 +311,9 @@ class OtpAuthController extends Notifier<OtpAuthState> {
       resendConfirmation: false,
     );
   }
+
+  void clearPendingDestination() =>
+      state = state.copyWith(pendingDestination: null);
 
   void setPhoneNumber(String phoneNumber) {
     state = state.copyWith(
@@ -339,6 +383,7 @@ class OtpAuthController extends Notifier<OtpAuthState> {
 
   Future<bool> verifyOtp() async {
     if (state.isVerifyingOtp || state.otpCode.length != 6) return false;
+    final generation = ++_sessionGeneration;
     state = state.copyWith(
       isVerifyingOtp: true,
       verificationError: null,
@@ -354,29 +399,36 @@ class OtpAuthController extends Notifier<OtpAuthState> {
             ),
           );
       final storage = ref.read(secureStorageServiceProvider);
-      await Future.wait([
-        storage.write(SecureStorageService.accessTokenKey, session.accessToken),
-        storage.write(
-          SecureStorageService.authenticatedUserIdKey,
-          session.user.id,
-        ),
-        storage.write(
-          SecureStorageService.accessTokenExpiresAtKey,
-          session.accessTokenExpiresAt.toIso8601String(),
-        ),
-        storage.write(
-          SecureStorageService.refreshTokenKey,
-          session.refreshToken,
-        ),
-        storage.write(
-          SecureStorageService.refreshTokenExpiresAtKey,
-          session.refreshTokenExpiresAt.toIso8601String(),
-        ),
-      ]);
-      try {
-        await ref.read(authenticationServiceProvider).markAuthenticated();
-      } catch (_) {
-        // The in-memory development session remains valid.
+      if (!await _persistSession(generation, () async {
+        await Future.wait([
+          storage.write(
+            SecureStorageService.accessTokenKey,
+            session.accessToken,
+          ),
+          storage.write(
+            SecureStorageService.authenticatedUserIdKey,
+            session.user.id,
+          ),
+          storage.write(
+            SecureStorageService.accessTokenExpiresAtKey,
+            session.accessTokenExpiresAt.toIso8601String(),
+          ),
+          storage.write(
+            SecureStorageService.refreshTokenKey,
+            session.refreshToken,
+          ),
+          storage.write(
+            SecureStorageService.refreshTokenExpiresAtKey,
+            session.refreshTokenExpiresAt.toIso8601String(),
+          ),
+        ]);
+        try {
+          await ref.read(authenticationServiceProvider).markAuthenticated();
+        } catch (_) {
+          // The in-memory development session remains valid.
+        }
+      })) {
+        return false;
       }
       _resendTimer?.cancel();
       ref.invalidate(profilePersistenceControllerProvider);
@@ -391,6 +443,7 @@ class OtpAuthController extends Notifier<OtpAuthState> {
       );
       return true;
     } on PhoneOtpException catch (error) {
+      if (!ref.mounted || generation != _sessionGeneration) return false;
       final uiError = _verificationError(error.failure);
       state = state.copyWith(
         isVerifyingOtp: false,
@@ -402,6 +455,7 @@ class OtpAuthController extends Notifier<OtpAuthState> {
       );
       return false;
     } catch (_) {
+      if (!ref.mounted || generation != _sessionGeneration) return false;
       state = state.copyWith(
         isVerifyingOtp: false,
         verificationError: OtpUiError.server,
@@ -420,12 +474,22 @@ class OtpAuthController extends Notifier<OtpAuthState> {
   }
 
   void clearOtpForBackNavigation() {
-    state = state.copyWith(otpCode: '', verificationError: null);
+    _sessionGeneration++;
+    state = state.copyWith(
+      otpCode: '',
+      verificationError: null,
+      isVerifyingOtp: false,
+    );
   }
 
   void cancel() {
+    _sessionGeneration++;
     _resendTimer?.cancel();
-    state = OtpAuthState(isAuthenticated: state.isAuthenticated);
+    state = OtpAuthState(
+      isAuthenticated: state.isAuthenticated,
+      session: state.session,
+      sessionExpired: state.sessionExpired,
+    );
   }
 
   void _startResendTimer() {

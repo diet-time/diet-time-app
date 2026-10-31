@@ -18,6 +18,7 @@ void prepareOrderingCustomer(ProviderContainer container) {
       .read(profilePersistenceControllerProvider.notifier)
       .restore(
         const CustomerProfile(
+          preferredName: 'Noor',
           profileId: 'profile-id',
           genderCode: 'FEMALE',
           dateOfBirth: '1995-03-17',

@@ -233,6 +233,7 @@ void main() {
           .read(personalizationControllerProvider.notifier)
           .replace(
             const CustomerProfile(
+              preferredName: 'Noor',
               genderCode: 'FEMALE',
               dateOfBirth: '1995-03-17',
               heightCm: 165,
@@ -336,6 +337,7 @@ void main() {
           .read(personalizationControllerProvider.notifier)
           .replace(
             const CustomerProfile(
+              preferredName: 'Noor',
               genderCode: 'FEMALE',
               dateOfBirth: '1995-03-17',
               heightCm: 165,
@@ -376,6 +378,7 @@ void main() {
           .read(personalizationControllerProvider.notifier)
           .replace(
             const CustomerProfile(
+              preferredName: 'Noor',
               genderCode: 'FEMALE',
               dateOfBirth: '1995-03-17',
               heightCm: 165,
@@ -420,6 +423,7 @@ void main() {
           .read(personalizationControllerProvider.notifier)
           .replace(
             const CustomerProfile(
+              preferredName: 'Noor',
               genderCode: 'FEMALE',
               dateOfBirth: '1995-03-17',
               heightCm: 165,
@@ -652,6 +656,7 @@ void main() {
           .read(personalizationControllerProvider.notifier)
           .replace(
             const CustomerProfile(
+              preferredName: 'Noor',
               genderCode: 'FEMALE',
               dateOfBirth: '1995-03-17',
               heightCm: 165,
@@ -741,6 +746,8 @@ void main() {
         final repo = TourRepository();
         final c = setup(repo);
         final destinations = <String>[];
+        final allowed = ValueNotifier(true);
+        addTearDown(allowed.dispose);
         c.read(appTourControllerProvider.notifier).navigate = (route) async {
           destinations.add(route);
         };
@@ -756,7 +763,11 @@ void main() {
                 GlobalWidgetsLocalizations.delegate,
                 GlobalCupertinoLocalizations.delegate,
               ],
-              builder: (context, child) => AppTourHost(child: child!),
+              builder: (context, child) => AppTourHost(
+                navigation: allowed,
+                canRun: () => allowed.value,
+                child: child!,
+              ),
               home: Scaffold(
                 body: ListView(
                   children: const [
@@ -783,6 +794,19 @@ void main() {
         await tester.pump();
         expect(find.byKey(const ValueKey('appTourTooltip')), findsOneWidget);
         expect(destinations.last, 'home');
+        final navigationCount = destinations.length;
+        allowed.value =
+            false; // Authentication, onboarding and checkout routes.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 150));
+        expect(find.byKey(const ValueKey('appTourTooltip')), findsNothing);
+        expect(destinations.length, navigationCount);
+        expect(repo.values, isEmpty);
+        allowed.value = true;
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 150));
+        await tester.pump();
+        expect(find.byKey(const ValueKey('appTourTooltip')), findsOneWidget);
         await tester.tap(find.byKey(const ValueKey('tourNext')));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));

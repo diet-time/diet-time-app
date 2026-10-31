@@ -15,7 +15,8 @@ import 'package:diet_time/features/personalization/presentation/personalization_
 import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:diet_time/features/personalization/presentation/questionnaire_deferral_controller.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
-import 'package:diet_time/features/authentication/domain/otp_service.dart';
+import 'package:diet_time/features/personalization/domain/customer_onboarding.dart';
+import 'package:diet_time/features/personalization/presentation/customer_onboarding_coordinator.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -47,7 +48,8 @@ class PersonalizationScreen extends ConsumerStatefulWidget {
 
 class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   static const _stepCount = 9;
-  late final PageController _controller;
+  late PageController _controller;
+  bool _initialized = false;
 
   int _index = 0;
   bool _isNavigating = false;
@@ -71,8 +73,8 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   @override
   void initState() {
     super.initState();
-    // This is a one-shot local flow; legacy server progress must not skip pages.
     _controller = PageController();
+    _initialized = !widget.accountSetupMode;
   }
 
   @override
@@ -92,6 +94,22 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   }
 
   Future<void> _loadProfile() async {
+    if (widget.accountSetupMode) {
+      final decision = await ref
+          .read(customerOnboardingCoordinatorProvider.notifier)
+          .check();
+      if (!mounted) return;
+      if (decision.phase != CustomerOnboardingPhase.questionnaireRequired) {
+        context.go(AppRoutes.authenticatedLanding);
+        return;
+      }
+      _restoreVisibleValues(decision.profile!);
+      _controller.dispose();
+      _index = decision.questionnairePage;
+      _controller = PageController(initialPage: _index);
+      setState(() => _initialized = true);
+      return;
+    }
     if (!await ref.read(otpAuthControllerProvider.notifier).restoreSession()) {
       if (mounted) {
         _signIn();
@@ -111,17 +129,6 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       return;
     }
     if (loaded.errorMessage != null) return;
-    final CustomerProfile restored =
-        profile ?? ref.read(personalizationControllerProvider);
-    if (widget.accountSetupMode) {
-      if (restored.isCompleted) {
-        context.go(widget.completionRoute);
-        return;
-      }
-      _restoreVisibleValues(restored);
-      await _goTo(resumeStepFor(restored), recordHistory: false);
-      return;
-    }
     if (profile == null) return;
     if (profile.isCompleted && !widget.customerProfileMode) {
       context.pushReplacement(
@@ -131,20 +138,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     }
     _restoreVisibleValues(profile);
     if (!widget.customerProfileMode) {
-      final target = profile.goalCode == null
-          ? 1
-          : profile.genderCode == null ||
-                profile.dateOfBirth == null ||
-                profile.heightCm == null ||
-                profile.weightKg == null
-          ? 2
-          : profile.dailyRoutineCode == null
-          ? 3
-          : profile.activityLevelCode == null
-          ? 4
-          : !profile.preferencesConfirmed
-          ? 5
-          : 6;
+      final target = CustomerQuestionnaire.firstIncompletePage(profile);
       await _goTo(target, recordHistory: false);
     }
   }
@@ -205,7 +199,8 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   }
 
   Future<void> _continueStep() async {
-    if (_isNavigating ||
+    if (!_initialized ||
+        _isNavigating ||
         ref.read(profilePersistenceControllerProvider).isSaving) {
       return;
     }
@@ -261,9 +256,17 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       ref.read(personalizationControllerProvider.notifier).confirmAllergens();
     }
     if (_index >= 1 && _index <= 6) {
-      final saved = await ref
-          .read(profilePersistenceControllerProvider.notifier)
-          .save(complete: _index == 6);
+      final saved = widget.accountSetupMode
+          ? await ref
+                .read(customerOnboardingCoordinatorProvider.notifier)
+                .saveQuestionnaire(
+                  complete: _index == CustomerQuestionnaire.steps.last.page,
+                )
+          : await ref
+                .read(profilePersistenceControllerProvider.notifier)
+                .save(
+                  complete: _index == CustomerQuestionnaire.steps.last.page,
+                );
       if (!mounted) return;
       if (!saved) {
         if (ref.read(profilePersistenceControllerProvider).requiresLogin ||
@@ -277,14 +280,14 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         }
         return;
       }
-      if (_index == 6 && widget.accountSetupMode) {
-        context.go(widget.completionRoute);
-        return;
-      }
       if (widget.accountSetupMode) {
-        final persisted = ref.read(personalizationControllerProvider);
-        _restoreVisibleValues(persisted);
-        await _goTo(resumeStepFor(persisted));
+        final decision = ref.read(customerOnboardingCoordinatorProvider);
+        if (decision.phase != CustomerOnboardingPhase.questionnaireRequired) {
+          context.go(AppRoutes.authenticatedLanding);
+          return;
+        }
+        _restoreVisibleValues(decision.profile!);
+        await _goTo(decision.questionnairePage);
         return;
       }
       await _goTo(_index + 1);
@@ -304,6 +307,15 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   }
 
   void _previous() {
+    if (widget.accountSetupMode) {
+      final previous = CustomerQuestionnaire.previousPage(_index);
+      if (previous == null) {
+        context.go(AppRoutes.plans);
+      } else {
+        unawaited(_goTo(previous, recordHistory: false));
+      }
+      return;
+    }
     if (_history.isEmpty) {
       if (widget.checkoutMode || widget.accountSetupMode) {
         context.go(AppRoutes.plans);
@@ -315,11 +327,13 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   }
 
   void _signIn() {
-    ref.read(checkoutControllerProvider.notifier).beginNewOrder();
-    context.go(
-      AppRoutes.phoneLogin,
-      extra: PendingAuthDestination(route: widget.entryRoute),
-    );
+    if (widget.checkoutMode) {
+      ref
+          .read(customerOnboardingCoordinatorProvider.notifier)
+          .begin(CustomerJourneyIntent.startNewPlan);
+      ref.read(checkoutControllerProvider.notifier).beginNewOrder();
+    }
+    context.go(AppRoutes.authenticatedLanding);
   }
 
   Future<void> _notNow() async {
@@ -502,6 +516,9 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_initialized) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context);
     final allergenState = _index == 6
@@ -509,7 +526,9 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         : const AsyncValue<List<GuestAllergen>>.loading();
     final steps = _buildSteps(l10n, locale.languageCode, allergenState);
     final persistence = ref.watch(profilePersistenceControllerProvider);
-    final localCompletionPercentage = (_index * 100 / (_stepCount - 1)).round();
+    final localCompletionPercentage = CustomerQuestionnaire.progress(
+      persistence.persistedProfile,
+    );
     final persistenceErrorMessage = switch (persistence.errorMessage) {
       'profile_load' => _wellnessCopy(
         context,
@@ -563,8 +582,15 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                         : () => Navigator.of(context).maybePop(),
                   ),
                   _StepProgress(
-                    current: _index,
-                    count: _stepCount,
+                    current: widget.accountSetupMode
+                        ? CustomerQuestionnaire.steps.indexWhere(
+                                (step) => step.page == _index,
+                              ) +
+                              1
+                        : _index,
+                    count: widget.accountSetupMode
+                        ? CustomerQuestionnaire.steps.length
+                        : _stepCount,
                     completionPercentage: localCompletionPercentage,
                   ),
                   Expanded(
@@ -632,7 +658,9 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                     onPrevious: _previous,
                     onContinue: () => unawaited(_continue()),
                     isSaving: persistence.isSaving,
-                    canGoBack: _history.isNotEmpty,
+                    canGoBack: widget.accountSetupMode
+                        ? CustomerQuestionnaire.previousPage(_index) != null
+                        : _history.isNotEmpty,
                   ),
                 ],
               ),

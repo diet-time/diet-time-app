@@ -35,8 +35,15 @@ class AppTourSetting extends ConsumerWidget {
 }
 
 class AppTourHost extends ConsumerStatefulWidget {
-  const AppTourHost({required this.child, super.key});
+  const AppTourHost({
+    required this.child,
+    this.navigation,
+    this.canRun,
+    super.key,
+  });
   final Widget child;
+  final Listenable? navigation;
+  final bool Function()? canRun;
   @override
   ConsumerState<AppTourHost> createState() => _AppTourHostState();
 }
@@ -51,13 +58,30 @@ class _AppTourHostState extends ConsumerState<AppTourHost>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    widget.navigation?.addListener(_routeChanged);
   }
 
   @override
   void dispose() {
     _generation++;
     WidgetsBinding.instance.removeObserver(this);
+    widget.navigation?.removeListener(_routeChanged);
     super.dispose();
+  }
+
+  void _routeChanged() {
+    _generation++;
+    _prepared = null;
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void didUpdateWidget(covariant AppTourHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.navigation != widget.navigation) {
+      oldWidget.navigation?.removeListener(_routeChanged);
+      widget.navigation?.addListener(_routeChanged);
+    }
   }
 
   @override
@@ -179,7 +203,8 @@ class _AppTourHostState extends ConsumerState<AppTourHost>
 
   @override
   Widget build(BuildContext context) {
-    final tour = ref.watch(appTourControllerProvider);
+    final active = ref.watch(appTourControllerProvider);
+    final tour = widget.canRun?.call() == false ? const AppTourState() : active;
     final id = tour.running ? '${tour.step.id}:${tour.index}' : null;
     if (id != _prepared) {
       _prepared = id;

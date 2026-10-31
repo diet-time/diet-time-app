@@ -14,8 +14,7 @@ import 'package:diet_time/features/plans/presentation/subscription_selection_wid
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
-import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
+import 'package:diet_time/features/personalization/presentation/customer_onboarding_coordinator.dart';
 
 typedef MealPlanContinue =
     void Function(String mealPlanTemplateId, String mealPlanPriceId);
@@ -285,11 +284,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
     if (!package.isValid) return;
     widget.onContinue?.call(widget.plan.id, package.mealPlanPriceId);
     if (widget.onContinue != null) return;
-    final cached = ref.read(profilePersistenceControllerProvider);
-    if (!ref.read(otpAuthControllerProvider).isAuthenticated ||
-        !cached.hasLoaded ||
-        cached.errorMessage != null ||
-        !ref.read(personalizationControllerProvider).isCompleted) {
+    if (!ref.read(customerOnboardingReadyProvider)) {
       context.go(AppRoutes.startPlan);
       return;
     }

@@ -1,3 +1,6 @@
+import 'support/ordering_customer.dart';
+import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
+import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:go_router/go_router.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
@@ -602,7 +605,12 @@ void main() {
 
     container
         .read(personalizationControllerProvider.notifier)
-        .replace(const CustomerProfile(profileId: 'late-profile-id'));
+        .replace(
+          const CustomerProfile(
+            preferredName: 'Noor',
+            profileId: 'late-profile-id',
+          ),
+        );
     await tester.pump();
     await tester.pump();
 
@@ -945,6 +953,10 @@ void main() {
       final ordersRepository = _CountingOrdersRepository();
       final container = ProviderContainer(
         overrides: [
+          otpAuthControllerProvider.overrideWith(OrderingAuth.new),
+          customerProfileServiceProvider.overrideWithValue(
+            CustomerProfileService(customerRepository: profileRepository),
+          ),
           customerProfileRepositoryProvider.overrideWithValue(
             profileRepository,
           ),
@@ -955,7 +967,9 @@ void main() {
       addTearDown(container.dispose);
 
       await expectLater(
-        profileRepository.updateProfile(const CustomerProfile()),
+        profileRepository.updateProfile(
+          const CustomerProfile(preferredName: 'Noor'),
+        ),
         throwsA(isA<CustomerProfileException>()),
       );
       await container
@@ -1164,6 +1178,7 @@ class _GetOnlyProfileRepository implements CustomerProfileRepository {
   Future<CustomerProfile?> getProfile() async {
     getCalls++;
     return const CustomerProfile(
+      preferredName: 'Noor',
       genderCode: 'FEMALE',
       dateOfBirth: '1995-03-17',
       heightCm: 165,

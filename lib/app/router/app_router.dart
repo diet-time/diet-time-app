@@ -19,13 +19,12 @@ import 'package:diet_time/features/onboarding/presentation/onboarding_screen.dar
 import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_details_screen.dart';
-import 'package:diet_time/features/personalization/presentation/post_login_name_gate.dart';
+import 'package:diet_time/features/personalization/presentation/customer_onboarding_coordinator.dart';
+import 'package:diet_time/features/personalization/domain/customer_onboarding.dart';
 import 'package:diet_time/features/personalization/presentation/authenticated_landing_screen.dart';
 import 'package:diet_time/features/splash/presentation/splash_screen.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_entry_screen.dart';
-import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
-import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -76,11 +75,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.personalization,
-        pageBuilder: (context, state) =>
-            _slidePage(state: state, child: const PersonalizationScreen()),
+        redirect: (context, state) => AppRoutes.authenticatedLanding,
       ),
       GoRoute(
         path: AppRoutes.customerSetup,
+        redirect: (context, state) =>
+            ref.read(customerOnboardingCoordinatorProvider).phase ==
+                CustomerOnboardingPhase.questionnaireRequired
+            ? null
+            : AppRoutes.authenticatedLanding,
         pageBuilder: (context, state) => _slidePage(
           state: state,
           child: PersonalizationScreen(
@@ -91,6 +94,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.customerQuestionnaire,
+        redirect: (context, state) => ref.read(customerOnboardingReadyProvider)
+            ? null
+            : AppRoutes.authenticatedLanding,
         pageBuilder: (context, state) => _slidePage(
           state: state,
           child: const PersonalizationScreen(customerProfileMode: true),
@@ -144,15 +150,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.planDetails,
-        redirect: (context, state) {
-          final cached = ref.read(profilePersistenceControllerProvider);
-          return ref.read(otpAuthControllerProvider).isAuthenticated &&
-                  cached.hasLoaded &&
-                  cached.errorMessage == null &&
-                  ref.read(personalizationControllerProvider).isCompleted
-              ? null
-              : AppRoutes.startPlan;
-        },
+        redirect: (context, state) => ref.read(customerOnboardingReadyProvider)
+            ? null
+            : AppRoutes.startPlan,
         pageBuilder: (context, state) {
           final plan = state.extra;
           if (plan is! MealPlanOption) {
@@ -176,15 +176,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.checkoutEntry,
         redirect: (context, state) {
-          final cached = ref.read(profilePersistenceControllerProvider);
-          final profile = ref.read(personalizationControllerProvider);
           final checkout = ref.read(checkoutControllerProvider);
-          if (ref.read(otpAuthControllerProvider).isAuthenticated &&
-              cached.hasLoaded &&
-              cached.errorMessage == null &&
-              profile.isCompleted &&
+          final profile = ref
+              .read(profilePersistenceControllerProvider)
+              .persistedProfile;
+          if (ref.read(customerOnboardingReadyProvider) &&
               checkout.selection != null &&
-              checkout.customerProfileId == profile.profileId) {
+              checkout.customerProfileId == profile?.profileId) {
             return AppRoutes.planSummary;
           }
           return null;
@@ -193,11 +191,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.checkoutQuestionnaire,
-        builder: (context, state) =>
-            const PersonalizationScreen(checkoutMode: true),
+        redirect: (context, state) => AppRoutes.startPlan,
       ),
       GoRoute(
         path: AppRoutes.planSummary,
+        redirect: (context, state) => ref.read(customerOnboardingReadyProvider)
+            ? null
+            : AppRoutes.startPlan,
         pageBuilder: (context, state) => _slidePage(
           state: state,
           child: PopScope(
@@ -213,6 +213,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.customerAddress,
+        redirect: (context, state) => ref.read(customerOnboardingReadyProvider)
+            ? null
+            : AppRoutes.startPlan,
         pageBuilder: (context, state) =>
             _slidePage(state: state, child: const CustomerAddressScreen()),
       ),
@@ -230,14 +233,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.postLogin,
-        pageBuilder: (context, state) {
-          final nextRoute =
-              state.extra as String? ?? AppRoutes.authenticatedLanding;
-          return _slidePage(
-            state: state,
-            child: PostLoginNameGate(onContinue: () => context.go(nextRoute)),
-          );
-        },
+        redirect: (context, state) => AppRoutes.authenticatedLanding,
       ),
       GoRoute(
         path: AppRoutes.authenticatedLanding,
@@ -250,6 +246,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.home,
+        redirect: (context, state) => ref.read(customerOnboardingReadyProvider)
+            ? null
+            : AppRoutes.authenticatedLanding,
         builder: (context, state) => const HomeScreen(),
       ),
       GoRoute(

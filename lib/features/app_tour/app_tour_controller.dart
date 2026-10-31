@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:diet_time/features/personalization/domain/customer_onboarding.dart';
 import 'package:diet_time/core/storage/secure_storage_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diet_time/core/network/api_client.dart';
@@ -211,7 +212,9 @@ class AppTourController extends Notifier<AppTourState> {
         current == _attemptedOwner ||
         state.running ||
         state.saving ||
-        !ref.read(personalizationControllerProvider).isCompleted ||
+        !CustomerOnboardingPolicy.ready(
+          ref.read(personalizationControllerProvider),
+        ) ||
         !ref.read(personalizationControllerProvider).isAppTourEnabled ||
         navigate == null) {
       return;

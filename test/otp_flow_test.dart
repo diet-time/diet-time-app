@@ -29,6 +29,39 @@ final _invalidOtp = List.filled(6, '9').join();
 
 void main() {
   testWidgets(
+    'late OTP success after logout cannot restore the previous account',
+    (tester) async {
+      final repository = _ControlledAuthenticationRepository();
+      await tester.pumpWidget(
+        _app(otp: _FakeOtpService(), repository: repository),
+      );
+      await _openOtp(tester);
+      await tester.enterText(find.byKey(const ValueKey('otpCell0')), _testOtp);
+      await tester.pump();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(OtpVerificationPage)),
+      );
+      await tester.ensureVisible(find.byKey(const ValueKey('verifyOtpButton')));
+      await tester.tap(find.byKey(const ValueKey('verifyOtpButton')));
+      await tester.pump();
+      expect(repository.callCount, 1);
+      await container.read(otpAuthControllerProvider.notifier).signOut();
+      repository.succeed();
+      await tester.pumpAndSettle();
+      expect(
+        container.read(otpAuthControllerProvider).isAuthenticated,
+        isFalse,
+      );
+      expect(
+        await container
+            .read(secureStorageServiceProvider)
+            .read(SecureStorageService.accessTokenKey),
+        isNull,
+      );
+      expect(find.byKey(const ValueKey('otpDestination')), findsNothing);
+    },
+  );
+  testWidgets(
     'Start Your Plan OTP returns to the new-plan gate, not the dashboard',
     (tester) async {
       await tester.pumpWidget(_app(otp: _FakeOtpService(), startNewPlan: true));
