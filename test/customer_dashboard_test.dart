@@ -199,6 +199,20 @@ void main() {
   );
 
   test(
+    'rejected orders explain the outcome even when a legacy reason is missing',
+    () {
+      final rejected = _reviewSummary('declined', 'REJECTED');
+      expect(rejected.statusLabel, 'Rejected');
+      expect(rejected.reviewMessage, contains('declined by Diet Time'));
+      expect(
+        _detail(rejected).reviewMessage,
+        contains('declined by Diet Time'),
+      );
+      expect(rejected.isCurrent, isFalse);
+    },
+  );
+
+  test(
     'refresh reflects staff approval and rejection using the same purchase ID',
     () async {
       final orders = [_reviewSummary('purchase', 'PENDING_APPROVAL')];
@@ -311,7 +325,10 @@ void main() {
         expect(find.byKey(const ValueKey('planPayment-pending')), findsNothing);
         final copy = lookupAppLocalizations(Locale(locale));
         expect(
-          find.descendant(of: card, matching: find.text(copy.customerPending)),
+          find.descendant(
+            of: card,
+            matching: find.text(copy.dashboardPendingApproval),
+          ),
           findsOneWidget,
         );
         expect(
@@ -437,7 +454,7 @@ void main() {
       expect(originalSize.height, lessThan(170));
       expect(tester.widget<Material>(card).color, const Color(0xFF8B642D));
       expect(
-        find.descendant(of: card, matching: find.text('Pending')),
+        find.descendant(of: card, matching: find.text('Pending Approval')),
         findsOneWidget,
       );
       expect(

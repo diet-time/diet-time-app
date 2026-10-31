@@ -697,10 +697,6 @@ class _ReferencePlanCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
-    final pending = const {
-      'PENDING_APPROVAL',
-      'PENDING',
-    }.contains(summary.status);
     final (background, icon) = switch (summary.status) {
       'PENDING_APPROVAL' ||
       'PENDING' => (const Color(0xFF8B642D), Icons.schedule_rounded),
@@ -711,9 +707,7 @@ class _ReferencePlanCard extends ConsumerWidget {
     final package = (detail?.entitlement ?? summary.entitlement)?.label(
       Localizations.localeOf(context).languageCode,
     );
-    final status = context.customerCopy(
-      pending ? 'Pending' : summary.statusLabel,
-    );
+    final status = context.customerCopy(summary.statusLabel);
     Future<void> openDetails() async {
       await context.push(AppRoutes.orderDetails, extra: summary.id);
       if (context.mounted) {
@@ -1696,7 +1690,7 @@ class _CustomerOrdersState extends ConsumerState<_CustomerOrders> {
                   ('ALL', context.customerCopy('All Orders')),
                   (
                     'PENDING_APPROVAL',
-                    context.customerCopy('Pending Confirmation'),
+                    context.customerCopy('Pending Approval'),
                   ),
                   ('ON_HOLD', context.customerCopy('On Hold')),
                   ('REJECTED', context.customerCopy('Rejected')),

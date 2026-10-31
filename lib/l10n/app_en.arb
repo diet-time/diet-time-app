@@ -866,5 +866,6 @@
         "type": "int"
       }
     }
-  }
+  },
+  "customerOrderRejectedMessage": "Your order was declined by Diet Time. Please contact us for help."
 }

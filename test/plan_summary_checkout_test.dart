@@ -191,8 +191,8 @@ void main() {
       );
       expect(find.text('Order Submitted'), findsOneWidget);
       expect(find.text('Order Confirmed!'), findsNothing);
-      await tester.ensureVisible(find.text('Pending Confirmation'));
-      expect(find.text('Pending Confirmation'), findsOneWidget);
+      await tester.ensureVisible(find.text('Pending Approval'));
+      expect(find.text('Pending Approval'), findsOneWidget);
       expect(find.text('Payment Pending'), findsOneWidget);
     },
   );
@@ -208,7 +208,7 @@ void main() {
         'review': {'canFulfill': false},
       });
       expect(pending.isCurrent, isFalse);
-      expect(pending.statusLabel, 'Pending Confirmation');
+      expect(pending.statusLabel, 'Pending Approval');
       expect(pending.paymentLabel, 'Paid');
       final rejected = OrderConfirmation.fromJson({
         'status': 'REJECTED',

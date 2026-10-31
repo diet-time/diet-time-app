@@ -154,6 +154,8 @@ class CustomerOrderSummary {
       review['fulfillmentBlockedReason'] as String? ??
       (review['awaitingPayment'] == true
           ? 'Your order is confirmed and awaiting the required payment.'
+          : status == 'REJECTED'
+          ? 'Your order was declined by Diet Time. Please contact us for help.'
           : status == 'PENDING_APPROVAL'
           ? "Your order has been received and is awaiting confirmation from Diet Time. We'll notify you once it's reviewed."
           : null);
@@ -294,6 +296,8 @@ class OrderConfirmation {
       review['fulfillmentBlockedReason'] as String? ??
       (review['awaitingPayment'] == true
           ? 'Your order is confirmed and awaiting the required payment.'
+          : status == 'REJECTED'
+          ? 'Your order was declined by Diet Time. Please contact us for help.'
           : status == 'PENDING_APPROVAL'
           ? "Your order has been received and is awaiting confirmation from Diet Time. We'll notify you once it's reviewed."
           : null);

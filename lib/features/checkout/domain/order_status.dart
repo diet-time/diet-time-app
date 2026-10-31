@@ -1,5 +1,5 @@
 String orderStatusLabel(String status) => switch (status.toUpperCase()) {
-  'PENDING_APPROVAL' || 'PENDING' => 'Pending Confirmation',
+  'PENDING_APPROVAL' || 'PENDING' => 'Pending Approval',
   'ON_HOLD' => 'On Hold',
   'CONFIRMED' => 'Confirmed',
   'REJECTED' => 'Rejected',

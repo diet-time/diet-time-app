@@ -2273,4 +2273,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String dashboardPlanCount(int count) {
     return '$count خطط';
   }
+
+  @override
+  String get customerOrderRejectedMessage =>
+      'نعتذر، لم تتم الموافقة على طلبك من دايت تايم. يرجى التواصل معنا للمساعدة.';
 }

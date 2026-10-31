@@ -2319,4 +2319,8 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get customerOrderRejectedMessage =>
+      'Your order was declined by Diet Time. Please contact us for help.';
 }

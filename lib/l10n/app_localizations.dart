@@ -4159,6 +4159,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, one{1 PLAN} other{{count} PLANS}}'**
   String dashboardPlanCount(int count);
+
+  /// No description provided for @customerOrderRejectedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your order was declined by Diet Time. Please contact us for help.'**
+  String get customerOrderRejectedMessage;
 }
 
 class _AppLocalizationsDelegate

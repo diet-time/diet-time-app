@@ -532,6 +532,9 @@ extension CustomerCopy on BuildContext {
       "All your meal orders in one place" =>
         copy.customerAllYourMealOrdersInOnePlace,
       "All Orders" => copy.customerAllOrders,
+      "Pending Approval" => copy.dashboardPendingApproval,
+      "Your order was declined by Diet Time. Please contact us for help." =>
+        copy.customerOrderRejectedMessage,
       "Pending Confirmation" => copy.customerPendingConfirmation,
       "On Hold" => copy.customerOnHold,
       "Rejected" => copy.customerRejected,
