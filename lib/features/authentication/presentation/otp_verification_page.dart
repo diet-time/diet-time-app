@@ -113,7 +113,11 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
         destination?.route == AppRoutes.checkoutEntry ||
         destination?.route == AppRoutes.planSummary;
     context.go(
-      checkout ? AppRoutes.checkoutEntry : AppRoutes.authenticatedLanding,
+      destination?.route == AppRoutes.startPlan
+          ? AppRoutes.startPlan
+          : checkout
+          ? AppRoutes.checkoutEntry
+          : AppRoutes.authenticatedLanding,
     );
   }
 

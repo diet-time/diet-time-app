@@ -45,6 +45,7 @@ abstract final class AppRoutes {
   static const planDetails = '/plan-details';
   static const planStartDate = '/plan-start-date';
   static const checkoutEntry = '/checkout-entry';
+  static const startPlan = '/start-plan';
   static const checkoutQuestionnaire = '/checkout-questionnaire';
   static const planSummary = '/plan-summary';
   static const customerAddress = '/customer-address';
@@ -146,6 +147,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         redirect: (context, state) => AppRoutes.checkoutEntry,
       ),
       GoRoute(
+        path: AppRoutes.startPlan,
+        builder: (context, state) => const CheckoutEntryScreen(startPlan: true),
+      ),
+      GoRoute(
         path: AppRoutes.checkoutEntry,
         redirect: (context, state) {
           final cached = ref.read(profilePersistenceControllerProvider);
@@ -165,8 +170,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.checkoutQuestionnaire,
-        builder: (context, state) =>
-            const PersonalizationScreen(checkoutMode: true),
+        builder: (context, state) => PersonalizationScreen(
+          checkoutMode: true,
+          startPlanMode: state.extra == true,
+        ),
       ),
       GoRoute(
         path: AppRoutes.planSummary,

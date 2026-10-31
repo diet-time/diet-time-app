@@ -289,7 +289,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
       pricingOption: package,
     );
     ref.read(checkoutControllerProvider.notifier).selectPackage(selection);
-    context.push(AppRoutes.checkoutEntry);
+    context.go(AppRoutes.startPlan);
   }
 }
 

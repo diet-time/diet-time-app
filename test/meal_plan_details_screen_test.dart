@@ -289,7 +289,7 @@ void main() {
             builder: (_, _) => MealPlanDetailsScreen(plan: _plan),
           ),
           GoRoute(
-            path: '/checkout-entry',
+            path: '/start-plan',
             builder: (_, _) => const Scaffold(body: Text('Checkout entry')),
           ),
         ],

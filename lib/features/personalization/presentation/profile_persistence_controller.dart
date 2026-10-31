@@ -100,6 +100,9 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
                 .read(customerProfileServiceProvider)
                 .saveProgress(profile);
       ref.read(personalizationControllerProvider.notifier).replace(saved);
+      if (complete && !saved.isCompleted) {
+        throw const CustomerProfileException(statusCode: 422);
+      }
       state = state.copyWith(
         isSaving: false,
         hasLoaded: true,

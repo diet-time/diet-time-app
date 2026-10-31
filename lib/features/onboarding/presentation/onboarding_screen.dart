@@ -25,11 +25,16 @@ class PersonalizationScreen extends ConsumerStatefulWidget {
   const PersonalizationScreen({
     this.customerProfileMode = false,
     this.checkoutMode = false,
+    this.startPlanMode = false,
     super.key,
   });
 
   final bool customerProfileMode;
   final bool checkoutMode;
+  final bool startPlanMode;
+
+  String get entryRoute =>
+      startPlanMode ? AppRoutes.startPlan : AppRoutes.checkoutEntry;
 
   @override
   ConsumerState<PersonalizationScreen> createState() =>
@@ -44,6 +49,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   bool _isNavigating = false;
   bool _profileLoadStarted = false;
   bool _skipping = false;
+  bool _continuing = false;
   Future<void>? _profileLoad;
   final List<int> _history = [];
   String? _validationMessage;
@@ -88,7 +94,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
           AppRoutes.phoneLogin,
           extra: PendingAuthDestination(
             route: widget.checkoutMode
-                ? AppRoutes.checkoutEntry
+                ? widget.entryRoute
                 : AppRoutes.authenticatedLanding,
           ),
         );
@@ -103,7 +109,11 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     if (!mounted || profile == null || _skipping) return;
     if (profile.isCompleted && !widget.customerProfileMode) {
       context.pushReplacement(
-        widget.checkoutMode ? AppRoutes.checkoutEntry : AppRoutes.plans,
+        widget.startPlanMode
+            ? AppRoutes.home
+            : widget.checkoutMode
+            ? AppRoutes.checkoutEntry
+            : AppRoutes.plans,
       );
       return;
     }
@@ -173,11 +183,31 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   }
 
   Future<void> _continue() async {
+    if (_continuing) return;
+    _continuing = true;
+    try {
+      await _continueStep();
+    } finally {
+      _continuing = false;
+    }
+  }
+
+  Future<void> _continueStep() async {
+    if (_isNavigating ||
+        ref.read(profilePersistenceControllerProvider).isSaving) {
+      return;
+    }
+    await _profileLoad;
+    if (!mounted) return;
+    final persistence = ref.read(profilePersistenceControllerProvider);
+    if (persistence.isLoading || persistence.errorMessage == 'profile_load') {
+      return;
+    }
     if (!await ref.read(otpAuthControllerProvider.notifier).restoreSession()) {
       if (mounted) {
         context.pushReplacement(
           AppRoutes.phoneLogin,
-          extra: const PendingAuthDestination(route: AppRoutes.checkoutEntry),
+          extra: PendingAuthDestination(route: widget.entryRoute),
         );
       }
       return;
@@ -205,11 +235,15 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         .setPreferredLanguage(Localizations.localeOf(context).languageCode);
     if (_index == 2) {
       final controller = ref.read(personalizationControllerProvider.notifier);
-      controller
-        ..setGender(_gender!.toUpperCase())
-        ..setAge(_age!)
-        ..setHeight(_height!.toDouble())
-        ..setWeight(_weight!.toDouble());
+      final profile = ref.read(personalizationControllerProvider);
+      controller.setGender(_gender!.toUpperCase());
+      if (_age != profile.age) controller.setAge(_age!);
+      if (_height != profile.heightCm?.round()) {
+        controller.setHeight(_height!.toDouble());
+      }
+      if (_weight != profile.weightKg?.round()) {
+        controller.setWeight(_weight!.toDouble());
+      }
     }
     if (_index == 5) {
       ref.read(personalizationControllerProvider.notifier).confirmPreferences();
@@ -229,6 +263,10 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         }
         return;
       }
+      if (_index == 6 && widget.startPlanMode) {
+        context.go(AppRoutes.home);
+        return;
+      }
       await _goTo(_index + 1);
       return;
     }
@@ -237,7 +275,11 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         Navigator.of(context).pop(true);
       } else {
         context.pushReplacement(
-          widget.checkoutMode ? AppRoutes.checkoutEntry : AppRoutes.plans,
+          widget.startPlanMode
+              ? AppRoutes.home
+              : widget.checkoutMode
+              ? AppRoutes.checkoutEntry
+              : AppRoutes.plans,
         );
       }
       return;

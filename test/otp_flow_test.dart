@@ -518,7 +518,7 @@ Widget _planApp(AuthenticationService authentication) {
             MealPlanDetailsScreen(plan: state.extra! as MealPlanOption),
       ),
       GoRoute(
-        path: '/checkout-entry',
+        path: '/start-plan',
         builder: (context, state) =>
             const SizedBox(key: ValueKey('authenticatedDestination')),
       ),

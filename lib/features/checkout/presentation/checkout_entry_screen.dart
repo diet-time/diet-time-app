@@ -20,7 +20,7 @@ class CheckoutAccessService {
   CheckoutAccessService(this.ref);
   final Ref ref;
 
-  Future<CheckoutAccess> resolve() async {
+  Future<CheckoutAccess> resolve({bool refreshProfile = false}) async {
     if (ref.read(checkoutControllerProvider).selection == null) {
       return CheckoutAccess.browse;
     }
@@ -28,7 +28,10 @@ class CheckoutAccessService {
       return CheckoutAccess.login;
     }
     final persistence = ref.read(profilePersistenceControllerProvider);
-    final profile = persistence.hasLoaded && persistence.errorMessage == null
+    final profile =
+        !refreshProfile &&
+            persistence.hasLoaded &&
+            persistence.errorMessage == null
         ? ref.read(personalizationControllerProvider)
         : await ref.read(profilePersistenceControllerProvider.notifier).load();
     if (ref.read(profilePersistenceControllerProvider).errorMessage != null) {
@@ -43,7 +46,8 @@ class CheckoutAccessService {
 }
 
 class CheckoutEntryScreen extends ConsumerStatefulWidget {
-  const CheckoutEntryScreen({super.key});
+  const CheckoutEntryScreen({this.startPlan = false, super.key});
+  final bool startPlan;
   @override
   ConsumerState<CheckoutEntryScreen> createState() =>
       _CheckoutEntryScreenState();
@@ -51,6 +55,7 @@ class CheckoutEntryScreen extends ConsumerStatefulWidget {
 
 class _CheckoutEntryScreenState extends ConsumerState<CheckoutEntryScreen> {
   bool _error = false;
+  bool _resolving = false;
   @override
   void initState() {
     super.initState();
@@ -58,25 +63,35 @@ class _CheckoutEntryScreenState extends ConsumerState<CheckoutEntryScreen> {
   }
 
   Future<void> _resolve() async {
+    if (_resolving) return;
+    _resolving = true;
     if (_error) setState(() => _error = false);
     try {
-      final access = await ref.read(checkoutAccessProvider).resolve();
+      final access = await ref
+          .read(checkoutAccessProvider)
+          .resolve(refreshProfile: widget.startPlan);
       if (!mounted) return;
       switch (access) {
         case CheckoutAccess.browse:
           context.go(AppRoutes.plans);
         case CheckoutAccess.login:
-          context.pushReplacement(
+          context.go(
             AppRoutes.phoneLogin,
-            extra: const PendingAuthDestination(route: AppRoutes.checkoutEntry),
+            extra: PendingAuthDestination(
+              route: widget.startPlan
+                  ? AppRoutes.startPlan
+                  : AppRoutes.checkoutEntry,
+            ),
           );
         case CheckoutAccess.questionnaire:
-          context.pushReplacement(AppRoutes.checkoutQuestionnaire);
+          context.go(AppRoutes.checkoutQuestionnaire, extra: widget.startPlan);
         case CheckoutAccess.summary:
-          context.pushReplacement(AppRoutes.planSummary);
+          context.go(widget.startPlan ? AppRoutes.home : AppRoutes.planSummary);
       }
     } on Object {
       if (mounted) setState(() => _error = true);
+    } finally {
+      _resolving = false;
     }
   }
 

@@ -11,6 +11,84 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
+    'new completion requires saved details and both confirmations',
+    () async {
+      final repository = ProfileRepository();
+      final service = CustomerProfileService(customerRepository: repository);
+      const answers = CustomerProfile(
+        genderCode: 'FEMALE',
+        dateOfBirth: '1995-03-17',
+        heightCm: 165,
+        weightKg: 70,
+        goalCode: 'LOSE_WEIGHT',
+        dailyRoutineCode: 'OFFICE_WORK',
+        activityLevelCode: 'MOSTLY_SITTING',
+      );
+      for (final profile in [
+        answers,
+        answers.copyWith(preferencesConfirmed: true),
+        answers.copyWith(allergensConfirmed: true),
+      ]) {
+        expect(
+          () => service.complete(profile),
+          throwsA(isA<CustomerProfileException>()),
+        );
+      }
+      expect(repository.writes, 0);
+      await service.complete(
+        answers.copyWith(preferencesConfirmed: true, allergensConfirmed: true),
+      );
+      expect(repository.writes, 1);
+    },
+  );
+
+  test(
+    'backend completed answers take precedence over a pending draft',
+    () async {
+      final storage = MemorySecureStorage();
+      await storage.write(SecureStorageService.accessTokenKey, 'token');
+      await storage.write(SecureStorageService.authenticatedUserIdKey, 'user');
+      final repository = ProfileRepository()..fail = true;
+      final service = CustomerProfileService(
+        customerRepository: repository,
+        storage: storage,
+      );
+      await expectLater(
+        service.saveProgress(
+          const CustomerProfile(
+            profileId: 'owned-profile',
+            goalCode: 'LOSE_WEIGHT',
+          ),
+        ),
+        throwsA(isA<CustomerProfileException>()),
+      );
+      repository
+        ..fail = false
+        ..last = const CustomerProfile(
+          profileId: 'owned-profile',
+          genderCode: 'FEMALE',
+          dateOfBirth: '1995-03-17',
+          heightCm: 165,
+          weightKg: 70,
+          goalCode: 'MAINTAIN_WEIGHT',
+          dailyRoutineCode: 'OFFICE_WORK',
+          activityLevelCode: 'MOSTLY_SITTING',
+          onboardingStatus: 'COMPLETED',
+          nextStepCode: 'PROFILE_COMPLETED',
+          shouldShowOnboarding: false,
+          preferences: {'HIGH_PROTEIN'},
+          allergens: {'milk-id'},
+        );
+      final writes = repository.writes;
+      final loaded = await service.load();
+      expect(loaded!.isCompleted, isTrue);
+      expect(loaded.goalCode, 'MAINTAIN_WEIGHT');
+      expect(loaded.allergens, {'milk-id'});
+      expect(loaded.preferences, {'HIGH_PROTEIN'});
+      expect(repository.writes, writes);
+    },
+  );
+  test(
     'guest answers survive restart, then sync to authenticated profile once',
     () async {
       final storage = MemorySecureStorage();
@@ -26,7 +104,7 @@ void main() {
         allergensConfirmed: true,
         preferencesConfirmed: true,
       );
-      await service.complete(answers);
+      await service.saveProgress(answers);
       expect(repository.writes, 0);
       service = CustomerProfileService(
         customerRepository: repository,

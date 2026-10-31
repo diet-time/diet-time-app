@@ -93,9 +93,8 @@ class CustomerProfileService implements ProfilePersistenceService {
       await storage?.delete(guestDraftKey);
     }
     final remote = await customerRepository.getProfile();
-    // A guest draft must never overwrite a returning customer's completed answers.
-    if (remote?.isCompleted == true &&
-        pending?.profileId != remote!.profileId) {
+    // Persisted completion takes precedence over an older cached draft.
+    if (remote?.isCompleted == true) {
       await storage?.delete(key);
       return remote;
     }
@@ -149,6 +148,11 @@ class CustomerProfileService implements ProfilePersistenceService {
 
   @override
   Future<CustomerProfile> complete(CustomerProfile profile) {
+    if (!profile.hasRequiredDetails ||
+        !profile.preferencesConfirmed ||
+        !profile.allergensConfirmed) {
+      throw const CustomerProfileException(statusCode: 422);
+    }
     return _save(profile.copyWith(onboardingStatus: 'COMPLETED'));
   }
 }

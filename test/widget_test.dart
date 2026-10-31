@@ -320,6 +320,45 @@ void main() {
     },
   );
 
+  testWidgets(
+    'Start Your Plan resumes saved answers and completes at dashboard',
+    (tester) async {
+      final service = _FakeProfilePersistenceService(
+        profile: const CustomerProfile(
+          profileId: 'profile-id',
+          goalCode: 'LOSE_WEIGHT',
+          genderCode: 'FEMALE',
+          dateOfBirth: '1995-03-17',
+          heightCm: 165.5,
+          weightKg: 70.4,
+          dailyRoutineCode: 'OFFICE_WORK',
+          activityLevelCode: 'MOSTLY_SITTING',
+          preferences: {'HIGH_PROTEIN'},
+          preferencesConfirmed: true,
+          allergens: {'MILK'},
+          nextStepCode: 'ALLERGENS',
+        ),
+      );
+      await tester.pumpWidget(
+        _questionnaireCheckoutApp(service, startPlan: true),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('onboardingStep-6')), findsOneWidget);
+      await _continue(tester);
+      await tester.pumpAndSettle();
+      expect(service.completeCalls, 1);
+      expect(service.lastSubmitted!.dateOfBirth, '1995-03-17');
+      expect(service.lastSubmitted!.heightCm, 165.5);
+      expect(service.lastSubmitted!.weightKg, 70.4);
+      expect(service.lastSubmitted!.allergens, {'MILK'});
+      expect(service.lastSubmitted!.preferences, {'HIGH_PROTEIN'});
+      expect(service.lastSubmitted!.allergensConfirmed, isTrue);
+      expect(find.text('Dashboard ready'), findsOneWidget);
+      expect(find.byType(PersonalizationScreen), findsNothing);
+      expect(find.byType(PhoneLoginPage), findsNothing);
+    },
+  );
+
   testWidgets('returning incomplete guest still sees image onboarding', (
     tester,
   ) async {
@@ -752,35 +791,43 @@ class _NoOrders extends OrdersRepository {
   }) async => [];
 }
 
-Widget _questionnaireCheckoutApp(ProfilePersistenceService service) =>
-    ProviderScope(
-      overrides: [
-        authenticationServiceProvider.overrideWithValue(
-          const _AuthenticatedService(),
+Widget _questionnaireCheckoutApp(
+  ProfilePersistenceService service, {
+  bool startPlan = false,
+}) => ProviderScope(
+  overrides: [
+    authenticationServiceProvider.overrideWithValue(
+      const _AuthenticatedService(),
+    ),
+    customerProfileServiceProvider.overrideWithValue(service),
+  ],
+  child: MaterialApp.router(
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: AppLocalizations.supportedLocales,
+    routerConfig: GoRouter(
+      initialLocation: '/checkout-questionnaire',
+      routes: [
+        GoRoute(
+          path: '/checkout-questionnaire',
+          builder: (_, _) => PersonalizationScreen(
+            checkoutMode: true,
+            startPlanMode: startPlan,
+          ),
         ),
-        customerProfileServiceProvider.overrideWithValue(service),
+        GoRoute(
+          path: '/checkout-entry',
+          builder: (_, _) => const Scaffold(body: Text('Checkout ready')),
+        ),
+        GoRoute(
+          path: '/home',
+          builder: (_, _) => const Scaffold(body: Text('Dashboard ready')),
+        ),
       ],
-      child: MaterialApp.router(
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        routerConfig: GoRouter(
-          initialLocation: '/checkout-questionnaire',
-          routes: [
-            GoRoute(
-              path: '/checkout-questionnaire',
-              builder: (_, _) =>
-                  const PersonalizationScreen(checkoutMode: true),
-            ),
-            GoRoute(
-              path: '/checkout-entry',
-              builder: (_, _) => const Scaffold(body: Text('Checkout ready')),
-            ),
-          ],
-        ),
-      ),
-    );
+    ),
+  ),
+);

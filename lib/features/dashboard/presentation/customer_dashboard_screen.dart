@@ -123,7 +123,26 @@ class _CustomerDashboardScreenState
     return Scaffold(
       backgroundColor: const Color(0xFFF8F6EF),
       body: SafeArea(
-        child: IndexedStack(index: _tabIndex, children: pages),
+        child: Column(
+          children: [
+            if (ref.watch(checkoutControllerProvider).selection != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: OutlinedButton.icon(
+                  key: const ValueKey('resumeSelectedPlan'),
+                  onPressed: () => context.go(AppRoutes.checkoutEntry),
+                  icon: const Icon(Icons.shopping_bag_outlined),
+                  label: Text(context.customerCopy('Resume selected plan')),
+                ),
+              ),
+            Expanded(
+              child: IndexedStack(index: _tabIndex, children: pages),
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         key: const ValueKey('dashboardNavigation'),

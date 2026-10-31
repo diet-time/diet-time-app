@@ -54,7 +54,14 @@ class HttpCustomerProfileRepository implements CustomerProfileRepository {
     if (result.statusCode < 200 || result.statusCode >= 300) {
       throw CustomerProfileException(statusCode: result.statusCode);
     }
-    return _profileFromEnvelope(result.body, fallback: profile) ??
+    return _profileFromEnvelope(
+          result.body,
+          fallback: profile.copyWith(
+            onboardingStatus: 'IN_PROGRESS',
+            nextStepCode: 'BASIC_DETAILS',
+            shouldShowOnboarding: true,
+          ),
+        ) ??
         (throw const CustomerProfileException(statusCode: 502));
   }
 
