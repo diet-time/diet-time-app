@@ -303,6 +303,13 @@ class GuestMeal {
   final int displayOrder;
 }
 
+int compareGuestMealTimes(GuestMealTime a, GuestMealTime b) {
+  final order = a.displayOrder.compareTo(b.displayOrder);
+  return order != 0
+      ? order
+      : a.code.toUpperCase().compareTo(b.code.toUpperCase());
+}
+
 class GuestMealTime {
   const GuestMealTime({
     required this.code,

@@ -272,22 +272,68 @@ class _AppTourHostState extends ConsumerState<AppTourHost>
                                         context,
                                       ).textTheme.labelMedium,
                                     ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      tourCopy(
+                                    const SizedBox(height: 8),
+                                    LinearProgressIndicator(
+                                      key: const ValueKey('tourProgress'),
+                                      value:
+                                          (tour.index + 1) / tour.steps.length,
+                                      semanticsLabel: tourCopy(
                                         context,
-                                        '${tour.step.id}.title',
+                                        'progress',
                                       ),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            color: const Color(0xFF075A43),
-                                            fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF075A43),
+                                      backgroundColor: const Color(0xFFDCE9DF),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 18,
+                                          backgroundColor: const Color(
+                                            0xFFE5EEE5,
                                           ),
+                                          child: Icon(
+                                            _tourStepIcon(tour.step),
+                                            size: 20,
+                                            color: const Color(0xFF075A43),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            tourCopy(
+                                              context,
+                                              '${tour.step.id}.title',
+                                            ),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(
+                                                  color: const Color(
+                                                    0xFF075A43,
+                                                  ),
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     const SizedBox(height: 8),
                                     Text(tourCopy(context, tour.step.id)),
+                                    if (tour.step.nextHint
+                                        case final hint?) ...[
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        tourCopy(context, hint),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelLarge
+                                            ?.copyWith(
+                                              color: const Color(0xFF075A43),
+                                            ),
+                                      ),
+                                    ],
                                     if (tour.index == 0)
                                       CheckboxListTile(
                                         contentPadding: EdgeInsets.zero,
@@ -379,3 +425,20 @@ class _Spotlight extends CustomPainter {
   @override
   bool shouldRepaint(_Spotlight old) => old.rect != rect;
 }
+
+IconData _tourStepIcon(TourStep step) => switch (step.id) {
+  'menuButton' || 'menu' => Icons.restaurant_menu_rounded,
+  'language' => Icons.language_rounded,
+  'plans' => Icons.subscriptions_outlined,
+  'viewDetails' || 'orderDetails' || 'orders' => Icons.receipt_long_outlined,
+  'newPlan' || 'choosePlan' => Icons.add_circle_outline_rounded,
+  'tomorrow' || 'chooseMeals' || 'confirmation' => Icons.restaurant_outlined,
+  'navigation' => Icons.home_outlined,
+  'calendar' => Icons.calendar_month_outlined,
+  'questionnaire' => Icons.assignment_outlined,
+  'addresses' => Icons.location_on_outlined,
+  _ =>
+    step.destination == 'profile'
+        ? Icons.person_outline_rounded
+        : Icons.explore_outlined,
+};

@@ -92,7 +92,14 @@ class _CustomerDashboardScreenState
                   context,
                 )?.routerDelegate.currentConfiguration.lastOrNull?.route.path ==
                 AppRoutes.home) {
-          ref.read(appTourControllerProvider.notifier).maybeStart();
+          ref
+              .read(appTourControllerProvider.notifier)
+              .maybeStart(
+                hasPlanCards: dashboardPlanOrders(state).isNotEmpty,
+                hasActivePlan:
+                    state is DashboardWithActivePlan ||
+                    state is DashboardWithMultipleActivePlans,
+              );
         }
       });
     }

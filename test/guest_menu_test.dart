@@ -16,7 +16,116 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+GuestMenuResponse _orderedBrowsingMenu(
+  String code,
+  DateTime date, {
+  bool arabic = false,
+  bool includeLunch = true,
+}) {
+  final fixture = _fixtureJson()['data'] as Map<String, dynamic>;
+  final template =
+      ((fixture['menuFixtures'] as List).first as Map)['slots'] as List;
+  final base = Map<String, dynamic>.from(template.first as Map);
+  final meal = Map<String, dynamic>.from((base['meals'] as List).first as Map);
+  final types = [
+    ('TYPE_C', 'Dinner', 'العشاء', 30),
+    ('TYPE_D', 'Snack', 'وجبة خفيفة', 30),
+    if (includeLunch) ('TYPE_B', 'Lunch', 'الغداء', 20),
+    ('TYPE_A', 'AM Meal', 'وجبة صباحية', 10),
+  ];
+  return GuestMenuResponse.fromJson({
+    'data': {
+      'planId': 'plan-1',
+      'planCode': code,
+      'date': date.toIso8601String(),
+      'slots': [
+        for (var i = 0; i < types.length; i++)
+          {
+            ...base,
+            'id': 'browse-slot-${types[i].$1}',
+            'displayOrder': i,
+            'mealTime': {
+              'id': 'unchanged-id-${types[i].$1}',
+              'code': types[i].$1,
+              'name': arabic ? types[i].$3 : types[i].$2,
+              'displayOrder': types[i].$4,
+            },
+            'meals': [
+              {
+                ...meal,
+                'id': 'browse-meal-${types[i].$1}',
+                'name': '${types[i].$2} dish',
+              },
+            ],
+          },
+      ],
+    },
+  });
+}
+
 void main() {
+  for (final language in ['en', 'ar']) {
+    testWidgets(
+      'configured meal-type order overrides slot order and names in $language',
+      (tester) async {
+        await _useTallSurface(tester);
+        final repository = _FakeGuestMenuRepository(
+          _response(),
+          menuBuilder: (code, date) =>
+              _orderedBrowsingMenu(code, date, arabic: language == 'ar'),
+        );
+        await tester.pumpWidget(
+          _app(repository: repository, locale: Locale(language)),
+        );
+        await _load(tester);
+        final positions = [
+          for (final code in ['TYPE_A', 'TYPE_B', 'TYPE_C', 'TYPE_D'])
+            tester.getCenter(find.byKey(ValueKey('guest-filter-$code'))).dx,
+        ];
+        for (var i = 1; i < positions.length; i++) {
+          expect(
+            language == 'ar'
+                ? positions[i] < positions[i - 1]
+                : positions[i] > positions[i - 1],
+            isTrue,
+          );
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+  for (final selected in ['TYPE_A', 'TYPE_B']) {
+    testWidgets(
+      'date switch preserves valid type or selects first available after $selected disappears',
+      (tester) async {
+        await _useTallSurface(tester);
+        final repository = _FakeGuestMenuRepository(
+          _response(),
+          menuBuilder: (code, date) =>
+              _orderedBrowsingMenu(code, date, includeLunch: date.day != 26),
+        );
+        await tester.pumpWidget(_app(repository: repository));
+        await _load(tester);
+        await tester.tap(find.byKey(ValueKey('guest-filter-$selected')));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const ValueKey('guest-date-2026-07-26T00:00:00.000')),
+        );
+        await _load(tester);
+        final chip = tester.widget<ChoiceChip>(
+          find.descendant(
+            of: find.byKey(const ValueKey('guest-filter-TYPE_A')),
+            matching: find.byType(ChoiceChip),
+          ),
+        );
+        expect(chip.selected, isTrue);
+        expect(find.text('AM Meal dish'), findsOneWidget);
+        expect(repository.menuCalls.last.date, DateTime(2026, 7, 26));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   for (final scenario in ['today', 'unpublished', 'friday']) {
     testWidgets(
       'dashboard date uses Qatar current week and preserves $scenario availability',
@@ -85,20 +194,13 @@ void main() {
         expect(find.byKey(const ValueKey('guestStartPlan')), findsOneWidget);
         expect(repository.calls.first.date, today);
         expect(repository.calls.length, scenario == 'today' ? 1 : 2);
-        if (scenario == 'friday') {
-          expect(repository.menuCalls, isEmpty);
-        } else {
-          expect(repository.menuCalls.single.date, today);
-        }
+        expect(repository.menuCalls.single.date, today);
         final day = find.byKey(
           ValueKey('guest-date-${today.toIso8601String()}'),
         );
         expect(day, findsOneWidget);
         final ink = find.descendant(of: day, matching: find.byType(InkWell));
-        expect(
-          tester.widget<InkWell>(ink).onTap,
-          scenario == 'today' ? isNotNull : isNull,
-        );
+        expect(tester.widget<InkWell>(ink).onTap, isNotNull);
         final container = find.descendant(
           of: day,
           matching: find.byType(AnimatedContainer),
@@ -901,7 +1003,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('unavailable calendar dates are disabled', (tester) async {
+  testWidgets('unconfigured calendar dates remain selectable', (tester) async {
     await _useTallSurface(tester);
     final json = _fixtureJson();
     final data = json['data']! as Map<String, dynamic>;
@@ -919,9 +1021,10 @@ void main() {
     final inkWell = tester.widget<InkWell>(
       find.descendant(of: dateCard, matching: find.byType(InkWell)),
     );
-    expect(inkWell.onTap, isNull);
-    expect(repository.calls, hasLength(1));
-    expect(repository.menuCalls, hasLength(1));
+    expect(inkWell.onTap, isNotNull);
+    await tester.tap(dateCard);
+    await tester.pumpAndSettle();
+    expect(repository.menuCalls.last.date, DateTime(2026, 7, 26));
   });
 
   testWidgets('guest menu renders the new nested meal-plan response', (

@@ -111,6 +111,71 @@ class TourStorage extends SecureStorageService {
 }
 
 void main() {
+  test(
+    'customers without plans skip unavailable actions even after enabling detailed guidance',
+    () {
+      final c = setup(TourRepository());
+      final controller = c.read(appTourControllerProvider.notifier);
+      controller.maybeStart(hasPlanCards: false, hasActivePlan: false);
+      controller.detail(true);
+      final ids = c
+          .read(appTourControllerProvider)
+          .steps
+          .map((step) => step.id)
+          .toSet();
+      expect(
+        ids.intersection({
+          'viewDetails',
+          'orderDetails',
+          'tomorrow',
+          'chooseMeals',
+          'confirmation',
+        }),
+        isEmpty,
+      );
+      expect(
+        ids,
+        containsAll({
+          'menuButton',
+          'newPlan',
+          'navigation',
+          'orders',
+          'calendar',
+          'profileTab',
+          'settings',
+        }),
+      );
+      expect(c.read(appTourControllerProvider).steps.last.id, 'settings');
+    },
+  );
+  test(
+    'customers with plans receive the matching order and meal-button guidance',
+    () {
+      final c = setup(TourRepository());
+      final controller = c.read(appTourControllerProvider.notifier);
+      controller.maybeStart(hasPlanCards: true, hasActivePlan: true);
+      controller.detail(true);
+      final ids = c
+          .read(appTourControllerProvider)
+          .steps
+          .map((step) => step.id)
+          .toList();
+      expect(
+        ids,
+        containsAll({
+          'viewDetails',
+          'orderDetails',
+          'tomorrow',
+          'chooseMeals',
+          'confirmation',
+        }),
+      );
+      expect(ids.toSet().length, ids.length);
+      expect(ids.indexOf('viewDetails') + 1, ids.indexOf('orderDetails'));
+      expect(ids.indexOf('newPlan') + 1, ids.indexOf('choosePlan'));
+    },
+  );
+
   testWidgets(
     'restored session can enable from Profile and launch on returning Home',
     (tester) async {
@@ -351,7 +416,14 @@ void main() {
           .read(appTourControllerProvider)
           .steps
           .indexWhere((step) => step.id == 'menu');
-      controller.move(menuIndex);
+      controller.move(menuIndex - 1);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      expect(find.text('Next opens the Menu screen.'), findsOneWidget);
+      expect(find.byKey(const ValueKey('dashboardMenuButton')), findsOneWidget);
+      expect(find.byKey(const ValueKey('tourProgress')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('tourNext')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump();
@@ -377,6 +449,31 @@ void main() {
         router.routerDelegate.currentConfiguration.last.route.path,
         AppRoutes.menu,
       );
+      for (final (id, index) in [
+        ('navigation', 0),
+        ('orders', 1),
+        ('calendar', 2),
+        ('profileTab', 3),
+      ]) {
+        final tour = container.read(appTourControllerProvider);
+        final stepIndex = tour.steps.indexWhere((step) => step.id == id);
+        controller.move(stepIndex - tour.index);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump();
+        expect(
+          tester
+              .widget<NavigationBar>(
+                find.byKey(const ValueKey('dashboardNavigation')),
+              )
+              .selectedIndex,
+          index,
+        );
+        expect(
+          router.routerDelegate.currentConfiguration.last.route.path,
+          AppRoutes.home,
+        );
+      }
       // Final Finish, just like Skip, returns through the same stack and persists false.
       controller.move(
         container.read(appTourControllerProvider).steps.length -
@@ -509,13 +606,23 @@ void main() {
       final controller = c.read(appTourControllerProvider.notifier)
         ..maybeStart();
       controller.detail(true);
-      expect(c.read(appTourControllerProvider).steps.length, 24);
-      controller.move(1);
-      controller.move(1);
+      expect(
+        c.read(appTourControllerProvider).steps.length,
+        basicTourSteps.length + detailedTourSteps.length,
+      );
+      final steps = c.read(appTourControllerProvider).steps;
+      final optionalIndex = steps.indexWhere((step) => step.id == 'tomorrow');
+      controller.move(optionalIndex);
       controller.unavailable();
-      expect(c.read(appTourControllerProvider).step.id, 'navigation');
+      expect(
+        c.read(appTourControllerProvider).step.id,
+        steps[optionalIndex + 1].id,
+      );
       controller.move(-1);
-      expect(c.read(appTourControllerProvider).step.id, 'plans');
+      expect(
+        c.read(appTourControllerProvider).step.id,
+        steps[optionalIndex - 1].id,
+      );
       while (c.read(appTourControllerProvider).index <
           c.read(appTourControllerProvider).steps.length - 1) {
         controller.move(1);
@@ -528,6 +635,10 @@ void main() {
     for (final step in [...basicTourSteps, ...detailedTourSteps]) {
       expect(tourEnglish.containsKey(step.id), isTrue);
       expect(tourArabic.containsKey('${step.id}.title'), isTrue);
+      if (step.nextHint != null) {
+        expect(tourEnglish.containsKey(step.nextHint), isTrue);
+        expect(tourArabic.containsKey(step.nextHint), isTrue);
+      }
     }
   });
   for (final locale in ['en', 'ar']) {

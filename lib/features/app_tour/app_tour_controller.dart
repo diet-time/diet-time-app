@@ -63,40 +63,55 @@ class TourStep {
     this.destination,
     this.targets, {
     this.optional = false,
+    this.nextHint,
   });
   final String id;
   final String destination;
   final List<String> targets;
   final bool optional;
+  final String? nextHint;
 }
 
 const basicTourSteps = [
   TourStep('welcome', 'home', ['dashboardHeaderControls']),
+  TourStep('menuButton', 'home', [
+    'dashboardMenuButton',
+  ], nextHint: 'menuButton.hint'),
+  TourStep('menu', 'menu', ['guestMealPlanHeader', 'tourMenuScreen']),
+  TourStep('language', 'home', ['dashboardLanguageSelector']),
   TourStep('plans', 'home', [
     'activePlansCarousel',
     'activePlan-',
     'noActivePlan',
   ]),
+  TourStep(
+    'viewDetails',
+    'home',
+    ['viewOrder-'],
+    optional: true,
+    nextHint: 'viewDetails.hint',
+  ),
+  TourStep('orderDetails', 'orderDetails', [
+    'orderDetailsHeader',
+  ], optional: true),
+  TourStep('newPlan', 'home', [
+    'orderAnotherPlan',
+    'choosePlan',
+  ], nextHint: 'newPlan.hint'),
+  TourStep('choosePlan', 'plans', ['mealPlan-', 'tourPlanSelection']),
   TourStep('tomorrow', 'home', ['tomorrowDeliveries'], optional: true),
-  TourStep('navigation', 'home', ['dashboardNavigation']),
-  TourStep('orders', 'orders', ['tourOrdersList']),
-  TourStep('calendar', 'calendar', [
-    'tourCalendarGrid',
-    'emptyDashboardCalendar',
-  ]),
+  TourStep('chooseMeals', 'home', ['chooseTomorrowMeals'], optional: true),
+  TourStep('navigation', 'home', ['dashboardHomeTab']),
+  TourStep('orders', 'orders', ['dashboardOrdersTab']),
+  TourStep('calendar', 'calendar', ['dashboardCalendarTab']),
+  TourStep('profileTab', 'profile', ['dashboardProfileTab']),
   TourStep('profile', 'profile', ['customerProfileOption']),
   TourStep('questionnaire', 'profile', ['customerQuestionnaireOption']),
   TourStep('addresses', 'profile', ['customerAddressOption']),
-  TourStep('language', 'home', ['dashboardLanguageSelector']),
-  TourStep('menu', 'menu', ['guestMealPlanHeader', 'tourMenuScreen']),
-  TourStep('choosePlan', 'plans', ['mealPlan-', 'tourPlanSelection']),
   TourStep('settings', 'profile', ['appTourSetting']),
 ];
 const detailedTourSteps = [
   TourStep('confirmation', 'home', ['confirmTomorrowMeals'], optional: true),
-  TourStep('orderDetails', 'orderDetails', [
-    'orderDetailsHeader',
-  ], optional: true),
   TourStep('calendarNavigation', 'calendar', [
     'nextDeliveryMonth',
   ], optional: true),
@@ -158,6 +173,8 @@ class AppTourController extends Notifier<AppTourState> {
   TourNavigator? navigate;
   String? _attemptedOwner;
   int _generation = 0;
+  List<TourStep> _baseSteps = basicTourSteps;
+  bool? _hasActivePlan;
   String? get owner {
     final auth = ref.read(otpAuthControllerProvider);
     final profile = ref.read(personalizationControllerProvider);
@@ -188,7 +205,7 @@ class AppTourController extends Notifier<AppTourState> {
     return const AppTourState();
   }
 
-  void maybeStart() {
+  void maybeStart({bool? hasPlanCards, bool? hasActivePlan}) {
     final current = owner;
     if (current == null ||
         current == _attemptedOwner ||
@@ -199,7 +216,16 @@ class AppTourController extends Notifier<AppTourState> {
       return;
     }
     _attemptedOwner = current;
-    state = const AppTourState(running: true);
+    _hasActivePlan = hasActivePlan;
+    _baseSteps = [
+      for (final step in basicTourSteps)
+        if (!(hasPlanCards == false &&
+                const {'viewDetails', 'orderDetails'}.contains(step.id)) &&
+            !(hasActivePlan == false &&
+                const {'tomorrow', 'chooseMeals'}.contains(step.id)))
+          step,
+    ];
+    state = AppTourState(running: true, steps: _baseSteps);
   }
 
   void detail(bool enabled) {
@@ -210,9 +236,12 @@ class AppTourController extends Notifier<AppTourState> {
       running: true,
       detailed: enabled,
       steps: [
-        ...basicTourSteps.take(12),
-        if (enabled) ...detailedTourSteps,
-        basicTourSteps.last,
+        ..._baseSteps.take(_baseSteps.length - 1),
+        if (enabled)
+          ...detailedTourSteps.where(
+            (step) => _hasActivePlan != false || step.id != 'confirmation',
+          ),
+        _baseSteps.last,
       ],
     );
   }

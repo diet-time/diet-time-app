@@ -198,23 +198,10 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
       Duration(days: (selectedDate.weekday - DateTime.saturday + 7) % 7),
     );
     final language = _language ?? 'en';
-    final loaded = _menuData;
-    final selectedPlan = data.mealPlans
-        .where((plan) => plan.isSelected)
-        .firstOrNull;
     return GuestHomeData(
       mealPlans: data.mealPlans,
       weeklyCalendar: List.generate(7, (index) {
         final date = weekStart.add(Duration(days: index));
-        final known = data.weeklyCalendar
-            .where((item) => _sameDate(item.date, date))
-            .firstOrNull;
-        // Retain server availability. A successful date-specific menu also confirms its published day.
-        final published =
-            loaded != null &&
-            _sameDate(loaded.date, date) &&
-            loaded.planId.isNotEmpty &&
-            loaded.planId == selectedPlan?.id;
         return GuestCalendarDate(
           date: date,
           dayNumber: date.day,
@@ -222,9 +209,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
           shortDayName: DateFormat('EEE', language).format(date),
           isToday: _sameDate(date, today),
           isSelected: _sameDate(date, selectedDate),
-          isAvailable:
-              date.weekday != DateTime.friday &&
-              (known?.isAvailable == true || published),
+          isAvailable: true,
         );
       }),
     );
@@ -246,11 +231,11 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     }
     final initiallySelected = _firstSelected(
       data.weeklyCalendar,
-      (item) => item.isSelected && item.isAvailable && item.date != null,
+      (item) => item.isSelected && item.date != null,
     )?.date;
     if (initiallySelected != null) return initiallySelected;
     return data.weeklyCalendar
-        .where((item) => item.isAvailable && item.date != null)
+        .where((item) => item.date != null)
         .firstOrNull
         ?.date;
   }
@@ -335,7 +320,6 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   Future<void> _selectDate(GuestCalendarDate date) async {
     final data = _homeData;
     if (data == null ||
-        !date.isAvailable ||
         _sameDate(date.date, _selectedDate) ||
         date.date == null ||
         _selectedPlanCode == null) {
@@ -362,10 +346,6 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     required int selectionRequestId,
     bool force = false,
   }) async {
-    if (_dashboardOrigin && date.weekday == DateTime.friday) {
-      _applyMenu(GuestMenuResponse.empty(planCode: planCode, date: date).data);
-      return;
-    }
     final language = _language ?? 'en';
     final plan = _homeData?.mealPlans
         .where((item) => item.code == planCode)
@@ -425,7 +405,12 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
     );
     final selectedMealTimeCode = hasSelectedFilter
         ? _selectedMealTimeCode
-        : 'ALL';
+        : filters
+              .firstWhere(
+                (filter) => filter.code != 'ALL',
+                orElse: () => filters.first,
+              )
+              .code;
     final visibleMeals = _filterMeals(data, selectedMealTimeCode);
     setState(() {
       _menuData = data;
@@ -540,9 +525,7 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
 
   bool _isDateAvailable(GuestHomeData data, DateTime? date) {
     if (date == null) return false;
-    return data.weeklyCalendar.any(
-      (item) => item.isAvailable && _sameDate(item.date, date),
-    );
+    return data.weeklyCalendar.any((item) => _sameDate(item.date, date));
   }
 
   List<GuestMeal> _filterMeals(GuestMenuData data, String filterCode) {
@@ -560,32 +543,13 @@ class _BrowseMenuScreenState extends ConsumerState<BrowseMenuScreen> {
   }
 
   List<GuestMenuSlot> _configuredMenuSlots(GuestMenuData? data) {
-    final menuSlots = data?.slots ?? const <GuestMenuSlot>[];
-    final plan = _homeData?.mealPlans
-        .where((item) => item.code == _selectedPlanCode)
-        .firstOrNull;
-    if (plan == null || plan.slots.isEmpty) {
-      return menuSlots.toList(growable: false)
-        ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-    }
-
-    final configuredOrder = <String, int>{};
-    for (var index = 0; index < plan.slots.length; index++) {
-      final code = normalizeMealTimeCode(plan.slots[index].mealTime.code);
-      if (code.isNotEmpty) configuredOrder.putIfAbsent(code, () => index);
-    }
-    final configuredSlots = menuSlots
-        .where(
-          (slot) => configuredOrder.containsKey(
-            normalizeMealTimeCode(slot.mealTime.code),
-          ),
-        )
-        .toList(growable: false);
-    return configuredSlots..sort((a, b) {
-      final aOrder = configuredOrder[normalizeMealTimeCode(a.mealTime.code)]!;
-      final bOrder = configuredOrder[normalizeMealTimeCode(b.mealTime.code)]!;
-      final order = aOrder.compareTo(bOrder);
-      return order != 0 ? order : a.displayOrder.compareTo(b.displayOrder);
+    // The date-specific API menu is authoritative; metadata from another day
+    // must never hide its slots or override configured meal-type ordering.
+    return [...?data?.slots]..sort((a, b) {
+      final typeOrder = compareGuestMealTimes(a.mealTime, b.mealTime);
+      if (typeOrder != 0) return typeOrder;
+      final slotOrder = a.displayOrder.compareTo(b.displayOrder);
+      return slotOrder != 0 ? slotOrder : a.id.compareTo(b.id);
     });
   }
 

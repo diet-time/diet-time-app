@@ -7,6 +7,25 @@ String tourCopy(BuildContext context, String key) {
 }
 
 const tourEnglish = <String, String>{
+  'progress': 'Tour progress',
+  'menuButton.title': 'Menu button',
+  'menuButton':
+      'Use Menu to browse dishes, dates and nutrition before choosing a plan. It opens the same menu you can return to from Home.',
+  'menuButton.hint': 'Next opens the Menu screen.',
+  'viewDetails.title': 'View Details',
+  'viewDetails':
+      'This button opens the full order for this plan: approval status, payment, service dates and takeaway or delivery information.',
+  'viewDetails.hint': 'Next opens your order details.',
+  'newPlan.title': 'Choose or add a plan',
+  'newPlan':
+      'Choose Plan starts your first plan. Order Another Plan lets you add a new one. You can review packages and dates before placing an order.',
+  'newPlan.hint': 'Next opens the plan list.',
+  'chooseMeals.title': 'Choose tomorrow’s meals',
+  'chooseMeals':
+      'When selection is open, this button lets you review or change tomorrow’s assigned dishes. Review your choices before confirming them.',
+  'profileTab.title': 'Profile button',
+  'profileTab':
+      'Use this bottom button for personal information, your questionnaire, saved addresses and the app-tour setting.',
   'enable': 'Enable App Tour',
   'description': 'Explore the app with a guided walkthrough.',
   'next': 'Next',
@@ -20,25 +39,26 @@ const tourEnglish = <String, String>{
   'enabled': 'Tour enabled. Return to Home to start.',
   'loading': 'Finding this feature…',
   'confirmation.title': 'Confirm your meals',
-  'confirmation': 'When confirmation is available, review all your choices here before confirming. Confirmation can lock the choices for that service day. This tour never confirms meals for you.',
+  'confirmation':
+      'When confirmation is available, review all your choices here before confirming. Confirmation can lock the choices for that service day. This tour never confirms meals for you.',
   'welcome.title': 'Welcome to Diet Time',
   'welcome':
-      'Let’s explore your app. Nothing is ordered or changed during this walkthrough. You can skip at any time.',
+      'We’ll highlight the buttons you use most. Next explores the next feature, Previous takes you back, and Skip Tour returns to Home.',
   'plans.title': 'My Plans',
   'plans':
       'Your plans appear here. Pending orders await staff approval; confirmed and active plans show their actual status. View Details opens the full order.',
   'tomorrow.title': 'Tomorrow’s meals',
   'tomorrow':
       'See your next meals and their service status here. Open a meal to review its details.',
-  'navigation.title': 'Your navigation',
+  'navigation.title': 'Home button',
   'navigation':
-      'Use Home, Orders, Calendar and Profile to move around the app.',
-  'orders.title': 'Orders and subscriptions',
+      'Tap Home to return to your dashboard, current plans and tomorrow’s meals from any dashboard tab.',
+  'orders.title': 'Orders button',
   'orders':
-      'Review your orders and filter by status. Approval and payment are separate; pending orders stay pending until staff approve them.',
-  'calendar.title': 'Your meal calendar',
+      'Tap Orders to see your purchases and filter them by status. Open an order to review it; approval and payment are shown separately.',
+  'calendar.title': 'Calendar button',
   'calendar':
-      'Browse your service dates and select a day to see its orders and meals below. Your calendar appears when a plan is available.',
+      'Tap Calendar for service dates. Choose a day to see its orders and meals below the calendar.',
   'profile.title': 'Your profile',
   'profile':
       'Open Customer Profile to review or update your personal information.',
@@ -92,6 +112,25 @@ const tourEnglish = <String, String>{
       'Each dish shows its nutrition. Open a dish after the tour for the full details.',
 };
 const tourArabic = <String, String>{
+  'progress': 'تقدم الجولة',
+  'menuButton.title': 'زر القائمة',
+  'menuButton':
+      'استخدم القائمة لاستعراض الأطباق والتواريخ والقيم الغذائية قبل اختيار خطة. يمكنك العودة إليها من الرئيسية في أي وقت.',
+  'menuButton.hint': 'التالي يفتح شاشة القائمة.',
+  'viewDetails.title': 'عرض التفاصيل',
+  'viewDetails':
+      'يفتح هذا الزر الطلب الكامل لهذه الخطة، بما في ذلك الموافقة والدفع وتواريخ الخدمة ومعلومات الاستلام أو التوصيل.',
+  'viewDetails.hint': 'التالي يفتح تفاصيل طلبك.',
+  'newPlan.title': 'اختيار خطة أو إضافة خطة',
+  'newPlan':
+      'اختر خطة لبدء خطتك الأولى، أو اطلب خطة أخرى لإضافة خطة جديدة. يمكنك مراجعة الباقات والتواريخ قبل تقديم الطلب.',
+  'newPlan.hint': 'التالي يفتح قائمة الخطط.',
+  'chooseMeals.title': 'اختيار وجبات الغد',
+  'chooseMeals':
+      'عندما يكون الاختيار متاحاً، يتيح هذا الزر مراجعة وجبات الغد المخصصة أو تغييرها. راجع اختياراتك قبل تأكيدها.',
+  'profileTab.title': 'زر الملف الشخصي',
+  'profileTab':
+      'استخدم هذا الزر السفلي للوصول إلى المعلومات الشخصية والاستبيان والعناوين المحفوظة وإعداد جولة التطبيق.',
   'enable': 'تفعيل جولة التطبيق',
   'description': 'استكشف التطبيق من خلال جولة إرشادية.',
   'next': 'التالي',
@@ -105,24 +144,26 @@ const tourArabic = <String, String>{
   'enabled': 'تم تفعيل الجولة. ارجع إلى الرئيسية للبدء.',
   'loading': 'جارٍ العثور على الميزة…',
   'confirmation.title': 'تأكيد وجباتك',
-  'confirmation': 'عند إتاحة التأكيد، راجع جميع اختياراتك هنا أولاً. قد يؤدي التأكيد إلى قفل اختيارات يوم الخدمة. الجولة لا تؤكد الوجبات نيابة عنك.',
+  'confirmation':
+      'عند إتاحة التأكيد، راجع جميع اختياراتك هنا أولاً. قد يؤدي التأكيد إلى قفل اختيارات يوم الخدمة. الجولة لا تؤكد الوجبات نيابة عنك.',
   'welcome.title': 'مرحباً بك في دايت تايم',
   'welcome':
-      'لنستكشف التطبيق. لن يتم تقديم طلب أو تغيير اختياراتك خلال الجولة. يمكنك تخطيها في أي وقت.',
+      'سنوضح الأزرار الأكثر استخداماً. التالي يستعرض الميزة التالية، والسابق يعيدك إلى الخطوة الماضية، وتخطي الجولة يعيدك إلى الرئيسية.',
   'plans.title': 'خططي',
   'plans':
       'تظهر خططك هنا. الطلبات المعلقة تنتظر موافقة الفريق، وتظهر الخطط المؤكدة والنشطة بحالتها الفعلية. افتح التفاصيل للاطلاع على الطلب.',
   'tomorrow.title': 'وجبات الغد',
   'tomorrow':
       'اطلع على وجباتك القادمة وحالة الخدمة هنا. افتح الوجبة لمراجعة تفاصيلها.',
-  'navigation.title': 'التنقل في التطبيق',
-  'navigation': 'استخدم الرئيسية والطلبات والتقويم والملف الشخصي للتنقل.',
-  'orders.title': 'الطلبات والاشتراكات',
+  'navigation.title': 'زر الرئيسية',
+  'navigation':
+      'اضغط الرئيسية للعودة إلى لوحة التحكم وخططك الحالية ووجبات الغد من أي تبويب.',
+  'orders.title': 'زر الطلبات',
   'orders':
-      'راجع طلباتك وصفّها حسب الحالة. الموافقة والدفع منفصلان؛ تبقى الطلبات معلقة حتى يوافق الفريق.',
-  'calendar.title': 'تقويم وجباتك',
+      'اضغط الطلبات لرؤية مشترياتك وتصفيتها حسب الحالة. افتح طلباً لمراجعته؛ تظهر الموافقة والدفع بشكل منفصل.',
+  'calendar.title': 'زر التقويم',
   'calendar':
-      'استعرض تواريخ الخدمة واختر يوماً لرؤية طلباته ووجباته أدناه. يظهر التقويم عند توفر خطة.',
+      'اضغط التقويم لرؤية تواريخ الخدمة. اختر يوماً لعرض طلباته ووجباته أسفل التقويم.',
   'profile.title': 'ملفك الشخصي',
   'profile': 'افتح ملف العميل لمراجعة معلوماتك الشخصية أو تحديثها.',
   'questionnaire.title': 'الأهداف والتفضيلات',
