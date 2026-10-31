@@ -9,6 +9,10 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get customerPlanSupportHelp =>
+      'Contact Diet Time for help with your plan.';
+
+  @override
   String get deliveriesTitle => 'Tomorrow’s Deliveries';
 
   @override
@@ -1424,7 +1428,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get customerQuestionnaireUpdatedSuccessfully =>
-      'Questionnaire updated successfully';
+      'Your plan preferences have been updated.';
 
   @override
   String get customerLogout => 'Logout';
@@ -1612,7 +1616,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'View or update your personal information';
 
   @override
-  String get customerQuestionnaire => 'Questionnaire';
+  String get customerQuestionnaire => 'Adjust My Plan';
 
   @override
   String get customerCaptureYourGoalsAndFoodPreferences =>

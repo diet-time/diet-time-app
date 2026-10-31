@@ -477,9 +477,8 @@ void main() {
               ? 'الطلب: DT-20261028-00001234'
               : 'Order: DT-20261028-00001234',
         );
-        expect(number, findsOneWidget);
-        expect(tester.widget<Text>(number).maxLines, isNull);
-        expect(tester.widget<Text>(number).overflow, isNull);
+        expect(number, findsNothing);
+        expect(find.byTooltip('Order: DT-20261028-00001234'), findsNothing);
         final toggle = inCard(
           'a',
           arabic ? 'عرض الوجبات المؤكدة' : 'View confirmed meals',

@@ -98,6 +98,12 @@ abstract class AppLocalizations {
     Locale('en'),
   ];
 
+  /// No description provided for @customerPlanSupportHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Diet Time for help with your plan.'**
+  String get customerPlanSupportHelp;
+
   /// No description provided for @deliveriesTitle.
   ///
   /// In en, this message translates to:
@@ -2567,7 +2573,7 @@ abstract class AppLocalizations {
   /// No description provided for @customerQuestionnaireUpdatedSuccessfully.
   ///
   /// In en, this message translates to:
-  /// **'Questionnaire updated successfully'**
+  /// **'Your plan preferences have been updated.'**
   String get customerQuestionnaireUpdatedSuccessfully;
 
   /// No description provided for @customerLogout.
@@ -2921,7 +2927,7 @@ abstract class AppLocalizations {
   /// No description provided for @customerQuestionnaire.
   ///
   /// In en, this message translates to:
-  /// **'Questionnaire'**
+  /// **'Adjust My Plan'**
   String get customerQuestionnaire;
 
   /// No description provided for @customerCaptureYourGoalsAndFoodPreferences.

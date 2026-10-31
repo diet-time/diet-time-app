@@ -2113,8 +2113,9 @@ IconData _filterIcon(String code) {
     'BREAKFAST' => Icons.wb_sunny_outlined,
     'LUNCH' => Icons.lunch_dining_outlined,
     'DINNER' => Icons.nightlight_outlined,
-    'SNACK' => Icons.apple_outlined,
-    _ => Icons.grid_view_rounded,
+    'SNACK' => Icons.cookie_outlined,
+    'ALL' => Icons.grid_view_rounded,
+    _ => Icons.restaurant_rounded,
   };
 }
 

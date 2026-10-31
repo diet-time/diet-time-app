@@ -239,7 +239,7 @@ void main() {
     );
 
     expect(find.text('Order Confirmed!'), findsOneWidget);
-    expect(find.text('ORD-20260810-000001'), findsOneWidget);
+    expect(find.text('ORD-20260810-000001'), findsNothing);
     expect(find.text('1880 QAR'), findsOneWidget);
   });
 }

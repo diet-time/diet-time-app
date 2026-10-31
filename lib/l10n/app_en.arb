@@ -1,4 +1,5 @@
 {
+  "customerPlanSupportHelp": "Contact Diet Time for help with your plan.",
   "@@locale": "en",
   "deliveriesTitle": "Tomorrow’s Deliveries",
   "deliveriesScheduled": "{count} scheduled {count, plural, =1{order} other{orders}}",
@@ -573,7 +574,7 @@
   "customerPROFILE": "PROFILE",
   "customerProfileUpdatedSuccessfully": "Profile updated successfully",
   "customerUnableToLoadYourProfile": "Unable to load your profile.",
-  "customerQuestionnaireUpdatedSuccessfully": "Questionnaire updated successfully",
+  "customerQuestionnaireUpdatedSuccessfully": "Your plan preferences have been updated.",
   "customerLogout": "Logout",
   "customerAreYouSureYouWantToLogout": "Are you sure you want to logout?",
   "customerCancel": "Cancel",
@@ -632,7 +633,7 @@
   "customerProfile": "Profile",
   "customerCustomerProfile": "Customer Profile",
   "customerViewOrUpdateYourPersonalInformation": "View or update your personal information",
-  "customerQuestionnaire": "Questionnaire",
+  "customerQuestionnaire": "Adjust My Plan",
   "customerCaptureYourGoalsAndFoodPreferences": "Capture your goals and food preferences",
   "customerAddOrEditYourDeliveryAddress": "Add or edit your delivery address",
   "customerPleaseSignInAgainToViewYourMeals": "Please sign in again to view your meals.",

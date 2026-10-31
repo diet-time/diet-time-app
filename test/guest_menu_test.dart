@@ -1244,6 +1244,8 @@ void main() {
     final repository = _FakeGuestMenuRepository(_response());
     await tester.pumpWidget(_app(repository: repository));
     await _load(tester);
+    expect(find.byIcon(Icons.apple_outlined), findsNothing);
+    expect(find.byIcon(Icons.cookie_outlined), findsWidgets);
 
     await tester.ensureVisible(
       find.byKey(const ValueKey('guest-filter-SNACK')),

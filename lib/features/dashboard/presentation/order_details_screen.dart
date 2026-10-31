@@ -238,7 +238,7 @@ class _OrderDetails extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 12),
-        _SupportBar(orderNumber: order.orderNumber),
+        const _SupportBar(),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(14),
@@ -342,10 +342,10 @@ class _OrderHeaderCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _Label(context.customerCopy('ORDER NUMBER')),
+                  _Label(context.customerCopy('PLAN')),
                   const SizedBox(height: 4),
                   Text(
-                    order.orderNumber,
+                    order.plan.name,
                     style: const TextStyle(
                       color: AppColors.darkGreen,
                       fontSize: 17,
@@ -562,9 +562,7 @@ class _MetricTile extends StatelessWidget {
 }
 
 class _SupportBar extends StatelessWidget {
-  const _SupportBar({required this.orderNumber});
-
-  final String orderNumber;
+  const _SupportBar();
 
   @override
   Widget build(BuildContext context) => Container(
@@ -601,9 +599,7 @@ class _SupportBar extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          lookupAppLocalizations(
-            Localizations.localeOf(context),
-          ).customerOrderReference(orderNumber),
+          context.customerCopy('Contact Diet Time for help with your plan.'),
         ),
       ),
     );

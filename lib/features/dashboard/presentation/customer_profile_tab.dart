@@ -62,7 +62,7 @@ class CustomerProfileTab extends StatelessWidget {
       _ProfileNavigationRow(
         key: const ValueKey('customerQuestionnaireOption'),
         icon: Icons.assignment_outlined,
-        label: context.customerCopy('Questionnaire'),
+        label: context.customerCopy('Adjust My Plan'),
         description: context.customerCopy(
           'Capture your goals and food preferences',
         ),

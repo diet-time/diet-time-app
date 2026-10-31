@@ -111,7 +111,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
                   'Your session has expired. Please sign in again.',
                 ),
               ApiException(failure: ApiFailure.notFound) => context.customerCopy(
-                'This order could not be loaded for your account. Refresh your dashboard or contact our team with your order reference.',
+                'This order could not be loaded for your account. Refresh your dashboard or contact our team for help.',
               ),
               ApiException(failure: ApiFailure.network || ApiFailure.timeout) =>
                 context.customerCopy(
@@ -381,13 +381,6 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  copy.deliveriesOrder(reference),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.darkGreen,
-                  ),
-                ),
                 const SizedBox(height: 8),
                 Semantics(
                   label: copy.deliveriesLoading,
@@ -404,10 +397,6 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
           ),
         if (_error != null) ...[
           const SizedBox(height: 6),
-          Text(
-            copy.deliveriesOrder(reference),
-            style: const TextStyle(fontSize: 11, color: AppColors.darkGreen),
-          ),
           Text(
             _error!,
             style: TextStyle(
@@ -464,12 +453,6 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
             ),
             const SizedBox(height: 4),
             Text(menu.planName),
-            if (widget.orderReference != null)
-              Text(
-                lookupAppLocalizations(
-                  Localizations.localeOf(context),
-                ).deliveriesOrder(widget.orderReference!),
-              ),
             if (fullSelection && menu.orderStatus != null)
               Text(
                 '${context.customerCopy('Order status')}: ${context.customerCopy(orderStatusLabel(menu.orderStatus!))}',

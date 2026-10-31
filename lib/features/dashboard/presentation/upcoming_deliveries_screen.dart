@@ -307,13 +307,6 @@ class _UpcomingDeliveriesScreenState
                         ),
                       ),
                     const SizedBox(height: 4),
-                    Text(
-                      order.orderNumber,
-                      style: const TextStyle(
-                        color: Color(0xFF5E6D60),
-                        fontSize: 11,
-                      ),
-                    ),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 6,

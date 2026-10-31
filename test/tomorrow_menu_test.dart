@@ -150,8 +150,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Order: ORD-A'), findsOneWidget);
-      expect(find.text('Order: ORD-B'), findsOneWidget);
+      expect(find.text('Order: ORD-A'), findsNothing);
+      expect(find.text('Order: ORD-B'), findsNothing);
       expect(find.text('Dish a'), findsNothing);
       expect(find.text('Dish b'), findsNothing);
       await tester.tap(find.text('View confirmed meals').first);

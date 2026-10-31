@@ -562,7 +562,9 @@ extension CustomerCopy on BuildContext {
       "Customer Profile" => copy.customerCustomerProfile,
       "View or update your personal information" =>
         copy.customerViewOrUpdateYourPersonalInformation,
-      "Questionnaire" => copy.customerQuestionnaire,
+      "Questionnaire" || "Adjust My Plan" => copy.customerQuestionnaire,
+      "Contact Diet Time for help with your plan." =>
+        copy.customerPlanSupportHelp,
       "Capture your goals and food preferences" =>
         copy.customerCaptureYourGoalsAndFoodPreferences,
       "Add or edit your delivery address" =>

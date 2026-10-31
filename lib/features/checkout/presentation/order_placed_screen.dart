@@ -138,10 +138,6 @@ class _ConfirmationCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _Detail(
-            label: context.customerCopy('ORDER NUMBER'),
-            value: confirmation.orderNumber,
-          ),
-          _Detail(
             label: context.customerCopy('PLAN'),
             value: confirmation.plan.name,
           ),

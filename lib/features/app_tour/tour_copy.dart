@@ -25,7 +25,7 @@ const tourEnglish = <String, String>{
       'When selection is open, this button lets you review or change tomorrow’s assigned dishes. Review your choices before confirming them.',
   'profileTab.title': 'Profile button',
   'profileTab':
-      'Use this bottom button for personal information, your questionnaire, saved addresses and the app-tour setting.',
+      'Use this bottom button for personal information, Adjust My Plan, saved addresses and the app-tour setting.',
   'enable': 'Enable App Tour',
   'description': 'Explore the app with a guided walkthrough.',
   'next': 'Next',
@@ -62,9 +62,9 @@ const tourEnglish = <String, String>{
   'profile.title': 'Your profile',
   'profile':
       'Open Customer Profile to review or update your personal information.',
-  'questionnaire.title': 'Goals and preferences',
+  'questionnaire.title': 'Adjust My Plan',
   'questionnaire':
-      'Open Questionnaire to update your goals, routine, dietary preferences and allergens.',
+      'Open Adjust My Plan to update your goals, routine, dietary preferences and allergens.',
   'addresses.title': 'Saved addresses',
   'addresses':
       'Add or edit addresses here. Home Delivery needs an address; Takeaway uses your selected branch.',
@@ -130,7 +130,7 @@ const tourArabic = <String, String>{
       'عندما يكون الاختيار متاحاً، يتيح هذا الزر مراجعة وجبات الغد المخصصة أو تغييرها. راجع اختياراتك قبل تأكيدها.',
   'profileTab.title': 'زر الملف الشخصي',
   'profileTab':
-      'استخدم هذا الزر السفلي للوصول إلى المعلومات الشخصية والاستبيان والعناوين المحفوظة وإعداد جولة التطبيق.',
+      'استخدم هذا الزر السفلي للوصول إلى المعلومات الشخصية وعدّل خطتي والعناوين المحفوظة وإعداد جولة التطبيق.',
   'enable': 'تفعيل جولة التطبيق',
   'description': 'استكشف التطبيق من خلال جولة إرشادية.',
   'next': 'التالي',
@@ -166,9 +166,9 @@ const tourArabic = <String, String>{
       'اضغط التقويم لرؤية تواريخ الخدمة. اختر يوماً لعرض طلباته ووجباته أسفل التقويم.',
   'profile.title': 'ملفك الشخصي',
   'profile': 'افتح ملف العميل لمراجعة معلوماتك الشخصية أو تحديثها.',
-  'questionnaire.title': 'الأهداف والتفضيلات',
+  'questionnaire.title': 'عدّل خطتي',
   'questionnaire':
-      'افتح الاستبيان لتحديث أهدافك وروتينك وتفضيلاتك الغذائية والحساسيات.',
+      'افتح عدّل خطتي لتحديث أهدافك وروتينك وتفضيلاتك الغذائية والحساسيات.',
   'addresses.title': 'العناوين المحفوظة',
   'addresses':
       'أضف العناوين أو عدّلها هنا. التوصيل المنزلي يحتاج عنواناً، والاستلام يستخدم الفرع المختار.',

@@ -9,6 +9,9 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String get customerPlanSupportHelp => 'تواصل مع دايت تايم للمساعدة في خطتك.';
+
+  @override
   String get deliveriesTitle => 'توصيلات الغد';
 
   @override
@@ -1394,7 +1397,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get customerQuestionnaireUpdatedSuccessfully =>
-      'تم تحديث الاستبيان بنجاح';
+      'تم تحديث تفضيلات خطتك.';
 
   @override
   String get customerLogout => 'تسجيل الخروج';
@@ -1579,7 +1582,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'عرض بياناتك الشخصية أو تحديثها';
 
   @override
-  String get customerQuestionnaire => 'الاستبيان';
+  String get customerQuestionnaire => 'عدّل خطتي';
 
   @override
   String get customerCaptureYourGoalsAndFoodPreferences =>

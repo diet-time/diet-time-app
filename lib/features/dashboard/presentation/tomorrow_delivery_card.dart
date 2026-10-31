@@ -54,12 +54,6 @@ class TomorrowDeliveryCard extends StatelessWidget {
       TomorrowDeliveryState.locked => copy.deliveriesLocked,
       TomorrowDeliveryState.unavailable => copy.deliveriesWaiting,
     };
-    final reference = menu.orderNumber?.trim().isNotEmpty == true
-        ? menu.orderNumber!.trim()
-        : orderReference;
-    final secondary = reference == menu.subscriptionId
-        ? '#${reference.length > 8 ? reference.substring(reference.length - 8) : reference}'
-        : reference;
     final accent = actionable
         ? const Color(0xFF886018)
         : AppColors.emeraldGreen;
@@ -120,16 +114,6 @@ class TomorrowDeliveryCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Tooltip(
-                      message: copy.deliveriesOrder(reference),
-                      child: Text(
-                        copy.deliveriesOrder(secondary),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.darkGreen.withValues(alpha: .62),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),

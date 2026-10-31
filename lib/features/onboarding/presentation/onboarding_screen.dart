@@ -95,6 +95,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       }
       return;
     }
+    if (!mounted) return;
     final persistence = ref.read(profilePersistenceControllerProvider);
     final profile = persistence.hasLoaded && persistence.errorMessage == null
         ? ref.read(personalizationControllerProvider)
@@ -256,6 +257,14 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   Future<void> _notNow() async {
     if (_skipping) return;
     setState(() => _skipping = true);
+    if (widget.customerProfileMode) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(false);
+      } else {
+        context.go(AppRoutes.home);
+      }
+      return;
+    }
     try {
       await _profileLoad;
       final profile = ref.read(personalizationControllerProvider);

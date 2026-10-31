@@ -17,6 +17,86 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final count in [1, 2]) {
+    testWidgets(
+      'My Plan works for $count pending plans with one New Plan action',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(800, 1400));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final orders = [
+          for (var i = 0; i < count; i++)
+            _reviewSummary('pending-$i', 'PENDING_APPROVAL'),
+        ];
+        String? selectedId;
+        final router = GoRouter(
+          initialLocation: AppRoutes.home,
+          routes: [
+            GoRoute(
+              path: AppRoutes.home,
+              builder: (_, _) => const CustomerDashboardScreen(),
+            ),
+            GoRoute(
+              path: AppRoutes.orderDetails,
+              builder: (_, state) {
+                selectedId = state.extra as String;
+                return const Scaffold(body: Text('Selected plan details'));
+              },
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              customerDashboardControllerProvider.overrideWith(
+                () => _DashboardControllerForTest(
+                  DashboardWithoutActivePlan(orders),
+                ),
+              ),
+              ordersRepositoryProvider.overrideWithValue(
+                _FakeOrdersRepository(orders),
+              ),
+            ],
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('dashboardMyPlan')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('ORDER ANOTHER PLAN'), findsNothing);
+        expect(find.byKey(const ValueKey('orderAnotherPlan')), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('dashboardMyPlan')));
+        await tester.pumpAndSettle();
+        if (count == 1) {
+          expect(selectedId, 'pending-0');
+          expect(find.text('Selected plan details'), findsOneWidget);
+        } else {
+          expect(
+            tester
+                .widget<NavigationBar>(
+                  find.byKey(const ValueKey('dashboardNavigation')),
+                )
+                .selectedIndex,
+            1,
+          );
+          expect(
+            find.byKey(const ValueKey('detailedOrder-pending-0')),
+            findsOneWidget,
+          );
+          expect(find.text('ORD-pending-0'), findsNothing);
+        }
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
   testWidgets(
     'dashboard does not poll while idle and still allows explicit refresh',
     (tester) async {
@@ -271,7 +351,7 @@ void main() {
           'pending',
         );
         expect(find.text(copy.dashboardPendingApproval), findsOneWidget);
-        expect(find.text('ORD-pending'), findsWidgets);
+        expect(find.text('ORD-pending'), findsNothing);
         expect(tester.takeException(), isNull);
       },
     );
@@ -545,7 +625,8 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('QUICK ACTIONS'), findsOneWidget);
-    expect(find.textContaining('ORDER ANOTHER PLAN'), findsOneWidget);
+    expect(find.textContaining('ORDER ANOTHER PLAN'), findsNothing);
+    expect(find.byKey(const ValueKey('orderAnotherPlan')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -643,7 +724,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('orderDetailsHeader')), findsOneWidget);
-    expect(find.text('ORDER NUMBER'), findsOneWidget);
+    expect(find.text('ORDER NUMBER'), findsNothing);
+    expect(find.text('ORD-active'), findsNothing);
     expect(find.text('PAYMENT STATUS'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

@@ -452,37 +452,14 @@ class _DashboardHome extends ConsumerWidget {
             const _NoActivePlanCard(),
           ],
           const SizedBox(height: 22),
-          if (plans.isNotEmpty)
-            OutlinedButton.icon(
-              key: const ValueKey('orderAnotherPlan'),
-              onPressed: () => _startNewOrder(context, ref),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.darkGreen,
-                minimumSize: const Size.fromHeight(46),
-                side: BorderSide(
-                  color: AppColors.emeraldGreen.withValues(alpha: .5),
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              icon: const Icon(Icons.add_rounded, size: 17),
-              label: Text(
-                context.customerCopy('ORDER ANOTHER PLAN'),
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
-              ),
-            ),
           if (plans.isNotEmpty) ...[
             const SizedBox(height: 24),
             _SectionTitle(context.customerCopy('QUICK ACTIONS')),
             const SizedBox(height: 10),
             _QuickActions(
-              onPlan: single == null
-                  ? null
-                  : () => context.push(
-                      AppRoutes.orderDetails,
-                      extra: single.order.id,
-                    ),
+              onPlan: plans.length == 1
+                  ? () => _openReviewedOrder(context, plans.single.id)
+                  : onViewAll,
               onOrders: onViewAll,
               onNewPlan: () => _startNewOrder(context, ref),
             ),
@@ -1346,7 +1323,7 @@ class _QuickActions extends StatelessWidget {
     required this.onNewPlan,
   });
 
-  final VoidCallback? onPlan;
+  final VoidCallback onPlan;
   final VoidCallback onOrders;
   final VoidCallback onNewPlan;
 
@@ -1356,6 +1333,7 @@ class _QuickActions extends StatelessWidget {
       Expanded(
         child: _QuickAction(
           icon: Icons.badge_outlined,
+          key: const ValueKey('dashboardMyPlan'),
           label: context.customerCopy('My Plan'),
           onTap: onPlan,
         ),
@@ -1372,6 +1350,7 @@ class _QuickActions extends StatelessWidget {
       Expanded(
         child: _QuickAction(
           icon: Icons.add_circle_outline_rounded,
+          key: const ValueKey('orderAnotherPlan'),
           label: context.customerCopy('New Plan'),
           onTap: onNewPlan,
         ),
@@ -1396,6 +1375,7 @@ class _QuickActions extends StatelessWidget {
 
 class _QuickAction extends StatelessWidget {
   const _QuickAction({
+    super.key,
     required this.icon,
     required this.label,
     required this.onTap,
@@ -1481,13 +1461,6 @@ class _OrderRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  order.orderNumber,
-                  style: const TextStyle(
-                    color: AppColors.darkGreen,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
                 const SizedBox(height: 4),
                 Text(
                   '${order.planName} · ${_period(order.startDate, order.endDate)}',
@@ -1861,16 +1834,6 @@ class _DetailedOrderCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        order.orderNumber,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.darkGreen,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
                       const SizedBox(height: 4),
                       Text(
                         order.planName,

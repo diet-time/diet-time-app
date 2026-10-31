@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/core/storage/secure_storage_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
@@ -80,6 +79,99 @@ class AddressFormController extends CheckoutController {
 }
 
 void main() {
+  for (final language in ['en', 'ar']) {
+    testWidgets(
+      'Profile Adjust My Plan Not now returns to Profile without creating a draft ($language)',
+      (tester) async {
+        final storage = DraftStorage();
+        storage.values.addAll({
+          SecureStorageService.accessTokenKey: 'token',
+          SecureStorageService.authenticatedUserIdKey: 'customer',
+          SecureStorageService.accessTokenExpiresAtKey: DateTime.now()
+              .toUtc()
+              .add(const Duration(hours: 1))
+              .toIso8601String(),
+        });
+        final container = ProviderContainer(
+          overrides: [
+            secureStorageServiceProvider.overrideWithValue(storage),
+            profilePersistenceControllerProvider.overrideWith(
+              LocalProfileController.new,
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        container
+            .read(personalizationControllerProvider.notifier)
+            .replace(
+              const CustomerProfile(
+                profileId: 'customer',
+                goalCode: 'LOSE_WEIGHT',
+                preferences: {'CHICKEN'},
+              ),
+            );
+        final router = GoRouter(
+          initialLocation: AppRoutes.home,
+          routes: [
+            GoRoute(
+              path: AppRoutes.home,
+              builder: (context, _) => Scaffold(
+                body: TextButton(
+                  onPressed: () =>
+                      context.push(AppRoutes.customerQuestionnaire),
+                  child: const Text('Open Adjust My Plan'),
+                ),
+              ),
+            ),
+            GoRoute(
+              path: AppRoutes.customerQuestionnaire,
+              builder: (_, _) =>
+                  const PersonalizationScreen(customerProfileMode: true),
+            ),
+            GoRoute(
+              path: AppRoutes.plans,
+              builder: (_, _) =>
+                  const Scaffold(body: Text('Unexpected plans redirect')),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(
+              routerConfig: router,
+              locale: Locale(language),
+              supportedLocales: AppLocalizations.supportedLocales,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+            ),
+          ),
+        );
+        await tester.tap(find.text('Open Adjust My Plan'));
+        await tester.pumpAndSettle();
+        expect(router.canPop(), isTrue);
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('personalizationNotNow')),
+        );
+        await tester.tap(find.byKey(const ValueKey('personalizationNotNow')));
+        await tester.pumpAndSettle();
+        expect(find.text('Open Adjust My Plan'), findsOneWidget);
+        expect(find.text('Unexpected plans redirect'), findsNothing);
+        expect(router.canPop(), isFalse);
+        expect(container.read(questionnaireDeferralProvider), isFalse);
+        expect(
+          storage.values.keys.where((key) => key.startsWith('questionnaire.')),
+          isEmpty,
+        );
+        expect(container.read(personalizationControllerProvider).preferences, {
+          'CHICKEN',
+        });
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
   test(
     'address fields accept numeric streets, identifiers, Arabic names and free directions',
     () {
@@ -132,7 +224,7 @@ void main() {
 
   for (final session in ['guest', 'authenticated', 'expired']) {
     testWidgets(
-      'Not now saves draft and routes $session without completing questionnaire',
+      'Profile entry handles $session without completing questionnaire',
       (tester) async {
         final storage = DraftStorage();
         if (session != 'guest') {
@@ -221,26 +313,19 @@ void main() {
         await tester.ensureVisible(skip);
         await tester.tap(skip);
         await tester.pumpAndSettle();
-        expect(find.text('Plans'), findsOneWidget);
-        final key = session == 'guest'
-            ? 'questionnaire.guest'
-            : 'questionnaire.user.customer';
-        final draft = jsonDecode(storage.values[key]!) as Map<String, dynamic>;
-        expect(draft['goalCode'], 'LOSE_WEIGHT');
-        expect(draft['preferences'], ['CHICKEN']);
-        expect(draft['onboardingStatus'], 'IN_PROGRESS');
+        expect(find.text('Customer Dashboard'), findsOneWidget);
+        expect(
+          storage.values.keys.where((key) => key.startsWith('questionnaire.')),
+          isEmpty,
+        );
+        expect(container.read(personalizationControllerProvider).preferences, {
+          'CHICKEN',
+        });
         expect(
           container.read(personalizationControllerProvider).isCompleted,
           false,
         );
-        expect(
-          container.read(personalizationControllerProvider).allergensConfirmed,
-          false,
-        );
-        expect(container.read(questionnaireDeferralProvider), true);
-        router.go(AppRoutes.authenticatedLanding);
-        await tester.pumpAndSettle();
-        expect(find.text('Plans'), findsOneWidget);
+        expect(container.read(questionnaireDeferralProvider), false);
         await tester.pumpWidget(const SizedBox());
       },
     );

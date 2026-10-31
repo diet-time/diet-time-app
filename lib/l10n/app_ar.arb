@@ -1,4 +1,5 @@
 {
+  "customerPlanSupportHelp": "تواصل مع دايت تايم للمساعدة في خطتك.",
   "@@locale": "ar",
   "deliveriesTitle": "توصيلات الغد",
   "deliveriesScheduled": "{count} طلبات مجدولة",
@@ -518,7 +519,7 @@
   "customerPROFILE": "الملف الشخصي",
   "customerProfileUpdatedSuccessfully": "تم تحديث الملف بنجاح",
   "customerUnableToLoadYourProfile": "تعذر تحميل ملفك.",
-  "customerQuestionnaireUpdatedSuccessfully": "تم تحديث الاستبيان بنجاح",
+  "customerQuestionnaireUpdatedSuccessfully": "تم تحديث تفضيلات خطتك.",
   "customerLogout": "تسجيل الخروج",
   "customerAreYouSureYouWantToLogout": "هل تريد تسجيل الخروج؟",
   "customerCancel": "إلغاء",
@@ -577,7 +578,7 @@
   "customerProfile": "الملف الشخصي",
   "customerCustomerProfile": "ملف العميل",
   "customerViewOrUpdateYourPersonalInformation": "عرض بياناتك الشخصية أو تحديثها",
-  "customerQuestionnaire": "الاستبيان",
+  "customerQuestionnaire": "عدّل خطتي",
   "customerCaptureYourGoalsAndFoodPreferences": "أدخل أهدافك وتفضيلاتك الغذائية",
   "customerAddOrEditYourDeliveryAddress": "أضف عنوان التوصيل أو عدله",
   "customerPleaseSignInAgainToViewYourMeals": "يرجى تسجيل الدخول مرة أخرى لعرض وجباتك.",
