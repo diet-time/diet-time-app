@@ -593,7 +593,8 @@ String mealDayStatusLabel(String status) => switch (status) {
   'auto_selected' => 'Automatically Selected',
   'customized' => 'Customized',
   'locked' => 'Locked',
-  'delivered' => 'Delivered',
+  'delivered' || 'DELIVERED' => 'Delivered',
+  'collected' || 'COLLECTED' => 'Collected',
   'needs_review' => 'Our team is reviewing this day',
   _ => 'Selection pending',
 };

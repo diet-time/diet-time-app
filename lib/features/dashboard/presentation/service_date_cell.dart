@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 IconData serviceStatusIcon(String? status) => switch (status) {
   'customized' => Icons.tune_rounded,
   'locked' => Icons.lock_outline_rounded,
-  'delivered' => Icons.check_circle_outline,
+  'delivered' ||
+  'DELIVERED' ||
+  'collected' ||
+  'COLLECTED' => Icons.check_circle_outline,
   'mixed' => Icons.layers_outlined,
   'needs_review' => Icons.info_outline,
   'auto_selected' => Icons.auto_awesome_outlined,

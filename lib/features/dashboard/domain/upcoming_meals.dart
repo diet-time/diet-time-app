@@ -186,6 +186,7 @@ class DailyMealMenu {
       selectionStatus != 'CUSTOMER_CONFIRMED' &&
       selectionStatus != 'AUTO_FINALIZED' &&
       deliveryStatus != 'DELIVERED' &&
+      deliveryStatus != 'COLLECTED' &&
       deliveryStatus != 'CANCELLED' &&
       deliveryStatus != 'SKIPPED' &&
       !deadlinePassed;
