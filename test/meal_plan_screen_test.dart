@@ -13,6 +13,60 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final authenticated in [false, true]) {
+    testWidgets(
+      'Back to Dashboard is available only to a ready customer: $authenticated',
+      (tester) async {
+        final container = ProviderContainer(
+          overrides: [
+            mealPlansProvider.overrideWith(
+              (ref, language) async => _pricedPlans,
+            ),
+            otpAuthControllerProvider.overrideWith(
+              authenticated ? OrderingAuth.new : GuestOrderingAuth.new,
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        if (authenticated) prepareOrderingCustomer(container);
+        final router = GoRouter(
+          initialLocation: '/plans',
+          routes: [
+            GoRoute(path: '/plans', builder: (_, _) => const MealPlanScreen()),
+            GoRoute(
+              path: '/home',
+              builder: (_, _) =>
+                  const Scaffold(body: Text('Existing dashboard')),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final back = find.byKey(const ValueKey('mealPlanBackToDashboard'));
+        expect(back, authenticated ? findsOneWidget : findsNothing);
+        if (authenticated) {
+          await tester.tap(back);
+          await tester.pumpAndSettle();
+          expect(find.text('Existing dashboard'), findsOneWidget);
+          expect(container.read(checkoutControllerProvider).selection, isNull);
+          expect(
+            container.read(checkoutControllerProvider).orderConfirmation,
+            isNull,
+          );
+        }
+      },
+    );
+  }
   testWidgets(
     'guest can browse but tapping a plan enters authentication without storing a selection',
     (tester) async {

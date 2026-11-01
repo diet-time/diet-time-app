@@ -64,11 +64,15 @@ class HttpCustomerProfileRepository implements CustomerProfileRepository {
       method: 'PUT',
       body: {
         ...profile.toJson(),
+        'preferredLanguage': profile.preferredLanguage,
         if (profile.profileId == null) 'createOnly': true,
       },
     );
     if (result.statusCode < 200 || result.statusCode >= 300) {
-      throw CustomerProfileException(statusCode: result.statusCode);
+      throw CustomerProfileException(
+        statusCode: result.statusCode,
+        code: _errorCode(result.body),
+      );
     }
     final saved = _profileFromEnvelope(
       result.body,
@@ -193,6 +197,7 @@ class CustomerProfileException implements Exception {
 }
 
 String? _errorCode(Map<String, dynamic> body) {
+  if (body['code'] is String) return body['code'] as String;
   final errors = body['errors'];
   if (errors is! List || errors.isEmpty || errors.first is! Map) return null;
   return (errors.first as Map)['code']?.toString();

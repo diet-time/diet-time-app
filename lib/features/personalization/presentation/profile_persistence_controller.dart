@@ -2,6 +2,7 @@ import 'package:diet_time/features/personalization/data/customer_profile_reposit
 import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
 import 'package:diet_time/features/personalization/domain/customer_profile.dart';
 import 'package:diet_time/features/personalization/domain/customer_onboarding.dart';
+import 'package:diet_time/features/personalization/domain/questionnaire_profile_merge.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
@@ -59,11 +60,13 @@ final profilePersistenceControllerProvider =
 
 class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
   Future<CustomerProfile?>? _pendingLoad;
+  Future<bool>? _pendingSave;
   int _generation = 0;
   @override
   ProfilePersistenceState build() {
     _generation++;
     _pendingLoad = null;
+    _pendingSave = null;
     ref.onDispose(() => _generation++);
     return const ProfilePersistenceState();
   }
@@ -83,6 +86,10 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
   }
 
   Future<CustomerProfile?> load() {
+    final saving = _pendingSave;
+    if (saving != null) {
+      return saving.then((_) => ref.mounted ? state.persistedProfile : null);
+    }
     if (_pendingLoad != null) return _pendingLoad!;
     final request = _load();
     _pendingLoad = request;
@@ -126,8 +133,16 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
     }
   }
 
-  Future<bool> save({required bool complete}) async {
-    if (state.isSaving) return false;
+  Future<bool> save({required bool complete}) {
+    if (state.isSaving || _pendingSave != null) return Future.value(false);
+    final request = _save(complete: complete);
+    _pendingSave = request;
+    return request.whenComplete(() {
+      if (identical(_pendingSave, request)) _pendingSave = null;
+    });
+  }
+
+  Future<bool> _save({required bool complete}) async {
     final generation = _generation;
     state = state.copyWith(
       isSaving: true,
@@ -135,14 +150,45 @@ class ProfilePersistenceController extends Notifier<ProfilePersistenceState> {
       requiresLogin: false,
     );
     try {
-      final profile = ref.read(personalizationControllerProvider);
-      final saved = await _withSessionRecovery(
-        () async => complete
-            ? await ref.read(customerProfileServiceProvider).complete(profile)
-            : await ref
-                  .read(customerProfileServiceProvider)
-                  .saveProgress(profile),
+      await _pendingLoad;
+      if (!ref.mounted || generation != _generation) return false;
+      var profile = ref.read(personalizationControllerProvider);
+      final baseline = state.persistedProfile;
+      Future<CustomerProfile> submit() => _withSessionRecovery(
+        () => complete
+            ? ref.read(customerProfileServiceProvider).complete(profile)
+            : ref.read(customerProfileServiceProvider).saveProgress(profile),
       );
+      CustomerProfile saved;
+      try {
+        saved = await submit();
+      } on CustomerProfileException catch (error) {
+        if (error.statusCode != 409 ||
+            baseline == null ||
+            !{
+              null,
+              'concurrency_conflict',
+              'profile_conflict',
+            }.contains(error.code)) {
+          rethrow;
+        }
+        final latest = await _withSessionRecovery(
+          () => ref.read(customerProfileRepositoryProvider).getProfile(),
+        );
+        if (!ref.mounted || generation != _generation) return false;
+        if (latest == null ||
+            latest.profileId != baseline.profileId ||
+            latest.userId != baseline.userId) {
+          rethrow;
+        }
+        final reconciled = mergeQuestionnaireAnswers(baseline, profile, latest);
+        profile = reconciled.profile;
+        ref.read(personalizationControllerProvider.notifier).replace(profile);
+        state = state.copyWith(persistedProfile: latest);
+        if (reconciled.hasConflicts) rethrow;
+        // One retry only, retaining server metadata and untouched answers.
+        saved = await submit();
+      }
       if (!ref.mounted || generation != _generation) return false;
       ref.read(personalizationControllerProvider.notifier).replace(saved);
       if (complete && !saved.isCompleted) {

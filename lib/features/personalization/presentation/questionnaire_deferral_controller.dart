@@ -14,7 +14,11 @@ class QuestionnaireDeferralController extends Notifier<bool> {
   @override
   bool build() => false;
 
-  Future<void> defer() async {
+  Future<void> defer({bool cacheDraft = true}) async {
+    if (!cacheDraft) {
+      state = true;
+      return;
+    }
     final profile = ref.read(personalizationControllerProvider);
     final storage = ref.read(secureStorageServiceProvider);
     final token = await storage.read(SecureStorageService.accessTokenKey);

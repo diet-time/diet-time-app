@@ -351,6 +351,8 @@ void main() {
         _questionnaireCheckoutApp(service, startPlan: true),
       );
       await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('onboardingStep-0')), findsOneWidget);
+      await _continue(tester);
       expect(find.byKey(const ValueKey('onboardingStep-6')), findsOneWidget);
       await _continue(tester);
       await tester.pumpAndSettle();
@@ -384,6 +386,8 @@ void main() {
       await tester.pump();
       await tester.tap(find.byKey(const ValueKey('displayNameContinue')));
       await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('onboardingStep-0')), findsOneWidget);
+      await _continue(tester);
       expect(find.byKey(const ValueKey('onboardingStep-1')), findsOneWidget);
       expect(find.text('0%'), findsOneWidget);
       expect(service.saveProgressCalls, 0);

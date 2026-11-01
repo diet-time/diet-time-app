@@ -4,6 +4,7 @@ import 'package:diet_time/features/personalization/data/display_name_repository.
 import 'package:diet_time/features/personalization/domain/customer_onboarding.dart';
 import 'package:diet_time/features/personalization/domain/customer_profile.dart';
 import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
+import 'package:diet_time/features/personalization/presentation/questionnaire_deferral_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CustomerOnboardingState {
@@ -34,6 +35,19 @@ final customerOnboardingReadyProvider = Provider<bool>((ref) {
       persisted.hasLoaded &&
       persisted.errorMessage == null &&
       CustomerOnboardingPolicy.ready(persisted.persistedProfile);
+});
+
+/// Deferring questions grants dashboard/profile access, never checkout access.
+final customerDashboardAvailableProvider = Provider<bool>((ref) {
+  if (ref.watch(customerOnboardingReadyProvider)) return true;
+  final persisted = ref.watch(profilePersistenceControllerProvider);
+  final profile = persisted.persistedProfile;
+  return ref.watch(otpAuthControllerProvider).isAuthenticated &&
+      ref.watch(questionnaireDeferralProvider) &&
+      persisted.hasLoaded &&
+      persisted.errorMessage == null &&
+      profile?.profileId != null &&
+      CustomerOnboardingPolicy.validName(profile?.preferredName);
 });
 
 class CustomerOnboardingCoordinator extends Notifier<CustomerOnboardingState> {

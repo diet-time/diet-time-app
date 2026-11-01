@@ -105,7 +105,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       }
       _restoreVisibleValues(decision.profile!);
       _controller.dispose();
-      _index = decision.questionnairePage;
+      _index = 0;
       _controller = PageController(initialPage: _index);
       setState(() => _initialized = true);
       return;
@@ -217,6 +217,15 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       return;
     }
     if (!mounted) return;
+    if (_index == 0) {
+      final profile = ref.read(personalizationControllerProvider);
+      await _goTo(
+        profile.isCompleted
+            ? 1
+            : CustomerQuestionnaire.firstIncompletePage(profile),
+      );
+      return;
+    }
     final l10n = AppLocalizations.of(context);
     final invalid =
         (_index == 1 && _goal == null) ||
@@ -310,7 +319,11 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     if (widget.accountSetupMode) {
       final previous = CustomerQuestionnaire.previousPage(_index);
       if (previous == null) {
-        context.go(AppRoutes.plans);
+        if (_index == 0) {
+          context.go(AppRoutes.plans);
+        } else {
+          unawaited(_goTo(0, recordHistory: false));
+        }
       } else {
         unawaited(_goTo(previous, recordHistory: false));
       }
@@ -339,6 +352,18 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   Future<void> _notNow() async {
     if (_skipping) return;
     setState(() => _skipping = true);
+    if (widget.accountSetupMode) {
+      await _profileLoad;
+      if (!mounted) return;
+      await ref
+          .read(questionnaireDeferralProvider.notifier)
+          .defer(cacheDraft: false);
+      ref
+          .read(customerOnboardingCoordinatorProvider.notifier)
+          .begin(CustomerJourneyIntent.normalLogin);
+      if (mounted) context.go(AppRoutes.home);
+      return;
+    }
     if (widget.customerProfileMode) {
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop(false);

@@ -44,13 +44,28 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
     final language = Localizations.localeOf(context).languageCode;
     final plans = ref.watch(mealPlansProvider(language));
     final canPop = Navigator.of(context).canPop();
+    final dashboardAvailable = ref.watch(customerDashboardAvailableProvider);
     return Scaffold(
       key: const ValueKey('tourPlanSelection'),
       backgroundColor: const Color(0xFFF5F3E9),
       body: SafeArea(
         child: Column(
           children: [
-            if (canPop)
+            if (dashboardAvailable)
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                  key: const ValueKey('mealPlanBackToDashboard'),
+                  onPressed: () => context.go(AppRoutes.home),
+                  icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                  label: Text(
+                    language == 'ar'
+                        ? 'العودة إلى لوحة التحكم'
+                        : 'Back to Dashboard',
+                  ),
+                ),
+              ),
+            if (canPop && !dashboardAvailable)
               Align(
                 alignment: AlignmentDirectional.centerStart,
                 child: IconButton(

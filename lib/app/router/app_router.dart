@@ -94,7 +94,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.customerQuestionnaire,
-        redirect: (context, state) => ref.read(customerOnboardingReadyProvider)
+        redirect: (context, state) =>
+            ref.read(customerDashboardAvailableProvider)
             ? null
             : AppRoutes.authenticatedLanding,
         pageBuilder: (context, state) => _slidePage(
@@ -246,7 +247,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.home,
-        redirect: (context, state) => ref.read(customerOnboardingReadyProvider)
+        redirect: (context, state) =>
+            ref.read(customerDashboardAvailableProvider)
             ? null
             : AppRoutes.authenticatedLanding,
         builder: (context, state) => const HomeScreen(),

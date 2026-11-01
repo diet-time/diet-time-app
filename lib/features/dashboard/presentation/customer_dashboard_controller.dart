@@ -113,7 +113,8 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
           );
           return;
         }
-        if (decision.phase != CustomerOnboardingPhase.ready) {
+        if (decision.phase != CustomerOnboardingPhase.ready &&
+            !ref.read(customerDashboardAvailableProvider)) {
           state = decision.phase == CustomerOnboardingPhase.profileRequired
               ? const DashboardProfileNotFound()
               : const DashboardNeedsOnboarding();
