@@ -2110,6 +2110,9 @@ Map<String, dynamic> _nestedFixtureJson({bool includeImages = true}) {
 }
 
 class _MenuTestAuth extends OtpAuthController {
+  @override
+  Future<bool> ensureCurrentSession() async => state.isAuthenticated;
+
   _MenuTestAuth(this.authenticated);
   final bool authenticated;
   @override

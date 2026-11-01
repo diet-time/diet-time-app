@@ -5,10 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class OrderingAuth extends OtpAuthController {
   @override
+  Future<bool> ensureCurrentSession() async => state.isAuthenticated;
+
+  @override
   OtpAuthState build() => const OtpAuthState(isAuthenticated: true);
 }
 
 class GuestOrderingAuth extends OtpAuthController {
+  @override
+  Future<bool> ensureCurrentSession() async => state.isAuthenticated;
+
   @override
   OtpAuthState build() => const OtpAuthState();
 }

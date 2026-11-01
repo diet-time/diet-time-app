@@ -198,3 +198,32 @@ Every row still requires a real-device/API pass before release.
 
 The automated scenarios passed. Full manual validation of every new and returning
 customer scenario remains outstanding; it would be inaccurate to claim otherwise.
+
+## Follow-up: name prompt before login (2026-11-01)
+
+The gateway previously used `restoreSession()`, which immediately accepted a
+cached authenticated flag. The secure-storage service also accepted an in-memory
+authentication marker when credentials were absent. Neither is sufficient to
+open name collection for a guest.
+
+The coordinator now calls `ensureCurrentSession()` before loading the profile.
+This validates stored credentials or refreshes them, clears an unusable session,
+and preserves the destination intent when login is needed. The production
+secure-storage service no longer grants access from an in-memory marker alone.
+Ordinary session restoration retains its previous refresh behavior; the explicit
+onboarding check requires a usable session. Valid restored customers still skip
+login and completed onboarding.
+
+Regression tests use the real phone-login/OTP screens and authentication methods
+for guests, cached authenticated flags without credentials, and expired tokens,
+under both intents. They assert no profile load or name panel before successful
+OTP, then exactly one name panel afterward. Additional tests retain the valid
+restored-session path and reject authentication markers without credentials.
+Existing fake authenticated test controllers explicitly provide fake session
+validation; the new regression cases exercise the real validation methods.
+
+Executed after this correction: **447 Flutter tests passed**, static analysis
+reported **no issues**, and `git diff --check` passed. Logs:
+`artifacts/login-before-name-full-tests.log` and
+`artifacts/login-before-name-analysis.log`. No API changes were needed for this
+follow-up. Real-device reproduction and release checks remain outstanding.

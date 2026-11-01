@@ -22,6 +22,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 class TourAuth extends OtpAuthController {
   @override
+  Future<bool> ensureCurrentSession() async => state.isAuthenticated;
+
+  @override
   OtpAuthState build() => session('a');
   void change(String id) => state = session(id);
   static OtpAuthState session(String id) => OtpAuthState(

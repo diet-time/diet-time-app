@@ -354,6 +354,9 @@ class _Profiles implements ProfilePersistenceService {
 }
 
 class _Auth extends OtpAuthController {
+  @override
+  Future<bool> ensureCurrentSession() async => state.isAuthenticated;
+
   _Auth(this.profiles, this.recover);
   final _Profiles profiles;
   final bool recover;

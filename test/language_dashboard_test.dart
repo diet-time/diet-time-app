@@ -158,6 +158,9 @@ class _EmptyDashboard extends CustomerDashboardController {
 
 class _HeaderAuth extends OtpAuthController {
   @override
+  Future<bool> ensureCurrentSession() async => state.isAuthenticated;
+
+  @override
   OtpAuthState build() => const OtpAuthState(isAuthenticated: true);
 }
 

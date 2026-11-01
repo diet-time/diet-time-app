@@ -148,8 +148,12 @@ class OtpAuthController extends Notifier<OtpAuthState> {
         session != null &&
             !session.accessTokenExpiresAt.isAfter(DateTime.now().toUtc())
         ? await _refreshStoredSession(preserveSessionOnTransientFailure: false)
-        : await _restoreSession();
+        : await _restoreSession(preserveSessionOnTransientFailure: false);
     if (!ref.mounted || generation != _sessionGeneration) return false;
+    if (!valid) {
+      await signOut(sessionExpired: true);
+      return false;
+    }
     state = state.copyWith(
       isAuthenticated: valid,
       session: valid ? state.session : null,
@@ -157,7 +161,9 @@ class OtpAuthController extends Notifier<OtpAuthState> {
     return valid;
   }
 
-  Future<bool> _restoreSession() async {
+  Future<bool> _restoreSession({
+    bool preserveSessionOnTransientFailure = true,
+  }) async {
     final generation = _sessionGeneration;
     try {
       final authenticated = await ref
@@ -168,7 +174,9 @@ class OtpAuthController extends Notifier<OtpAuthState> {
         state = state.copyWith(isAuthenticated: true);
         return true;
       }
-      return _refreshStoredSession();
+      return _refreshStoredSession(
+        preserveSessionOnTransientFailure: preserveSessionOnTransientFailure,
+      );
     } catch (_) {
       // A missing platform storage implementation must not block guest use.
       return false;

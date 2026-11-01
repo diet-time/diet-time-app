@@ -93,6 +93,17 @@ void main() {
     expect(await service.isLoggedIn(), isTrue);
   });
 
+  test(
+    'marking authenticated without credentials cannot bypass login',
+    () async {
+      final service = SecureStorageAuthenticationService(
+        SecureStorageService(),
+      );
+      await service.markAuthenticated();
+      expect(await service.isLoggedIn(), isFalse);
+    },
+  );
+
   test('expired secure access token does not restore a session', () async {
     final storage = SecureStorageService(storage: const FlutterSecureStorage());
     await storage.write(SecureStorageService.accessTokenKey, 'access-token');

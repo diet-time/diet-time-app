@@ -100,7 +100,7 @@ class CustomerOnboardingCoordinator extends Notifier<CustomerOnboardingState> {
     try {
       final authenticated = await ref
           .read(otpAuthControllerProvider.notifier)
-          .restoreSession();
+          .ensureCurrentSession();
       if (!ref.mounted) return const CustomerOnboardingState();
       if (generation != _generation) return state;
       if (!authenticated) return _set(CustomerOnboardingPhase.unauthenticated);

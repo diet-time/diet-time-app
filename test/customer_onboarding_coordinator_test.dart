@@ -306,6 +306,9 @@ class _Profiles implements ProfilePersistenceService {
 
 class _Auth extends OtpAuthController {
   @override
+  Future<bool> ensureCurrentSession() async => state.isAuthenticated;
+
+  @override
   OtpAuthState build() => _session('a');
   void _clear() {
     ref.invalidate(profilePersistenceControllerProvider);

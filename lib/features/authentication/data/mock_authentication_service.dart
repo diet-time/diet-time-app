@@ -49,7 +49,6 @@ class SecureStorageAuthenticationService
   SecureStorageAuthenticationService(this._storage);
 
   final SecureStorageService _storage;
-  bool _authenticatedInMemory = false;
 
   @override
   Future<bool> isLoggedIn() async {
@@ -59,24 +58,18 @@ class SecureStorageAuthenticationService
     ]);
     final accessToken = values[0]?.trim() ?? '';
     final expiresAt = DateTime.tryParse(values[1] ?? '');
-    if (accessToken.isEmpty && expiresAt == null) return _authenticatedInMemory;
-    final isValid =
-        accessToken.isNotEmpty &&
+    return accessToken.isNotEmpty &&
         expiresAt != null &&
         expiresAt.isAfter(DateTime.now().toUtc());
-    _authenticatedInMemory = isValid;
-    return isValid;
   }
 
   @override
-  Future<void> markAuthenticated() async {
-    _authenticatedInMemory = true;
-  }
+  // OTP writes credentials before calling this hook. A local flag cannot grant
+  // access when those credentials are missing or expired.
+  Future<void> markAuthenticated() async {}
 
   @override
-  Future<void> signOut() async {
-    _authenticatedInMemory = false;
-  }
+  Future<void> signOut() async {}
 
   @override
   Future<void> signIn({

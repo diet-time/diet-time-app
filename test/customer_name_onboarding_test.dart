@@ -2,7 +2,13 @@ import 'dart:async';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/core/storage/secure_storage_service.dart';
+import 'package:diet_time/features/authentication/data/authentication_repository.dart';
+import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
+import 'package:diet_time/features/authentication/domain/auth_models.dart';
+import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
+import 'package:diet_time/features/authentication/presentation/phone_login_page.dart';
+import 'package:diet_time/features/authentication/presentation/otp_verification_page.dart';
 import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
 import 'package:diet_time/features/personalization/data/display_name_repository.dart';
 import 'package:diet_time/features/personalization/domain/customer_onboarding.dart';
@@ -38,6 +44,107 @@ const _completed = CustomerProfile(
 );
 
 void main() {
+  for (final startPlan in [false, true]) {
+    testWidgets('valid restored customer skips login: plan=$startPlan', (
+      tester,
+    ) async {
+      final storage = _SessionStorage();
+      storage.values[SecureStorageService.accessTokenKey] = 'token';
+      storage.values[SecureStorageService.accessTokenExpiresAtKey] =
+          DateTime.utc(2099).toIso8601String();
+      final api = _NameApi()
+        ..profile = _completed.copyWith(preferredName: 'Noor');
+      final container = ProviderContainer(
+        overrides: [
+          secureStorageServiceProvider.overrideWithValue(storage),
+          authenticationServiceProvider.overrideWithValue(
+            SecureStorageAuthenticationService(storage),
+          ),
+          customerProfileServiceProvider.overrideWithValue(_Profiles(api)),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = _router(startPlan);
+      addTearDown(router.dispose);
+      await tester.pumpWidget(_app(container, router, 'en'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PhoneLoginPage), findsNothing);
+      expect(find.byType(DisplayNamePanel), findsNothing);
+      expect(
+        find.text(startPlan ? 'Plan selection' : 'Dashboard'),
+        findsOneWidget,
+      );
+    });
+
+    for (final initial in ['guest', 'stale flag', 'expired token']) {
+      testWidgets('login and OTP precede name: $initial plan=$startPlan', (
+        tester,
+      ) async {
+        final api = _NameApi();
+        final profiles = _Profiles(api);
+        final storage = _SessionStorage();
+        if (initial == 'expired token') {
+          storage.values[SecureStorageService.accessTokenKey] = 'old-token';
+          storage.values[SecureStorageService.accessTokenExpiresAtKey] =
+              DateTime.utc(2000).toIso8601String();
+        }
+        final container = ProviderContainer(
+          overrides: [
+            if (initial != 'guest')
+              otpAuthControllerProvider.overrideWith(_StaleAuth.new),
+            secureStorageServiceProvider.overrideWithValue(storage),
+            authenticationServiceProvider.overrideWithValue(
+              SecureStorageAuthenticationService(storage),
+            ),
+            authenticationRepositoryProvider.overrideWithValue(
+              _OtpRepository(),
+            ),
+            customerProfileServiceProvider.overrideWithValue(profiles),
+            apiClientProvider.overrideWithValue(api),
+          ],
+        );
+        addTearDown(container.dispose);
+        final router = _router(startPlan);
+        addTearDown(router.dispose);
+        await tester.pumpWidget(_app(container, router, 'en'));
+        await tester.pumpAndSettle();
+        expect(find.byType(PhoneLoginPage), findsOneWidget);
+        expect(find.byType(DisplayNamePanel), findsNothing);
+        expect(profiles.loads, 0);
+
+        await tester.enterText(
+          find.byKey(const ValueKey('phoneNumberInput')),
+          '74452435',
+        );
+        await tester.pump();
+        await tester.tap(find.byKey(const ValueKey('phoneContinueButton')));
+        await tester.pumpAndSettle();
+        expect(find.byType(OtpVerificationPage), findsOneWidget);
+        expect(find.byType(DisplayNamePanel), findsNothing);
+        expect(profiles.loads, 0);
+        await tester.enterText(
+          find.byKey(const ValueKey('otpCell0')),
+          '123456',
+        );
+        await tester.pump();
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('verifyOtpButton')),
+        );
+        await tester.tap(find.byKey(const ValueKey('verifyOtpButton')));
+        await tester.pumpAndSettle();
+        expect(find.byType(DisplayNamePanel), findsOneWidget);
+        expect(find.byType(PhoneLoginPage), findsNothing);
+        expect(find.byType(OtpVerificationPage), findsNothing);
+        expect(profiles.loads, 1);
+        expect(
+          container.read(customerOnboardingCoordinatorProvider).intent,
+          startPlan
+              ? CustomerJourneyIntent.startNewPlan
+              : CustomerJourneyIntent.normalLogin,
+        );
+      });
+    }
+  }
   for (final startPlan in [false, true]) {
     for (final language in ['en', 'ar']) {
       testWidgets(
@@ -219,6 +326,24 @@ GoRouter _router(bool startPlan) => GoRouter(
   initialLocation: '/entry',
   routes: [
     GoRoute(
+      path: AppRoutes.phoneLogin,
+      builder: (_, state) => PhoneLoginPage(
+        pendingDestination: state.extra! as PendingAuthDestination,
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.otp,
+      builder: (_, _) => const OtpVerificationPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.authenticatedLanding,
+      builder: (_, _) => const AuthenticatedLandingScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.startPlan,
+      builder: (_, _) => const AuthenticatedLandingScreen(startNewPlan: true),
+    ),
+    GoRoute(
       path: '/entry',
       builder: (_, _) => AuthenticatedLandingScreen(startNewPlan: startPlan),
     ),
@@ -246,6 +371,9 @@ Widget _app(ProviderContainer container, GoRouter router, String language) =>
 
 class _Auth extends OtpAuthController {
   @override
+  Future<bool> ensureCurrentSession() async => state.isAuthenticated;
+
+  @override
   OtpAuthState build() => const OtpAuthState(isAuthenticated: true);
 }
 
@@ -258,14 +386,54 @@ class _Storage extends SecureStorageService {
 class _Profiles implements ProfilePersistenceService {
   _Profiles(this.api);
   final _NameApi api;
+  int loads = 0;
   @override
-  Future<CustomerProfile?> load() async => api.profile;
+  Future<CustomerProfile?> load() async {
+    loads++;
+    return api.profile;
+  }
+
   @override
   Future<CustomerProfile> saveProgress(CustomerProfile profile) async =>
       throw StateError('name gate must not save questions');
   @override
   Future<CustomerProfile> complete(CustomerProfile profile) =>
       saveProgress(profile);
+}
+
+// Deliberately inherits the real validation methods: a cached flag is not proof
+// of a valid session and must never open the profile-name dialog.
+class _StaleAuth extends OtpAuthController {
+  @override
+  OtpAuthState build() => const OtpAuthState(isAuthenticated: true);
+}
+
+class _SessionStorage extends SecureStorageService {
+  final values = <String, String>{};
+  @override
+  Future<String?> read(String key) async => values[key];
+  @override
+  Future<void> write(String key, String value) async => values[key] = value;
+  @override
+  Future<void> delete(String key) async => values.remove(key);
+}
+
+class _OtpRepository implements AuthenticationRepository {
+  @override
+  Future<AuthSession> verifyPhoneOtp(PhoneOtpLoginRequest request) async =>
+      AuthSession(
+        accessToken: 'token',
+        refreshToken: 'refresh',
+        accessTokenExpiresAt: DateTime.utc(2099),
+        refreshTokenExpiresAt: DateTime.utc(2099),
+        user: const AuthUser(
+          id: 'a',
+          email: '',
+          name: '',
+          roles: ['Customer'],
+          phoneNumber: '+97474452435',
+        ),
+      );
 }
 
 class _NameApi extends ApiClient {

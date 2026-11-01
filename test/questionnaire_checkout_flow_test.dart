@@ -316,6 +316,9 @@ ProviderContainer _container(
 );
 
 class _Auth extends OtpAuthController {
+  @override
+  Future<bool> ensureCurrentSession() async => state.isAuthenticated;
+
   _Auth(this.authenticated);
   final bool authenticated;
   void signIn() => state = const OtpAuthState(isAuthenticated: true);
