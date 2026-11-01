@@ -2344,4 +2344,119 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get chooserLimitHint =>
       'Your meal limit is reached. Choose a selected dish to replace, or go back and deselect one.';
+
+  @override
+  String get customerDeliveryInformation => 'Delivery Information';
+
+  @override
+  String get customerDeliveryChargesNotice =>
+      'Delivery charges may apply based on your location and distance. Any applicable charges will be communicated before payment.';
+
+  @override
+  String get customerMealPlanAmount => 'Meal-plan amount';
+
+  @override
+  String get deliveryCityDoha => 'Doha';
+
+  @override
+  String get deliveryCityRayyan => 'Rayyan';
+
+  @override
+  String get deliveryCityUmSalal => 'Um Salal';
+
+  @override
+  String get deliveryCityWakrah => 'Wakrah';
+
+  @override
+  String get deliveryCityKhour => 'Khour';
+
+  @override
+  String get deliveryCityAlDaayen => 'AL Daayen';
+
+  @override
+  String get deliveryCityWestBay => 'West Bay';
+
+  @override
+  String get deliveryCityThePearl => 'The Pearl';
+
+  @override
+  String get deliveryCityLusail => 'Lusail';
+
+  @override
+  String get deliveryCityAlSadd => 'Al Sadd';
+
+  @override
+  String get deliveryCityBinMahmoud => 'Bin Mahmoud';
+
+  @override
+  String get deliveryCityNajma => 'Najma';
+
+  @override
+  String get deliveryCityAlMansoura => 'Al Mansoura';
+
+  @override
+  String get deliveryCityOldAirport => 'Old Airport';
+
+  @override
+  String get deliveryCityAlHilal => 'Al Hilal';
+
+  @override
+  String get deliveryCityAbuHamour => 'Abu Hamour';
+
+  @override
+  String get deliveryCityAinKhaled => 'Ain Khaled';
+
+  @override
+  String get deliveryCityAlWaab => 'Al Waab';
+
+  @override
+  String get deliveryCityMuaither => 'Muaither';
+
+  @override
+  String get deliveryCityMadinatKhalifa => 'Madinat Khalifa';
+
+  @override
+  String get deliveryCityDuhail => 'Duhail';
+
+  @override
+  String get deliveryCityAlGharrafa => 'Al Gharrafa';
+
+  @override
+  String get deliveryCityAlThumama => 'Al Thumama';
+
+  @override
+  String get deliveryCityAlDafna => 'Al Dafna';
+
+  @override
+  String get deliveryCityAlKheesa => 'Al Kheesa';
+
+  @override
+  String get deliveryCityAlWukair => 'Al Wukair';
+
+  @override
+  String get deliveryCityIzghawa => 'Izghawa';
+
+  @override
+  String get deliveryCityAzizia => 'Azizia';
+
+  @override
+  String get deliveryCityAlMarkhiya => 'Al Markhiya';
+
+  @override
+  String get deliveryCityUmmGhuwailina => 'Umm Ghuwailina';
+
+  @override
+  String get deliveryCityAlMuntazah => 'Al Muntazah';
+
+  @override
+  String get deliveryCityAlNasr => 'Al Nasr';
+
+  @override
+  String get deliveryCityLabel => 'City *';
+
+  @override
+  String get deliveryCitySearch => 'Search locations';
+
+  @override
+  String get deliveryCityRequired => 'Select a city.';
 }

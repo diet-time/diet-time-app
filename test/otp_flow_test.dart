@@ -17,6 +17,7 @@ import 'package:diet_time/features/plans/presentation/meal_plan_details_screen.d
 import 'package:diet_time/features/plans/presentation/meal_plan_screen.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -28,6 +29,188 @@ final _testOtp = List.generate(6, (index) => (index + 1).toString()).join();
 final _invalidOtp = List.filled(6, '9').join();
 
 void main() {
+  testWidgets(
+    'native long-press Paste replaces a selected digit with the whole OTP',
+    (tester) async {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.getData') return {'text': _testOtp};
+          if (call.method == 'Clipboard.hasStrings') return {'value': true};
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      await tester.pumpWidget(_app(otp: _FakeOtpService()));
+      await _openOtp(tester);
+      await tester.enterText(find.byKey(const ValueKey('otpCell0')), '987654');
+      await tester.pump();
+      await tester.tapAt(
+        tester.getCenter(find.byKey(const ValueKey('otpDigit2'))),
+      );
+      await tester.pump();
+      await tester.longPressAt(
+        tester.getCenter(find.byKey(const ValueKey('otpDigit2'))),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Paste'));
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(OtpVerificationPage)),
+      );
+      expect(container.read(otpAuthControllerProvider).otpCode, _testOtp);
+      expect(
+        _isButtonEnabled(tester, find.byKey(const ValueKey('verifyOtpButton'))),
+        isTrue,
+      );
+    },
+  );
+  testWidgets(
+    'login panel follows content and respects safe area and keyboard',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.viewPadding = const FakeViewPadding(bottom: 34);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetViewPadding);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpWidget(_app(otp: _FakeOtpService()));
+      await tester.pumpAndSettle();
+      final panel = find.byKey(const ValueKey('phoneLoginPanel'));
+      final button = find.byKey(const ValueKey('phoneContinueButton'));
+      final height = tester.getSize(panel).height;
+      expect(height, lessThan(400));
+      expect(
+        tester.getBottomRight(panel).dy - tester.getBottomRight(button).dy,
+        lessThanOrEqualTo(47),
+      );
+      tester.view.physicalSize = const Size(390, 1100);
+      await tester.pumpAndSettle();
+      expect(tester.getSize(panel).height, closeTo(height, 1));
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      expect(tester.getBottomRight(button).dy, lessThanOrEqualTo(544));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (var index = 0; index < 6; index++) {
+    testWidgets('OTP backspace deletes selected digit $index immediately', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_app(otp: _FakeOtpService()));
+      await _openOtp(tester);
+      await tester.enterText(find.byKey(const ValueKey('otpCell0')), _testOtp);
+      await tester.pump();
+      await tester.tapAt(
+        tester.getCenter(find.byKey(ValueKey('otpDigit$index'))),
+      );
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+      await tester.pump();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(OtpVerificationPage)),
+      );
+      expect(
+        container.read(otpAuthControllerProvider).otpCode,
+        _testOtp.replaceRange(index, index + 1, ''),
+      );
+      expect(
+        _isButtonEnabled(tester, find.byKey(const ValueKey('verifyOtpButton'))),
+        isFalse,
+      );
+    });
+  }
+
+  testWidgets('OTP empty segments delete the preceding digit with backspace', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app(otp: _FakeOtpService()));
+    await _openOtp(tester);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(OtpVerificationPage)),
+    );
+    for (var index = 1; index < 6; index++) {
+      await tester.enterText(
+        find.byKey(const ValueKey('otpCell0')),
+        _testOtp.substring(0, index),
+      );
+      await tester.pump();
+      await tester.tapAt(
+        tester.getCenter(find.byKey(ValueKey('otpDigit$index'))),
+      );
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+      await tester.pump();
+      expect(
+        container.read(otpAuthControllerProvider).otpCode,
+        _testOtp.substring(0, index - 1),
+      );
+    }
+  });
+
+  testWidgets(
+    'OTP native editing can replace each earlier digit and accept full autofill',
+    (tester) async {
+      await tester.pumpWidget(_app(otp: _FakeOtpService()));
+      await _openOtp(tester);
+      final editor = find.byKey(const ValueKey('otpCell0'));
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(OtpVerificationPage)),
+      );
+      expect(
+        tester.widget<TextField>(editor).autofillHints,
+        contains(AutofillHints.oneTimeCode),
+      );
+      for (var index = 0; index < 6; index++) {
+        await tester.enterText(editor, _testOtp);
+        await tester.pump();
+        await tester.tapAt(
+          tester.getCenter(find.byKey(ValueKey('otpDigit$index'))),
+        );
+        await tester.pump();
+        final value = tester.widget<TextField>(editor).controller!.value;
+        expect(
+          value.selection,
+          TextSelection(baseOffset: index, extentOffset: index + 1),
+        );
+        tester.testTextInput.updateEditingValue(
+          value.replaced(value.selection, '9'),
+        );
+        await tester.pump();
+        expect(tester.widget<TextField>(editor).focusNode!.hasFocus, index < 5);
+        expect(
+          container.read(otpAuthControllerProvider).otpCode,
+          _testOtp.replaceRange(index, index + 1, '9'),
+        );
+      }
+      await tester.tapAt(
+        tester.getCenter(find.byKey(const ValueKey('otpDigit0'))),
+      );
+      await tester.pump();
+      tester.testTextInput.updateEditingValue(
+        TextEditingValue(
+          text: _testOtp,
+          selection: const TextSelection.collapsed(offset: 6),
+        ),
+      );
+      await tester.pump();
+      expect(container.read(otpAuthControllerProvider).otpCode, _testOtp);
+      expect(
+        _isButtonEnabled(tester, find.byKey(const ValueKey('verifyOtpButton'))),
+        isTrue,
+      );
+    },
+  );
   testWidgets(
     'late OTP success after logout cannot restore the previous account',
     (tester) async {
@@ -358,7 +541,7 @@ void main() {
           .widget<TextField>(find.byKey(const ValueKey('otpCell0')))
           .controller
           ?.text,
-      '1',
+      _testOtp,
     );
     expect(_isButtonEnabled(tester, verify), isTrue);
   });
@@ -434,7 +617,9 @@ void main() {
     addTearDown(tester.view.resetViewInsets);
     await tester.pump();
 
-    await tester.tap(find.byKey(const ValueKey('otpCell0')));
+    await tester.tapAt(
+      tester.getCenter(find.byKey(const ValueKey('otpDigit0'))),
+    );
     await tester.pump();
     await tester.ensureVisible(find.byKey(const ValueKey('verifyOtpButton')));
 

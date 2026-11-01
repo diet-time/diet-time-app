@@ -4201,6 +4201,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your meal limit is reached. Choose a selected dish to replace, or go back and deselect one.'**
   String get chooserLimitHint;
+
+  /// No description provided for @customerDeliveryInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery Information'**
+  String get customerDeliveryInformation;
+
+  /// No description provided for @customerDeliveryChargesNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery charges may apply based on your location and distance. Any applicable charges will be communicated before payment.'**
+  String get customerDeliveryChargesNotice;
+
+  /// No description provided for @customerMealPlanAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Meal-plan amount'**
+  String get customerMealPlanAmount;
+
+  /// No description provided for @deliveryCityDoha.
+  ///
+  /// In en, this message translates to:
+  /// **'Doha'**
+  String get deliveryCityDoha;
+
+  /// No description provided for @deliveryCityRayyan.
+  ///
+  /// In en, this message translates to:
+  /// **'Rayyan'**
+  String get deliveryCityRayyan;
+
+  /// No description provided for @deliveryCityUmSalal.
+  ///
+  /// In en, this message translates to:
+  /// **'Um Salal'**
+  String get deliveryCityUmSalal;
+
+  /// No description provided for @deliveryCityWakrah.
+  ///
+  /// In en, this message translates to:
+  /// **'Wakrah'**
+  String get deliveryCityWakrah;
+
+  /// No description provided for @deliveryCityKhour.
+  ///
+  /// In en, this message translates to:
+  /// **'Khour'**
+  String get deliveryCityKhour;
+
+  /// No description provided for @deliveryCityAlDaayen.
+  ///
+  /// In en, this message translates to:
+  /// **'AL Daayen'**
+  String get deliveryCityAlDaayen;
+
+  /// No description provided for @deliveryCityWestBay.
+  ///
+  /// In en, this message translates to:
+  /// **'West Bay'**
+  String get deliveryCityWestBay;
+
+  /// No description provided for @deliveryCityThePearl.
+  ///
+  /// In en, this message translates to:
+  /// **'The Pearl'**
+  String get deliveryCityThePearl;
+
+  /// No description provided for @deliveryCityLusail.
+  ///
+  /// In en, this message translates to:
+  /// **'Lusail'**
+  String get deliveryCityLusail;
+
+  /// No description provided for @deliveryCityAlSadd.
+  ///
+  /// In en, this message translates to:
+  /// **'Al Sadd'**
+  String get deliveryCityAlSadd;
+
+  /// No description provided for @deliveryCityBinMahmoud.
+  ///
+  /// In en, this message translates to:
+  /// **'Bin Mahmoud'**
+  String get deliveryCityBinMahmoud;
+
+  /// No description provided for @deliveryCityNajma.
+  ///
+  /// In en, this message translates to:
+  /// **'Najma'**
+  String get deliveryCityNajma;
+
+  /// No description provided for @deliveryCityAlMansoura.
+  ///
+  /// In en, this message translates to:
+  /// **'Al Mansoura'**
+  String get deliveryCityAlMansoura;
+
+  /// No description provided for @deliveryCityOldAirport.
+  ///
+  /// In en, this message translates to:
+  /// **'Old Airport'**
+  String get deliveryCityOldAirport;
+
+  /// No description provided for @deliveryCityAlHilal.
+  ///
+  /// In en, this message translates to:
+  /// **'Al Hilal'**
+  String get deliveryCityAlHilal;
+
+  /// No description provided for @deliveryCityAbuHamour.
+  ///
+  /// In en, this message translates to:
+  /// **'Abu Hamour'**
+  String get deliveryCityAbuHamour;
+
+  /// No description provided for @deliveryCityAinKhaled.
+  ///
+  /// In en, this message translates to:
+  /// **'Ain Khaled'**
+  String get deliveryCityAinKhaled;
+
+  /// No description provided for @deliveryCityAlWaab.
+  ///
+  /// In en, this message translates to:
+  /// **'Al Waab'**
+  String get deliveryCityAlWaab;
+
+  /// No description provided for @deliveryCityMuaither.
+  ///
+  /// In en, this message translates to:
+  /// **'Muaither'**
+  String get deliveryCityMuaither;
+
+  /// No description provided for @deliveryCityMadinatKhalifa.
+  ///
+  /// In en, this message translates to:
+  /// **'Madinat Khalifa'**
+  String get deliveryCityMadinatKhalifa;
+
+  /// No description provided for @deliveryCityDuhail.
+  ///
+  /// In en, this message translates to:
+  /// **'Duhail'**
+  String get deliveryCityDuhail;
+
+  /// No description provided for @deliveryCityAlGharrafa.
+  ///
+  /// In en, this message translates to:
+  /// **'Al Gharrafa'**
+  String get deliveryCityAlGharrafa;
+
+  /// No description provided for @deliveryCityAlThumama.
+  ///
+  /// In en, this message translates to:
+  /// **'Al Thumama'**
+  String get deliveryCityAlThumama;
+
+  /// No description provided for @deliveryCityAlDafna.
+  ///
+  /// In en, this message translates to:
+  /// **'Al Dafna'**
+  String get deliveryCityAlDafna;
+
+  /// No description provided for @deliveryCityAlKheesa.
+  ///
+  /// In en, this message translates to:
+  /// **'Al Kheesa'**
+  String get deliveryCityAlKheesa;
+
+  /// No description provided for @deliveryCityAlWukair.
+  ///
+  /// In en, this message translates to:
+  /// **'Al Wukair'**
+  String get deliveryCityAlWukair;
+
+  /// No description provided for @deliveryCityIzghawa.
+  ///
+  /// In en, this message translates to:
+  /// **'Izghawa'**
+  String get deliveryCityIzghawa;
+
+  /// No description provided for @deliveryCityAzizia.
+  ///
+  /// In en, this message translates to:
+  /// **'Azizia'**
+  String get deliveryCityAzizia;
+
+  /// No description provided for @deliveryCityAlMarkhiya.
+  ///
+  /// In en, this message translates to:
+  /// **'Al Markhiya'**
+  String get deliveryCityAlMarkhiya;
+
+  /// No description provided for @deliveryCityUmmGhuwailina.
+  ///
+  /// In en, this message translates to:
+  /// **'Umm Ghuwailina'**
+  String get deliveryCityUmmGhuwailina;
+
+  /// No description provided for @deliveryCityAlMuntazah.
+  ///
+  /// In en, this message translates to:
+  /// **'Al Muntazah'**
+  String get deliveryCityAlMuntazah;
+
+  /// No description provided for @deliveryCityAlNasr.
+  ///
+  /// In en, this message translates to:
+  /// **'Al Nasr'**
+  String get deliveryCityAlNasr;
+
+  /// No description provided for @deliveryCityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'City *'**
+  String get deliveryCityLabel;
+
+  /// No description provided for @deliveryCitySearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search locations'**
+  String get deliveryCitySearch;
+
+  /// No description provided for @deliveryCityRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a city.'**
+  String get deliveryCityRequired;
 }
 
 class _AppLocalizationsDelegate

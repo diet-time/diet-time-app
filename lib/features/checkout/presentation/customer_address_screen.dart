@@ -1,5 +1,6 @@
 import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/checkout/domain/address_validation.dart';
+import 'delivery_city_dropdown.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/checkout/domain/checkout_models.dart';
@@ -358,11 +359,10 @@ class _CustomerAddressScreenState extends ConsumerState<CustomerAddressScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          _AddressField(
+          DeliveryCityDropdown(
             key: const ValueKey('areaField'),
             controller: _areaController,
-            label: context.customerCopy('Area *'),
-            validator: AddressValidation.area,
+            existingValue: _addressBeingEdited?.area,
             serverError: _fieldError(checkout, 'area'),
             onChanged: (_) => ref
                 .read(checkoutControllerProvider.notifier)

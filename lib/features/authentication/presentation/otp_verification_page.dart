@@ -21,18 +21,16 @@ class OtpVerificationPage extends ConsumerStatefulWidget {
 }
 
 class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
-  final _controllers = List.generate(6, (_) => TextEditingController());
-  final _focusNodes = List.generate(6, (_) => FocusNode());
-  bool _syncingCells = false;
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
-    for (final focusNode in _focusNodes) {
-      focusNode.addListener(_refreshFocusStyle);
-    }
+    _controller.addListener(_refreshFocusStyle);
+    _focusNode.addListener(_refreshFocusStyle);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _focusNodes.first.requestFocus();
+      if (mounted) _focusNode.requestFocus();
     });
   }
 
@@ -42,63 +40,42 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
 
   @override
   void dispose() {
-    for (final controller in _controllers) {
-      controller.dispose();
-    }
-    for (final focusNode in _focusNodes) {
-      focusNode.dispose();
-    }
+    _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
-  String get _code => _controllers.map((item) => item.text).join();
+  String get _code => _controller.text;
 
-  void _onCellChanged(int index, String value) {
-    if (_syncingCells) return;
-    final digits = value.replaceAll(RegExp(r'\D'), '');
-    if (digits.length > 1) {
-      _setCells(digits.substring(0, digits.length > 6 ? 6 : digits.length));
-      return;
-    }
-    if (digits != value) _controllers[index].text = digits;
+  void _onCodeChanged(String value) {
     ref.read(otpAuthControllerProvider.notifier).setOtpCode(_code);
-    if (digits.isNotEmpty) {
-      if (index < 5) {
-        _focusNodes[index + 1].requestFocus();
-      } else {
-        FocusManager.instance.primaryFocus?.unfocus();
-      }
+    if (_code.length == 6 && _controller.selection.extentOffset == 6) {
+      _focusNode.unfocus();
     }
     setState(() {});
   }
 
   void _setCells(String code) {
-    _syncingCells = true;
-    for (var index = 0; index < 6; index++) {
-      _controllers[index].text = index < code.length ? code[index] : '';
-    }
-    _syncingCells = false;
+    _controller.value = TextEditingValue(
+      text: code,
+      selection: TextSelection.collapsed(offset: code.length),
+    );
     ref.read(otpAuthControllerProvider.notifier).setOtpCode(_code);
     if (code.length == 6) {
-      FocusManager.instance.primaryFocus?.unfocus();
+      _focusNode.unfocus();
     } else {
-      _focusNodes[code.length > 5 ? 5 : code.length].requestFocus();
+      _focusNode.requestFocus();
     }
     setState(() {});
   }
 
-  KeyEventResult _handleKey(int index, KeyEvent event) {
-    if (event is KeyDownEvent &&
-        event.logicalKey == LogicalKeyboardKey.backspace &&
-        _controllers[index].text.isEmpty &&
-        index > 0) {
-      _controllers[index - 1].clear();
-      _focusNodes[index - 1].requestFocus();
-      ref.read(otpAuthControllerProvider.notifier).setOtpCode(_code);
-      setState(() {});
-      return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
+  void _selectDigit(int index) {
+    _focusNode.requestFocus();
+    final start = math.min(index, _code.length);
+    _controller.selection = TextSelection(
+      baseOffset: start,
+      extentOffset: math.min(start + 1, _code.length),
+    );
   }
 
   Future<void> _verify() async {
@@ -253,10 +230,10 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
                         ),
                         SizedBox(height: compact ? 22 : 30),
                         _OtpInputPanel(
-                          controllers: _controllers,
-                          focusNodes: _focusNodes,
-                          onChanged: _onCellChanged,
-                          onKeyEvent: _handleKey,
+                          controller: _controller,
+                          focusNode: _focusNode,
+                          onChanged: _onCodeChanged,
+                          onSelect: _selectDigit,
                           hasError: auth.verificationError != null,
                         ),
                         const SizedBox(height: 8),
@@ -411,95 +388,163 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
   }
 }
 
-class _OtpInputPanel extends StatelessWidget {
+class _OtpInputPanel extends StatefulWidget {
   const _OtpInputPanel({
-    required this.controllers,
-    required this.focusNodes,
+    required this.controller,
+    required this.focusNode,
     required this.onChanged,
-    required this.onKeyEvent,
+    required this.onSelect,
     required this.hasError,
   });
-
-  final List<TextEditingController> controllers;
-  final List<FocusNode> focusNodes;
-  final void Function(int index, String value) onChanged;
-  final KeyEventResult Function(int index, KeyEvent event) onKeyEvent;
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<int> onSelect;
   final bool hasError;
+  @override
+  State<_OtpInputPanel> createState() => _OtpInputPanelState();
+}
 
+class _OtpInputPanelState extends State<_OtpInputPanel> {
+  int _tappedDigit = 0;
   @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
+    final focusNode = widget.focusNode;
+    final cursor = controller.selection.start.clamp(0, 5);
     return Directionality(
       textDirection: TextDirection.ltr,
-      child: Row(
-        children: List.generate(6, (index) {
-          final active = focusNodes[index].hasFocus;
-          final filled = controllers[index].text.isNotEmpty;
-          final borderColor = hasError
-              ? AppColors.jasper.withValues(alpha: .72)
-              : active
-              ? AppColors.emeraldGreen
-              : AppColors.darkGreen.withValues(alpha: .14);
-          return Expanded(
-            child: Padding(
-              padding: EdgeInsetsDirectional.only(end: index == 5 ? 0 : 6),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                height: 62,
-                decoration: BoxDecoration(
-                  color: AppColors.white.withValues(alpha: .9),
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(
-                    color: borderColor,
-                    width: active ? 1.6 : 1,
-                  ),
-                  boxShadow: [
-                    if (active)
-                      BoxShadow(
-                        color: AppColors.emeraldGreen.withValues(alpha: .08),
-                        blurRadius: 10,
+      child: SizedBox(
+        height: 62,
+        child: LayoutBuilder(
+          builder: (context, constraints) => Stack(
+            children: [
+              ExcludeSemantics(
+                child: Row(
+                  children: List.generate(6, (index) {
+                    final active = focusNode.hasFocus && cursor == index;
+                    final digit = index < controller.text.length
+                        ? controller.text[index]
+                        : '';
+                    final borderColor = widget.hasError
+                        ? AppColors.jasper.withValues(alpha: .72)
+                        : active
+                        ? AppColors.emeraldGreen
+                        : AppColors.darkGreen.withValues(alpha: .14);
+                    return Expanded(
+                      child: Padding(
+                        padding: EdgeInsetsDirectional.only(
+                          end: index == 5 ? 0 : 6,
+                        ),
+                        child: AnimatedContainer(
+                          key: ValueKey('otpDigit$index'),
+                          duration: const Duration(milliseconds: 160),
+                          height: 62,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: AppColors.white.withValues(alpha: .9),
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(
+                              color: borderColor,
+                              width: active ? 1.6 : 1,
+                            ),
+                            boxShadow: [
+                              if (active)
+                                BoxShadow(
+                                  color: AppColors.emeraldGreen.withValues(
+                                    alpha: .08,
+                                  ),
+                                  blurRadius: 10,
+                                ),
+                            ],
+                          ),
+                          child: Text(
+                            digit,
+                            style: TextStyle(
+                              color: digit.isNotEmpty
+                                  ? AppColors.darkGreen
+                                  : AppColors.emeraldGreen,
+                              fontSize: 21,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
                       ),
-                  ],
+                    );
+                  }),
                 ),
-                child: Focus(
-                  onKeyEvent: (_, event) => onKeyEvent(index, event),
-                  child: TextField(
-                    key: ValueKey('otpCell$index'),
-                    controller: controllers[index],
-                    focusNode: focusNodes[index],
-                    keyboardType: TextInputType.number,
-                    textInputAction: index == 5
-                        ? TextInputAction.done
-                        : TextInputAction.next,
-                    textAlign: TextAlign.center,
-                    autofillHints: const [AutofillHints.oneTimeCode],
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(6),
-                    ],
-                    style: TextStyle(
-                      color: filled
-                          ? AppColors.darkGreen
-                          : AppColors.emeraldGreen,
-                      fontSize: 21,
-                      fontWeight: FontWeight.w800,
+              ),
+              // The real native editor handles software-keyboard deletion, long-press
+              // Paste, accessibility and SMS autofill. Boxes only render its value.
+              Positioned.fill(
+                child: Listener(
+                  onPointerDown: (event) => _tappedDigit =
+                      (event.localPosition.dx / (constraints.maxWidth / 6))
+                          .floor()
+                          .clamp(0, 5),
+                  child: TextSelectionTheme(
+                    data: const TextSelectionThemeData(
+                      selectionColor: Colors.transparent,
                     ),
-                    onChanged: (value) => onChanged(index, value),
-                    decoration: const InputDecoration(
-                      counterText: '',
-                      filled: false,
-                      contentPadding: EdgeInsets.symmetric(vertical: 17),
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
+                    child: TextField(
+                      key: const ValueKey('otpCell0'),
+                      controller: controller,
+                      focusNode: focusNode,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      autofillHints: const [AutofillHints.oneTimeCode],
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      showCursor: false,
+                      inputFormatters: [
+                        _CompleteOtpPasteFormatter(),
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(6),
+                      ],
+                      style: const TextStyle(color: Colors.transparent),
+                      onTap: () => widget.onSelect(_tappedDigit),
+                      onChanged: widget.onChanged,
+                      decoration: const InputDecoration(
+                        filled: false,
+                        counterText: '',
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          );
-        }),
+            ],
+          ),
+        ),
       ),
     );
+  }
+}
+
+class _CompleteOtpPasteFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final start = oldValue.selection.start.clamp(0, oldValue.text.length);
+    final end = oldValue.selection.end.clamp(start, oldValue.text.length);
+    final insertedLength =
+        newValue.text.length - (oldValue.text.length - (end - start));
+    if (insertedLength > 0 && start + insertedLength <= newValue.text.length) {
+      final inserted = newValue.text
+          .substring(start, start + insertedLength)
+          .replaceAll(RegExp(r'\D'), '');
+      if (inserted.length >= 6) {
+        return TextEditingValue(
+          text: inserted.substring(0, 6),
+          selection: const TextSelection.collapsed(offset: 6),
+        );
+      }
+    }
+    return newValue;
   }
 }
 

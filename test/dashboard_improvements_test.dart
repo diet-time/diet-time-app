@@ -44,7 +44,10 @@ class LocalProfileController extends ProfilePersistenceController {
 }
 
 class AddressFormController extends CheckoutController {
+  AddressFormController({this.initialAddresses = const []});
+  final List<CustomerDeliveryAddress> initialAddresses;
   CustomerDeliveryAddress? submitted;
+  bool? submittedEditing;
   @override
   CheckoutState build() => const CheckoutState(
     customerProfileId: 'customer',
@@ -63,7 +66,7 @@ class AddressFormController extends CheckoutController {
       startTime: '07:00',
       endTime: '11:00',
     ),
-  );
+  ).copyWith(addresses: initialAddresses);
   @override
   Future<void> loadAddresses() async {}
   @override
@@ -74,11 +77,85 @@ class AddressFormController extends CheckoutController {
     required bool editing,
   }) async {
     submitted = address;
+    submittedEditing = editing;
     return false;
   }
 }
 
 void main() {
+  for (final savedCity in ['Lusail', 'Legacy District']) {
+    testWidgets(
+      'editing an address preserves saved city and other fields: $savedCity',
+      (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        const maps = MethodChannel(
+          'com.diettime.diet_time/google_maps_configuration',
+        );
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          maps,
+          (_) async => false,
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            maps,
+            null,
+          ),
+        );
+        await tester.binding.setSurfaceSize(const Size(390, 844));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final saved = CustomerDeliveryAddress.fromJson({
+          'id': 'saved',
+          'addressType': 'HOME',
+          'buildingNo': '33',
+          'streetNo': '4',
+          'zoneNo': '91',
+          'area': savedCity,
+          'latitude': 25.28,
+          'longitude': 51.53,
+        });
+        final controller = AddressFormController(initialAddresses: [saved]);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              checkoutControllerProvider.overrideWith(() => controller),
+            ],
+            child: const MaterialApp(home: CustomerAddressScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('editAddress-saved')));
+        await tester.pumpAndSettle();
+        final city = find.descendant(
+          of: find.byKey(const ValueKey('cityDropdown')),
+          matching: find.byType(TextField),
+        );
+        expect(tester.widget<TextField>(city).controller!.text, savedCity);
+        await tester.scrollUntilVisible(
+          find.byKey(const ValueKey('saveAddress')),
+          300,
+          scrollable: find
+              .descendant(
+                of: find.byKey(const ValueKey('addressForm')),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.tap(find.byKey(const ValueKey('saveAddress')));
+        await tester.pumpAndSettle();
+        expect(controller.submittedEditing, isTrue);
+        expect(controller.submitted?.id, 'saved');
+        expect(controller.submitted?.area, savedCity);
+        expect(controller.submitted?.buildingNo, '33');
+        expect(controller.submitted?.streetNo, '4');
+        expect(controller.submitted?.zoneNo, '91');
+        expect(controller.submitted?.latitude, 25.28);
+        expect(tester.takeException(), isNull);
+        debugDefaultTargetPlatformOverride = null;
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
   for (final language in ['en', 'ar']) {
     testWidgets(
       'Profile Adjust My Plan Not now returns to Profile without creating a draft ($language)',
@@ -409,27 +486,36 @@ void main() {
         TextInputType.number,
       );
       await tester.enterText(field('zoneNoField'), '91');
-      await tester.enterText(field('areaField'), 'Al Wakrah 2');
-      expect(Form.of(tester.element(field('areaField'))).validate(), false);
-      await tester.pump();
-      expect(
-        find.text(
-          'Use English or Arabic letters and name punctuation; no digits.',
-        ),
-        findsOneWidget,
+      final city = find.descendant(
+        of: find.byKey(const ValueKey('cityDropdown')),
+        matching: find.byType(TextField),
       );
-      await tester.enterText(field('areaField'), '  الوكرة  ');
-      expect(Form.of(tester.element(field('areaField'))).validate(), true);
+      await tester.ensureVisible(city);
+      await tester.tap(city);
+      await tester.enterText(city, 'Al Wakrah 2');
+      expect(Form.of(tester.element(city)).validate(), false);
+      await tester.pump();
+      expect(find.text('Select a city.'), findsOneWidget);
+      await tester.enterText(city, 'الوكرة');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Wakrah'));
+      await tester.pumpAndSettle();
+      expect(Form.of(tester.element(city)).validate(), true);
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey('saveAddress')),
         300,
-        scrollable: find.byType(Scrollable).last,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const ValueKey('addressForm')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       await tester.tap(find.byKey(const ValueKey('saveAddress')));
       await tester.pumpAndSettle();
       expect(controller.submitted?.buildingNo, 'A-126/B');
       expect(controller.submitted?.streetNo, '960');
-      expect(controller.submitted?.area, 'الوكرة');
+      expect(controller.submitted?.area, 'Wakrah');
       expect(controller.submitted?.unitNumber, isNull);
       expect(tester.takeException(), isNull);
       debugDefaultTargetPlatformOverride = null;

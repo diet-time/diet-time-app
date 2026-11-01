@@ -2298,4 +2298,119 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get chooserLimitHint =>
       'وصلت إلى الحد المسموح من الوجبات. اختر وجبة محددة لاستبدالها، أو ارجع وألغِ اختيار إحداها.';
+
+  @override
+  String get customerDeliveryInformation => 'معلومات التوصيل';
+
+  @override
+  String get customerDeliveryChargesNotice =>
+      'قد تُطبق رسوم توصيل حسب موقعك والمسافة. سيتم إبلاغك بأي رسوم مستحقة قبل الدفع.';
+
+  @override
+  String get customerMealPlanAmount => 'مبلغ خطة الوجبات';
+
+  @override
+  String get deliveryCityDoha => 'الدوحة';
+
+  @override
+  String get deliveryCityRayyan => 'الريان';
+
+  @override
+  String get deliveryCityUmSalal => 'أم صلال';
+
+  @override
+  String get deliveryCityWakrah => 'الوكرة';
+
+  @override
+  String get deliveryCityKhour => 'الخور';
+
+  @override
+  String get deliveryCityAlDaayen => 'الظعاين';
+
+  @override
+  String get deliveryCityWestBay => 'الخليج الغربي';
+
+  @override
+  String get deliveryCityThePearl => 'اللؤلؤة';
+
+  @override
+  String get deliveryCityLusail => 'لوسيل';
+
+  @override
+  String get deliveryCityAlSadd => 'السد';
+
+  @override
+  String get deliveryCityBinMahmoud => 'بن محمود';
+
+  @override
+  String get deliveryCityNajma => 'نجمة';
+
+  @override
+  String get deliveryCityAlMansoura => 'المنصورة';
+
+  @override
+  String get deliveryCityOldAirport => 'المطار القديم';
+
+  @override
+  String get deliveryCityAlHilal => 'الهلال';
+
+  @override
+  String get deliveryCityAbuHamour => 'أبو هامور';
+
+  @override
+  String get deliveryCityAinKhaled => 'عين خالد';
+
+  @override
+  String get deliveryCityAlWaab => 'الوعب';
+
+  @override
+  String get deliveryCityMuaither => 'معيذر';
+
+  @override
+  String get deliveryCityMadinatKhalifa => 'مدينة خليفة';
+
+  @override
+  String get deliveryCityDuhail => 'الدحيل';
+
+  @override
+  String get deliveryCityAlGharrafa => 'الغرافة';
+
+  @override
+  String get deliveryCityAlThumama => 'الثمامة';
+
+  @override
+  String get deliveryCityAlDafna => 'الدفنة';
+
+  @override
+  String get deliveryCityAlKheesa => 'الخيسة';
+
+  @override
+  String get deliveryCityAlWukair => 'الوكير';
+
+  @override
+  String get deliveryCityIzghawa => 'إزغوى';
+
+  @override
+  String get deliveryCityAzizia => 'العزيزية';
+
+  @override
+  String get deliveryCityAlMarkhiya => 'المرخية';
+
+  @override
+  String get deliveryCityUmmGhuwailina => 'أم غويلينة';
+
+  @override
+  String get deliveryCityAlMuntazah => 'المنتزه';
+
+  @override
+  String get deliveryCityAlNasr => 'النصر';
+
+  @override
+  String get deliveryCityLabel => 'المدينة *';
+
+  @override
+  String get deliveryCitySearch => 'ابحث عن موقع';
+
+  @override
+  String get deliveryCityRequired => 'اختر المدينة.';
 }

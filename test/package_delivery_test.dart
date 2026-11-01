@@ -4,6 +4,8 @@ import 'package:diet_time/features/checkout/domain/checkout_models.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
 import 'package:diet_time/features/checkout/presentation/plan_summary_screen.dart';
+import 'package:diet_time/features/checkout/presentation/order_placed_screen.dart';
+import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dart';
@@ -12,6 +14,56 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    'Delivery on a legacy-disabled package keeps address, slot and plan amount in the order request',
+    () async {
+      final orders = _Orders();
+      final address = CustomerDeliveryAddress.fromJson({
+        'id': 'address',
+        'addressName': 'Home',
+        'addressType': 'HOME',
+        'buildingNo': '1',
+        'streetNo': '2',
+        'zoneNo': '3',
+        'area': 'Doha',
+        'latitude': 25.28,
+        'longitude': 51.53,
+      });
+      const slot = DeliveryTimeSlot(
+        id: 'slot',
+        name: 'Morning',
+        startTime: '08:00',
+        endTime: '10:00',
+      );
+      final state = _state(false).copyWith(
+        selectedAddress: address,
+        selectedAddressId: address.id,
+        selectedDeliveryTimeSlot: slot,
+        selectedDeliveryTimeSlotId: slot.id,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          checkoutControllerProvider.overrideWith(() => _Controller(state)),
+          ordersRepositoryProvider.overrideWithValue(orders),
+        ],
+      );
+      addTearDown(container.dispose);
+      expect(
+        await container.read(checkoutControllerProvider.notifier).placeOrder(),
+        isNotNull,
+      );
+      final request = orders.requests.single;
+      expect(request.fulfillmentMethod, 'HOME_DELIVERY');
+      expect(request.customerAddressId, address.id);
+      expect(request.deliveryTimeSlotId, slot.id);
+      expect(request.takeawayBranchId, isNull);
+      expect(request.expectedTotalAmount, 900);
+      expect(request.toJson(), isNot(contains('deliveryFee')));
+      expect(request.toJson(), isNot(contains('estimatedDeliveryAmount')));
+      expect(state.selection!.totalPrice, 900);
+      expect(container.read(checkoutControllerProvider).selection, isNull);
+    },
+  );
   test('package parser defaults to delivery and honors false', () {
     expect(MealPlanPackage.fromJson({}).isDeliveryEnabled, isTrue);
     expect(
@@ -21,7 +73,7 @@ void main() {
   });
 
   test(
-    'switching packages resets invalid fulfillment and invalid submissions stop locally',
+    'switching packages keeps fulfillment choice and still requires delivery details or a branch',
     () async {
       final orders = _Orders();
       final container = ProviderContainer(
@@ -43,18 +95,19 @@ void main() {
       controller.begin(takeaway.selection!, takeaway.schedule!);
       expect(
         container.read(checkoutControllerProvider).fulfillmentMethod,
-        'TAKEAWAY',
+        'HOME_DELIVERY',
       );
       expect(container.read(checkoutControllerProvider).canPlaceOrder, isFalse);
       expect(await controller.placeOrder(), isNull);
       expect(orders.requests, isEmpty);
+      controller.selectFulfillmentMethod('TAKEAWAY');
       controller.selectBranch(_branch);
       expect(container.read(checkoutControllerProvider).canPlaceOrder, isTrue);
       controller.selectFulfillmentMethod('HOME_DELIVERY');
-      expect(container.read(checkoutControllerProvider).isTakeaway, isTrue);
+      expect(container.read(checkoutControllerProvider).isTakeaway, isFalse);
       final delivery = _state(true);
       controller.begin(delivery.selection!, delivery.schedule!);
-      expect(container.read(checkoutControllerProvider).isTakeaway, isTrue);
+      expect(container.read(checkoutControllerProvider).isTakeaway, isFalse);
       controller.selectFulfillmentMethod('HOME_DELIVERY');
       expect(container.read(checkoutControllerProvider).canPlaceOrder, isFalse);
       controller.selectFulfillmentMethod('TAKEAWAY');
@@ -188,40 +241,145 @@ void main() {
     },
   );
 
-  testWidgets('takeaway-only package hides delivery and address controls', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          checkoutControllerProvider.overrideWith(
-            () => _Controller(_state(false)),
-          ),
-        ],
-        child: const MaterialApp(home: PlanSummaryScreen()),
-      ),
-    );
-    await tester.pump();
-    expect(
-      find.text('This package is available for takeaway only.'),
-      findsOneWidget,
-    );
-    expect(find.text('Takeaway'), findsOneWidget);
-    expect(find.text('Home Delivery'), findsNothing);
-    expect(find.text('DELIVERY ADDRESS & TIME SLOT'), findsNothing);
-    expect(
-      tester
-          .widget<FilledButton>(
-            find.descendant(
-              of: find.byKey(const ValueKey('placeOrder')),
-              matching: find.byType(FilledButton),
+  for (final enabled in [false, true]) {
+    for (final language in ['en', 'ar']) {
+      testWidgets(
+        'all packages offer both methods and localized delivery notice: legacy=$enabled lang=$language',
+        (tester) async {
+          final initial = _state(
+            enabled,
+          ).copyWith(fulfillmentMethod: 'TAKEAWAY', selectedBranch: _branch);
+          final container = ProviderContainer(
+            overrides: [
+              checkoutControllerProvider.overrideWith(
+                () => _Controller(initial),
+              ),
+            ],
+          );
+          addTearDown(container.dispose);
+          final copy = lookupAppLocalizations(Locale(language));
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: MaterialApp(
+                locale: Locale(language),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const PlanSummaryScreen(),
+              ),
             ),
-          )
-          .onPressed,
-      isNotNull,
-    );
-  });
+          );
+          await tester.pumpAndSettle();
+          final selector = find.byKey(const ValueKey('checkoutFulfillment'));
+          final delivery = find.descendant(
+            of: selector,
+            matching: find.text(copy.customerHomeDelivery),
+          );
+          final takeaway = find.descendant(
+            of: selector,
+            matching: find.text(copy.customerTakeaway),
+          );
+          expect(delivery, findsOneWidget);
+          expect(takeaway, findsOneWidget);
+          expect(
+            find.byKey(const ValueKey('deliveryInformationNotice')),
+            findsNothing,
+          );
+          final amount = tester
+              .widget<Text>(find.byKey(const ValueKey('checkoutFinalAmount')))
+              .data;
+          await tester.ensureVisible(delivery);
+          await tester.tap(delivery);
+          await tester.pump();
+          expect(
+            find.byKey(const ValueKey('deliveryInformationNotice')),
+            findsOneWidget,
+          );
+          expect(find.text(copy.customerDeliveryInformation), findsOneWidget);
+          expect(find.text(copy.customerDeliveryChargesNotice), findsOneWidget);
+          expect(find.text(copy.customerMealPlanAmount), findsOneWidget);
+          expect(
+            container.read(checkoutControllerProvider).isTakeaway,
+            isFalse,
+          );
+          expect(
+            container.read(checkoutControllerProvider).selection,
+            same(initial.selection),
+          );
+          expect(
+            tester
+                .widget<Text>(find.byKey(const ValueKey('checkoutFinalAmount')))
+                .data,
+            amount,
+          );
+          await tester.ensureVisible(takeaway);
+          await tester.tap(takeaway);
+          await tester.pump();
+          expect(
+            find.byKey(const ValueKey('deliveryInformationNotice')),
+            findsNothing,
+          );
+          expect(
+            container.read(checkoutControllerProvider).selectedBranch,
+            _branch,
+          );
+          expect(
+            container.read(checkoutControllerProvider).selection!.totalPrice,
+            900,
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
 
+  for (final method in ['HOME_DELIVERY', 'TAKEAWAY']) {
+    for (final language in ['en', 'ar']) {
+      testWidgets(
+        'order confirmation notice follows fulfillment: $method $language',
+        (tester) async {
+          final confirmation = OrderConfirmation.fromJson({
+            'id': 'order',
+            'orderNumber': 'ORD-1',
+            'fulfillmentMethod': method,
+            'pricing': {'totalAmount': 900, 'currencyCode': 'QAR'},
+          });
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                checkoutControllerProvider.overrideWith(
+                  () => _Controller(
+                    _state(false).copyWith(orderConfirmation: confirmation),
+                  ),
+                ),
+              ],
+              child: MaterialApp(
+                locale: Locale(language),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const OrderPlacedScreen(),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final copy = lookupAppLocalizations(Locale(language));
+          expect(
+            find.byKey(const ValueKey('deliveryInformationNotice')),
+            method == 'HOME_DELIVERY' ? findsOneWidget : findsNothing,
+          );
+          if (method == 'HOME_DELIVERY') {
+            expect(
+              find.text(copy.customerDeliveryChargesNotice),
+              findsOneWidget,
+            );
+            expect(find.text(copy.customerMealPlanAmount), findsOneWidget);
+          }
+          expect(confirmation.pricing.totalAmount, 900);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
   testWidgets(
     'delivery-enabled package offers both methods and takeaway hides address',
     (tester) async {

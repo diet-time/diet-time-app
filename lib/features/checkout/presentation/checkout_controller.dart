@@ -24,7 +24,6 @@ class CheckoutController extends Notifier<CheckoutState> {
 
   void selectFulfillmentMethod(String method) {
     if (method != 'TAKEAWAY' && method != 'HOME_DELIVERY') return;
-    if (method == 'HOME_DELIVERY' && !state.isDeliveryEnabled) return;
     state = state.copyWith(
       fulfillmentMethod: method,
       idempotencyKey: null,

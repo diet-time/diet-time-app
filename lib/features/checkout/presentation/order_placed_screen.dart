@@ -1,4 +1,5 @@
 import 'package:diet_time/app/localization/customer_copy.dart';
+import 'delivery_information_notice.dart';
 import 'dart:async';
 
 import 'package:diet_time/app/router/app_router.dart';
@@ -164,7 +165,7 @@ class _ConfirmationCard extends StatelessWidget {
                         true)
                       confirmation.takeawayBranch!.address!,
                   ].join(' · ')
-                : confirmation.fulfillmentLabel,
+                : context.customerCopy(confirmation.fulfillmentLabel),
           ),
           _Detail(
             label: context.customerCopy('PLAN PERIOD'),
@@ -190,8 +191,15 @@ class _ConfirmationCard extends StatelessWidget {
                 address.streetLine,
               ].where((value) => value.trim().isNotEmpty).join('\n'),
             ),
+          if (!confirmation.isTakeaway)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: DeliveryInformationNotice(),
+            ),
           _Detail(
-            label: context.customerCopy('TOTAL'),
+            label: context.customerCopy(
+              confirmation.isTakeaway ? 'TOTAL' : 'Meal-plan amount',
+            ),
             value:
                 '${formatMealPlanPriceAmount(confirmation.pricing.totalAmount, locale)} ${confirmation.pricing.currencyCode}',
           ),

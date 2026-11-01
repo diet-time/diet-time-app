@@ -162,14 +162,12 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
                 SingleChildScrollView(
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.viewInsetsOf(context).bottom,
-                  ),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       minHeight: constraints.maxHeight,
                     ),
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         SizedBox(
                           height: heroHeight,
@@ -208,11 +206,9 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
                           ),
                         ),
                         Container(
+                          key: const ValueKey('phoneLoginPanel'),
                           width: double.infinity,
-                          constraints: BoxConstraints(
-                            minHeight: constraints.maxHeight - heroHeight,
-                          ),
-                          padding: const EdgeInsets.fromLTRB(20, 9, 20, 28),
+                          padding: const EdgeInsets.fromLTRB(20, 9, 20, 12),
                           decoration: const BoxDecoration(
                             color: Color(0xFFFCFBF7),
                             borderRadius: BorderRadius.vertical(
@@ -222,6 +218,7 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
                           child: SafeArea(
                             top: false,
                             child: Column(
+                              mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Stack(

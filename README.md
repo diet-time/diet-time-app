@@ -893,3 +893,499 @@ Authorization: Bearer <admin token>
 Deploy/restart the updated API before using this route. It returns `messageId`, `status`, `deliveryConfirmed`, `errorCode` and `errorMessage`. `deliveryConfirmed` is true only for `delivered` or `read`. A successful lookup can report an `undelivered` or `failed` message; inspect its error code instead of interpreting HTTP 200 as delivery. The lookup accepts valid SM/MM message IDs, uses the server's account credentials, and does not return message bodies or recipient numbers. It also works when outgoing messaging is disabled. Invalid IDs are rejected before calling Twilio; provider lookup failures return structured errors. No live message was sent or queried during implementation; production delivery remains unverified.
 
 Status lookup validation: **175 API unit tests passed** and **8 Twilio HTTP endpoint tests passed**. These cover queued/delivered/read/failed/undelivered results, SM/MM IDs, provider authentication/not-found errors, timeouts, mismatched records, invalid-ID rejection, Admin-only access and zero sends. No order, pricing, meal-selection or database data was altered.
+
+## Customer application implementation reports
+
+The following implementation reports were consolidated from the project documentation. Test counts describe the checks recorded for each change.
+
+### Customer journey audit
+
+#### Investigation before implementation
+
+The current app was traced from splash through authentication, questionnaire,
+dashboard, checkout and logout before changing those screens.
+
+| Entry/path | Current decision owner | Problem |
+| --- | --- | --- |
+| Splash/session restore | `SplashScreen._openAuthenticatedDestination` | Correctly distinguishes guest/restored session; restored session then enters the landing gate. |
+| Phone login → OTP | `PhoneLoginPage`, `OtpVerificationPage._verify` | OTP goes directly to authenticated landing or Start Plan; it bypasses the legacy name gate. |
+| Legacy login → `/post-login` | `PostLoginNameGate` | Separately fetches the name and can fall back to a device-wide cached name. This is not an authoritative per-customer onboarding decision. |
+| Normal login and Start Plan | `AuthenticatedLandingScreen._resolve` | Checks questionnaire completion but never requires a name. Destination is carried partly in route extras. |
+| Setup questionnaire | `PersonalizationScreen._loadProfile`, `_continueStep` | Independently loads, authenticates, decides completion, selects a page and redirects. |
+| Dashboard | `CustomerDashboardController.initialize`, dashboard build callbacks | Another profile load/completion decision and redirect to setup; no name requirement. |
+| Plan list/details and route guard | Widget guards and router guard | Repeat authentication/profile predicates rather than consume one onboarding policy. |
+| Checkout entry | `CheckoutAccessService` and entry screen | Independently decides login/questionnaire/summary; must hand unmet onboarding to the same coordinator. |
+| Logout/recovery | OTP sign-out, profile controller logout | Clear profile/session state; outstanding asynchronous checks need account-generation guards. |
+| Tour | Dashboard callbacks and `AppTourController.maybeStart` | Already checks questionnaire and route readiness, but also needs the required-name policy. |
+
+##### Root causes
+
+1. `DisplayNamePanel` exists, but active OTP routes bypass `PostLoginNameGate`.
+   Missing names are not part of the current landing/dashboard/order predicates.
+2. The actual questionnaire widgets are Goal (page 1), Basic Details/Measurements
+   (page 2), Routine, Activity, Preferences, Allergens. The API's `NextStep` checks
+   Basic Details before Goal. Setup follows that code, so a new customer sees page
+   2, then page 1 after saving. Legacy initialization follows yet another rule.
+3. Questionnaire UI is built with page 0 before the asynchronous load chooses a
+   page. Progress is based on a physical page index across welcome/questions/BMI/
+   success, rather than persisted required answers.
+4. Multiple independent callbacks can re-evaluate state or navigate while another
+   screen is active. Loading, saving and account changes need shared serialization
+   and stale-result protection, not more independent route patches.
+5. Legacy name loading treats any 404 as missing and can use a global local name
+   after API failure. The consolidated flow must use the authenticated profile
+   response and the existing stable `profile_not_found` code.
+
+##### API and PostgreSQL findings
+
+Authentication creates `ApplicationUser`/`UserProfile`; a customer profile may
+legitimately be absent. Existing authenticated GET/PUT `/api/v1/customer/profile`
+and PATCH `/api/v1/customer/profile/preferred-name` cover retrieval, creation,
+updates and name saving. The name PATCH creates a missing profile and preserves
+questionnaire fields. No competing creation endpoint is needed.
+
+`public.customer_profiles.user_id` references the authenticated user and has the
+unique filtered index `ux_customer_profiles_user`. Writes use a per-user advisory
+transaction lock and row locks. Existing create-only upserts preserve the winning
+profile on retry. Names, demographics, preferences, allergens, confirmation flags,
+onboarding status and completion timestamp already exist. No schema migration is
+justified. Legacy completed profiles remain compatible; a new completion must
+save both explicit confirmations.
+
+The removed resume-plan controller/banner remain absent. Checkout selection is
+transient state for an authenticated order, not an authentication return payload.
+Order placement checks request idempotency and purchase eligibility, not absence
+of other active/pending orders. Approval, payment and schedules are out of scope.
+
+#### Unified design
+
+One Riverpod coordinator owns authentication/profile/name/questionnaire policy
+and transient `NormalLogin`/`StartNewPlan` intent. Logical states are:
+
+`Unauthenticated → LoadingProfile → ProfileRequired/NameRequired →
+QuestionnaireRequired → Ready`, with `RecoverableError` for real failures.
+
+- One gateway renders the existing name panel or navigates to the existing
+  questionnaire/final destination. Legacy automatic routes delegate to it.
+- Persisted profile responses determine readiness. Device name caches and local
+  questionnaire edits cannot mark onboarding complete.
+- One questionnaire sequence matches the existing widgets: Goal, Basic Details,
+  Routine, Activity, Preferences, Allergens. The API next-step ordering must agree.
+  This sequence is compiled in the existing app, not database-configurable.
+- Questionnaire data and initial page are resolved before questions render.
+  Progress derives from saved required answers; 100% requires backend completion.
+- Name saves use the existing PATCH and hydrate shared profile state from its
+  response. Errors retain the entered name; repeated taps cannot duplicate saves.
+- Concurrent checks share work. Account generation guards discard late responses
+  after logout/account switch. Restart defaults to Dashboard and reloads backend
+  state; the transient intent is consumed only at the final destination.
+- Dashboard, route guards, order entry and tour use the same readiness policy.
+  They do not independently decide which questionnaire step to open.
+
+#### Verification plan
+
+Automate both intents for missing/existing profiles, missing/invalid/valid names,
+each incomplete required step, completed questionnaires, request/save failures,
+rapid taps, backward navigation, stale callbacks/account switch, cached-state
+restarts, English/Arabic and existing-order/new-plan behavior. Retain checkout,
+tour and profile regression tests. Record only tests actually executed.
+
+Manual release verification still required: real OTP delivery and interrupted
+OTP sessions, process termination during name/questionnaire saves, another device,
+live PostgreSQL concurrency, iOS TestFlight and Android release navigation,
+keyboard/back gestures, accessibility and real tour overlays. Windows unit/widget
+tests cannot establish those device/release outcomes.
+
+#### Implementation and changed files
+
+The coordinator and policy now own the automatic journey. Explicit profile editing
+still uses the existing questionnaire UI. Removed the legacy independent name gate
+and route resolver rather than retaining competing automatic decisions.
+
+Flutter production files (paths relative to `lib/`):
+
+- `app/app.dart`, `app/router/app_router.dart`
+- `features/authentication/presentation/login_screen.dart`,
+  `otp_auth_controller.dart`, `phone_login_page.dart`
+- `features/personalization/domain/customer_onboarding.dart` (new);
+  `onboarding_route_resolver.dart` (removed)
+- `features/personalization/data/display_name_repository.dart`
+- `features/personalization/presentation/customer_onboarding_coordinator.dart`
+  (new), `authenticated_landing_screen.dart`, `display_name_panel.dart`,
+  `profile_persistence_controller.dart`; `post_login_name_gate.dart` (removed)
+- `features/onboarding/presentation/onboarding_screen.dart`
+- `features/dashboard/presentation/customer_dashboard_controller.dart`,
+  `customer_dashboard_screen.dart`
+- `features/checkout/presentation/checkout_entry_screen.dart`
+- `features/plans/presentation/meal_plan_screen.dart`,
+  `meal_plan_details_screen.dart`
+- `features/app_tour/app_tour_controller.dart`, `app_tour_host.dart`
+
+Flutter regression files under `test/`: new `customer_name_onboarding_test.dart`
+and `customer_onboarding_coordinator_test.dart`; updated `app_tour_test.dart`,
+`customer_dashboard_test.dart`, `customer_profile_persistence_test.dart`,
+`new_customer_onboarding_test.dart`, `otp_flow_test.dart`,
+`questionnaire_checkout_flow_test.dart`, `support/ordering_customer.dart`,
+`widget_test.dart`; removed obsolete `post_login_name_gate_test.dart`.
+
+ASP.NET Core files in the sibling `diet-time-api` repository:
+
+- `src/BuildingBlocks/DietTime.Domain/CustomerQuestionnaireRules.cs` aligns
+  next-step ordering with the existing Goal-first UI.
+- `src/BuildingBlocks/DietTime.Application/Validation.cs` validates meaningful
+  names, including Arabic, without accepting a phone number as a name.
+- `src/BuildingBlocks/DietTime.Persistence/CustomerProfileService.cs` requires
+  both confirmations before a newly completed questionnaire can be persisted;
+  preserves legacy completed profiles and existing transaction/identity rules.
+- `tests/DietTime.UnitTests/CustomerOnboardingSequenceTests.cs` (new),
+  `QuestionnaireCompletionTests.cs`, and
+  `tests/DietTime.Meal.Api.IntegrationTests/CustomerProfileApiTests.cs`.
+
+No database migration, replacement screen, pending-plan record, automatic order,
+payment change or approval change was introduced. The obsolete Resume Selected
+Plan controller/banner remain absent. Name collection precedes all questions;
+required questions follow Goal, Basic Details, Routine, Activity, Preferences,
+Allergens. StartNewPlan finishes at Plan Selection; NormalLogin at Dashboard.
+
+#### Executed verification
+
+- Full Flutter unit/widget suite: **438 passed**, including disposal of an
+  outstanding onboarding request.
+- Direct Dart static analysis with `--fatal-infos`: **no issues**.
+- ASP.NET Core unit suite: **245 passed**.
+- API database integration project: **build succeeded**, with eight existing
+  unused-parameter/variable and async-without-await warnings in unrelated API
+  controllers. This is compilation evidence, not a database test pass.
+- Added English/Arabic tour route-suppression checks: **16 tour tests passed**.
+- App and API `git diff --check`: no whitespace errors.
+
+Logs are in local `artifacts/customer-journey-*.log` files. PostgreSQL integration
+execution is unavailable: `docker info` fails because the Docker Desktop Linux
+engine pipe does not exist. Tests guarded by `RUN_INTEGRATION_TESTS` were not
+reported as executed. No physical-device, TestFlight or Android-release run was
+performed. No live customer data was changed.
+
+#### Scenario coverage and remaining manual verification
+
+Automated results below use fake profile APIs or test repositories unless stated.
+They verify client state and navigation, not production database persistence.
+Every row still requires a real-device/API pass before release.
+
+| # | Scenario | Automated evidence | Additional manual verification |
+| --- | --- | --- | --- |
+| 1 | New number, Start Your Plan | OTP/navigation tests plus name-first setup and Plan Selection destination | Real OTP to complete order-entry journey |
+| 2 | New number, normal login | Name-first setup and Dashboard destination | Real OTP and Dashboard data |
+| 3 | Complete existing customer | Name/questions skipped for both intents | Existing production-compatible profile |
+| 4 | Missing name | Both intents; completed questionnaire retained after name PATCH | Confirm database fields unchanged |
+| 5 | Missing profile | Stable 404 classification, name creation, dashboard dependencies deferred | PostgreSQL creation/concurrency tests |
+| 6 | Partial questionnaire | Every required first-incomplete step and saved answers | Actual draft after reconnect |
+| 7 | Step 1 incomplete | Goal chosen despite misleading later hint; initial 0% | Device rendering |
+| 8 | Step 2 incomplete | Basic Details after saved Goal; persisted 17% | Device rendering |
+| 9 | Completed questionnaire | No questionnaire flash/redirect; backend completion required | Device cold start |
+| 10 | Active subscription, new plan | Fresh plan action with ACTIVE/CONFIRMED orders | Actual new checkout beside active order |
+| 11 | Pending order, new plan | Fresh plan action with PENDING_APPROVAL order | Actual new checkout beside pending order |
+| 12 | Restart during name | Fresh provider container reloads missing-name profile, safe default intent | Process kill while PATCH is in flight |
+| 13 | Restart during questionnaire | Fresh container reloads partial backend answers | Process kill during save; second device |
+| 14 | Restart after completion | Fresh container reloads complete profile and skips questions | Real secure storage and server round trip |
+| 15 | Profile network/API failure | Recoverable error; no false missing-profile/dashboard result | Airplane mode/reconnect |
+| 16 | Name save failure | Input retained; retry and duplicate-tap prevention | Timeout/reconnect against API |
+| 17 | Questionnaire save failure | Remains on question; incomplete response cannot grant access | Server/network interruption |
+| 18 | Rapid navigation/taps | Shared checks, single name save, late OTP/name/profile callbacks rejected | Repeated device gestures |
+| 19 | Back during onboarding | Saved answers retained; authoritative previous-step mapping; name cannot bypass | System back/edge gestures |
+| 20 | Logout/another number | Old account responses cannot hydrate new account; late OTP cannot restore logout | Two real identities and stored tokens |
+| 21 | English/Arabic | Name validation, RTL/compact layouts and tour checks | Keyboard, accessibility and localized devices |
+| 22 | TestFlight/Android release | No release-device verification performed | Both release distributions, all above paths |
+
+The automated scenarios passed. Full manual validation of every new and returning
+customer scenario remains outstanding; it would be inaccurate to claim otherwise.
+
+#### Follow-up: name prompt before login (2026-11-01)
+
+The gateway previously used `restoreSession()`, which immediately accepted a
+cached authenticated flag. The secure-storage service also accepted an in-memory
+authentication marker when credentials were absent. Neither is sufficient to
+open name collection for a guest.
+
+The coordinator now calls `ensureCurrentSession()` before loading the profile.
+This validates stored credentials or refreshes them, clears an unusable session,
+and preserves the destination intent when login is needed. The production
+secure-storage service no longer grants access from an in-memory marker alone.
+Ordinary session restoration retains its previous refresh behavior; the explicit
+onboarding check requires a usable session. Valid restored customers still skip
+login and completed onboarding.
+
+Regression tests use the real phone-login/OTP screens and authentication methods
+for guests, cached authenticated flags without credentials, and expired tokens,
+under both intents. They assert no profile load or name panel before successful
+OTP, then exactly one name panel afterward. Additional tests retain the valid
+restored-session path and reject authentication markers without credentials.
+Existing fake authenticated test controllers explicitly provide fake session
+validation; the new regression cases exercise the real validation methods.
+
+Executed after this correction: **447 Flutter tests passed**, static analysis
+reported **no issues**, and `git diff --check` passed. Logs:
+`artifacts/login-before-name-full-tests.log` and
+`artifacts/login-before-name-analysis.log`. No API changes were needed for this
+follow-up. Real-device reproduction and release checks remain outstanding.
+
+### Three customer flow corrections
+
+#### 1. Questionnaire save conflict
+
+Confirmed root cause in the API: `SynchronizePreferences` added a preference with
+a supplied Guid to the collection of an existing tracked profile. EF inferred
+`Modified`, issuing an UPDATE for a row that did not exist. A database-free test
+against the actual Npgsql EF model reproduced `Expected: Added / Actual: Modified`.
+Explicitly adding the new preference to the DbSet fixes its state to `Added`.
+Existing preference edits/removals, per-customer locks, EF concurrency tokens,
+questionnaire validation and completion criteria remain in place. No migration.
+
+The API upsert contract does not consume Flutter's `rowVersion`; a stale client
+version was not the cause of that false insert conflict. Flutter already adopts
+the successful response version. Tests now verify consecutive outgoing versions.
+
+Flutter previously surfaced 409 without retrieving the latest profile. It now
+serializes questionnaire loads/saves, retains the saved baseline, and handles a
+concurrency conflict with a three-way comparison of saved, edited and latest
+answers. Only locally changed questionnaire fields are reapplied; unrelated
+server fields and current version are retained. Disjoint changes receive one
+automatic retry. Different concurrent edits to the same answer retain local input
+and show the error for review and explicit retry. Repeated conflicts stop after
+one retry; database-constraint conflicts are not retried as concurrency errors.
+Profile failures retain their API error codes. The update also sends the profile's
+language so a reconciled Arabic setting is not overwritten by the API's English
+default. Authentication/session recovery behavior is unchanged.
+
+#### 2. Back to Dashboard
+
+The existing meal-plan screen has a compact, localized Back to Dashboard header
+action when the authenticated customer can access Dashboard. It uses the existing
+home route. It does not select a package, submit an order, or modify plan cards,
+prices or Continue. The ordinary back button remains for other pushed entries.
+
+#### 3. Questionnaire introduction and Not Now
+
+Incomplete account setup opens the existing introduction (page 0) after the
+unchanged authentication/name/profile flow. Start uses the existing authoritative
+first-incomplete-step calculation. No question opens before that action.
+
+Not Now uses the existing session-scoped deferral provider and goes directly to
+Dashboard. It does not save answers, create a draft/order, or mark completion.
+Dashboard and the existing Profile questionnaire route permit this explicit
+deferral; checkout readiness still requires actual questionnaire completion.
+Profile can reopen the existing introduction and resume saved answers. Completed
+customers retain their existing destination and skip introduction/questions.
+Logout continues to clear deferral using the existing authentication behavior.
+App-tour logic, dashboard layout, payment, approval and calendar were not changed.
+
+#### Exact changed files
+
+Flutter production paths relative to `diet-time-app`:
+
+- `lib/app/router/app_router.dart`
+- `lib/features/dashboard/presentation/customer_dashboard_controller.dart`
+- `lib/features/onboarding/presentation/onboarding_screen.dart`
+- `lib/features/personalization/data/customer_profile_repository.dart`
+- `lib/features/personalization/domain/questionnaire_profile_merge.dart` (new)
+- `lib/features/personalization/presentation/customer_onboarding_coordinator.dart`
+- `lib/features/personalization/presentation/profile_persistence_controller.dart`
+- `lib/features/personalization/presentation/questionnaire_deferral_controller.dart`
+- `lib/features/plans/presentation/meal_plan_screen.dart`
+
+Flutter tests:
+
+- `test/questionnaire_save_conflict_test.dart` (new)
+- `test/questionnaire_landing_test.dart` (new)
+- `test/meal_plan_screen_test.dart`
+- `test/widget_test.dart`
+
+ASP.NET Core paths relative to the sibling `diet-time-api` repository:
+
+- `src/BuildingBlocks/DietTime.Persistence/CustomerProfileService.cs`
+- `tests/DietTime.UnitTests/QuestionnairePreferenceTrackingTests.cs` (new)
+
+#### Executed validation
+
+- Preference tracking reproduction: 1 failing test before the API fix, 1 passing
+  test after it. No PostgreSQL connection was used for this EF state test.
+- Targeted Flutter suite: 35 passed (conflict handling, intro/deferral/Profile,
+  dashboard controller, meal plans and profile persistence).
+- Full Flutter suite: **461 passed**, including the existing ordering, OTP/name,
+  dashboard, calendar and app-tour regressions.
+- Full ASP.NET Core unit suite: **246 passed**.
+- Dart static analysis with `--fatal-infos`: **no issues**.
+- App/API `git diff --check`: no whitespace errors.
+
+Logs: `artifacts/three-fixes-{tests,full-tests,api-tests,analysis}.log` and the
+preference-before/after logs. Live PostgreSQL integration was not executed:
+Docker Desktop's Linux-engine pipe is unavailable. Real-device/release validation
+also remains outstanding. Deploy the API preference fix with the Flutter update;
+the client conflict recovery does not replace the server insertion correction.
+
+### Login UI, back arrow, OTP editing and automatic meal categories
+
+#### Root causes and corrections
+
+1. **Login panel:** its minimum height was the viewport remainder below the hero,
+   producing blank space after Continue. The scroll view also added keyboard
+   insets while Scaffold already resized its body. Removed the panel minimum and
+   duplicate keyboard padding, reduced its bottom padding to 12, and kept SafeArea.
+   Extra height now exposes the existing background instead of stretching the
+   panel. Logo, copy, rounded corners, input and validation are unchanged.
+2. **Meal-plan back action:** the header used a labelled text button. It is now a
+   green IconButton with a tooltip and a standard touch target, at the top-left.
+   The same existing dashboard route and availability check are retained. No plan
+   selection, checkout mutation or order request is performed by this action.
+3. **OTP editing:** six independent editors relied on hardware KeyEvent backspace
+   handling, which did not reliably cover mobile IME deletion. A multi-character
+   cell edit was also treated as a full-code paste. One native TextField now owns
+   the value, cursor, deletion, selection, clipboard menu and one-time-code autofill.
+   The existing six-box appearance renders that value. Tapping a box selects its
+   digit, replacement advances the caret, and a complete pasted code replaces the
+   whole value even when an earlier digit is selected. Authentication, OTP
+   generation, expiry, verification and navigation were not changed.
+4. **Automatic meal assignments:** initialization and cutoff finalization both
+   chose distinct dish IDs without enforcing distinct meal-type IDs. Both now use
+   the same assignment rule over their existing eligible template/week/weekday
+   options. Meal types are grouped by configured ID and sorted by configured
+   DisplayOrder. Within each type, existing saved-default, customer-preference,
+   IsDefault and display-order priorities are retained. Ranked alternatives are
+   considered only when needed to avoid a shared dish blocking another category.
+   Snacks are assigned separately using the existing snack classification and
+   quantity. No Breakfast/Lunch/Dinner IDs are hardcoded.
+
+Insufficient distinct types produce the existing partial/needs-review state with
+a specific configuration reason instead of duplicate-category meals. A failed
+cutoff assignment retains existing selections. Confirmed/locked days retain their
+existing early exit; unconfirmed customer-sourced selections are preserved for
+review. Initialization still skips existing service dates under its existing
+per-order lock. No new startup reassignment, history deletion, migration, package
+change, payment/approval change or cutoff change was introduced.
+
+#### Exact modified files
+
+Relative to `diet-time-app`:
+
+- `lib/features/authentication/presentation/phone_login_page.dart`
+- `lib/features/authentication/presentation/otp_verification_page.dart`
+- `lib/features/plans/presentation/meal_plan_screen.dart`
+- `test/otp_flow_test.dart`
+- `test/meal_plan_screen_test.dart`
+- `README.md` (this report)
+
+Relative to the sibling `diet-time-api`:
+
+- `src/BuildingBlocks/DietTime.Application/AutomaticMealAssignmentRules.cs` (new)
+- `src/BuildingBlocks/DietTime.Persistence/UpcomingMealService.cs`
+- `src/BuildingBlocks/DietTime.Persistence/TomorrowMealService.cs`
+- `tests/DietTime.UnitTests/AutomaticMealAssignmentTests.cs` (new)
+- `tests/DietTime.Meal.Api.IntegrationTests/UpcomingMealServiceTests.cs`
+
+#### Executed verification
+
+- Full Flutter suite: **471 passed**.
+- Targeted OTP/login/meal-plan suite: **44 passed**, including deletion at each of
+  six positions, empty-position backspace, replacement at every position, native
+  long-press Paste over an existing code, autofill editing events/hints, keyboard
+  insets, compact/tall viewports, safe-area spacing, dashboard navigation and no
+  checkout creation by the back action.
+- Full ASP.NET Core unit suite: **257 passed**. Assignment tests cover 1–5 meal
+  packages, configured type order, several slots sharing one type, independent
+  snack quantities, default/preference priorities, shared-dish fallback, missing
+  configuration and deterministic repeat selection.
+- Database-free `SubscriptionMenuRulesTests` in the integration-test assembly:
+  **9 passed**, covering the four-week cycle and wraparound.
+- PostgreSQL integration project: build succeeded, **0 errors** and eight existing
+  warnings in unrelated API controllers. Added persistent distinct-type,
+  confirmed-selection preservation, idempotent rerun and shortage coverage; aligned
+  its fixture with three configured meal types for its three-meal package.
+- Dart static analysis: **no issues**. App/API `git diff --check` passed.
+
+Logs are under `artifacts/four-fixes-*.log`.
+
+#### Verification still required
+
+No physical iPhone, TestFlight or Android testing was performed. Flutter device
+discovery found Windows, Chrome and Edge only. Tests exercised Flutter's native
+editing/clipboard path and simulated autofill events; real SMS autofill and mobile
+keyboard behavior must still be checked on both mobile platforms.
+
+Live PostgreSQL integration tests were not executed because
+`UPCOMING_MEALS_TEST_CONNECTION` is not configured. Date/weekday SQL filtering,
+persistent history/locking and database idempotency have compiled test coverage,
+not an executed database validation in this session. Run the UpcomingMealService
+integration suite against an isolated PostgreSQL instance before release.
+The backend assignment changes must be deployed alongside the Flutter changes.
+
+### Delivery and Takeaway for every eligible package
+
+#### Changes
+
+The legacy package delivery flag previously hid the selector, forced Takeaway in
+checkout state, rejected Delivery at placement, and rejected it during subsequent
+fulfillment validation. Customer package responses also exposed that restriction.
+
+Both methods are now available regardless of that flag. Existing package
+availability, active address ownership, active delivery slots, active takeaway
+branches, fulfillment snapshots and order/subscription processing remain intact.
+The legacy database column/admin metadata remain for compatibility; they no longer
+restrict customer fulfillment. No schema migration or admin feature was added.
+
+One compact green information component displays the requested Delivery Information
+notice immediately in the plan summary when Delivery is selected and on Delivery
+order confirmation. It disappears for Takeaway. English and Arabic use the
+existing ARB/generated localization system. Delivery's price caption is now
+Meal-plan amount; Takeaway retains its existing total captions and pricing.
+
+No fees, estimated amounts, distance calculations, daily charges, pricing changes,
+new financial configuration, tables or columns were introduced. The price values,
+duration, quantities and request amounts are unchanged.
+
+#### Modified files for this request
+
+Flutter, relative to `diet-time-app`:
+
+- `lib/features/checkout/domain/checkout_models.dart`
+- `lib/features/checkout/presentation/checkout_controller.dart`
+- `lib/features/checkout/presentation/delivery_information_notice.dart` (new)
+- `lib/features/checkout/presentation/plan_summary_screen.dart`
+- `lib/features/checkout/presentation/order_placed_screen.dart`
+- `lib/app/localization/customer_copy.dart`
+- `lib/l10n/app_en.arb`, `lib/l10n/app_ar.arb`
+- Generated `lib/l10n/app_localizations.dart`, `app_localizations_en.dart`,
+  `app_localizations_ar.dart`
+- `test/package_delivery_test.dart`
+- `README.md` (this report)
+
+ASP.NET Core, relative to the sibling `diet-time-api` repository:
+
+- `src/BuildingBlocks/DietTime.Domain/Entities.cs`
+- `src/BuildingBlocks/DietTime.Persistence/CustomerMealPlanPurchaseService.cs`
+- `src/BuildingBlocks/DietTime.Persistence/MealQueryService.cs`
+- `src/BuildingBlocks/DietTime.Persistence/OrderService.cs`
+- `src/BuildingBlocks/DietTime.Persistence/StaffOrderService.cs` (only removal of
+  the legacy delivery-flag predicate; approval workflow remains unchanged)
+- `tests/DietTime.UnitTests/DeliveryEligibilityTests.cs`
+- `tests/DietTime.Meal.Api.IntegrationTests/PackageDeliveryIntegrationTests.cs`
+
+Earlier uncommitted login/OTP/back-arrow/automatic-assignment work was preserved.
+
+#### Verification
+
+- Targeted checkout/order tests: 36 passed; the additional Delivery payload test
+  then passed in the 14-test package fulfillment suite.
+- Final full Flutter suite: **479 passed** (`artifacts/fulfillment-full-tests.log`).
+- ASP.NET Core unit suite: **257 passed**.
+- Dart static analysis: **no issues**.
+- API integration project: **build succeeded**, zero warnings/errors in the final
+  incremental build. PostgreSQL integration tests were not executed because the
+  isolated `UPCOMING_MEALS_TEST_CONNECTION` is not configured.
+- App/API `git diff --check`: passed.
+
+Tests cover both legacy flag values, Delivery and Takeaway, English/Arabic notices
+and captions, unchanged displayed prices and order payload amounts, required
+addresses/slots/branches, selection preservation and normal checkout clearing
+after successful placement. Compiled integration coverage additionally checks
+customer API eligibility, stored fulfillment snapshots and equal plan amounts
+across Delivery/Takeaway. Live database and real-device verification remain
+outstanding. Deploy the API and Flutter changes together.

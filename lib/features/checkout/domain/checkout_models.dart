@@ -182,9 +182,7 @@ class CheckoutState {
   final bool isLoadingBranches;
   final String? branchError;
   final String fulfillmentMethod;
-  bool get isDeliveryEnabled =>
-      selection?.pricingOption.isDeliveryEnabled ?? true;
-  bool get isTakeaway => !isDeliveryEnabled || fulfillmentMethod == 'TAKEAWAY';
+  bool get isTakeaway => fulfillmentMethod == 'TAKEAWAY';
   String get fulfillmentLabel => isTakeaway ? 'Takeaway' : 'Home Delivery';
   final MealPlanPurchaseSelection? selection;
   final MealPlanServiceSchedule? schedule;
@@ -303,15 +301,7 @@ class CheckoutState {
     branchError: identical(branchError, _unset)
         ? this.branchError
         : branchError as String?,
-    fulfillmentMethod:
-        (identical(selection, _unset)
-                    ? this.selection
-                    : selection as MealPlanPurchaseSelection?)
-                ?.pricingOption
-                .isDeliveryEnabled ==
-            false
-        ? 'TAKEAWAY'
-        : fulfillmentMethod ?? this.fulfillmentMethod,
+    fulfillmentMethod: fulfillmentMethod ?? this.fulfillmentMethod,
     selection: identical(selection, _unset)
         ? this.selection
         : selection as MealPlanPurchaseSelection?,

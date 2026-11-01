@@ -1,4 +1,5 @@
 import 'package:diet_time/app/localization/customer_copy.dart';
+import 'delivery_information_notice.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_start_date_screen.dart';
 import 'dart:async';
 
@@ -97,38 +98,35 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        checkout.fulfillmentLabel,
+                        context.customerCopy(checkout.fulfillmentLabel),
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
-                      if (!checkout.isDeliveryEnabled)
-                        Text(
-                          context.customerCopy(
-                            'This package is available for takeaway only.',
+                      SegmentedButton<String>(
+                        key: const ValueKey('checkoutFulfillment'),
+                        segments: [
+                          ButtonSegment(
+                            value: 'TAKEAWAY',
+                            label: Text(context.customerCopy('Takeaway')),
                           ),
-                        )
-                      else
-                        SegmentedButton<String>(
-                          segments: [
-                            ButtonSegment(
-                              value: 'TAKEAWAY',
-                              label: Text(context.customerCopy('Takeaway')),
-                            ),
-                            ButtonSegment(
-                              value: 'HOME_DELIVERY',
-                              label: Text(
-                                context.customerCopy('Home Delivery'),
-                              ),
-                            ),
-                          ],
-                          selected: {
-                            checkout.isTakeaway ? 'TAKEAWAY' : 'HOME_DELIVERY',
-                          },
-                          onSelectionChanged: checkout.isPlacingOrder
-                              ? null
-                              : (values) => ref
-                                    .read(checkoutControllerProvider.notifier)
-                                    .selectFulfillmentMethod(values.single),
-                        ),
+                          ButtonSegment(
+                            value: 'HOME_DELIVERY',
+                            label: Text(context.customerCopy('Home Delivery')),
+                          ),
+                        ],
+                        selected: {
+                          checkout.isTakeaway ? 'TAKEAWAY' : 'HOME_DELIVERY',
+                        },
+                        onSelectionChanged: checkout.isPlacingOrder
+                            ? null
+                            : (values) => ref
+                                  .read(checkoutControllerProvider.notifier)
+                                  .selectFulfillmentMethod(values.single),
+                      ),
+                      if (!checkout.isTakeaway) ...[
+                        const SizedBox(height: 12),
+                        const DeliveryInformationNotice(),
+                        const SizedBox(height: 12),
+                      ],
                       if (checkout.isTakeaway) ...[
                         const SizedBox(height: 12),
                         Text(
@@ -269,7 +267,11 @@ class _PlanSummaryScreenState extends ConsumerState<PlanSummaryScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              context.customerCopy('Order Total'),
+                              context.customerCopy(
+                                checkout.isTakeaway
+                                    ? 'Order Total'
+                                    : 'Meal-plan amount',
+                              ),
                               style: TextStyle(
                                 color: AppColors.darkGreen,
                                 fontSize: 13,

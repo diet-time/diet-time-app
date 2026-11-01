@@ -464,6 +464,10 @@ extension CustomerCopy on BuildContext {
       "This package is available for takeaway only." =>
         copy.customerThisPackageIsAvailableForTakeawayOnly,
       "Home Delivery" => copy.customerHomeDelivery,
+      "Delivery Information" => copy.customerDeliveryInformation,
+      "Delivery charges may apply based on your location and distance. Any applicable charges will be communicated before payment." =>
+        copy.customerDeliveryChargesNotice,
+      "Meal-plan amount" => copy.customerMealPlanAmount,
       "COLLECTION BRANCH" => copy.customerCOLLECTIONBRANCH,
       "No takeaway branches are currently available." =>
         copy.customerNoTakeawayBranchesAreCurrentlyAvailable,

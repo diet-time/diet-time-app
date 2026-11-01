@@ -55,6 +55,10 @@ void main() {
         final back = find.byKey(const ValueKey('mealPlanBackToDashboard'));
         expect(back, authenticated ? findsOneWidget : findsNothing);
         if (authenticated) {
+          final arrow = tester.widget<IconButton>(back);
+          expect(arrow.color, isNotNull);
+          expect(find.text('Back to Dashboard'), findsNothing);
+          expect(tester.getSize(back).width, greaterThanOrEqualTo(48));
           await tester.tap(back);
           await tester.pumpAndSettle();
           expect(find.text('Existing dashboard'), findsOneWidget);

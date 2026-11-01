@@ -53,16 +53,15 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
           children: [
             if (dashboardAvailable)
               Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: TextButton.icon(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
                   key: const ValueKey('mealPlanBackToDashboard'),
                   onPressed: () => context.go(AppRoutes.home),
-                  icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                  label: Text(
-                    language == 'ar'
-                        ? 'العودة إلى لوحة التحكم'
-                        : 'Back to Dashboard',
-                  ),
+                  color: AppColors.darkGreen,
+                  tooltip: language == 'ar'
+                      ? 'العودة إلى لوحة التحكم'
+                      : 'Back to Dashboard',
+                  icon: const Icon(Icons.arrow_back_rounded),
                 ),
               ),
             if (canPop && !dashboardAvailable)
