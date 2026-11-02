@@ -862,12 +862,12 @@
   "packagePause": "إيقاف الباقة مؤقتًا",
   "packagePaused": "متوقفة مؤقتًا",
   "packagePauseScheduled": "تمت جدولة الإيقاف المؤقت",
-  "packageResumeEarly": "استئناف مبكر",
+  "packageResumeEarly": "إزالة الإيقاف المؤقت",
   "packageRemainingDays": "أيام الخدمة المتبقية",
   "packageNextDelivery": "موعد الخدمة القادم",
   "packageExpectedEnd": "تاريخ انتهاء الباقة المتوقع",
   "packagePauseStart": "تاريخ بدء الإيقاف المؤقت",
-  "packageResumeDate": "تاريخ الاستئناف المتوقع",
+  "packageResumeDate": "تاريخ استئناف التوصيل",
   "packageEarliestPauseDate": "أقرب تاريخ متاح للإيقاف المؤقت",
   "packagePreserveDays": "ستُحفظ أيام التوصيل المتبقية. وستبقى الخدمات التي بدأ تجهيزها في مواعيدها.",
   "packagePreviewPause": "معاينة الإيقاف المؤقت",
@@ -879,6 +879,6 @@
   "packageLoadFailure": "تعذر تحميل إدارة الباقة. يرجى إعادة المحاولة.",
   "packageScheduleChanged": "تعذر تحديث الجدول. حدّث المعاينة وحاول مرة أخرى.",
   "packageReason": "السبب (اختياري)",
-  "packageResumeConfirmation": "هل تريد الاستئناف في أقرب يوم خدمة مستقبلي متاح؟ ستُحفظ أيامك المتبقية.",
+  "packageResumeConfirmation": "سيتم الحفاظ على أيام الخدمة المتبقية وحساب تاريخ انتهاء الباقة تلقائياً.",
   "packageCancellationBlocked": "هذا الحجز مؤكد ومدفوع. لا يمكن إلغاؤه من التطبيق. يمكنك إيقاف الخدمات المستقبلية مؤقتًا أو التواصل مع دايت تايم."
 }

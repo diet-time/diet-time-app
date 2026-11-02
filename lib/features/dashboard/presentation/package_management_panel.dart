@@ -38,6 +38,7 @@ class _PackageManagementPanelState
   Timer? _eligibilityRefresh;
   bool _busy = false;
   String? _resumeCommand, _resumePause;
+  DateTime? _resumeDate;
   @override
   void dispose() {
     _eligibilityRefresh?.cancel();
@@ -93,24 +94,30 @@ class _PackageManagementPanelState
         _failure();
         return;
       }
-      final start = await showDatePicker(
+      final first = data.earliestRestartDate();
+      final last = data.latestRestartDate();
+      if (first.isAfter(last)) {
+        _failure();
+        return;
+      }
+      final restart = await showDatePicker(
         context: context,
-        initialDate: dates.first,
-        firstDate: dates.first,
-        lastDate: dates.last,
+        initialDate: first,
+        firstDate: first,
+        lastDate: last,
         currentDate: data.qatarNow(),
-        selectableDayPredicate: data.allowsPauseDate,
         helpText: lookupAppLocalizations(
           Localizations.localeOf(context),
-        ).packagePauseStart,
+        ).packageResumeDate,
       );
-      if (!mounted || start == null) return;
+      if (!mounted || restart == null) return;
       await showDialog<PackageManagement>(
         context: context,
         barrierDismissible: false,
         builder: (_) => _PauseDialog(
           orderId: widget.orderId,
-          start: start,
+          start: first,
+          initialResume: restart,
           repository: repository,
           qatarNow: data.qatarNow,
         ),
@@ -128,11 +135,33 @@ class _PackageManagementPanelState
     if (_busy || data.currentPause == null) return;
     setState(() => _busy = true);
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
+    final now = data.qatarNow();
+    final first = data.earliestRestartDate();
+    final last = data.latestRestartDate();
+    if (first.isAfter(last)) {
+      setState(() => _busy = false);
+      return;
+    }
+    final restart = await showDatePicker(
+      context: context,
+      initialDate: first,
+      firstDate: first,
+      lastDate: last,
+      currentDate: now,
+      helpText: copy.packageResumeDate,
+    );
+    if (!mounted) return;
+    if (restart == null) {
+      setState(() => _busy = false);
+      return;
+    }
     final accepted = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(copy.packageResumeEarly),
-        content: Text(copy.packageResumeConfirmation),
+        content: Text(
+          '${copy.packageResumeDate}: ${_dateLabel(context, restart)}\n${copy.packageResumeConfirmation}',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -150,8 +179,9 @@ class _PackageManagementPanelState
       setState(() => _busy = false);
       return;
     }
-    if (_resumePause != data.currentPause!.id) {
+    if (_resumePause != data.currentPause!.id || _resumeDate != restart) {
       _resumePause = data.currentPause!.id;
+      _resumeDate = restart;
       _resumeCommand = packageCommandId();
     }
     try {
@@ -162,10 +192,12 @@ class _PackageManagementPanelState
             _resumeCommand!,
             data.currentPause!.id,
             data.rowVersion,
+            resumeDate: restart,
           );
       if (mounted) {
         _resumeCommand = null;
         _resumePause = null;
+        _resumeDate = null;
         _changed();
       }
     } catch (_) {
@@ -292,11 +324,13 @@ class _PauseDialog extends StatefulWidget {
   const _PauseDialog({
     required this.orderId,
     required this.start,
+    required this.initialResume,
     required this.repository,
     required this.qatarNow,
   });
   final String orderId;
   final DateTime start;
+  final DateTime initialResume;
   final OrdersRepository repository;
   final DateTime Function() qatarNow;
   @override
@@ -304,7 +338,7 @@ class _PauseDialog extends StatefulWidget {
 }
 
 class _PauseDialogState extends State<_PauseDialog> {
-  late DateTime _resume = widget.start.add(const Duration(days: 1));
+  late DateTime _resume = widget.initialResume;
   final _reason = TextEditingController();
   PackagePausePreview? _preview;
   String? _error, _commandId;
@@ -399,9 +433,6 @@ class _PauseDialogState extends State<_PauseDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '${copy.packagePauseStart}: ${_dateLabel(context, widget.start)}',
-              ),
               TextButton(
                 onPressed: _busy
                     ? null
@@ -410,8 +441,8 @@ class _PauseDialogState extends State<_PauseDialog> {
                           context: context,
                           initialDate: _resume,
                           currentDate: widget.qatarNow(),
-                          firstDate: widget.start.add(const Duration(days: 1)),
-                          lastDate: DateTime(widget.start.year + 100, 12, 31),
+                          firstDate: widget.start,
+                          lastDate: packageRestartLimit(widget.qatarNow()),
                           helpText: copy.packageResumeDate,
                         );
                         if (mounted && date != null) {

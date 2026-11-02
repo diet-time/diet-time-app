@@ -2431,7 +2431,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get packagePauseScheduled => 'تمت جدولة الإيقاف المؤقت';
 
   @override
-  String get packageResumeEarly => 'استئناف مبكر';
+  String get packageResumeEarly => 'إزالة الإيقاف المؤقت';
 
   @override
   String get packageRemainingDays => 'أيام الخدمة المتبقية';
@@ -2446,7 +2446,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get packagePauseStart => 'تاريخ بدء الإيقاف المؤقت';
 
   @override
-  String get packageResumeDate => 'تاريخ الاستئناف المتوقع';
+  String get packageResumeDate => 'تاريخ استئناف التوصيل';
 
   @override
   String get packageEarliestPauseDate => 'أقرب تاريخ متاح للإيقاف المؤقت';
@@ -2483,7 +2483,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get packageResumeConfirmation =>
-      'هل تريد الاستئناف في أقرب يوم خدمة مستقبلي متاح؟ ستُحفظ أيامك المتبقية.';
+      'سيتم الحفاظ على أيام الخدمة المتبقية وحساب تاريخ انتهاء الباقة تلقائياً.';
 
   @override
   String get packageCancellationBlocked =>

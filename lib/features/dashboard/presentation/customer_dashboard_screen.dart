@@ -1,7 +1,7 @@
 import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/language/presentation/dashboard_language_switcher.dart';
 import 'dart:async';
-import 'package:diet_time/features/dashboard/presentation/package_management_panel.dart';
+import 'package:diet_time/features/dashboard/presentation/package_management_provider.dart';
 import 'package:diet_time/features/app_tour/app_tour_controller.dart';
 import 'package:diet_time/features/app_tour/app_tour_host.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
@@ -447,12 +447,6 @@ class _DashboardHome extends ConsumerWidget {
               )
             else
               _MultiPlanCarousel(orders: plans, details: details),
-            for (final plan in plans.where(
-              (p) =>
-                  p.rowVersion > 0 &&
-                  const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(p.status),
-            ))
-              PackageManagementPanel(orderId: plan.id, planName: plan.planName),
             if (single != null || multiple != null) ...[
               const SizedBox(height: 16),
               TomorrowDeliveriesSection(
@@ -721,7 +715,12 @@ class _ReferencePlanCard extends ConsumerWidget {
     final package = (detail?.entitlement ?? summary.entitlement)?.label(
       Localizations.localeOf(context).languageCode,
     );
-    final status = context.customerCopy(summary.statusLabel);
+    final status = _packageStatusLabel(
+      context,
+      ref,
+      summary.status,
+      summary.rowVersion > 0 ? summary.id : null,
+    );
     Future<void> openDetails() async {
       await context.push(AppRoutes.orderDetails, extra: summary.id);
       if (context.mounted) {
@@ -931,7 +930,10 @@ class _PlanHeroCard extends StatelessWidget {
                   ],
                 ),
               ),
-              _HeroStatusPill(summary.status),
+              _HeroStatusPill(
+                summary.status,
+                orderId: summary.rowVersion > 0 ? summary.id : null,
+              ),
             ],
           ),
           Padding(
@@ -1069,20 +1071,40 @@ class _HeroDetail extends StatelessWidget {
   );
 }
 
-class _HeroStatusPill extends StatelessWidget {
-  const _HeroStatusPill(this.status);
+String _packageStatusLabel(
+  BuildContext context,
+  WidgetRef ref,
+  String status,
+  String? orderId,
+) {
+  if (orderId != null &&
+      const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(status)) {
+    final data = ref.watch(packageManagementProvider(orderId)).asData?.value;
+    if (data?.currentPause != null) {
+      final copy = lookupAppLocalizations(Localizations.localeOf(context));
+      return data!.status == 'PAUSED'
+          ? copy.packagePaused
+          : copy.packagePauseScheduled;
+    }
+  }
+  return context.customerCopy(orderStatusLabel(status));
+}
+
+class _HeroStatusPill extends ConsumerWidget {
+  const _HeroStatusPill(this.status, {this.orderId});
+  final String? orderId;
 
   final String status;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context, WidgetRef ref) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
     decoration: BoxDecoration(
       color: const Color(0xFFBFEA92),
       borderRadius: BorderRadius.circular(999),
     ),
     child: Text(
-      orderStatusLabel(status),
+      _packageStatusLabel(context, ref, status, orderId),
       style: const TextStyle(
         color: Color(0xFF205A36),
         fontSize: 9,
@@ -1233,7 +1255,10 @@ class _CompactPlanCard extends StatelessWidget {
                   ),
                 ),
               ),
-              _HeroStatusPill(summary.status),
+              _HeroStatusPill(
+                summary.status,
+                orderId: summary.rowVersion > 0 ? summary.id : null,
+              ),
             ],
           ),
           const SizedBox(height: 10),

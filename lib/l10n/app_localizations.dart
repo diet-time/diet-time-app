@@ -4463,7 +4463,7 @@ abstract class AppLocalizations {
   /// No description provided for @packageResumeEarly.
   ///
   /// In en, this message translates to:
-  /// **'Resume Early'**
+  /// **'Remove pause'**
   String get packageResumeEarly;
 
   /// No description provided for @packageRemainingDays.
@@ -4493,7 +4493,7 @@ abstract class AppLocalizations {
   /// No description provided for @packageResumeDate.
   ///
   /// In en, this message translates to:
-  /// **'Expected resume date'**
+  /// **'Restart date'**
   String get packageResumeDate;
 
   /// No description provided for @packageEarliestPauseDate.
@@ -4559,7 +4559,7 @@ abstract class AppLocalizations {
   /// No description provided for @packageResumeConfirmation.
   ///
   /// In en, this message translates to:
-  /// **'Resume on the next eligible future service date? Your remaining days will be preserved.'**
+  /// **'Your remaining service days will be preserved and the package end date calculated automatically.'**
   String get packageResumeConfirmation;
 
   /// No description provided for @packageCancellationBlocked.

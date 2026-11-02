@@ -4,6 +4,11 @@ DateTime _date(Object? value) => DateTime.parse(value as String);
 String packageDate(DateTime date) =>
     '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
+DateTime packageRestartLimit(DateTime now) {
+  final lastDay = DateTime(now.year, now.month + 7, 0).day;
+  return DateTime(now.year, now.month + 6, min(now.day, lastDay));
+}
+
 class PackagePause {
   PackagePause.fromJson(Map<String, dynamic> json)
     : id = json['id'] as String,
@@ -55,6 +60,15 @@ class PackageManagement {
         day.weekday != DateTime.friday &&
         eligibleDates.any((d) => packageDate(d) == packageDate(day)) &&
         !(day == today.add(const Duration(days: 1)) && now.hour >= 21);
+  }
+
+  DateTime earliestRestartDate({DateTime? utcNow}) {
+    final now = qatarNow(utcNow: utcNow);
+    return DateTime(now.year, now.month, now.day + (now.hour >= 21 ? 2 : 1));
+  }
+
+  DateTime latestRestartDate({DateTime? utcNow}) {
+    return packageRestartLimit(qatarNow(utcNow: utcNow));
   }
 }
 

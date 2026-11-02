@@ -2477,7 +2477,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get packagePauseScheduled => 'Pause scheduled';
 
   @override
-  String get packageResumeEarly => 'Resume Early';
+  String get packageResumeEarly => 'Remove pause';
 
   @override
   String get packageRemainingDays => 'Remaining service days';
@@ -2492,7 +2492,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get packagePauseStart => 'Pause start date';
 
   @override
-  String get packageResumeDate => 'Expected resume date';
+  String get packageResumeDate => 'Restart date';
 
   @override
   String get packageEarliestPauseDate => 'Earliest eligible pause date';
@@ -2529,7 +2529,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get packageResumeConfirmation =>
-      'Resume on the next eligible future service date? Your remaining days will be preserved.';
+      'Your remaining service days will be preserved and the package end date calculated automatically.';
 
   @override
   String get packageCancellationBlocked =>

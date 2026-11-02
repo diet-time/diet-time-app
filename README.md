@@ -1624,3 +1624,15 @@ No existing database was modified during validation. Logs are in ignored
 removed after verification. No unrelated customer or Admin workflows were changed;
 real-device verification and deployment to the target environment remain outside
 these local automated checks.
+
+## Package restart-date update
+
+Pause management is available from the existing order-details screen. Dashboard plan cards display Paused or Pause scheduled status, without pause-management controls.
+
+Pausing selects a single restart date from the next eligible future date, up to six calendar months from the current Qatar date. This range can extend beyond the original package end. A preview shows the new end date, which the API calculates from the remaining purchased service days and package weekdays. Today's deliveries, delivered/collected days and committed meal selections are preserved.
+
+Remove pause also opens a restart-date picker. Dates begin at the next eligible future date, respecting the existing 21:00 Qatar cutoff, and extend six months ahead. The app submits `resumeDate` to the existing resume endpoint; the API recalculates the package end automatically. An unavailable delivery weekday rolls forward to the next package weekday. The end date itself is never entered by the customer.
+
+English and Arabic labels, schedule invalidation and command retry behavior are retained. Deploy the matching API changes before this app update. No database migration or SQL script is included.
+
+Validation for this update: 34 Admin frontend tests, 44 Flutter tests, 62 backend unit tests and 20 API integration tests passed. The integration suite used a disposable local PostgreSQL 18 database with no skipped tests. Coverage includes actual future-date rejection, delivery/collection HTTP calls, single restart-date scheduling from tomorrow, six-month limits, pause/resume persistence, retries, entitlement preservation, authorization and existing preparation/PDF behavior. TypeScript, targeted ESLint, Flutter static analysis and the SPA production build passed. Existing compiler/Vite advisories remain. No existing application database was modified.

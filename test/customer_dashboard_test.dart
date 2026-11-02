@@ -1,4 +1,7 @@
 import 'support/ordering_customer.dart';
+import 'package:diet_time/features/dashboard/domain/package_management.dart';
+import 'package:diet_time/features/dashboard/presentation/package_management_panel.dart';
+import 'package:diet_time/features/dashboard/presentation/package_management_provider.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/personalization/data/customer_profile_service.dart';
 import 'package:diet_time/app/router/app_router.dart';
@@ -20,6 +23,85 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final pauseStatus in ['PAUSED', 'SCHEDULED']) {
+    testWidgets(
+      'dashboard shows $pauseStatus in the plan card without pause controls',
+      (tester) async {
+        final summary = CustomerOrderSummary.fromJson({
+          'id': 'paused-plan',
+          'orderNumber': 'ORD-PAUSED',
+          'planName': 'Balance',
+          'planDurationName': '12 days',
+          'status': 'CONFIRMED',
+          'paymentStatus': 'PAID',
+          'totalAmount': 100,
+          'currencyCode': 'QAR',
+          'startDate': '2026-11-03',
+          'endDate': '2026-11-20',
+          'placedAt': '2026-11-02',
+          'review': {'rowVersion': 1, 'canFulfill': true},
+        });
+        final management = PackageManagement.fromJson({
+          'rowVersion': 2,
+          'serverNow': '2026-11-02T12:00:00Z',
+          'status': pauseStatus,
+          'remainingServiceDays': 8,
+          'expectedEndDate': '2026-12-20',
+          'eligiblePauseDates': [],
+          'canResumeEarly': true,
+          'currentPause': {
+            'id': 'pause',
+            'pauseStartDate': '2026-11-03',
+            'resumeDate': '2026-12-03',
+            'status': pauseStatus,
+          },
+        });
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              customerDashboardControllerProvider.overrideWith(
+                () => _DashboardControllerForTest(
+                  DashboardWithActivePlan(
+                    order: summary,
+                    detail: _detail(summary),
+                    orders: [summary],
+                  ),
+                ),
+              ),
+              ordersRepositoryProvider.overrideWithValue(
+                _FakeOrdersRepository([summary]),
+              ),
+              packageManagementProvider(
+                summary.id,
+              ).overrideWith((ref) async => management),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: const CustomerDashboardScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final card = find.byKey(const ValueKey('activePlan-paused-plan'));
+        expect(
+          find.descendant(
+            of: card,
+            matching: find.text(
+              pauseStatus == 'PAUSED' ? 'Paused' : 'Pause scheduled',
+            ),
+          ),
+          findsOneWidget,
+        );
+        expect(find.byType(PackageManagementPanel), findsNothing);
+        expect(
+          find.byKey(const ValueKey('pausePackage-paused-plan')),
+          findsNothing,
+        );
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
   for (final language in ['en', 'ar']) {
     for (final width in [320.0, 800.0]) {
       testWidgets(

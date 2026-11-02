@@ -124,8 +124,9 @@ class PackageOrders extends OrdersRepository {
     String id,
     String commandId,
     String pauseId,
-    int rowVersion,
-  ) async {
+    int rowVersion, {
+    DateTime? resumeDate,
+  }) async {
     resumes++;
     paused = false;
     return getPackageManagement(id);
@@ -166,6 +167,29 @@ class CapturePackageApi extends ApiClient {
 }
 
 void main() {
+  test(
+    'restart selection extends beyond package end and clamps six-month boundaries',
+    () {
+      final data = PackageManagement.fromJson(management());
+      expect(
+        data.earliestRestartDate(utcNow: data.receivedAt),
+        DateTime(2026, 11, 3),
+      );
+      expect(
+        data.latestRestartDate(utcNow: data.receivedAt),
+        DateTime(2027, 5, 2),
+      );
+      expect(packageRestartLimit(DateTime(2026, 8, 31)), DateTime(2027, 2, 28));
+      final cutoff = PackageManagement.fromJson({
+        ...management(),
+        'serverNow': '2026-11-02T18:00:00Z',
+      });
+      expect(
+        cutoff.earliestRestartDate(utcNow: cutoff.receivedAt),
+        DateTime(2026, 11, 4),
+      );
+    },
+  );
   test(
     'cancellation requires both approved state and paid payment; pending payment keeps the existing action',
     () {
@@ -258,7 +282,14 @@ void main() {
         DateTime(2026, 11, 10),
         'Travel',
       );
-      await repository.resumePackage('order', id, 'pause', 2);
+      await repository.resumePackage(
+        'order',
+        id,
+        'pause',
+        2,
+        resumeDate: DateTime(2026, 11, 3),
+      );
+      expect(api.calls.last.body, containsPair('resumeDate', '2026-11-03'));
       expect(api.calls.map((c) => c.path), [
         '/api/v1/orders/order/package-management',
         '/api/v1/orders/order/pause/preview',
@@ -347,9 +378,10 @@ void main() {
         final picker = tester.widget<CalendarDatePicker>(
           find.byType(CalendarDatePicker),
         );
-        expect(picker.selectableDayPredicate!(DateTime(2026, 11, 2)), isFalse);
-        expect(picker.selectableDayPredicate!(DateTime(2026, 11, 3)), isFalse);
-        expect(picker.selectableDayPredicate!(DateTime(2026, 11, 4)), isTrue);
+        expect(picker.firstDate, DateTime(2026, 11, 3));
+        expect(picker.lastDate, DateTime(2027, 5, 2));
+        expect(picker.lastDate.isAfter(DateTime(2026, 11, 12)), isTrue);
+        expect(picker.selectableDayPredicate, isNull);
         final nativeCopy = MaterialLocalizations.of(
           tester.element(find.byType(CalendarDatePicker)),
         );
@@ -375,6 +407,19 @@ void main() {
         expect(find.text(copy.packagePauseScheduled), findsOneWidget);
         expect(container.read(packageScheduleChangesProvider), {'order': 1});
         await tester.tap(find.text(copy.packageResumeEarly));
+        await tester.pumpAndSettle();
+        final restartPicker = tester.widget<CalendarDatePicker>(
+          find.byType(CalendarDatePicker),
+        );
+        expect(restartPicker.firstDate, DateTime(2026, 11, 3));
+        expect(restartPicker.lastDate, DateTime(2027, 5, 2));
+        await tester.tap(
+          find.text(
+            MaterialLocalizations.of(
+              tester.element(find.byType(CalendarDatePicker)),
+            ).okButtonLabel,
+          ),
+        );
         await tester.pumpAndSettle();
         await tester.tap(
           find.widgetWithText(FilledButton, copy.packageResumeEarly),

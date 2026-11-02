@@ -917,12 +917,12 @@
   "packagePause": "Pause Package",
   "packagePaused": "Paused",
   "packagePauseScheduled": "Pause scheduled",
-  "packageResumeEarly": "Resume Early",
+  "packageResumeEarly": "Remove pause",
   "packageRemainingDays": "Remaining service days",
   "packageNextDelivery": "Next scheduled delivery",
   "packageExpectedEnd": "Expected package end date",
   "packagePauseStart": "Pause start date",
-  "packageResumeDate": "Expected resume date",
+  "packageResumeDate": "Restart date",
   "packageEarliestPauseDate": "Earliest eligible pause date",
   "packagePreserveDays": "Your remaining delivery days will be preserved. Committed deliveries will remain scheduled.",
   "packagePreviewPause": "Preview pause",
@@ -934,6 +934,6 @@
   "packageLoadFailure": "Unable to load package management. Please retry.",
   "packageScheduleChanged": "Unable to update the schedule. Refresh the preview and try again.",
   "packageReason": "Reason (optional)",
-  "packageResumeConfirmation": "Resume on the next eligible future service date? Your remaining days will be preserved.",
+  "packageResumeConfirmation": "Your remaining service days will be preserved and the package end date calculated automatically.",
   "packageCancellationBlocked": "This booking is confirmed and paid. You cannot cancel it from the app. You may pause future deliveries or contact Diet Time."
 }

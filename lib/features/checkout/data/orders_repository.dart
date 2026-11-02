@@ -147,6 +147,7 @@ class OrdersRepository {
       body: {
         'pauseStartDate': packageDate(start),
         'resumeDate': packageDate(resume),
+        'moveRemaining': true,
       },
     );
     return PackagePausePreview.fromJson(response.body);
@@ -169,6 +170,7 @@ class OrdersRepository {
         'scheduleVersion': preview.scheduleVersion,
         'pauseStartDate': packageDate(start),
         'resumeDate': packageDate(resume),
+        'moveRemaining': true,
         'reason': reason,
       },
     );
@@ -179,8 +181,9 @@ class OrdersRepository {
     String id,
     String commandId,
     String pauseId,
-    int rowVersion,
-  ) async {
+    int rowVersion, {
+    DateTime? resumeDate,
+  }) async {
     final response = await _request(
       method: 'POST',
       path: '${ApiEndpoints.order(id)}/resume',
@@ -188,6 +191,7 @@ class OrdersRepository {
         'commandId': commandId,
         'pauseId': pauseId,
         'expectedRowVersion': rowVersion,
+        if (resumeDate != null) 'resumeDate': packageDate(resumeDate),
       },
     );
     return PackageManagement.fromJson(response.body);
