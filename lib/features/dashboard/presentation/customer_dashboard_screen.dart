@@ -1,6 +1,7 @@
 import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/language/presentation/dashboard_language_switcher.dart';
 import 'dart:async';
+import 'package:diet_time/features/dashboard/presentation/package_management_panel.dart';
 import 'package:diet_time/features/app_tour/app_tour_controller.dart';
 import 'package:diet_time/features/app_tour/app_tour_host.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
@@ -446,6 +447,12 @@ class _DashboardHome extends ConsumerWidget {
               )
             else
               _MultiPlanCarousel(orders: plans, details: details),
+            for (final plan in plans.where(
+              (p) =>
+                  p.rowVersion > 0 &&
+                  const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(p.status),
+            ))
+              PackageManagementPanel(orderId: plan.id, planName: plan.planName),
             if (single != null || multiple != null) ...[
               const SizedBox(height: 16),
               TomorrowDeliveriesSection(

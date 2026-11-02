@@ -4091,7 +4091,7 @@ abstract class AppLocalizations {
   /// No description provided for @packageUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'The selected meal package is unavailable. Please review your package.'**
+  /// **'No unlocked future service days are available to pause.'**
   String get packageUnavailable;
 
   /// No description provided for @durationPricingUnavailable.
@@ -4435,6 +4435,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please choose an available service start date. Next-day bookings close at 9:00 PM Qatar time.'**
   String get customerBookingCutoff;
+
+  /// No description provided for @packageManage.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Package'**
+  String get packageManage;
+
+  /// No description provided for @packagePause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause Package'**
+  String get packagePause;
+
+  /// No description provided for @packagePaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get packagePaused;
+
+  /// No description provided for @packagePauseScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause scheduled'**
+  String get packagePauseScheduled;
+
+  /// No description provided for @packageResumeEarly.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume Early'**
+  String get packageResumeEarly;
+
+  /// No description provided for @packageRemainingDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining service days'**
+  String get packageRemainingDays;
+
+  /// No description provided for @packageNextDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Next scheduled delivery'**
+  String get packageNextDelivery;
+
+  /// No description provided for @packageExpectedEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected package end date'**
+  String get packageExpectedEnd;
+
+  /// No description provided for @packagePauseStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause start date'**
+  String get packagePauseStart;
+
+  /// No description provided for @packageResumeDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected resume date'**
+  String get packageResumeDate;
+
+  /// No description provided for @packageEarliestPauseDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Earliest eligible pause date'**
+  String get packageEarliestPauseDate;
+
+  /// No description provided for @packagePreserveDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Your remaining delivery days will be preserved. Committed deliveries will remain scheduled.'**
+  String get packagePreserveDays;
+
+  /// No description provided for @packagePreviewPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview pause'**
+  String get packagePreviewPause;
+
+  /// No description provided for @packageConfirmPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm pause'**
+  String get packageConfirmPause;
+
+  /// No description provided for @packageAffectedDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Service days paused'**
+  String get packageAffectedDays;
+
+  /// No description provided for @packageRescheduledDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Future service days rescheduled'**
+  String get packageRescheduledDays;
+
+  /// No description provided for @packageCommittedDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Committed days preserved'**
+  String get packageCommittedDays;
+
+  /// No description provided for @packageLoadFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load package management. Please retry.'**
+  String get packageLoadFailure;
+
+  /// No description provided for @packageScheduleChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to update the schedule. Refresh the preview and try again.'**
+  String get packageScheduleChanged;
+
+  /// No description provided for @packageReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason (optional)'**
+  String get packageReason;
+
+  /// No description provided for @packageResumeConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume on the next eligible future service date? Your remaining days will be preserved.'**
+  String get packageResumeConfirmation;
+
+  /// No description provided for @packageCancellationBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'This booking is confirmed and paid. You cannot cancel it from the app. You may pause future deliveries or contact Diet Time.'**
+  String get packageCancellationBlocked;
 }
 
 class _AppLocalizationsDelegate

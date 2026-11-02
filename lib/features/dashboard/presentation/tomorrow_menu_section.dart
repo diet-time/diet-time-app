@@ -15,6 +15,7 @@ import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:diet_time/features/dashboard/presentation/package_management_provider.dart';
 
 class TomorrowMenuSection extends ConsumerStatefulWidget {
   const TomorrowMenuSection({
@@ -344,7 +345,17 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
   }
 
   @override
-  Widget build(BuildContext context) => _buildDeliveryCard(context);
+  Widget build(BuildContext context) {
+    ref.listen(
+      packageScheduleChangesProvider.select(
+        (changes) => changes[widget.orderId],
+      ),
+      (previous, next) {
+        if (previous != next && !_submitting) _load();
+      },
+    );
+    return _buildDeliveryCard(context);
+  }
 
   Widget _buildDeliveryCard(BuildContext context) {
     final copy = lookupAppLocalizations(Localizations.localeOf(context));

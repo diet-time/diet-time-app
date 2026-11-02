@@ -4,6 +4,7 @@ import 'package:diet_time/core/storage/secure_storage_service.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
+import 'package:diet_time/features/dashboard/domain/package_management.dart';
 
 final ordersRepositoryProvider = Provider<OrdersRepository>((ref) {
   final storage = ref.watch(secureStorageServiceProvider);
@@ -125,6 +126,71 @@ class OrdersRepository {
       body: {'expectedRowVersion': rowVersion, 'reason': reason},
     );
     return OrderConfirmation.fromJson(_orderFrom(response.body));
+  }
+
+  Future<PackageManagement> getPackageManagement(String id) async {
+    final response = await _request(
+      method: 'GET',
+      path: '${ApiEndpoints.order(id)}/package-management',
+    );
+    return PackageManagement.fromJson(response.body);
+  }
+
+  Future<PackagePausePreview> previewPause(
+    String id,
+    DateTime start,
+    DateTime resume,
+  ) async {
+    final response = await _request(
+      method: 'POST',
+      path: '${ApiEndpoints.order(id)}/pause/preview',
+      body: {
+        'pauseStartDate': packageDate(start),
+        'resumeDate': packageDate(resume),
+      },
+    );
+    return PackagePausePreview.fromJson(response.body);
+  }
+
+  Future<PackageManagement> pausePackage(
+    String id,
+    String commandId,
+    PackagePausePreview preview,
+    DateTime start,
+    DateTime resume,
+    String? reason,
+  ) async {
+    final response = await _request(
+      method: 'POST',
+      path: '${ApiEndpoints.order(id)}/pause',
+      body: {
+        'commandId': commandId,
+        'expectedRowVersion': preview.rowVersion,
+        'scheduleVersion': preview.scheduleVersion,
+        'pauseStartDate': packageDate(start),
+        'resumeDate': packageDate(resume),
+        'reason': reason,
+      },
+    );
+    return PackageManagement.fromJson(response.body);
+  }
+
+  Future<PackageManagement> resumePackage(
+    String id,
+    String commandId,
+    String pauseId,
+    int rowVersion,
+  ) async {
+    final response = await _request(
+      method: 'POST',
+      path: '${ApiEndpoints.order(id)}/resume',
+      body: {
+        'commandId': commandId,
+        'pauseId': pauseId,
+        'expectedRowVersion': rowVersion,
+      },
+    );
+    return PackageManagement.fromJson(response.body);
   }
 
   Future<OrderConfirmation> getOrder(String orderId) async {

@@ -2271,7 +2271,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get packageUnavailable =>
-      'The selected meal package is unavailable. Please review your package.';
+      'No unlocked future service days are available to pause.';
 
   @override
   String get durationPricingUnavailable =>
@@ -2463,4 +2463,75 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get customerBookingCutoff =>
       'Please choose an available service start date. Next-day bookings close at 9:00 PM Qatar time.';
+
+  @override
+  String get packageManage => 'Manage Package';
+
+  @override
+  String get packagePause => 'Pause Package';
+
+  @override
+  String get packagePaused => 'Paused';
+
+  @override
+  String get packagePauseScheduled => 'Pause scheduled';
+
+  @override
+  String get packageResumeEarly => 'Resume Early';
+
+  @override
+  String get packageRemainingDays => 'Remaining service days';
+
+  @override
+  String get packageNextDelivery => 'Next scheduled delivery';
+
+  @override
+  String get packageExpectedEnd => 'Expected package end date';
+
+  @override
+  String get packagePauseStart => 'Pause start date';
+
+  @override
+  String get packageResumeDate => 'Expected resume date';
+
+  @override
+  String get packageEarliestPauseDate => 'Earliest eligible pause date';
+
+  @override
+  String get packagePreserveDays =>
+      'Your remaining delivery days will be preserved. Committed deliveries will remain scheduled.';
+
+  @override
+  String get packagePreviewPause => 'Preview pause';
+
+  @override
+  String get packageConfirmPause => 'Confirm pause';
+
+  @override
+  String get packageAffectedDays => 'Service days paused';
+
+  @override
+  String get packageRescheduledDays => 'Future service days rescheduled';
+
+  @override
+  String get packageCommittedDays => 'Committed days preserved';
+
+  @override
+  String get packageLoadFailure =>
+      'Unable to load package management. Please retry.';
+
+  @override
+  String get packageScheduleChanged =>
+      'Unable to update the schedule. Refresh the preview and try again.';
+
+  @override
+  String get packageReason => 'Reason (optional)';
+
+  @override
+  String get packageResumeConfirmation =>
+      'Resume on the next eligible future service date? Your remaining days will be preserved.';
+
+  @override
+  String get packageCancellationBlocked =>
+      'This booking is confirmed and paid. You cannot cancel it from the app. You may pause future deliveries or contact Diet Time.';
 }

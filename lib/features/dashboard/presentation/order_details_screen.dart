@@ -8,6 +8,8 @@ import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:diet_time/core/network/api_client.dart';
+import 'package:diet_time/features/dashboard/presentation/package_management_panel.dart';
 
 final orderDetailsProvider = FutureProvider.autoDispose
     .family<OrderConfirmation, String>(
@@ -120,8 +122,22 @@ class _OrderDetails extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 30),
       children: [
         _OrderHeaderCard(order: order),
+        if (order.customerCancellationBlocked)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              lookupAppLocalizations(
+                Localizations.localeOf(context),
+              ).packageCancellationBlocked,
+            ),
+          ),
         if (order.rowVersion > 0 &&
-            ['PENDING_APPROVAL', 'ON_HOLD', 'CONFIRMED'].contains(order.status))
+            const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(order.status))
+          PackageManagementPanel(
+            orderId: order.id,
+            onChanged: () => ref.invalidate(orderDetailsProvider(order.id)),
+          ),
+        if (order.canRequestCancellation)
           TextButton.icon(
             icon: const Icon(Icons.cancel_outlined),
             label: Text(context.customerCopy('Request cancellation')),
@@ -136,14 +152,23 @@ class _OrderDetails extends ConsumerWidget {
                     .read(ordersRepositoryProvider)
                     .cancelOrder(order.id, order.rowVersion, reason);
                 ref.invalidate(orderDetailsProvider(order.id));
-              } catch (_) {
+              } catch (error) {
+                if (error is ApiException &&
+                    error.code == 'ORDER_CANCELLATION_NOT_ALLOWED') {
+                  ref.invalidate(orderDetailsProvider(order.id));
+                }
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        context.customerCopy(
-                          'The order could not be cancelled. Refresh the order or contact Diet Time.',
-                        ),
+                        error is ApiException &&
+                                error.code == 'ORDER_CANCELLATION_NOT_ALLOWED'
+                            ? lookupAppLocalizations(
+                                Localizations.localeOf(context),
+                              ).packageCancellationBlocked
+                            : context.customerCopy(
+                                'The order could not be cancelled. Refresh the order or contact Diet Time.',
+                              ),
                       ),
                     ),
                   );

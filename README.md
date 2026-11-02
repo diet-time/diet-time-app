@@ -1506,3 +1506,121 @@ updates are required. No unrelated workflow changes were necessary.
 - React Admin: **190 tests passed across 41 files** with `npm test -- --maxWorkers=2`. The initial unrestricted parallel run had one unrelated pricing-test timeout; reduced concurrency passed without changing that test or its timeout. All **40 notification/calendar tests** also passed in the focused run.
 - Static/build checks: Dart analysis reported **no issues**; Admin TypeScript/production build and ESLint for all six changed Admin files passed. Vite emitted a large-chunk advisory. App, Admin and API `git diff --check` checks passed.
 - Local validation logs are in ignored `artifacts/consolidated-*.log` and `artifacts/preparation-*.log`. Preview scripts/screenshots were moved outside the repositories; no preview page or generated build output is part of the changes.
+
+## Safe package pause and customer cancellation
+
+Customer cancellation previously checked approval transitions, service start and
+preparation locks, but never combined the separate persisted approval and payment
+statuses. The Flutter action also checked approval status alone. A future confirmed,
+paid booking could therefore reach cancellation and the existing refund-pending
+branch. The customer endpoint now rejects that combination under the order row lock
+with HTTP **409**, code **`ORDER_CANCELLATION_NOT_ALLOWED`**, and the requested
+explanation. The rejected command changes neither approval nor payment. Existing
+stricter fulfillment restrictions, eligible unpaid cancellation, its confirmation
+dialog, and Admin authorization/payment behavior remain intact.
+
+Pause was not previously implemented. The new controls live in the existing
+dashboard and order details, with English/Arabic labels; no router destination or
+separate subscription-management page was introduced. They show remaining service
+days, next delivery, projected end date, pause dates/status and Resume Early when
+available. Start-date picking uses fresh server eligibility and Qatar time, excludes
+today/past/Friday/committed dates, and requires an explicit backend preview before
+confirmation. The preview displays paused/rescheduled day counts and the revised
+end date. No eligible dates means a disabled action with an explanation.
+
+The API validates again after locking the order and service days, including the
+current clock/cutoffs, versions and saved schedule fingerprint. Changes are
+transactional and command IDs make pause/resume retries idempotent. Existing
+service-day IDs and purchased day counts are retained; fulfilled, locked and
+otherwise committed records are not moved. Unlocked remaining days are rescheduled
+on or after the selected resume date, respecting the purchased weekdays and Friday
+exclusion. The existing menu rotation, eligibility, assignment and selection-audit
+code revalidates future defaults. Invalid provisional customer choices remain saved
+and flagged for review. Missing legacy schedule/quantity metadata requires review.
+
+Pause state is stored separately from order approval/payment. It does not globally
+block committed deliveries. The persisted service-day schedule is authoritative
+after a pause, so backfilling cannot recreate pause gaps. Calendar/kitchen queries
+exclude genuinely paused dates, retain committed/fulfilled records and use the
+rescheduled dates. Kitchen report layout and configured category mapping are unchanged.
+Only the affected package's customer calendar/menu cache is refreshed after changes.
+
+### API and persistence
+
+The current application bridges an order to its subscription service days; the
+existing order ID is therefore used for these owned-customer endpoints:
+
+- `GET /api/v1/orders/{id}/package-management`
+- `GET /api/v1/orders/{id}/pauses`
+- `POST /api/v1/orders/{id}/pause/preview`
+- `POST /api/v1/orders/{id}/pause`
+- `POST /api/v1/orders/{id}/resume`
+
+Cancellation continues through the existing `POST /api/v1/orders/{id}/cancel`.
+Preview takes `pauseStartDate`/`resumeDate`. Confirmation also takes `commandId`,
+`expectedRowVersion`, the preview's `scheduleVersion` and an optional reason.
+Resume takes `commandId`, `pauseId` and `expectedRowVersion`.
+
+**Apply the migration before deploying the API.** New pause history is necessary
+because no equivalent persistence existed. Use the EF migration
+`20261102010000_SubscriptionPauses` or the transactional standalone script
+`../diet-time-api/database/scripts/20261102_subscription_pauses.sql`.
+It adds only `subscription_pauses`: order/subscription links, dates, accepted/resumed
+state, reason, actor/timestamps, immutable requested resume date, schedule-change
+audit JSON and a resume command ID. Existing tables/data are not rewritten by the
+migration. Automatic destructive rollback is intentionally disallowed for audit history.
+
+One upcoming/active pause is permitted per package. Resume means the first eligible
+service date on or after the chosen resume date; committed dates remain scheduled.
+Holiday/closure integration is deferred **as requested in this task**. No new
+holiday configuration, payment processing, refund operation or Admin workflow was added.
+
+### Modified files
+
+Flutter (`diet-time-app`):
+
+- `lib/features/checkout/data/orders_repository.dart`
+- `lib/features/checkout/domain/order_models.dart`
+- `lib/features/dashboard/domain/package_management.dart`
+- `lib/features/dashboard/presentation/package_management_provider.dart`
+- `lib/features/dashboard/presentation/package_management_panel.dart`
+- `lib/features/dashboard/presentation/customer_dashboard_screen.dart`
+- `lib/features/dashboard/presentation/order_details_screen.dart`
+- `lib/features/dashboard/presentation/tomorrow_menu_section.dart`
+- `lib/l10n/app_en.arb`, `lib/l10n/app_ar.arb`
+- Generated `lib/l10n/app_localizations.dart`, `app_localizations_en.dart`, `app_localizations_ar.dart`
+- `test/package_management_test.dart`
+- `README.md`
+
+ASP.NET Core/PostgreSQL (`../diet-time-api`):
+
+- `src/Apis/DietTime.Meal.Api/Controllers/OrdersController.cs`
+- `src/Apis/DietTime.Meal.Api/Program.cs`
+- `src/BuildingBlocks/DietTime.Application/PackagePauseRules.cs`
+- `src/BuildingBlocks/DietTime.Contracts/PackagePauseContracts.cs`
+- `src/BuildingBlocks/DietTime.Domain/SubscriptionPause.cs`
+- `src/BuildingBlocks/DietTime.Persistence/PackagePauseService.cs` — partial implementation of the existing `UpcomingMealService`.
+- `src/BuildingBlocks/DietTime.Persistence/UpcomingMealService.cs`
+- `src/BuildingBlocks/DietTime.Persistence/UpcomingMealConfigurations.cs`
+- `src/BuildingBlocks/DietTime.Persistence/StaffOrderService.cs`
+- `src/BuildingBlocks/DietTime.Persistence/OrderService.cs`
+- `src/BuildingBlocks/DietTime.Persistence/AdminDeliveryCalendarService.cs`
+- `src/BuildingBlocks/DietTime.Persistence/Migrations/20261102010000_SubscriptionPauses.cs`
+- `database/scripts/20261102_subscription_pauses.sql`
+- `tests/DietTime.UnitTests/PackagePauseRulesTests.cs`
+- `tests/DietTime.Meal.Api.IntegrationTests/PackagePauseTests.cs`
+- `tests/DietTime.Meal.Api.IntegrationTests/StaffOrderApprovalTests.cs`
+
+### Executed validation
+
+- **517 Flutter tests passed** across the full suite; the final **8 bilingual package tests** also passed after the Qatar picker refinement. Coverage includes blocked paid cancellation, retained order details, disabled dates, preview-only behavior, stable retry IDs, Resume Early and no-eligible-day messaging.
+- **343 API unit tests passed**, including date/cutoff, committed-state, independent payment/approval and entitlement scheduling rules.
+- **15 targeted integration checks passed, zero skipped**, against a separate temporary PostgreSQL 18 cluster with synthetic data. These cover actual HTTP preview/pause/replay/resume, authentication/ownership, confirmed-paid cancellation rejection without payment changes, unchanged eligible cancellation and Admin behavior, concurrency, rollback after an injected write failure, preserved IDs/fulfilled history, independent subscriptions, menu audit/uniqueness, kitchen/calendar exclusion and existing delivery/collection actions. The final **6 pause-specific PostgreSQL tests** passed again after entitlement validation refinements.
+- The standalone migration was **applied twice** in a disposable PostgreSQL database; existing pause-history data was retained.
+- Dart analysis reported **no issues**. API integration builds and app/API whitespace checks passed. Existing unrelated compiler warnings were not changed.
+
+No existing database was modified during validation. Logs are in ignored
+`artifacts/package-pause-*.log`. The temporary database cluster is shut down and
+removed after verification. No unrelated customer or Admin workflows were changed;
+real-device verification and deployment to the target environment remain outside
+these local automated checks.

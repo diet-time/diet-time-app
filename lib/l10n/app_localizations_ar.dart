@@ -2231,7 +2231,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get packageUnavailable =>
-      'باقة الوجبات المحددة غير متاحة. يرجى مراجعة باقتك.';
+      'لا توجد أيام خدمة مستقبلية غير مقفلة متاحة للإيقاف المؤقت.';
 
   @override
   String get durationPricingUnavailable =>
@@ -2417,4 +2417,75 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get customerBookingCutoff =>
       'يرجى اختيار موعد متاح لبدء الخدمة. يُغلق حجز اليوم التالي الساعة 9:00 مساءً بتوقيت قطر.';
+
+  @override
+  String get packageManage => 'إدارة الباقة';
+
+  @override
+  String get packagePause => 'إيقاف الباقة مؤقتًا';
+
+  @override
+  String get packagePaused => 'متوقفة مؤقتًا';
+
+  @override
+  String get packagePauseScheduled => 'تمت جدولة الإيقاف المؤقت';
+
+  @override
+  String get packageResumeEarly => 'استئناف مبكر';
+
+  @override
+  String get packageRemainingDays => 'أيام الخدمة المتبقية';
+
+  @override
+  String get packageNextDelivery => 'موعد الخدمة القادم';
+
+  @override
+  String get packageExpectedEnd => 'تاريخ انتهاء الباقة المتوقع';
+
+  @override
+  String get packagePauseStart => 'تاريخ بدء الإيقاف المؤقت';
+
+  @override
+  String get packageResumeDate => 'تاريخ الاستئناف المتوقع';
+
+  @override
+  String get packageEarliestPauseDate => 'أقرب تاريخ متاح للإيقاف المؤقت';
+
+  @override
+  String get packagePreserveDays =>
+      'ستُحفظ أيام التوصيل المتبقية. وستبقى الخدمات التي بدأ تجهيزها في مواعيدها.';
+
+  @override
+  String get packagePreviewPause => 'معاينة الإيقاف المؤقت';
+
+  @override
+  String get packageConfirmPause => 'تأكيد الإيقاف المؤقت';
+
+  @override
+  String get packageAffectedDays => 'أيام الخدمة الموقوفة مؤقتًا';
+
+  @override
+  String get packageRescheduledDays => 'أيام الخدمة المستقبلية المُعاد جدولتها';
+
+  @override
+  String get packageCommittedDays => 'أيام الخدمة الملتزم بها والمحافظة عليها';
+
+  @override
+  String get packageLoadFailure =>
+      'تعذر تحميل إدارة الباقة. يرجى إعادة المحاولة.';
+
+  @override
+  String get packageScheduleChanged =>
+      'تعذر تحديث الجدول. حدّث المعاينة وحاول مرة أخرى.';
+
+  @override
+  String get packageReason => 'السبب (اختياري)';
+
+  @override
+  String get packageResumeConfirmation =>
+      'هل تريد الاستئناف في أقرب يوم خدمة مستقبلي متاح؟ ستُحفظ أيامك المتبقية.';
+
+  @override
+  String get packageCancellationBlocked =>
+      'هذا الحجز مؤكد ومدفوع. لا يمكن إلغاؤه من التطبيق. يمكنك إيقاف الخدمات المستقبلية مؤقتًا أو التواصل مع دايت تايم.';
 }
