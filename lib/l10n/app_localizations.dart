@@ -4429,6 +4429,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select a city.'**
   String get deliveryCityRequired;
+
+  /// No description provided for @customerBookingCutoff.
+  ///
+  /// In en, this message translates to:
+  /// **'Please choose an available service start date. Next-day bookings close at 9:00 PM Qatar time.'**
+  String get customerBookingCutoff;
 }
 
 class _AppLocalizationsDelegate

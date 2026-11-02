@@ -232,7 +232,7 @@ class CheckoutState {
     if (startDate == null) return 'Please select a plan start date.';
     if (selection != null &&
         !eligibleDeliveryStart(startDate!, selection!.pricingOption)) {
-      return 'Choose a new service start date. Service can start tomorrow or later, excluding Friday.';
+      return serviceStartDateMessage;
     }
     if (selectedWeekdays.isEmpty) {
       return 'Please select your service days.';

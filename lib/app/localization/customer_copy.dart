@@ -6,6 +6,8 @@ extension CustomerCopy on BuildContext {
   String customerCopy(String value) {
     final copy = lookupAppLocalizations(Localizations.localeOf(this));
     return switch (value) {
+      "Please choose an available service start date. Next-day bookings close at 9:00 PM Qatar time." =>
+        copy.customerBookingCutoff,
       "Tomorrow’s Deliveries" => copy.deliveriesTitle,
       "Confirmed" => copy.deliveriesConfirmed,
       "Selection pending" => copy.deliveriesPending,

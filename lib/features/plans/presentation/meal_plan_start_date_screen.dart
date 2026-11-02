@@ -27,7 +27,7 @@ Future<MealPlanServiceSchedule?> showMealPlanStartDatePanel({
   final earliestStartDate = minimumDeliveryStart(package, today: today);
 
   bool isUnavailable(DateTime date) =>
-      date.weekday == DateTime.friday ||
+      !eligibleDeliveryStart(date, package, today: today) ||
       !selection.deliveryWeekdays.contains(date.weekday) ||
       package.unavailableDates.any((item) => dateKey(item) == dateKey(date));
 
@@ -130,13 +130,7 @@ class _MealPlanStartDateScreenState
     )) {
       setState(() => _schedule = null);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            context.customerCopy(
-              'Choose a new delivery start date. Delivery can start tomorrow or later.',
-            ),
-          ),
-        ),
+        SnackBar(content: Text(context.customerCopy(serviceStartDateMessage))),
       );
       await _openStartDatePicker();
       return;
@@ -781,9 +775,7 @@ class _StartDateBottomSheetState extends State<_StartDateBottomSheet> {
       onNextMonth: () => setState(() {
         _month = DateTime(_month.year, _month.month + 1);
       }),
-      onDone: _schedule == null
-          ? null
-          : () => Navigator.of(context).pop(_schedule),
+      onDone: _schedule == null ? null : _confirm,
     ),
   );
 
@@ -797,6 +789,19 @@ class _StartDateBottomSheetState extends State<_StartDateBottomSheet> {
       _month = DateTime(date.year, date.month);
       _schedule = schedule;
     });
+  }
+
+  void _confirm() {
+    final schedule = _schedule;
+    if (schedule == null) return;
+    if (widget.isUnavailable(schedule.startDate)) {
+      setState(() => _schedule = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.customerCopy(serviceStartDateMessage))),
+      );
+      return;
+    }
+    Navigator.of(context).pop(schedule);
   }
 
   bool get _isFirstMonth =>

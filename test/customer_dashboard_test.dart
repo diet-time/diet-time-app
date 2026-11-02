@@ -20,6 +20,59 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final language in ['en', 'ar']) {
+    for (final width in [320.0, 800.0]) {
+      testWidgets(
+        'recent order status and arrow stay on the trailing edge: $language $width',
+        (tester) async {
+          await tester.binding.setSurfaceSize(Size(width, 1100));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          final order = _reviewSummary('alignment', 'PENDING_APPROVAL');
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                customerDashboardControllerProvider.overrideWith(
+                  () => _DashboardControllerForTest(
+                    DashboardWithoutActivePlan([order]),
+                  ),
+                ),
+                ordersRepositoryProvider.overrideWithValue(
+                  _FakeOrdersRepository([order]),
+                ),
+              ],
+              child: MaterialApp(
+                locale: Locale(language),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const CustomerDashboardScreen(),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final row = find.byKey(const ValueKey('order-alignment'));
+          await tester.scrollUntilVisible(
+            row,
+            300,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.pumpAndSettle();
+          final arrow = find.descendant(
+            of: find.byKey(const ValueKey('orderTrailing-alignment')),
+            matching: find.byIcon(Icons.chevron_right_rounded),
+          );
+          final bounds = tester.getRect(row);
+          final arrowBounds = tester.getRect(arrow);
+          if (language == 'en') {
+            expect(arrowBounds.right, closeTo(bounds.right - 16, 1));
+          } else {
+            expect(arrowBounds.left, closeTo(bounds.left + 16, 1));
+          }
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox());
+        },
+      );
+    }
+  }
   for (final count in [1, 2]) {
     testWidgets(
       'My Plan works for $count pending plans with one New Plan action',

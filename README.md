@@ -1389,3 +1389,44 @@ after successful placement. Compiled integration coverage additionally checks
 customer API eligibility, stored fulfillment snapshots and equal plan amounts
 across Delivery/Takeaway. Live database and real-device verification remain
 outstanding. Deploy the API and Flutter changes together.
+## Next-day booking cutoff and order-row alignment
+
+New bookings now enforce the 9:00 PM Qatar boundary (18:00 UTC), including exactly
+9:00 PM. Before cutoff the minimum is tomorrow; at/after cutoff it is the day after
+tomorrow, subject to existing longer lead times, selected weekdays and unavailable
+service dates. Friday remains excluded. The previous booking rule checked dates
+only; the separate meal-selection cutoff did not protect new order placement.
+
+The customer API advertises the current minimum start date. Order placement checks
+fresh server time during validation and again after database writes, before commit;
+a request that crosses cutoff rolls back its new order/events and is not enqueued
+for notification. Existing bookings and idempotent replays are preserved.
+Flutter advances the supplied server clock across cutoff, rejects invalid checkout
+dates locally, and rechecks a calendar left open before confirming. English/Arabic
+guidance explains the cutoff. No prices, payment logic or database schema changed.
+
+The recent-order row previously allocated space to a loose status Flexible beside
+an Expanded title, leaving unused space after the arrow. Its trailing group now
+fills the remaining row allocation and aligns the status/arrow to the end (right
+in English, mirrored for Arabic), including narrow screens.
+
+Flutter files: `lib/features/plans/domain/meal_plan_purchase_selection.dart`,
+`lib/features/plans/presentation/meal_plan_start_date_screen.dart`,
+`lib/features/checkout/domain/checkout_models.dart`,
+`lib/features/checkout/presentation/checkout_controller.dart`,
+`lib/features/dashboard/presentation/customer_dashboard_screen.dart`,
+`lib/app/localization/customer_copy.dart`, English/Arabic ARBs and generated
+localizations, `test/booking_cutoff_test.dart`, and `test/customer_dashboard_test.dart`.
+API files in `diet-time-api`: `src/BuildingBlocks/DietTime.Application/Rules.cs`,
+`src/BuildingBlocks/DietTime.Persistence/CustomerMealPlanPurchaseService.cs`,
+`src/BuildingBlocks/DietTime.Persistence/OrderService.cs`,
+`tests/DietTime.UnitTests/BookingCutoffTests.cs`, and
+`tests/DietTime.Meal.Api.IntegrationTests/BookingCutoffIntegrationTests.cs`.
+
+Executed validation: **508 Flutter tests passed**, **317 API unit tests passed**,
+Dart static analysis clean, API integration project compiled (zero errors; eight
+existing unrelated controller warnings), and app/API whitespace checks passed.
+Logs: `artifacts/booking-cutoff-*.log`. PostgreSQL transaction/replay integration
+tests were compiled but not executed: `UPCOMING_MEALS_TEST_CONNECTION` is not
+configured. Physical-device verification remains outstanding. Deploy the API
+changes alongside the rebuilt app for authoritative server enforcement.

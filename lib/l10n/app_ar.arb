@@ -856,5 +856,6 @@
   "deliveryCityAlNasr": "النصر",
   "deliveryCityLabel": "المدينة *",
   "deliveryCitySearch": "ابحث عن موقع",
-  "deliveryCityRequired": "اختر المدينة."
+  "deliveryCityRequired": "اختر المدينة.",
+  "customerBookingCutoff": "يرجى اختيار موعد متاح لبدء الخدمة. يُغلق حجز اليوم التالي الساعة 9:00 مساءً بتوقيت قطر."
 }

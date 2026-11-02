@@ -129,8 +129,7 @@ class CheckoutController extends Notifier<CheckoutState> {
     if (!eligibleDeliveryStart(schedule.startDate, selection.pricingOption)) {
       state = state.copyWith(
         schedule: null,
-        placementError:
-            'Choose a future delivery start date; today and Friday are unavailable.',
+        placementError: serviceStartDateMessage,
       );
       return;
     }
@@ -668,7 +667,7 @@ class CheckoutController extends Notifier<CheckoutState> {
       return error.message ?? 'Please review your selected service days.';
     }
     if (code == 'invalid_start_date') {
-      return error.message ?? 'Please select another plan start date.';
+      return serviceStartDateMessage;
     }
     if (code == 'coupon_not_supported') {
       return 'Coupon codes are not supported yet. Remove the coupon and try again.';

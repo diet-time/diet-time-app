@@ -911,5 +911,6 @@
   "deliveryCityAlNasr": "Al Nasr",
   "deliveryCityLabel": "City *",
   "deliveryCitySearch": "Search locations",
-  "deliveryCityRequired": "Select a city."
+  "deliveryCityRequired": "Select a city.",
+  "customerBookingCutoff": "Please choose an available service start date. Next-day bookings close at 9:00 PM Qatar time."
 }

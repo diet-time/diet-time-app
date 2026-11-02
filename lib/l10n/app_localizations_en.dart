@@ -2459,4 +2459,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deliveryCityRequired => 'Select a city.';
+
+  @override
+  String get customerBookingCutoff =>
+      'Please choose an available service start date. Next-day bookings close at 9:00 PM Qatar time.';
 }

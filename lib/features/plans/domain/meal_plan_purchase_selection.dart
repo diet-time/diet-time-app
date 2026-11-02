@@ -76,12 +76,15 @@ MealPlanServiceSchedule? calculateMealPlanServiceSchedule({
 DateTime dateOnly(DateTime value) =>
     DateTime(value.year, value.month, value.day);
 
+const serviceStartDateMessage =
+    'Please choose an available service start date. Next-day bookings close at 9:00 PM Qatar time.';
+
 int dateKey(DateTime value) =>
     value.year * 10000 + value.month * 100 + value.day;
 
 // Qatar uses UTC+03 throughout the year. Advance a server clock from receipt
 // so a selection made across midnight must be reviewed again.
-DateTime qatarToday({DateTime? now, MealPlanPackage? package}) {
+DateTime qatarNow({DateTime? now, MealPlanPackage? package}) {
   var instant = now?.toUtc() ?? DateTime.now().toUtc();
   if (now == null &&
       package?.serverNow != null &&
@@ -91,17 +94,24 @@ DateTime qatarToday({DateTime? now, MealPlanPackage? package}) {
       elapsed.isNegative ? Duration.zero : elapsed,
     );
   }
-  return dateOnly(instant.add(const Duration(hours: 3)));
+  return instant.add(const Duration(hours: 3));
 }
 
-DateTime minimumDeliveryStart(MealPlanPackage package, {DateTime? today}) {
-  final current = today == null
-      ? qatarToday(package: package)
-      : dateOnly(today);
+DateTime qatarToday({DateTime? now, MealPlanPackage? package}) =>
+    dateOnly(qatarNow(now: now, package: package));
+
+DateTime minimumDeliveryStart(
+  MealPlanPackage package, {
+  DateTime? today,
+  DateTime? now,
+}) {
+  final localNow = today ?? qatarNow(now: now, package: package);
+  final current = dateOnly(localNow);
+  final cutoffLead = localNow.hour >= 21 ? 2 : 1;
   final lead = current.add(
     Duration(
-      days: package.startDateLeadTimeDays < 1
-          ? 1
+      days: package.startDateLeadTimeDays < cutoffLead
+          ? cutoffLead
           : package.startDateLeadTimeDays,
     ),
   );
@@ -115,8 +125,11 @@ bool eligibleDeliveryStart(
   DateTime date,
   MealPlanPackage package, {
   DateTime? today,
+  DateTime? now,
 }) =>
-    !dateOnly(date).isBefore(minimumDeliveryStart(package, today: today)) &&
+    !dateOnly(
+      date,
+    ).isBefore(minimumDeliveryStart(package, today: today, now: now)) &&
     date.weekday != DateTime.friday &&
     !package.nonDeliveryWeekdays.contains(date.weekday) &&
     !package.unavailableDates.any((day) => dateKey(day) == dateKey(date));

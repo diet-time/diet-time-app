@@ -1478,9 +1478,17 @@ class _OrderRow extends StatelessWidget {
               ],
             ),
           ),
-          Flexible(child: _StatusPill(order.status)),
-          const SizedBox(width: 4),
-          const Icon(Icons.chevron_right_rounded),
+          Expanded(
+            child: Row(
+              key: ValueKey('orderTrailing-${order.id}'),
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Flexible(child: _StatusPill(order.status)),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
+          ),
         ],
       ),
     ),

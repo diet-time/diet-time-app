@@ -2413,4 +2413,8 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get deliveryCityRequired => 'اختر المدينة.';
+
+  @override
+  String get customerBookingCutoff =>
+      'يرجى اختيار موعد متاح لبدء الخدمة. يُغلق حجز اليوم التالي الساعة 9:00 مساءً بتوقيت قطر.';
 }
