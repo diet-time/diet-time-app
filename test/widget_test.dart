@@ -267,6 +267,85 @@ void main() {
   });
 
   testWidgets(
+    'Adjust Plan starts at the first editing step with saved answers and step progress',
+    (tester) async {
+      final service = _FakeProfilePersistenceService(
+        profile: const CustomerProfile(
+          preferredName: 'Noor',
+          onboardingStatus: 'COMPLETED',
+          profileId: 'profile-id',
+          genderCode: 'FEMALE',
+          dateOfBirth: '1990-05-12',
+          heightCm: 165,
+          weightKg: 60,
+          goalCode: 'MAINTAIN_WEIGHT',
+          dailyRoutineCode: 'OFFICE_WORK',
+          activityLevelCode: 'MOSTLY_SITTING',
+          preferences: {'HIGH_PROTEIN', 'INTERNATIONAL', 'MEDITERRANEAN'},
+          allergens: {'NONE'},
+          preferencesConfirmed: true,
+          allergensConfirmed: true,
+          nextStepCode: 'PROFILE_COMPLETED',
+          completionPercentage: 100,
+          shouldShowOnboarding: false,
+        ),
+      );
+      await tester.pumpWidget(
+        _localizedApp(
+          const PersonalizationScreen(
+            customerProfileMode: true,
+            editMode: true,
+          ),
+          profileService: service,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PersonalizationScreen), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('onboardingHeaderBack')),
+        findsOneWidget,
+      );
+      expect(find.text('17%'), findsOneWidget);
+      final selectedGoal = tester.widget<AnimatedContainer>(
+        find.descendant(
+          of: find.byKey(const ValueKey('goal-maintain')),
+          matching: find.byType(AnimatedContainer),
+        ),
+      );
+      expect((selectedGoal.decoration! as BoxDecoration).gradient, isNotNull);
+      expect(service.profile!.isCompleted, isTrue);
+      expect(service.saveProgressCalls, 0);
+      await tester.tap(find.byKey(const ValueKey('goal-lose')).hitTestable());
+      await _continue(tester);
+      expect(service.lastSubmitted?.goalCode, 'LOSE_WEIGHT');
+      expect(service.profile!.isCompleted, isTrue);
+      expect(service.profile!.preferences, contains('INTERNATIONAL'));
+      expect(find.text('33%'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('onboardingHeaderBack')));
+      await tester.pumpAndSettle();
+      expect(find.text('17%'), findsOneWidget);
+      for (var step = 0; step < 4; step++) {
+        await _continue(tester);
+      }
+      expect(find.text('What do you enjoy eating?'), findsOneWidget);
+      expect(find.text('International'), findsNothing);
+      expect(find.text('Mediterranean'), findsNothing);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PersonalizationScreen)),
+      );
+      expect(
+        container.read(personalizationControllerProvider).preferences,
+        contains('INTERNATIONAL'),
+      );
+      expect(
+        container.read(personalizationControllerProvider).preferences,
+        contains('MEDITERRANEAN'),
+      );
+    },
+  );
+
+  testWidgets(
     'authenticated questionnaire checkpoints answers and continues to checkout',
     (tester) async {
       final profileService = _FakeProfilePersistenceService();

@@ -26,6 +26,7 @@ import 'package:go_router/go_router.dart';
 class PersonalizationScreen extends ConsumerStatefulWidget {
   const PersonalizationScreen({
     this.customerProfileMode = false,
+    this.editMode = false,
     this.checkoutMode = false,
     this.startNewPlan = false,
     this.accountSetupMode = false,
@@ -33,6 +34,7 @@ class PersonalizationScreen extends ConsumerStatefulWidget {
   });
 
   final bool customerProfileMode;
+  final bool editMode;
   final bool checkoutMode;
   final bool startNewPlan;
   final bool accountSetupMode;
@@ -52,6 +54,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   bool _initialized = false;
 
   int _index = 0;
+  bool _editingCompletedProfile = false;
   bool _isNavigating = false;
   bool _profileLoadStarted = false;
   bool _skipping = false;
@@ -74,7 +77,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
   void initState() {
     super.initState();
     _controller = PageController();
-    _initialized = !widget.accountSetupMode;
+    _initialized = !widget.accountSetupMode && !widget.editMode;
   }
 
   @override
@@ -128,7 +131,10 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       _signIn();
       return;
     }
-    if (loaded.errorMessage != null) return;
+    if (loaded.errorMessage != null) {
+      if (widget.editMode) setState(() => _initialized = true);
+      return;
+    }
     if (profile == null) return;
     if (profile.isCompleted && !widget.customerProfileMode) {
       context.pushReplacement(
@@ -137,6 +143,13 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
       return;
     }
     _restoreVisibleValues(profile);
+    if (widget.editMode) {
+      _editingCompletedProfile = profile.isCompleted;
+      _controller.dispose();
+      _index = _editingCompletedProfile ? 1 : 0;
+      _controller = PageController(initialPage: _index);
+      setState(() => _initialized = true);
+    }
     if (!widget.customerProfileMode) {
       final target = CustomerQuestionnaire.firstIncompletePage(profile);
       await _goTo(target, recordHistory: false);
@@ -551,9 +564,12 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
         : const AsyncValue<List<GuestAllergen>>.loading();
     final steps = _buildSteps(l10n, locale.languageCode, allergenState);
     final persistence = ref.watch(profilePersistenceControllerProvider);
-    final localCompletionPercentage = CustomerQuestionnaire.progress(
-      persistence.persistedProfile,
-    );
+    final localCompletionPercentage = _editingCompletedProfile
+        ? (_index.clamp(0, CustomerQuestionnaire.steps.length) *
+                  100 /
+                  CustomerQuestionnaire.steps.length)
+              .round()
+        : CustomerQuestionnaire.progress(persistence.persistedProfile);
     final persistenceErrorMessage = switch (persistence.errorMessage) {
       'profile_load' => _wellnessCopy(
         context,
@@ -607,6 +623,12 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
                         : () => Navigator.of(context).maybePop(),
                   ),
                   _StepProgress(
+                    semanticLabel: _editingCompletedProfile
+                        ? l10n.pageProgress(
+                            _index.clamp(1, CustomerQuestionnaire.steps.length),
+                            CustomerQuestionnaire.steps.length,
+                          )
+                        : null,
                     current: widget.accountSetupMode
                         ? CustomerQuestionnaire.steps.indexWhere(
                                 (step) => step.page == _index,
@@ -1204,16 +1226,20 @@ class _StepProgress extends StatelessWidget {
     required this.current,
     required this.count,
     required this.completionPercentage,
+    this.semanticLabel,
   });
 
   final int current;
   final int count;
   final int completionPercentage;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: AppLocalizations.of(context).pageProgress(current + 1, count),
+      label:
+          semanticLabel ??
+          AppLocalizations.of(context).pageProgress(current + 1, count),
       child: Padding(
         key: const ValueKey('onboardingProgress'),
         padding: const EdgeInsets.fromLTRB(20, 6, 20, 4),

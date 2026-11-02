@@ -25,9 +25,7 @@ class AppTourSetting extends ConsumerWidget {
               final controller = ref.read(appTourControllerProvider.notifier);
               final saved = await controller.setEnabled(value);
               if (context.mounted && saved && value) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(tourCopy(context, 'enabled'))),
-                );
+                await controller.navigate?.call('home');
               }
             },
     );

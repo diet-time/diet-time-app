@@ -100,7 +100,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             : AppRoutes.authenticatedLanding,
         pageBuilder: (context, state) => _slidePage(
           state: state,
-          child: const PersonalizationScreen(customerProfileMode: true),
+          child: const PersonalizationScreen(
+            customerProfileMode: true,
+            editMode: true,
+          ),
         ),
       ),
       GoRoute(

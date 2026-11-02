@@ -214,7 +214,7 @@ void main() {
   );
 
   testWidgets(
-    'restored session can enable from Profile and launch on returning Home',
+    'enabling from Profile saves then launches the existing tour immediately',
     (tester) async {
       final repository = TourRepository();
       final container = ProviderContainer(
@@ -296,12 +296,6 @@ void main() {
         container.read(personalizationControllerProvider).isAppTourEnabled,
         isTrue,
       );
-      expect(
-        find.text('Tour enabled. Return to Home to start.'),
-        findsOneWidget,
-      );
-      expect(find.byKey(const ValueKey('appTourTooltip')), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('dashboardHomeTab')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump();
@@ -315,6 +309,18 @@ void main() {
         container.read(personalizationControllerProvider).isAppTourEnabled,
         isFalse,
       );
+      // Re-enable after Skip, when the navigator already remembers Home.
+      await tester.tap(find.byKey(const ValueKey('dashboardProfileTab')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const ValueKey('appTourSetting')));
+      await tester.tap(find.byKey(const ValueKey('appTourSetting')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('appTourTooltip')), findsOneWidget);
+      expect(repository.values, [true, false, true]);
+      await container.read(appTourControllerProvider.notifier).finish();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('appTourTooltip')), findsNothing);
+      expect(repository.values, [true, false, true, false]);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 3));

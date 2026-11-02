@@ -185,6 +185,7 @@ class _CustomerDashboardScreenState
       _ => AppRoutes.home,
     };
     if (_tourDestination == destination &&
+        !['home', 'orders', 'calendar', 'profile'].contains(destination) &&
         router.routerDelegate.currentConfiguration.lastOrNull?.route.path ==
             expectedPath) {
       return;

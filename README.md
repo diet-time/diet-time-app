@@ -1430,3 +1430,79 @@ Logs: `artifacts/booking-cutoff-*.log`. PostgreSQL transaction/replay integratio
 tests were compiled but not executed: `UPCOMING_MEALS_TEST_CONNECTION` is not
 configured. Physical-device verification remains outstanding. Deploy the API
 changes alongside the rebuilt app for authoritative server enforcement.
+
+## Consolidated questionnaire, tour and kitchen UI fixes
+
+The seven targeted fixes reuse the existing screens, router, spotlight host,
+notification queries, fulfillment dialog/API and preparation export endpoint.
+
+### Root causes and corrections
+
+| Issue | Root cause | Correction |
+| --- | --- | --- |
+| Adjust Plan at 100% | The profile questionnaire had no dedicated edit initialization; its progress came from persisted completion and its introduction used resume metadata. | The existing Adjust Plan route requests edit mode. Completed profiles open at question 1 with saved values, 17% step progress and accurate accessibility progress. Opening does not save or reset completion. Incomplete profiles retain the introduction/resume behavior. |
+| Enable App Tour | The toggle saved the preference while staying on Profile, but the existing automatic start trigger runs on Home. The tour navigator could also incorrectly treat Home as already selected after a previous tour. | After a successful preference save, navigate through the existing dashboard callback to Home. Its readiness trigger starts the same spotlight host after targets render. Re-enabling after Skip also works; failed saves do not launch a tour. |
+| Notification dropdown | Large nested cards, repeated unread information, absolute timestamps and generous padding made the panel difficult to scan. | A responsive 400px panel uses separator rows, small icons, relative timestamps with the Qatar timestamp in a tooltip, one scrolling list and accessible fixed controls. Long values wrap. |
+| Scheduled Orders | Nine table columns competed for the drawer width. | Compact responsive cards retain customer/order/plan, item counts, fulfillment details, approval and daily status, and the existing fulfillment control. Four aligned counters, filters and sorting remain intact. Only overdue cards use a red background. |
+| Preparation Summary | Expanded customer cards appeared before the kitchen's primary dish list; totals and categories were spread across large panels. | Compact portion counters and category totals precede the menu work list, followed by expandable customer details and the existing plan breakdown. Allergens stay visible while collapsed; the PDF action remains prominent. |
+| Repeated allergen prefixes | Preferences and allergies were flattened into one prefixed string list. | The existing response adds separate structured preference/allergen labels, including saved allergen notes. UI/PDF safely handle legacy anchored prefixes, retain meaningful text, deduplicate labels and use “None specified” for empty groups. Existing legacy fields are retained. |
+| Generic meal categories | The preparation query explicitly replaced configured type names with Meal/Snack, and customer dishes were grouped only by broad classification. | One selection-based projection resolves the specific option's slot/type, falling back to the selection's explicit type for legacy rows. Configured names/order feed aggregates, customer dishes, overview and PDF. Classification remains separate. Unmapped rows retain their quantities under Uncategorized Meal/Snack and emit a diagnostic warning. |
+
+### Modified files
+
+Flutter application (`diet-time-app`):
+
+- `lib/app/router/app_router.dart`
+- `lib/features/onboarding/presentation/onboarding_screen.dart`
+- `lib/features/app_tour/app_tour_host.dart`
+- `lib/features/dashboard/presentation/customer_dashboard_screen.dart` — tour navigation guard only; order cards unchanged.
+- `test/widget_test.dart`
+- `test/app_tour_test.dart`
+- `README.md` — this report.
+
+React Admin (`../diet-time-admin-spa`):
+
+- `src/layouts/NotificationBell.tsx`
+- `src/layouts/NotificationBell.test.tsx`
+- `src/features/delivery-calendar/types.ts`
+- `src/features/delivery-calendar/components/DateDetailsDrawer.tsx`
+- `src/features/delivery-calendar/components/DateDetailsDrawer.test.tsx`
+- `src/features/delivery-calendar/components/FulfillmentRefresh.test.tsx`
+
+ASP.NET Core (`../diet-time-api`):
+
+- `src/BuildingBlocks/DietTime.Contracts/DeliveryPreparationContracts.cs`
+- `src/BuildingBlocks/DietTime.Application/AdminDeliveryCalendar.cs`
+- `src/BuildingBlocks/DietTime.Application/PreparationDisplayText.cs`
+- `src/BuildingBlocks/DietTime.Persistence/AdminDeliveryCalendarService.cs`
+- `src/BuildingBlocks/DietTime.Infrastructure/KitchenPreparationPdfReportGenerator.cs`
+- `tests/DietTime.UnitTests/DeliveryPreparationTests.cs`
+- `tests/DietTime.UnitTests/KitchenPreparationReportTests.cs`
+- `tests/DietTime.Meal.Api.IntegrationTests/PreparationCustomerDetailsTests.cs`
+
+### Response and PDF compatibility
+
+Existing response fields and endpoint paths remain available. Each customer dish
+adds `mealCategoryId`, `mealCategoryName`, `mealCategoryDisplayOrder` and
+`mealClassification`; its existing `category` still represents meal/snack.
+Aggregated `mealTypes` retain `mealTypeId`/`mealTypeName` and add
+`mealCategoryDisplayOrder`/`mealClassification`. Customer selections add
+`mealPlanName`, `foodPreferences` and `allergens`.
+
+The PDF consumes the same existing preparation response as Admin. Customer dishes
+use configured category headings, and preferences/allergens are separate, with
+allergens emphasized. Existing aggregate dish quantities, totals, export/download
+handling and plan breakdown are preserved. No PostgreSQL migration or saved-data
+updates are required. No unrelated workflow changes were necessary.
+
+### Executed validation and limits
+
+- Flutter: **509 tests passed** across the full suite. Coverage includes saved edit answers, step progress, Previous/Continue, successful edited-answer persistence, unchanged onboarding/resume behavior, immediate tour launch, re-enabling after Skip, Finish persistence and existing spotlight interactions.
+- API/PDF: **320 unit tests passed**, including same-dish/different-category quantities, sorting, structured/legacy dietary normalization, meaningful notes and extracted PDF content.
+- Preparation API endpoint checks: **7 passed**; **5 PostgreSQL-backed tests skipped** because `UPCOMING_MEALS_TEST_CONNECTION` is not configured. The skipped tests compiled, including customer-selected and automatic slot mapping. Live database query execution and persisted-data verification remain outstanding; no production database was accessed.
+- Headless Chrome: existing components passed responsive checks at **1440×900** and **390×844** with isolated mock data: drawer overflow, configured preparation categories, collapsed/expanded customer cards, notification viewport bounds, long content, list scrolling and visible footer controls. Temporary preview files were removed.
+- Repository-wide Admin lint reports the existing `react-refresh/only-export-components` warning in untouched `src/features/orders/OrderReviewDetails.tsx`. That unrelated file was left unchanged.
+
+- React Admin: **190 tests passed across 41 files** with `npm test -- --maxWorkers=2`. The initial unrestricted parallel run had one unrelated pricing-test timeout; reduced concurrency passed without changing that test or its timeout. All **40 notification/calendar tests** also passed in the focused run.
+- Static/build checks: Dart analysis reported **no issues**; Admin TypeScript/production build and ESLint for all six changed Admin files passed. Vite emitted a large-chunk advisory. App, Admin and API `git diff --check` checks passed.
+- Local validation logs are in ignored `artifacts/consolidated-*.log` and `artifacts/preparation-*.log`. Preview scripts/screenshots were moved outside the repositories; no preview page or generated build output is part of the changes.
