@@ -74,27 +74,6 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
             fontWeight: FontWeight.w900,
           ),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsetsDirectional.only(end: 10),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.darkGreen.withValues(alpha: .08),
-                ),
-              ),
-              child: const Icon(
-                Icons.receipt_long_outlined,
-                color: AppColors.emeraldGreen,
-                size: 19,
-              ),
-            ),
-          ),
-        ],
       ),
       body: order.when(
         loading: () => const _OrderDetailsLoading(),
@@ -119,7 +98,12 @@ class _OrderDetails extends ConsumerWidget {
     final address = delivery.address;
     return ListView(
       key: const ValueKey('orderDetails'),
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 30),
+      padding: EdgeInsets.fromLTRB(
+        12,
+        8,
+        12,
+        30 + MediaQuery.viewPaddingOf(context).bottom,
+      ),
       children: [
         _OrderHeaderCard(order: order),
         if (order.customerCancellationBlocked)
@@ -183,12 +167,6 @@ class _OrderDetails extends ConsumerWidget {
               child: Text(context.customerCopy(order.reviewMessage!)),
             ),
           ),
-        Text(
-          order.isTakeaway && order.takeawayBranch != null
-              ? '${context.customerCopy('Takeaway')} · ${order.takeawayBranch!.name}${order.takeawayBranch!.address == null ? '' : '\n${order.takeawayBranch!.address}'}'
-              : order.fulfillmentLabel,
-        ),
-        const SizedBox(height: 12),
         _SectionCard(
           children: [
             _InformationRow(
@@ -219,17 +197,35 @@ class _OrderDetails extends ConsumerWidget {
               value:
                   '${lookupAppLocalizations(Localizations.localeOf(context)).customerDaysPerWeek(delivery.daysPerWeek)}\n${_weekdays(context, delivery.days)}',
             ),
-            if (!order.isTakeaway)
-              _InformationRow(
-                icon: Icons.location_on_outlined,
-                label: context.customerCopy('DELIVERY ADDRESS'),
-                value: [
-                  address.displayName,
-                  address.area,
-                  address.streetLine,
-                  address.formattedAddress,
-                ].where((value) => value.trim().isNotEmpty).join('\n'),
-              ),
+            _InformationRow(
+              key: const ValueKey('orderFulfillmentDetails'),
+              icon: Icons.location_on_outlined,
+              label: order.isTakeaway
+                  ? lookupAppLocalizations(
+                      Localizations.localeOf(context),
+                    ).orderCollectionDetails
+                  : lookupAppLocalizations(
+                      Localizations.localeOf(context),
+                    ).orderDeliveryDetails,
+              value: order.isTakeaway
+                  ? [
+                          order.takeawayBranch?.name ??
+                              lookupAppLocalizations(
+                                Localizations.localeOf(context),
+                              ).orderBranchUnavailable,
+                          order.takeawayBranch?.address,
+                        ]
+                        .whereType<String>()
+                        .where((v) => v.trim().isNotEmpty)
+                        .join('\n')
+                  : [
+                      address.displayName,
+                      address.area,
+                      address.streetLine,
+                      address.formattedAddress,
+                    ].where((v) => v.trim().isNotEmpty).toSet().join('\n'),
+              last: order.isTakeaway,
+            ),
             if (!order.isTakeaway)
               _InformationRow(
                 icon: Icons.schedule_rounded,
@@ -266,6 +262,7 @@ class _OrderDetails extends ConsumerWidget {
         const _SupportBar(),
         const SizedBox(height: 12),
         Container(
+          key: const ValueKey('orderConfirmationCard'),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: AppColors.teaGreen.withValues(alpha: .2),
@@ -472,6 +469,7 @@ class _InformationRow extends StatelessWidget {
     this.value,
     this.child,
     this.last = false,
+    super.key,
   });
 
   final IconData icon;
@@ -588,85 +586,24 @@ class _MetricTile extends StatelessWidget {
 
 class _SupportBar extends StatelessWidget {
   const _SupportBar();
-
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: AppColors.darkGreen,
-      borderRadius: BorderRadius.circular(15),
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: _SupportAction(
-            icon: Icons.chat_bubble_outline_rounded,
-            label: context.customerCopy('Need Help?'),
-            onTap: () => _showSupport(context),
-          ),
-        ),
-        Container(
-          width: 1,
-          height: 34,
-          color: AppColors.white.withValues(alpha: .15),
-        ),
-        Expanded(
-          child: _SupportAction(
-            icon: Icons.support_agent_rounded,
-            label: context.customerCopy('Contact Support'),
-            onTap: () => _showSupport(context),
-          ),
-        ),
-      ],
-    ),
-  );
-
-  void _showSupport(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
+  Widget build(BuildContext context) => OutlinedButton.icon(
+    key: const ValueKey('orderContactSupport'),
+    icon: const Icon(Icons.support_agent_rounded),
+    label: Text(context.customerCopy('Contact Support')),
+    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          context.customerCopy('Contact Diet Time for help with your plan.'),
+          lookupAppLocalizations(
+            Localizations.localeOf(context),
+          ).orderSupportPending,
         ),
       ),
-    );
-  }
-}
-
-class _SupportAction extends StatelessWidget {
-  const _SupportAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(15),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: AppColors.white, size: 16),
-          const SizedBox(width: 7),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
+    ),
+    style: OutlinedButton.styleFrom(
+      foregroundColor: AppColors.emeraldGreen,
+      padding: const EdgeInsets.symmetric(vertical: 13),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
     ),
   );
 }

@@ -2534,4 +2534,52 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get packageCancellationBlocked =>
       'This booking is confirmed and paid. You cannot cancel it from the app. You may pause future deliveries or contact Diet Time.';
+
+  @override
+  String get orderCollectionDetails => 'COLLECTION DETAILS';
+
+  @override
+  String get orderDeliveryDetails => 'DELIVERY DETAILS';
+
+  @override
+  String get orderBranchUnavailable => 'Branch not recorded';
+
+  @override
+  String get orderSupportPending =>
+      'Support contact details will be added soon.';
+
+  @override
+  String get packageInvalidRestart =>
+      'Choose a restart date after the first paused delivery and within six months.';
+
+  @override
+  String get packageEligibilityChanged =>
+      'The available delivery dates changed. Refresh the preview before confirming.';
+
+  @override
+  String get packageReviewRequired =>
+      'Diet Time needs to review the saved service schedule before this package can be paused. Your deliveries have not been changed.';
+
+  @override
+  String get packageAlreadyPaused =>
+      'This package already has a scheduled pause. Refresh the package details.';
+
+  @override
+  String get packageNotActive =>
+      'This package is not eligible for pausing. Check its approval and payment status.';
+
+  @override
+  String get packageRestartExplanation =>
+      'Choose when remaining deliveries should restart. The next service follows your delivery weekdays; the package end date is recalculated separately.';
+
+  @override
+  String get packagePauseSuccess =>
+      'Pause scheduled. Your remaining service days are preserved.';
+
+  @override
+  String get packageResumeSuccess =>
+      'Restart scheduled. Your next delivery date has been updated.';
+
+  @override
+  String get packageActualRestartDate => 'First delivery after the pause';
 }

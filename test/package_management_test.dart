@@ -43,11 +43,22 @@ Map<String, dynamic> previewJson() => {
   'rescheduledServiceDays': 8,
   'preservedCommittedDays': 1,
   'projectedEndDate': '2026-11-20',
+  'remainingServiceDays': 8,
+  'actualRestartDate': '2026-11-05',
 };
 OrderConfirmation order({
   String status = 'CONFIRMED',
   String payment = 'PAID',
+  bool takeaway = false,
 }) => OrderConfirmation.fromJson({
+  'fulfillmentMethod': takeaway ? 'TAKEAWAY' : 'HOME_DELIVERY',
+  'takeawayBranch': takeaway
+      ? {
+          'id': 'branch',
+          'name': 'Diet Time – Izghawa Branch',
+          'address': 'Izghawa, Qatar',
+        }
+      : null,
   'id': 'order',
   'orderNumber': 'ORD-TEST',
   'status': status,
@@ -62,6 +73,11 @@ OrderConfirmation order({
     {'mealTypeId': 'meal', 'name': 'Lunch', 'quantity': 1},
   ],
   'delivery': {
+    'address': {
+      'name': 'Home',
+      'area': 'Doha',
+      'formattedAddress': 'Building 10, Street 20, Doha',
+    },
     'daysPerWeek': 6,
     'days': [1, 2, 3, 4, 6, 7],
     'startDate': '2026-11-03',
@@ -81,16 +97,27 @@ OrderConfirmation order({
 class PackageOrders extends OrdersRepository {
   PackageOrders()
     : super(apiClient: ApiClient(), accessTokenProvider: () async => 'token');
-  bool paused = false, available = true, failOnce = false;
+  bool paused = false, available = true, failOnce = false, takeaway = false;
+  ApiException? previewError;
+  int managementReads = 0;
+  List<String>? changedEligibleDates;
+  final previewStarts = <DateTime>[];
+  final confirmedStarts = <DateTime>[];
   int previews = 0, resumes = 0;
   final commands = <String>[];
   @override
-  Future<OrderConfirmation> getOrder(String id) async => order();
+  Future<OrderConfirmation> getOrder(String id) async =>
+      order(takeaway: takeaway);
   @override
-  Future<PackageManagement> getPackageManagement(String id) async =>
-      PackageManagement.fromJson(
-        management(paused: paused, available: available),
-      );
+  Future<PackageManagement> getPackageManagement(String id) async {
+    managementReads++;
+    final json = management(paused: paused, available: available);
+    if (managementReads >= 3 && changedEligibleDates != null) {
+      json['eligiblePauseDates'] = changedEligibleDates;
+    }
+    return PackageManagement.fromJson(json);
+  }
+
   @override
   Future<PackagePausePreview> previewPause(
     String id,
@@ -98,7 +125,14 @@ class PackageOrders extends OrdersRepository {
     DateTime resume,
   ) async {
     previews++;
-    return PackagePausePreview.fromJson(previewJson());
+    previewStarts.add(start);
+    if (previewError case final error?) throw error;
+    return PackagePausePreview.fromJson({
+      ...previewJson(),
+      'pauseStartDate': packageDate(start),
+      'resumeDate': packageDate(resume),
+      'actualRestartDate': packageDate(resume),
+    });
   }
 
   @override
@@ -111,6 +145,7 @@ class PackageOrders extends OrdersRepository {
     String? reason,
   ) async {
     commands.add(commandId);
+    confirmedStarts.add(start);
     if (failOnce) {
       failOnce = false;
       throw const ApiException(ApiFailure.network);
@@ -187,6 +222,27 @@ void main() {
       expect(
         cutoff.earliestRestartDate(utcNow: cutoff.receivedAt),
         DateTime(2026, 11, 4),
+      );
+    },
+  );
+  test(
+    'pause restart follows the first eligible delivery, not the clock boundary or package end',
+    () {
+      final data = PackageManagement.fromJson({
+        ...management(),
+        'expectedEndDate': '2026-12-01',
+      });
+      expect(
+        data.earliestPauseDate(utcNow: data.receivedAt),
+        DateTime(2026, 11, 4),
+      );
+      expect(
+        data.earliestPauseRestartDate(utcNow: data.receivedAt),
+        DateTime(2026, 11, 5),
+      );
+      expect(
+        data.earliestPauseRestartDate(utcNow: data.receivedAt),
+        isNot(data.endDate),
       );
     },
   );
@@ -310,6 +366,50 @@ void main() {
     },
   );
 
+  testWidgets(
+    'preview refreshes the eligible start when preparation commits a day while the picker is open',
+    (tester) async {
+      final repository = PackageOrders()
+        ..changedEligibleDates = ['2026-11-05', '2026-11-07'];
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [ordersRepositoryProvider.overrideWithValue(repository)],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(
+              body: SingleChildScrollView(
+                child: PackageManagementPanel(orderId: 'order'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final copy = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.byKey(const ValueKey('pausePackage-order')));
+      await tester.pumpAndSettle();
+      final picker = tester.widget<CalendarDatePicker>(
+        find.byType(CalendarDatePicker),
+      );
+      picker.onDateChanged(DateTime(2026, 11, 10));
+      await tester.pump();
+      await tester.tap(
+        find.text(
+          MaterialLocalizations.of(
+            tester.element(find.byType(CalendarDatePicker)),
+          ).okButtonLabel,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(copy.packagePreviewPause));
+      await tester.pumpAndSettle();
+      expect(repository.previewStarts, [DateTime(2026, 11, 5)]);
+      expect(repository.commands, isEmpty);
+      expect(find.text(copy.packageConfirmPause), findsOneWidget);
+    },
+  );
+
   for (final language in ['en', 'ar']) {
     testWidgets(
       'paid confirmed order keeps details and explanation, without cancellation ($language)',
@@ -340,6 +440,146 @@ void main() {
           findsOneWidget,
         );
         expect(tester.takeException(), isNull);
+      },
+    );
+
+    for (final takeaway in [true, false]) {
+      testWidgets(
+        'fulfillment is inside the details card with one deferred support button and no receipt action ($language, $takeaway)',
+        (tester) async {
+          tester.view.physicalSize = const Size(390, 844);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final repository = PackageOrders()..takeaway = takeaway;
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                ordersRepositoryProvider.overrideWithValue(repository),
+              ],
+              child: MaterialApp(
+                locale: Locale(language),
+                builder: (context, child) => MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(viewPadding: const EdgeInsets.only(bottom: 34)),
+                  child: child!,
+                ),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const OrderDetailsScreen(orderId: 'order'),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final copy = lookupAppLocalizations(Locale(language));
+          final row = find.byKey(const ValueKey('orderFulfillmentDetails'));
+          await tester.scrollUntilVisible(row, 250);
+          expect(
+            find.descendant(
+              of: row,
+              matching: find.text(
+                takeaway
+                    ? copy.orderCollectionDetails
+                    : copy.orderDeliveryDetails,
+              ),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.descendant(
+              of: row,
+              matching: find.byIcon(Icons.location_on_outlined),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.descendant(
+              of: row,
+              matching: find.textContaining(
+                takeaway ? 'Diet Time – Izghawa Branch' : 'Doha',
+              ),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.text('Takeaway · Diet Time – Izghawa Branch'),
+            findsNothing,
+          );
+          final appBar = tester.widget<AppBar>(find.byType(AppBar));
+          expect(appBar.actions, isNull);
+          expect(find.byIcon(Icons.receipt_long_outlined), findsNothing);
+          final support = find.byKey(const ValueKey('orderContactSupport'));
+          await tester.scrollUntilVisible(support, 200);
+          await tester.tap(support);
+          await tester.pump();
+          expect(find.text(copy.orderSupportPending), findsOneWidget);
+          expect(find.byIcon(Icons.chat_bubble_outline_rounded), findsNothing);
+          await tester.scrollUntilVisible(
+            find.byKey(const ValueKey('orderConfirmationCard')),
+            100,
+          );
+          expect(
+            tester.getRect(support).bottom,
+            lessThan(
+              tester
+                  .getRect(find.byKey(const ValueKey('orderConfirmationCard')))
+                  .top,
+            ),
+          );
+          expect(
+            tester
+                .getRect(find.byKey(const ValueKey('orderConfirmationCard')))
+                .bottom,
+            lessThanOrEqualTo(844 - 34),
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+    testWidgets(
+      'preview explains backend validation failures instead of hiding them ($language)',
+      (tester) async {
+        final repository = PackageOrders()
+          ..previewError = const ApiException(
+            ApiFailure.validation,
+            statusCode: 400,
+            code: 'invalid_resume_date',
+            message: 'Restart date is invalid',
+          );
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [ordersRepositoryProvider.overrideWithValue(repository)],
+            child: MaterialApp(
+              locale: Locale(language),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: const Scaffold(
+                body: SingleChildScrollView(
+                  child: PackageManagementPanel(orderId: 'order'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final copy = lookupAppLocalizations(Locale(language));
+        await tester.tap(find.byKey(const ValueKey('pausePackage-order')));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(
+            MaterialLocalizations.of(
+              tester.element(find.byType(CalendarDatePicker)),
+            ).okButtonLabel,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(copy.packagePreviewPause));
+        await tester.pumpAndSettle();
+        expect(find.text(copy.packageInvalidRestart), findsOneWidget);
+        expect(find.text(copy.packageScheduleChanged), findsNothing);
+        expect(repository.commands, isEmpty);
+        expect(find.text(copy.packageConfirmPause), findsNothing);
       },
     );
 
@@ -378,7 +618,8 @@ void main() {
         final picker = tester.widget<CalendarDatePicker>(
           find.byType(CalendarDatePicker),
         );
-        expect(picker.firstDate, DateTime(2026, 11, 3));
+        expect(picker.firstDate, DateTime(2026, 11, 5));
+        expect(picker.initialDate, DateTime(2026, 11, 5));
         expect(picker.lastDate, DateTime(2027, 5, 2));
         expect(picker.lastDate.isAfter(DateTime(2026, 11, 12)), isTrue);
         expect(picker.selectableDayPredicate, isNull);
@@ -391,6 +632,7 @@ void main() {
         await tester.tap(find.text(copy.packagePreviewPause));
         await tester.pumpAndSettle();
         expect(repository.previews, 1);
+        expect(repository.previewStarts, [DateTime(2026, 11, 4)]);
         expect(repository.commands, isEmpty);
         expect(find.text('${copy.packageAffectedDays}: 1'), findsOneWidget);
         expect(find.text('${copy.packageRescheduledDays}: 8'), findsOneWidget);
@@ -402,6 +644,10 @@ void main() {
         await tester.tap(find.text(copy.packageConfirmPause));
         await tester.pumpAndSettle();
         expect(repository.commands.length, 2);
+        expect(
+          repository.confirmedStarts.every((d) => d == DateTime(2026, 11, 4)),
+          isTrue,
+        );
         expect(repository.commands.first, repository.commands.last);
         expect(find.byType(AlertDialog), findsNothing);
         expect(find.text(copy.packagePauseScheduled), findsOneWidget);

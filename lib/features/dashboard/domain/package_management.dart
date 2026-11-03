@@ -67,6 +67,18 @@ class PackageManagement {
     return DateTime(now.year, now.month, now.day + (now.hour >= 21 ? 2 : 1));
   }
 
+  DateTime? earliestPauseDate({DateTime? utcNow}) {
+    final dates =
+        eligibleDates.where((d) => allowsPauseDate(d, utcNow: utcNow)).toList()
+          ..sort();
+    return dates.firstOrNull;
+  }
+
+  DateTime? earliestPauseRestartDate({DateTime? utcNow}) {
+    final start = earliestPauseDate(utcNow: utcNow);
+    return start?.add(const Duration(days: 1));
+  }
+
   DateTime latestRestartDate({DateTime? utcNow}) {
     return packageRestartLimit(qatarNow(utcNow: utcNow));
   }
@@ -79,10 +91,22 @@ class PackagePausePreview {
       affectedDays = (json['affectedServiceDays'] as num).toInt(),
       rescheduledDays = (json['rescheduledServiceDays'] as num).toInt(),
       committedDays = (json['preservedCommittedDays'] as num).toInt(),
+      remainingDays = (json['remainingServiceDays'] as num?)?.toInt(),
+      pauseStartDate = json['pauseStartDate'] == null
+          ? null
+          : _date(json['pauseStartDate']),
+      resumeDate = json['resumeDate'] == null
+          ? null
+          : _date(json['resumeDate']),
+      actualRestartDate = json['actualRestartDate'] == null
+          ? null
+          : _date(json['actualRestartDate']),
       endDate = _date(json['projectedEndDate']);
   final int rowVersion, affectedDays, rescheduledDays, committedDays;
   final String scheduleVersion;
   final DateTime endDate;
+  final int? remainingDays;
+  final DateTime? pauseStartDate, resumeDate, actualRestartDate;
 }
 
 String packageCommandId() {

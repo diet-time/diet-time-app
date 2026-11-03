@@ -935,5 +935,18 @@
   "packageScheduleChanged": "Unable to update the schedule. Refresh the preview and try again.",
   "packageReason": "Reason (optional)",
   "packageResumeConfirmation": "Your remaining service days will be preserved and the package end date calculated automatically.",
-  "packageCancellationBlocked": "This booking is confirmed and paid. You cannot cancel it from the app. You may pause future deliveries or contact Diet Time."
+  "packageCancellationBlocked": "This booking is confirmed and paid. You cannot cancel it from the app. You may pause future deliveries or contact Diet Time.",
+  "orderCollectionDetails": "COLLECTION DETAILS",
+  "orderDeliveryDetails": "DELIVERY DETAILS",
+  "orderBranchUnavailable": "Branch not recorded",
+  "orderSupportPending": "Support contact details will be added soon.",
+  "packageInvalidRestart": "Choose a restart date after the first paused delivery and within six months.",
+  "packageEligibilityChanged": "The available delivery dates changed. Refresh the preview before confirming.",
+  "packageReviewRequired": "Diet Time needs to review the saved service schedule before this package can be paused. Your deliveries have not been changed.",
+  "packageAlreadyPaused": "This package already has a scheduled pause. Refresh the package details.",
+  "packageNotActive": "This package is not eligible for pausing. Check its approval and payment status.",
+  "packageRestartExplanation": "Choose when remaining deliveries should restart. The next service follows your delivery weekdays; the package end date is recalculated separately.",
+  "packagePauseSuccess": "Pause scheduled. Your remaining service days are preserved.",
+  "packageResumeSuccess": "Restart scheduled. Your next delivery date has been updated.",
+  "packageActualRestartDate": "First delivery after the pause"
 }

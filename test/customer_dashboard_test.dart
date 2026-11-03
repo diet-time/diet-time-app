@@ -83,6 +83,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+        expect(find.byIcon(Icons.notifications_none_rounded), findsNothing);
         final card = find.byKey(const ValueKey('activePlan-paused-plan'));
         expect(
           find.descendant(

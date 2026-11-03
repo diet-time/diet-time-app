@@ -18,6 +18,29 @@ String _dateLabel(BuildContext context, DateTime? date) => date == null
         Localizations.localeOf(context).toLanguageTag(),
       ).format(date);
 
+String _packageError(BuildContext context, Object? error) {
+  final copy = lookupAppLocalizations(Localizations.localeOf(context));
+  if (error is ApiException) {
+    final message = switch (error.code) {
+      'pause_date_unavailable' ||
+      'schedule_changed' ||
+      'order_changed' => copy.packageEligibilityChanged,
+      'invalid_resume_date' => copy.packageInvalidRestart,
+      'schedule_review_required' => copy.packageReviewRequired,
+      'no_eligible_service_days' => copy.packageUnavailable,
+      'pause_already_scheduled' => copy.packageAlreadyPaused,
+      'package_not_active' => copy.packageNotActive,
+      _ => null,
+    };
+    if (message != null) return message;
+    if ((error.statusCode == 400 || error.statusCode == 409) &&
+        error.message?.trim().isNotEmpty == true) {
+      return error.message!;
+    }
+  }
+  return copy.packageScheduleChanged;
+}
+
 class PackageManagementPanel extends ConsumerStatefulWidget {
   const PackageManagementPanel({
     required this.orderId,
@@ -68,17 +91,11 @@ class _PackageManagementPanelState
     unawaited(ref.read(customerDashboardControllerProvider.notifier).refresh());
   }
 
-  void _failure() {
+  void _failure([Object? error]) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          lookupAppLocalizations(
-            Localizations.localeOf(context),
-          ).packageScheduleChanged,
-        ),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(_packageError(context, error))));
     ref.invalidate(packageManagementProvider(widget.orderId));
   }
 
@@ -89,15 +106,25 @@ class _PackageManagementPanelState
       final repository = ref.read(ordersRepositoryProvider);
       final data = await repository.getPackageManagement(widget.orderId);
       if (!mounted) return;
-      final dates = data.eligibleDates.where(data.allowsPauseDate).toList();
-      if (dates.isEmpty) {
-        _failure();
+      final start = data.earliestPauseDate();
+      if (start == null) {
+        _failure(
+          const ApiException(
+            ApiFailure.conflict,
+            code: 'no_eligible_service_days',
+          ),
+        );
         return;
       }
-      final first = data.earliestRestartDate();
+      final first = start.add(const Duration(days: 1));
       final last = data.latestRestartDate();
       if (first.isAfter(last)) {
-        _failure();
+        _failure(
+          const ApiException(
+            ApiFailure.validation,
+            code: 'invalid_resume_date',
+          ),
+        );
         return;
       }
       final restart = await showDatePicker(
@@ -111,21 +138,35 @@ class _PackageManagementPanelState
         ).packageResumeDate,
       );
       if (!mounted || restart == null) return;
-      await showDialog<PackageManagement>(
+      final result = await showDialog<PackageManagement>(
         context: context,
         barrierDismissible: false,
         builder: (_) => _PauseDialog(
           orderId: widget.orderId,
-          start: first,
+          start: start,
           initialResume: restart,
+          remainingDays: data.remainingDays,
           repository: repository,
           qatarNow: data.qatarNow,
         ),
       );
       // A committed command can lose its network response. Refresh after dismissing an error too.
-      if (mounted) _changed();
-    } catch (_) {
-      _failure();
+      if (mounted) {
+        _changed();
+        if (result != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                lookupAppLocalizations(
+                  Localizations.localeOf(context),
+                ).packagePauseSuccess,
+              ),
+            ),
+          );
+        }
+      }
+    } catch (error) {
+      _failure(error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -199,9 +240,12 @@ class _PackageManagementPanelState
         _resumePause = null;
         _resumeDate = null;
         _changed();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(copy.packageResumeSuccess)));
       }
-    } catch (_) {
-      _failure();
+    } catch (error) {
+      _failure(error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -325,12 +369,14 @@ class _PauseDialog extends StatefulWidget {
     required this.orderId,
     required this.start,
     required this.initialResume,
+    required this.remainingDays,
     required this.repository,
     required this.qatarNow,
   });
   final String orderId;
   final DateTime start;
   final DateTime initialResume;
+  final int remainingDays;
   final OrdersRepository repository;
   final DateTime Function() qatarNow;
   @override
@@ -338,6 +384,8 @@ class _PauseDialog extends StatefulWidget {
 }
 
 class _PauseDialogState extends State<_PauseDialog> {
+  late DateTime _start = widget.start;
+  late int _remainingDays = widget.remainingDays;
   late DateTime _resume = widget.initialResume;
   final _reason = TextEditingController();
   PackagePausePreview? _preview;
@@ -356,24 +404,52 @@ class _PauseDialogState extends State<_PauseDialog> {
       _preview = null;
     });
     try {
+      final current = await widget.repository.getPackageManagement(
+        widget.orderId,
+      );
+      final start = current.earliestPauseDate();
+      if (start == null) {
+        throw ApiException(
+          ApiFailure.conflict,
+          code: current.currentPause != null
+              ? 'pause_already_scheduled'
+              : 'no_eligible_service_days',
+        );
+      }
+      if (!mounted) return;
+      setState(() {
+        _start = start;
+        _remainingDays = current.remainingDays;
+      });
+      if (!_resume.isAfter(start)) {
+        throw const ApiException(
+          ApiFailure.validation,
+          code: 'invalid_resume_date',
+        );
+      }
       final result = await widget.repository.previewPause(
         widget.orderId,
-        widget.start,
+        start,
         _resume,
       );
+      if (mounted && result.pauseStartDate != null) {
+        setState(() => _start = result.pauseStartDate!);
+      }
+      if (!_resume.isAfter(result.pauseStartDate ?? start)) {
+        throw const ApiException(
+          ApiFailure.validation,
+          code: 'invalid_resume_date',
+        );
+      }
       if (mounted) {
         setState(() {
           _preview = result;
           _commandId = packageCommandId();
         });
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        setState(
-          () => _error = lookupAppLocalizations(
-            Localizations.localeOf(context),
-          ).packageScheduleChanged,
-        );
+        setState(() => _error = _packageError(context, error));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -391,7 +467,7 @@ class _PauseDialogState extends State<_PauseDialog> {
         widget.orderId,
         _commandId!,
         _preview!,
-        widget.start,
+        _preview!.pauseStartDate ?? _start,
         _resume,
         _reason.text.trim(),
       );
@@ -399,22 +475,16 @@ class _PauseDialogState extends State<_PauseDialog> {
     } on ApiException catch (error) {
       if (mounted) {
         setState(() {
-          _error = lookupAppLocalizations(
-            Localizations.localeOf(context),
-          ).packageScheduleChanged;
+          _error = _packageError(context, error);
           if (error.statusCode == 409) {
             _preview = null;
             _commandId = null;
           }
         });
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        setState(
-          () => _error = lookupAppLocalizations(
-            Localizations.localeOf(context),
-          ).packageScheduleChanged,
-        );
+        setState(() => _error = _packageError(context, error));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -433,15 +503,23 @@ class _PauseDialogState extends State<_PauseDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(
+                '${copy.packagePauseStart}: ${_dateLabel(context, _preview?.pauseStartDate ?? _start)}',
+              ),
+              Text(
+                '${copy.packageRemainingDays}: ${_preview?.remainingDays ?? _remainingDays}',
+              ),
               TextButton(
                 onPressed: _busy
                     ? null
                     : () async {
                         final date = await showDatePicker(
                           context: context,
-                          initialDate: _resume,
+                          initialDate: _resume.isAfter(_start)
+                              ? _resume
+                              : _start.add(const Duration(days: 1)),
                           currentDate: widget.qatarNow(),
-                          firstDate: widget.start,
+                          firstDate: _start.add(const Duration(days: 1)),
                           lastDate: packageRestartLimit(widget.qatarNow()),
                           helpText: copy.packageResumeDate,
                         );
@@ -458,6 +536,7 @@ class _PauseDialogState extends State<_PauseDialog> {
                 ),
               ),
               Text(copy.packagePreserveDays),
+              Text(copy.packageRestartExplanation),
               const SizedBox(height: 12),
               TextField(
                 controller: _reason,
@@ -469,6 +548,10 @@ class _PauseDialogState extends State<_PauseDialog> {
                 },
               ),
               if (_preview case final preview?) ...[
+                if (preview.actualRestartDate != null)
+                  Text(
+                    '${copy.packageActualRestartDate}: ${_dateLabel(context, preview.actualRestartDate)}',
+                  ),
                 Text('${copy.packageAffectedDays}: ${preview.affectedDays}'),
                 Text(
                   '${copy.packageRescheduledDays}: ${preview.rescheduledDays}',

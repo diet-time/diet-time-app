@@ -4567,6 +4567,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This booking is confirmed and paid. You cannot cancel it from the app. You may pause future deliveries or contact Diet Time.'**
   String get packageCancellationBlocked;
+
+  /// No description provided for @orderCollectionDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'COLLECTION DETAILS'**
+  String get orderCollectionDetails;
+
+  /// No description provided for @orderDeliveryDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'DELIVERY DETAILS'**
+  String get orderDeliveryDetails;
+
+  /// No description provided for @orderBranchUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Branch not recorded'**
+  String get orderBranchUnavailable;
+
+  /// No description provided for @orderSupportPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Support contact details will be added soon.'**
+  String get orderSupportPending;
+
+  /// No description provided for @packageInvalidRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a restart date after the first paused delivery and within six months.'**
+  String get packageInvalidRestart;
+
+  /// No description provided for @packageEligibilityChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The available delivery dates changed. Refresh the preview before confirming.'**
+  String get packageEligibilityChanged;
+
+  /// No description provided for @packageReviewRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Diet Time needs to review the saved service schedule before this package can be paused. Your deliveries have not been changed.'**
+  String get packageReviewRequired;
+
+  /// No description provided for @packageAlreadyPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'This package already has a scheduled pause. Refresh the package details.'**
+  String get packageAlreadyPaused;
+
+  /// No description provided for @packageNotActive.
+  ///
+  /// In en, this message translates to:
+  /// **'This package is not eligible for pausing. Check its approval and payment status.'**
+  String get packageNotActive;
+
+  /// No description provided for @packageRestartExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose when remaining deliveries should restart. The next service follows your delivery weekdays; the package end date is recalculated separately.'**
+  String get packageRestartExplanation;
+
+  /// No description provided for @packagePauseSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause scheduled. Your remaining service days are preserved.'**
+  String get packagePauseSuccess;
+
+  /// No description provided for @packageResumeSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart scheduled. Your next delivery date has been updated.'**
+  String get packageResumeSuccess;
+
+  /// No description provided for @packageActualRestartDate.
+  ///
+  /// In en, this message translates to:
+  /// **'First delivery after the pause'**
+  String get packageActualRestartDate;
 }
 
 class _AppLocalizationsDelegate

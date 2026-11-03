@@ -2488,4 +2488,51 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get packageCancellationBlocked =>
       'هذا الحجز مؤكد ومدفوع. لا يمكن إلغاؤه من التطبيق. يمكنك إيقاف الخدمات المستقبلية مؤقتًا أو التواصل مع دايت تايم.';
+
+  @override
+  String get orderCollectionDetails => 'تفاصيل الاستلام';
+
+  @override
+  String get orderDeliveryDetails => 'تفاصيل التوصيل';
+
+  @override
+  String get orderBranchUnavailable => 'الفرع غير مسجل';
+
+  @override
+  String get orderSupportPending => 'ستُضاف بيانات التواصل مع الدعم قريبًا.';
+
+  @override
+  String get packageInvalidRestart =>
+      'اختر تاريخ استئناف بعد أول خدمة موقوفة مؤقتًا وخلال ستة أشهر.';
+
+  @override
+  String get packageEligibilityChanged =>
+      'تغيّرت أيام الخدمة المتاحة. حدّث المعاينة قبل التأكيد.';
+
+  @override
+  String get packageReviewRequired =>
+      'يحتاج دايت تايم إلى مراجعة جدول الخدمة المحفوظ قبل إيقاف هذه الباقة مؤقتًا. لم تتغير مواعيد خدماتك.';
+
+  @override
+  String get packageAlreadyPaused =>
+      'لدى هذه الباقة إيقاف مؤقت مجدول بالفعل. حدّث تفاصيل الباقة.';
+
+  @override
+  String get packageNotActive =>
+      'هذه الباقة غير مؤهلة للإيقاف المؤقت. تحقّق من حالة التأكيد والدفع.';
+
+  @override
+  String get packageRestartExplanation =>
+      'اختر موعد استئناف الخدمات المتبقية. تتبع الخدمة القادمة أيام التوصيل المحددة، ويُعاد احتساب تاريخ انتهاء الباقة بشكل منفصل.';
+
+  @override
+  String get packagePauseSuccess =>
+      'تمت جدولة الإيقاف المؤقت وحفظ أيام الخدمة المتبقية.';
+
+  @override
+  String get packageResumeSuccess =>
+      'تمت جدولة الاستئناف وتحديث موعد الخدمة القادمة.';
+
+  @override
+  String get packageActualRestartDate => 'أول خدمة بعد الإيقاف المؤقت';
 }

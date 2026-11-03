@@ -537,47 +537,6 @@ class _ReferenceDashboardHeader extends StatelessWidget {
           ),
         ),
       ),
-      const SizedBox(width: 10),
-      Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.darkGreen.withValues(alpha: .07)),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.darkGreen.withValues(alpha: .05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            const Center(
-              child: Icon(
-                Icons.notifications_none_rounded,
-                color: AppColors.darkGreen,
-                size: 21,
-              ),
-            ),
-            PositionedDirectional(
-              end: 7,
-              top: 6,
-              child: Container(
-                width: 7,
-                height: 7,
-                decoration: const BoxDecoration(
-                  color: AppColors.emeraldGreen,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     ],
   );
 }
@@ -593,36 +552,6 @@ class _DashboardHeader extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Row(
-        children: [
-          const Spacer(),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(8),
-                child: Icon(
-                  Icons.notifications_none_rounded,
-                  color: AppColors.darkGreen,
-                ),
-              ),
-              Positioned(
-                right: 5,
-                top: 4,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppColors.emeraldGreen,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      const SizedBox(height: 16),
       Text(
         '${_greeting(context)}, ${_displayName(name)} 👋',
         style: const TextStyle(

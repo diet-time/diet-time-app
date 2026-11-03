@@ -1636,3 +1636,83 @@ Remove pause also opens a restart-date picker. Dates begin at the next eligible 
 English and Arabic labels, schedule invalidation and command retry behavior are retained. Deploy the matching API changes before this app update. No database migration or SQL script is included.
 
 Validation for this update: 34 Admin frontend tests, 44 Flutter tests, 62 backend unit tests and 20 API integration tests passed. The integration suite used a disposable local PostgreSQL 18 database with no skipped tests. Coverage includes actual future-date rejection, delivery/collection HTTP calls, single restart-date scheduling from tomorrow, six-month limits, pause/resume persistence, retries, entitlement preservation, authorization and existing preparation/PDF behavior. TypeScript, targeted ESLint, Flutter static analysis and the SPA production build passed. Existing compiler/Vite advisories remain. No existing application database was modified.
+
+## Order Details and Package Management fixes — 2026-11-03
+
+The pause failure was hidden by catch-all Flutter handlers. Investigation reproduced
+an inconsistent date contract: the UI used the next calendar/cutoff boundary as its
+pause start instead of the first eligible persisted service day, and retained that
+start while the picker stayed open. The `moveRemaining` API path accepted only the
+calendar boundary, so an actual eligible start after committed/non-service dates
+could be rejected. A preparation cutoff could also expire without a database flag
+or revision changing, leaving a previously issued preview stale.
+
+The app now derives the start from server eligibility, refreshes it before every
+preview, and requires a restart after the first paused delivery. The API accepts
+that actual eligible start while retaining legacy request compatibility. Preview
+reports the real first affected delivery, remaining days, requested restart, actual
+first delivery after the pause, and projected end date. The original end date is
+never used as a restart default. Business validation errors now receive actionable
+English/Arabic messages; other business error details are retained rather than
+replaced with the generic refresh message. Confirmation and resume show success
+feedback, and command IDs/transactional schedule updates remain in place.
+
+Preview versions now include time-dependent preparation eligibility, so a cutoff
+expiring alone invalidates confirmation. Committed deliveries before the first
+movable date are included in the preserved-day count. Existing Friday exclusion,
+purchased weekdays, persisted blocked dates, menu rotation, quantities, fulfillment
+history, ownership and payment/cancellation rules remain intact. Preview performs
+no database writes. Unsafe legacy schedules still require review rather than guessed
+repairs or erased history. No new database migration is required for these fixes.
+
+The Order Details location now sits in the existing white information card, using
+its location icon and typography: Collection Details with the branch for takeaway,
+or Delivery Details with the saved address. The loose fulfillment line, inactive
+receipt action, both dashboard bell drawings and duplicate support action were
+removed. One green Contact Support button and the thank-you confirmation card
+remain in the scrollable content, with bottom safe-area padding.
+
+**Support destination is deliberately deferred, as requested.** The retained
+button explains that contact details will be added; no phone number, URL or
+external channel was invented. No URL-launch dependency or native permissions were
+added. Connecting and testing an actual Android/iOS support channel remains for
+when the destination is provided.
+
+### Files changed by this task
+
+Flutter (`diet-time-app`):
+
+- `lib/features/dashboard/domain/package_management.dart`
+- `lib/features/dashboard/presentation/package_management_panel.dart`
+- `lib/features/dashboard/presentation/order_details_screen.dart`
+- `lib/features/dashboard/presentation/customer_dashboard_screen.dart`
+- `lib/l10n/app_en.arb`, `lib/l10n/app_ar.arb`
+- Generated `lib/l10n/app_localizations.dart`, `app_localizations_en.dart`, `app_localizations_ar.dart`
+- `test/package_management_test.dart`
+- `test/customer_dashboard_test.dart`
+- `README.md`
+
+ASP.NET Core (`../diet-time-api`):
+
+- `src/BuildingBlocks/DietTime.Contracts/PackagePauseContracts.cs`
+- `src/BuildingBlocks/DietTime.Persistence/PackagePauseService.cs`
+- `tests/DietTime.Meal.Api.IntegrationTests/PackagePauseTests.cs`
+
+The existing preview endpoint adds `remainingServiceDays` and `actualRestartDate`;
+existing fields/endpoints are retained. Flutter tolerates older responses missing
+the additive fields and does not invent an actual delivery date. Deploy the matching
+API and app updates together. No existing customer database was accessed or changed.
+Pre-existing/parallel API PDF, preparation and dashboard work was left untouched.
+
+### Actual validation
+
+- **528 Flutter tests passed** in the full suite. After the final label/safe-area refinements, **49 targeted package/dashboard tests passed**, including English/Arabic errors, committed-day changes while the picker is open, exact request starts, read-only preview, retries, success, fulfillment rows, removed icons, the deferred support action and confirmation-card visibility with an iPhone-style bottom inset.
+- **368 API unit tests passed**.
+- **14 PostgreSQL integration tests passed, zero skipped**, using an isolated temporary PostgreSQL 18 cluster. Tests cover preview without persisted changes, committed deliveries, pause/confirm/resume, preserved entitlement/IDs, retries, rollback, ownership, payment/cancellation, existing delivery/collection and calendar behavior, plus weekend/month-boundary scheduling.
+- The December 1 example is exercised explicitly: a four-day package originally ending December 1 retains a committed November 28 delivery; restarting the remaining three on December 1 revises its end to December 3. Resume restores the earlier end; a separate preview verifies Friday December 4 is skipped. Requested restart and revised end are therefore distinct calculations even when the requested restart equals the original end.
+- A separate database test advances only the saved kitchen cutoff clock, without changing database flags, and verifies stale confirmation is rejected with no schedule/history writes.
+- Dart static analysis reported **no issues**. App and task-specific API whitespace checks passed. Existing unrelated build warnings were left unchanged.
+
+Local logs are in ignored `artifacts/order-details-*.log`. The temporary PostgreSQL
+cluster and disposable test databases are shut down/removed after validation.
+Physical-device validation and production deployment were not performed.
