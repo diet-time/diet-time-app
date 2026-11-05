@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/dashboard/presentation/package_management_panel.dart';
+import 'package:diet_time/features/dashboard/presentation/package_management_provider.dart';
 
 final orderDetailsProvider = FutureProvider.autoDispose
     .family<OrderConfirmation, String>(
@@ -45,6 +46,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.invalidate(orderDetailsProvider(orderId));
+      ref.invalidate(packageManagementProvider(orderId));
     }
   }
 
@@ -96,6 +98,13 @@ class _OrderDetails extends ConsumerWidget {
     final locale = Localizations.localeOf(context).toLanguageTag();
     final delivery = order.delivery;
     final address = delivery.address;
+    final copy = lookupAppLocalizations(Localizations.localeOf(context));
+    final management =
+        order.rowVersion > 0 &&
+            const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(order.status)
+        ? ref.watch(packageManagementProvider(order.id)).asData?.value
+        : null;
+    final paused = management?.currentPause != null;
     return ListView(
       key: const ValueKey('orderDetails'),
       padding: EdgeInsets.fromLTRB(
@@ -172,7 +181,13 @@ class _OrderDetails extends ConsumerWidget {
             _InformationRow(
               icon: Icons.calendar_month_outlined,
               label: context.customerCopy('PLAN PERIOD'),
-              value: _period(delivery.startDate, delivery.endDate),
+              value: paused
+                  ? '${copy.packagePlanStarted}: ${delivery.startDate == null ? '—' : DateFormat.yMMMd(locale).format(delivery.startDate!)}\n'
+                        '${copy.packageRevisedEnd}: ${DateFormat.yMMMd(locale).format(management!.endDate)}'
+                  : _period(
+                      delivery.startDate,
+                      management?.endDate ?? delivery.endDate,
+                    ),
             ),
             _InformationRow(
               icon: Icons.restaurant_rounded,

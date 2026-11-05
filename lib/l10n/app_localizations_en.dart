@@ -2477,7 +2477,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get packagePauseScheduled => 'Pause scheduled';
 
   @override
-  String get packageResumeEarly => 'Remove pause';
+  String get packageResumeEarly => 'Request resume';
 
   @override
   String get packageRemainingDays => 'Remaining service days';
@@ -2499,13 +2499,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get packagePreserveDays =>
-      'Your remaining delivery days will be preserved. Committed deliveries will remain scheduled.';
+      'Staff must accept your pause request before any dates change. Until then, your current deliveries remain scheduled.';
 
   @override
   String get packagePreviewPause => 'Preview pause';
 
   @override
-  String get packageConfirmPause => 'Confirm pause';
+  String get packageConfirmPause => 'Submit pause request';
 
   @override
   String get packageAffectedDays => 'Service days paused';
@@ -2529,7 +2529,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get packageResumeConfirmation =>
-      'Your remaining service days will be preserved and the package end date calculated automatically.';
+      'Staff must accept your resume request before the pause is removed. Your current schedule remains unchanged until acceptance.';
 
   @override
   String get packageCancellationBlocked =>
@@ -2574,12 +2574,64 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get packagePauseSuccess =>
-      'Pause scheduled. Your remaining service days are preserved.';
+      'Pause request sent. Awaiting staff confirmation; your schedule has not changed.';
 
   @override
   String get packageResumeSuccess =>
-      'Restart scheduled. Your next delivery date has been updated.';
+      'Resume request sent. Awaiting staff confirmation; your pause remains in effect.';
 
   @override
   String get packageActualRestartDate => 'First delivery after the pause';
+
+  @override
+  String get packageRequestedRestart => 'Requested restart date';
+
+  @override
+  String get packageRestartShort => 'Restarts';
+
+  @override
+  String get packageEndShort => 'Ends';
+
+  @override
+  String get packageRevisedEnd => 'Revised package end date';
+
+  @override
+  String get packagePlanStarted => 'Plan started';
+
+  @override
+  String get packageDeliveryBeforePause => 'Delivery before the pause';
+
+  @override
+  String get packageCommittedDelivery =>
+      'Delivery still scheduled (not paused)';
+
+  @override
+  String get packageDeliveryToday => 'Today\'s delivery (not paused)';
+
+  @override
+  String get packagePauseScheduleNote =>
+      'The pause does not cancel today\'s or already committed deliveries. The end date includes the pause.';
+
+  @override
+  String get packagePausePending => 'Pause pending confirmation';
+
+  @override
+  String get packageResumePending => 'Resume pending confirmation';
+
+  @override
+  String get packagePauseRejected => 'Pause request declined';
+
+  @override
+  String get packageResumeRejected => 'Resume request declined';
+
+  @override
+  String get packageRequestPending =>
+      'A package request is already awaiting staff confirmation.';
+
+  @override
+  String get packageApprovalExplanation =>
+      'Your current status and delivery dates stay unchanged until staff accept this request.';
+
+  @override
+  String get packageRequestedPauseStart => 'Requested pause start';
 }

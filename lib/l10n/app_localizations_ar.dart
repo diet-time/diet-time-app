@@ -2431,7 +2431,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get packagePauseScheduled => 'تمت جدولة الإيقاف المؤقت';
 
   @override
-  String get packageResumeEarly => 'إزالة الإيقاف المؤقت';
+  String get packageResumeEarly => 'طلب الاستئناف';
 
   @override
   String get packageRemainingDays => 'أيام الخدمة المتبقية';
@@ -2453,13 +2453,13 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get packagePreserveDays =>
-      'ستُحفظ أيام التوصيل المتبقية. وستبقى الخدمات التي بدأ تجهيزها في مواعيدها.';
+      'يجب قبول طلب الإيقاف المؤقت من الموظفين قبل تغيير أي مواعيد. وحتى ذلك الحين تبقى توصيلاتك الحالية مجدولة.';
 
   @override
   String get packagePreviewPause => 'معاينة الإيقاف المؤقت';
 
   @override
-  String get packageConfirmPause => 'تأكيد الإيقاف المؤقت';
+  String get packageConfirmPause => 'إرسال طلب الإيقاف المؤقت';
 
   @override
   String get packageAffectedDays => 'أيام الخدمة الموقوفة مؤقتًا';
@@ -2483,7 +2483,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get packageResumeConfirmation =>
-      'سيتم الحفاظ على أيام الخدمة المتبقية وحساب تاريخ انتهاء الباقة تلقائياً.';
+      'يجب قبول طلب الاستئناف من الموظفين قبل إزالة الإيقاف المؤقت. يبقى جدولك الحالي دون تغيير حتى القبول.';
 
   @override
   String get packageCancellationBlocked =>
@@ -2527,12 +2527,64 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get packagePauseSuccess =>
-      'تمت جدولة الإيقاف المؤقت وحفظ أيام الخدمة المتبقية.';
+      'تم إرسال طلب الإيقاف المؤقت وبانتظار تأكيد الموظفين. لم يتغير جدولك.';
 
   @override
   String get packageResumeSuccess =>
-      'تمت جدولة الاستئناف وتحديث موعد الخدمة القادمة.';
+      'تم إرسال طلب الاستئناف وبانتظار تأكيد الموظفين. لا يزال الإيقاف المؤقت سارياً.';
 
   @override
   String get packageActualRestartDate => 'أول خدمة بعد الإيقاف المؤقت';
+
+  @override
+  String get packageRequestedRestart => 'تاريخ الاستئناف المطلوب';
+
+  @override
+  String get packageRestartShort => 'الاستئناف';
+
+  @override
+  String get packageEndShort => 'الانتهاء';
+
+  @override
+  String get packageRevisedEnd => 'تاريخ انتهاء الباقة بعد التعديل';
+
+  @override
+  String get packagePlanStarted => 'بداية الباقة';
+
+  @override
+  String get packageDeliveryBeforePause => 'توصيل قبل الإيقاف المؤقت';
+
+  @override
+  String get packageCommittedDelivery =>
+      'توصيل ما زال مجدولاً (غير مشمول بالإيقاف)';
+
+  @override
+  String get packageDeliveryToday => 'توصيل اليوم (غير مشمول بالإيقاف)';
+
+  @override
+  String get packagePauseScheduleNote =>
+      'الإيقاف المؤقت لا يلغي توصيل اليوم أو التوصيلات المؤكدة مسبقاً. تاريخ الانتهاء يشمل فترة الإيقاف.';
+
+  @override
+  String get packagePausePending => 'إيقاف مؤقت بانتظار التأكيد';
+
+  @override
+  String get packageResumePending => 'استئناف بانتظار التأكيد';
+
+  @override
+  String get packagePauseRejected => 'تم رفض طلب الإيقاف المؤقت';
+
+  @override
+  String get packageResumeRejected => 'تم رفض طلب الاستئناف';
+
+  @override
+  String get packageRequestPending =>
+      'يوجد طلب للباقة بانتظار تأكيد الموظفين بالفعل.';
+
+  @override
+  String get packageApprovalExplanation =>
+      'تبقى حالتك ومواعيد التوصيل الحالية دون تغيير حتى يقبل الموظفون هذا الطلب.';
+
+  @override
+  String get packageRequestedPauseStart => 'بداية الإيقاف المؤقت المطلوبة';
 }

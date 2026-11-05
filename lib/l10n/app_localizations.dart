@@ -4463,7 +4463,7 @@ abstract class AppLocalizations {
   /// No description provided for @packageResumeEarly.
   ///
   /// In en, this message translates to:
-  /// **'Remove pause'**
+  /// **'Request resume'**
   String get packageResumeEarly;
 
   /// No description provided for @packageRemainingDays.
@@ -4505,7 +4505,7 @@ abstract class AppLocalizations {
   /// No description provided for @packagePreserveDays.
   ///
   /// In en, this message translates to:
-  /// **'Your remaining delivery days will be preserved. Committed deliveries will remain scheduled.'**
+  /// **'Staff must accept your pause request before any dates change. Until then, your current deliveries remain scheduled.'**
   String get packagePreserveDays;
 
   /// No description provided for @packagePreviewPause.
@@ -4517,7 +4517,7 @@ abstract class AppLocalizations {
   /// No description provided for @packageConfirmPause.
   ///
   /// In en, this message translates to:
-  /// **'Confirm pause'**
+  /// **'Submit pause request'**
   String get packageConfirmPause;
 
   /// No description provided for @packageAffectedDays.
@@ -4559,7 +4559,7 @@ abstract class AppLocalizations {
   /// No description provided for @packageResumeConfirmation.
   ///
   /// In en, this message translates to:
-  /// **'Your remaining service days will be preserved and the package end date calculated automatically.'**
+  /// **'Staff must accept your resume request before the pause is removed. Your current schedule remains unchanged until acceptance.'**
   String get packageResumeConfirmation;
 
   /// No description provided for @packageCancellationBlocked.
@@ -4631,13 +4631,13 @@ abstract class AppLocalizations {
   /// No description provided for @packagePauseSuccess.
   ///
   /// In en, this message translates to:
-  /// **'Pause scheduled. Your remaining service days are preserved.'**
+  /// **'Pause request sent. Awaiting staff confirmation; your schedule has not changed.'**
   String get packagePauseSuccess;
 
   /// No description provided for @packageResumeSuccess.
   ///
   /// In en, this message translates to:
-  /// **'Restart scheduled. Your next delivery date has been updated.'**
+  /// **'Resume request sent. Awaiting staff confirmation; your pause remains in effect.'**
   String get packageResumeSuccess;
 
   /// No description provided for @packageActualRestartDate.
@@ -4645,6 +4645,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'First delivery after the pause'**
   String get packageActualRestartDate;
+
+  /// No description provided for @packageRequestedRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested restart date'**
+  String get packageRequestedRestart;
+
+  /// No description provided for @packageRestartShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Restarts'**
+  String get packageRestartShort;
+
+  /// No description provided for @packageEndShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends'**
+  String get packageEndShort;
+
+  /// No description provided for @packageRevisedEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Revised package end date'**
+  String get packageRevisedEnd;
+
+  /// No description provided for @packagePlanStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan started'**
+  String get packagePlanStarted;
+
+  /// No description provided for @packageDeliveryBeforePause.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery before the pause'**
+  String get packageDeliveryBeforePause;
+
+  /// No description provided for @packageCommittedDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery still scheduled (not paused)'**
+  String get packageCommittedDelivery;
+
+  /// No description provided for @packageDeliveryToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s delivery (not paused)'**
+  String get packageDeliveryToday;
+
+  /// No description provided for @packagePauseScheduleNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The pause does not cancel today\'s or already committed deliveries. The end date includes the pause.'**
+  String get packagePauseScheduleNote;
+
+  /// No description provided for @packagePausePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause pending confirmation'**
+  String get packagePausePending;
+
+  /// No description provided for @packageResumePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume pending confirmation'**
+  String get packageResumePending;
+
+  /// No description provided for @packagePauseRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause request declined'**
+  String get packagePauseRejected;
+
+  /// No description provided for @packageResumeRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume request declined'**
+  String get packageResumeRejected;
+
+  /// No description provided for @packageRequestPending.
+  ///
+  /// In en, this message translates to:
+  /// **'A package request is already awaiting staff confirmation.'**
+  String get packageRequestPending;
+
+  /// No description provided for @packageApprovalExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your current status and delivery dates stay unchanged until staff accept this request.'**
+  String get packageApprovalExplanation;
+
+  /// No description provided for @packageRequestedPauseStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested pause start'**
+  String get packageRequestedPauseStart;
 }
 
 class _AppLocalizationsDelegate

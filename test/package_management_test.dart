@@ -10,6 +10,7 @@ import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 
 Map<String, dynamic> management({bool paused = false, bool available = true}) =>
     {
@@ -98,6 +99,7 @@ class PackageOrders extends OrdersRepository {
   PackageOrders()
     : super(apiClient: ApiClient(), accessTokenProvider: () async => 'token');
   bool paused = false, available = true, failOnce = false, takeaway = false;
+  String? pendingType;
   ApiException? previewError;
   int managementReads = 0;
   List<String>? changedEligibleDates;
@@ -112,6 +114,17 @@ class PackageOrders extends OrdersRepository {
   Future<PackageManagement> getPackageManagement(String id) async {
     managementReads++;
     final json = management(paused: paused, available: available);
+    if (pendingType != null) {
+      json['latestRequest'] = {
+        'id': 'request',
+        'type': pendingType,
+        'status': 'PENDING_APPROVAL',
+        'pauseStartDate': '2026-11-04',
+        'resumeDate': '2026-11-10',
+      };
+      json['eligiblePauseDates'] = [];
+      json['canResumeEarly'] = false;
+    }
     if (managementReads >= 3 && changedEligibleDates != null) {
       json['eligiblePauseDates'] = changedEligibleDates;
     }
@@ -150,7 +163,7 @@ class PackageOrders extends OrdersRepository {
       failOnce = false;
       throw const ApiException(ApiFailure.network);
     }
-    paused = true;
+    pendingType = 'PAUSE';
     return getPackageManagement(id);
   }
 
@@ -163,7 +176,7 @@ class PackageOrders extends OrdersRepository {
     DateTime? resumeDate,
   }) async {
     resumes++;
-    paused = false;
+    pendingType = 'RESUME';
     return getPackageManagement(id);
   }
 }
@@ -202,6 +215,137 @@ class CapturePackageApi extends ApiClient {
 }
 
 void main() {
+  for (final language in ['en', 'ar']) {
+    for (final type in ['PAUSE', 'RESUME']) {
+      testWidgets(
+        'declined $type keeps the schedule and permits a new request ($language)',
+        (tester) async {
+          final copy = lookupAppLocalizations(Locale(language));
+          final data = PackageManagement.fromJson({
+            ...management(paused: type == 'RESUME'),
+            'latestRequest': {
+              'id': 'declined',
+              'type': type,
+              'status': 'REJECTED',
+              'reviewReason': 'Please choose later dates',
+            },
+          });
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                ordersRepositoryProvider.overrideWithValue(PackageOrders()),
+                packageManagementProvider(
+                  'order',
+                ).overrideWith((ref) async => data),
+              ],
+              child: MaterialApp(
+                locale: Locale(language),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(
+                  body: SingleChildScrollView(
+                    child: PackageManagementPanel(orderId: 'order'),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            find.text(
+              type == 'PAUSE'
+                  ? copy.packagePauseRejected
+                  : copy.packageResumeRejected,
+            ),
+            findsOneWidget,
+          );
+          expect(find.text('Please choose later dates'), findsOneWidget);
+          if (type == 'PAUSE') {
+            final button = tester.widget<FilledButton>(
+              find.byKey(const ValueKey('pausePackage-order')),
+            );
+            expect(button.onPressed, isNotNull);
+            expect(data.currentPause, isNull);
+          } else {
+            expect(find.text(copy.packageResumeEarly), findsOneWidget);
+            expect(find.text(copy.packagePauseScheduled), findsOneWidget);
+            expect(data.currentPause, isNotNull);
+          }
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox());
+        },
+      );
+    }
+    testWidgets(
+      'paused dates distinguish today, restart and revised end ($language)',
+      (tester) async {
+        final locale = Locale(language);
+        final copy = lookupAppLocalizations(locale);
+        final data = PackageManagement.fromJson({
+          ...management(paused: true),
+          'serverNow': '2026-11-03T14:40:00Z',
+          'nextScheduledDelivery': '2026-11-03',
+          'firstDeliveryAfterPause': '2026-12-05',
+          'expectedEndDate': '2026-12-10',
+          'currentPause': {
+            'id': 'pause',
+            'pauseStartDate': '2026-11-04',
+            'resumeDate': '2026-12-04',
+            'status': 'SCHEDULED',
+          },
+        });
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ordersRepositoryProvider.overrideWithValue(PackageOrders()),
+              orderDetailsProvider(
+                'order',
+              ).overrideWith((ref) async => order()),
+              packageManagementProvider(
+                'order',
+              ).overrideWith((ref) async => data),
+            ],
+            child: MaterialApp(
+              locale: locale,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: const OrderDetailsScreen(orderId: 'order'),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        String date(int month, int day) =>
+            DateFormat.yMMMd(language).format(DateTime(2026, month, day));
+        expect(
+          find.text('${copy.packageDeliveryToday}: ${date(11, 3)}'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('${copy.packageRequestedRestart}: ${date(12, 4)}'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('${copy.packageActualRestartDate}: ${date(12, 5)}'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('${copy.packageRevisedEnd}: ${date(12, 10)}'),
+          findsOneWidget,
+        );
+        expect(find.textContaining(copy.packageNextDelivery), findsNothing);
+        expect(find.text(copy.packagePauseScheduleNote), findsOneWidget);
+        await tester.scrollUntilVisible(
+          find.textContaining(copy.packagePlanStarted),
+          200,
+        );
+        expect(
+          find.textContaining('${copy.packageRevisedEnd}: ${date(12, 10)}'),
+          findsWidgets,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
   test(
     'restart selection extends beyond package end and clamps six-month boundaries',
     () {
@@ -650,8 +794,17 @@ void main() {
         );
         expect(repository.commands.first, repository.commands.last);
         expect(find.byType(AlertDialog), findsNothing);
-        expect(find.text(copy.packagePauseScheduled), findsOneWidget);
+        expect(find.text(copy.packagePausePending), findsOneWidget);
+        expect(find.text(copy.packagePauseScheduled), findsNothing);
+        expect(repository.paused, isFalse);
         expect(container.read(packageScheduleChangesProvider), {'order': 1});
+        expect(find.text(copy.packageResumeEarly), findsNothing);
+        // Staff acceptance arrives on a subsequent package-state refresh.
+        repository.pendingType = null;
+        repository.paused = true;
+        await tester.pump(const Duration(seconds: 31));
+        await tester.pumpAndSettle();
+        expect(find.text(copy.packagePauseScheduled), findsOneWidget);
         await tester.tap(find.text(copy.packageResumeEarly));
         await tester.pumpAndSettle();
         final restartPicker = tester.widget<CalendarDatePicker>(
@@ -672,6 +825,13 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(repository.resumes, 1);
+        expect(repository.paused, isTrue);
+        expect(find.text(copy.packageResumePending), findsOneWidget);
+        expect(find.byKey(const ValueKey('pausePackage-order')), findsNothing);
+        repository.pendingType = null;
+        repository.paused = false;
+        await tester.pump(const Duration(seconds: 31));
+        await tester.pumpAndSettle();
         expect(
           find.byKey(const ValueKey('pausePackage-order')),
           findsOneWidget,

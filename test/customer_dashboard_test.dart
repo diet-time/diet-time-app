@@ -23,7 +23,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  for (final pauseStatus in ['PAUSED', 'SCHEDULED']) {
+  for (final pauseStatus in [
+    'PAUSED',
+    'SCHEDULED',
+    'PAUSE_PENDING',
+    'RESUME_PENDING',
+  ]) {
     testWidgets(
       'dashboard shows $pauseStatus in the plan card without pause controls',
       (tester) async {
@@ -44,17 +49,32 @@ void main() {
         final management = PackageManagement.fromJson({
           'rowVersion': 2,
           'serverNow': '2026-11-02T12:00:00Z',
-          'status': pauseStatus,
+          'status': pauseStatus.endsWith('_PENDING')
+              ? 'CONFIRMED'
+              : pauseStatus,
           'remainingServiceDays': 8,
-          'expectedEndDate': '2026-12-20',
+          'expectedEndDate': pauseStatus == 'PAUSE_PENDING'
+              ? '2026-11-20'
+              : '2026-12-20',
+          'firstDeliveryAfterPause': '2026-12-05',
           'eligiblePauseDates': [],
           'canResumeEarly': true,
-          'currentPause': {
-            'id': 'pause',
-            'pauseStartDate': '2026-11-03',
-            'resumeDate': '2026-12-03',
-            'status': pauseStatus,
-          },
+          'latestRequest': pauseStatus.endsWith('_PENDING')
+              ? {
+                  'id': 'request',
+                  'type': pauseStatus == 'PAUSE_PENDING' ? 'PAUSE' : 'RESUME',
+                  'status': 'PENDING_APPROVAL',
+                  'resumeDate': '2026-12-03',
+                }
+              : null,
+          'currentPause': pauseStatus == 'PAUSE_PENDING'
+              ? null
+              : {
+                  'id': 'pause',
+                  'pauseStartDate': '2026-11-03',
+                  'resumeDate': '2026-12-03',
+                  'status': pauseStatus,
+                },
         });
         await tester.pumpWidget(
           ProviderScope(
@@ -89,8 +109,22 @@ void main() {
           find.descendant(
             of: card,
             matching: find.text(
-              pauseStatus == 'PAUSED' ? 'Paused' : 'Pause scheduled',
+              pauseStatus == 'PAUSE_PENDING'
+                  ? '03 Nov - 20 Nov'
+                  : 'Restarts: Dec 5, 2026\nEnds: Dec 20, 2026',
             ),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: card,
+            matching: find.text(switch (pauseStatus) {
+              'PAUSE_PENDING' => 'Pause pending confirmation',
+              'RESUME_PENDING' => 'Resume pending confirmation',
+              'PAUSED' => 'Paused',
+              _ => 'Pause scheduled',
+            }),
           ),
           findsOneWidget,
         );

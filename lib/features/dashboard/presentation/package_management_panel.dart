@@ -30,6 +30,7 @@ String _packageError(BuildContext context, Object? error) {
       'no_eligible_service_days' => copy.packageUnavailable,
       'pause_already_scheduled' => copy.packageAlreadyPaused,
       'package_not_active' => copy.packageNotActive,
+      'package_request_pending' => copy.packageRequestPending,
       _ => null,
     };
     if (message != null) return message;
@@ -254,9 +255,15 @@ class _PackageManagementPanelState
   @override
   Widget build(BuildContext context) {
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
-    ref.listen(packageManagementProvider(widget.orderId), (_, next) {
+    ref.listen(packageManagementProvider(widget.orderId), (previous, next) {
       if (next.value case final data?) {
         _refreshAtBoundary(data);
+        if (previous?.value?.hasPendingRequest == true &&
+            !data.hasPendingRequest) {
+          Future.microtask(() {
+            if (mounted) _changed();
+          });
+        }
       }
     });
     return Card(
@@ -297,6 +304,44 @@ class _PackageManagementPanelState
                       color: AppColors.darkGreen,
                     ),
                   ),
+                  if (data.hasPendingRequest) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      data.latestRequest!.type == 'PAUSE'
+                          ? copy.packagePausePending
+                          : copy.packageResumePending,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.emeraldGreen,
+                      ),
+                    ),
+                    Text(
+                      copy.packageApprovalExplanation,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    if (data.latestRequest!.start != null)
+                      _line(
+                        copy.packageRequestedPauseStart,
+                        _dateLabel(context, data.latestRequest!.start),
+                      ),
+                    _line(
+                      copy.packageRequestedRestart,
+                      _dateLabel(context, data.latestRequest!.resume),
+                    ),
+                  ] else if (data.latestRequest?.status == 'REJECTED') ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      data.latestRequest!.type == 'PAUSE'
+                          ? copy.packagePauseRejected
+                          : copy.packageResumeRejected,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    if (data.latestRequest!.reviewReason?.isNotEmpty == true)
+                      Text(
+                        data.latestRequest!.reviewReason!,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                  ],
                   if (data.currentPause != null) ...[
                     const SizedBox(height: 8),
                     Text(
@@ -312,26 +357,63 @@ class _PackageManagementPanelState
                       copy.packagePauseStart,
                       _dateLabel(context, data.currentPause!.start),
                     ),
-                    _line(
-                      copy.packageResumeDate,
-                      _dateLabel(context, data.currentPause!.resume),
-                    ),
+                    if (data.firstDeliveryAfterPause == null ||
+                        packageDate(data.firstDeliveryAfterPause!) !=
+                            packageDate(data.currentPause!.resume))
+                      _line(
+                        copy.packageRequestedRestart,
+                        _dateLabel(context, data.currentPause!.resume),
+                      ),
+                    if (data.firstDeliveryAfterPause != null)
+                      _line(
+                        copy.packageActualRestartDate,
+                        _dateLabel(context, data.firstDeliveryAfterPause),
+                      ),
                   ],
                   _line(copy.packageRemainingDays, '${data.remainingDays}'),
+                  if (data.currentPause == null)
+                    _line(
+                      copy.packageNextDelivery,
+                      _dateLabel(context, data.nextDelivery),
+                    )
+                  else if (data.nextDelivery case final next?) ...[
+                    if (next.isBefore(data.currentPause!.resume))
+                      _line(
+                        packageDate(next) == packageDate(data.qatarNow())
+                            ? copy.packageDeliveryToday
+                            : next.isBefore(data.currentPause!.start)
+                            ? copy.packageDeliveryBeforePause
+                            : copy.packageCommittedDelivery,
+                        _dateLabel(context, next),
+                      )
+                    else if (data.firstDeliveryAfterPause == null)
+                      _line(
+                        copy.packageActualRestartDate,
+                        _dateLabel(context, next),
+                      ),
+                  ],
                   _line(
-                    copy.packageNextDelivery,
-                    _dateLabel(context, data.nextDelivery),
-                  ),
-                  _line(
-                    copy.packageExpectedEnd,
+                    data.currentPause == null
+                        ? copy.packageExpectedEnd
+                        : copy.packageRevisedEnd,
                     _dateLabel(context, data.endDate),
                   ),
+                  if (data.currentPause != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        copy.packagePauseScheduleNote,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
                   if (data.eligibleDates.isNotEmpty)
                     _line(
                       copy.packageEarliestPauseDate,
                       _dateLabel(context, data.eligibleDates.first),
                     ),
-                  if (data.currentPause == null) ...[
+                  if (data.hasPendingRequest)
+                    const SizedBox.shrink()
+                  else if (data.currentPause == null) ...[
                     FilledButton.icon(
                       key: ValueKey('pausePackage-${widget.orderId}'),
                       onPressed:

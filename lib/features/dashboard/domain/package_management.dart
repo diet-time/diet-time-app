@@ -29,6 +29,9 @@ class PackageManagement {
       nextDelivery = json['nextScheduledDelivery'] == null
           ? null
           : _date(json['nextScheduledDelivery']),
+      firstDeliveryAfterPause = json['firstDeliveryAfterPause'] == null
+          ? null
+          : _date(json['firstDeliveryAfterPause']),
       endDate = _date(json['expectedEndDate']),
       eligibleDates = (json['eligiblePauseDates'] as List)
           .map(_date)
@@ -36,14 +39,22 @@ class PackageManagement {
       currentPause = json['currentPause'] == null
           ? null
           : PackagePause.fromJson(json['currentPause'] as Map<String, dynamic>),
-      canResumeEarly = json['canResumeEarly'] == true;
+      canResumeEarly = json['canResumeEarly'] == true,
+      latestRequest = json['latestRequest'] is Map<String, dynamic>
+          ? PackageChangeRequest.fromJson(
+              json['latestRequest'] as Map<String, dynamic>,
+            )
+          : null;
   final int rowVersion, remainingDays;
   final String status;
   final DateTime serverNow, receivedAt, endDate;
   final DateTime? nextDelivery;
+  final DateTime? firstDeliveryAfterPause;
   final List<DateTime> eligibleDates;
   final PackagePause? currentPause;
   final bool canResumeEarly;
+  final PackageChangeRequest? latestRequest;
+  bool get hasPendingRequest => latestRequest?.status == 'PENDING_APPROVAL';
 
   DateTime qatarNow({DateTime? utcNow}) {
     final elapsed = (utcNow ?? DateTime.now().toUtc()).difference(receivedAt);
@@ -82,6 +93,21 @@ class PackageManagement {
   DateTime latestRestartDate({DateTime? utcNow}) {
     return packageRestartLimit(qatarNow(utcNow: utcNow));
   }
+}
+
+class PackageChangeRequest {
+  PackageChangeRequest.fromJson(Map<String, dynamic> json)
+    : id = json['id'] as String,
+      type = json['type'] as String,
+      status = json['status'] as String,
+      start = json['pauseStartDate'] == null
+          ? null
+          : _date(json['pauseStartDate']),
+      resume = json['resumeDate'] == null ? null : _date(json['resumeDate']),
+      reviewReason = json['reviewReason'] as String?;
+  final String id, type, status;
+  final DateTime? start, resume;
+  final String? reviewReason;
 }
 
 class PackagePausePreview {

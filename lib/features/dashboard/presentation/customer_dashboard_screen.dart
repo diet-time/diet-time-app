@@ -650,6 +650,21 @@ class _ReferencePlanCard extends ConsumerWidget {
       summary.status,
       summary.rowVersion > 0 ? summary.id : null,
     );
+    final management =
+        summary.rowVersion > 0 &&
+            const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(summary.status)
+        ? ref.watch(packageManagementProvider(summary.id)).asData?.value
+        : null;
+    final pause = management?.currentPause;
+    final dateLocale = Localizations.localeOf(context).toLanguageTag();
+    final planDates = pause == null
+        ? _period(
+            summary.startDate,
+            management?.endDate ?? summary.endDate,
+            locale: dateLocale,
+          )
+        : '${copy.packageRestartShort}: ${DateFormat.yMMMd(dateLocale).format(management!.firstDeliveryAfterPause ?? pause.resume)}\n'
+              '${copy.packageEndShort}: ${DateFormat.yMMMd(dateLocale).format(management.endDate)}';
     Future<void> openDetails() async {
       await context.push(AppRoutes.orderDetails, extra: summary.id);
       if (context.mounted) {
@@ -748,17 +763,7 @@ class _ReferencePlanCard extends ConsumerWidget {
                       size: 12,
                     ),
                     const SizedBox(width: 6),
-                    Expanded(
-                      child: line(
-                        _period(
-                          summary.startDate,
-                          summary.endDate,
-                          locale: Localizations.localeOf(context).languageCode,
-                        ),
-                        maxLines: 2,
-                        size: 10,
-                      ),
-                    ),
+                    Expanded(child: line(planDates, maxLines: 2, size: 10)),
                     TextButton(
                       key: ValueKey('viewOrder-${summary.id}'),
                       onPressed: openDetails,
@@ -1009,6 +1014,12 @@ String _packageStatusLabel(
   if (orderId != null &&
       const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(status)) {
     final data = ref.watch(packageManagementProvider(orderId)).asData?.value;
+    if (data?.hasPendingRequest == true) {
+      final copy = lookupAppLocalizations(Localizations.localeOf(context));
+      return data!.latestRequest!.type == 'PAUSE'
+          ? copy.packagePausePending
+          : copy.packageResumePending;
+    }
     if (data?.currentPause != null) {
       final copy = lookupAppLocalizations(Localizations.localeOf(context));
       return data!.status == 'PAUSED'

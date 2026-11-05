@@ -1716,3 +1716,135 @@ Pre-existing/parallel API PDF, preparation and dashboard work was left untouched
 Local logs are in ignored `artifacts/order-details-*.log`. The temporary PostgreSQL
 cluster and disposable test databases are shut down/removed after validation.
 Physical-device validation and production deployment were not performed.
+
+### Pause save failure: managed service-day constraint (November 3, 2026)
+
+The reported database error was PostgreSQL `23514` on
+`subscription_service_days.ck_managed_service_day`. The supplied constraint
+requires managed service dates to exclude Fridays. Pause/resume temporarily moves
+unlocked rows beyond the schedule to avoid unique-date collisions; those
+intermediate writes previously included Fridays, so confirmation failed even
+though the requested final schedule excluded them. PostgreSQL enforces this
+`NOT VALID` constraint on updates too.
+
+`../diet-time-api/src/BuildingBlocks/DietTime.Persistence/PackagePauseService.cs`
+now skips Fridays when assigning temporary dates. The database constraint,
+transactions, service-day identities, entitlement and payment behavior are
+preserved. No Flutter change or database migration is required; deploy the
+updated API for the app to use the fix.
+
+Regression coverage in `PackagePauseConstraintTests.cs` uses the exact supplied
+constraint and the reported November 4 to December 17 restart with 24 remaining
+days. The unchanged code reproduced the same `23514` failure. Existing HTTP
+pause/resume and rollback tests in `PackagePauseTests.cs` now also enforce that
+constraint. Tests use only a disposable local PostgreSQL database.
+
+Validation: **11 targeted PostgreSQL integration tests passed, zero skipped**,
+including the reported case, resume, HTTP requests, retries and transaction
+rollback. Production deployment and physical-device verification were not performed.
+
+### Clearer paused-plan dates (November 3, 2026)
+
+Paused dashboard cards display labelled restart and revised end dates rather than
+an uninterrupted range from the original start. Order details retain the original
+start explicitly as "Plan started" and label the revised end separately.
+
+Package management distinguishes today's uncompleted delivery, deliveries before
+the pause and already committed deliveries from the first delivery after the
+pause. A short explanation makes clear that today's and committed deliveries
+remain scheduled. The requested restart date appears separately only when it
+differs from the actual first delivery, or when the API has not supplied that date.
+All new labels support English and Arabic.
+
+The existing package-management API adds optional `firstDeliveryAfterPause`, read
+from persisted service days on or after the requested restart. For example, a
+Friday request may restart on Saturday; today's unfinished delivery is still
+reported independently. No rescheduling rule, entitlement, price, database column
+or customer flow was changed.
+
+Changed Flutter files: `package_management.dart`, `package_management_panel.dart`,
+`customer_dashboard_screen.dart`, `order_details_screen.dart`, English/Arabic ARBs
+and generated localization classes, `package_management_test.dart` and
+`customer_dashboard_test.dart`. API changes: `PackagePauseContracts.cs`,
+`PackagePauseService.cs` and `PackagePauseConstraintTests.cs`.
+
+Validation: **51 targeted Flutter tests passed**, **12 PostgreSQL integration
+tests passed with zero skipped**, and Dart static analysis found no issues.
+Coverage includes English/Arabic date labels, today's preserved delivery, a
+Friday request followed by Saturday service, persisted schedule reads and the
+existing pause/resume, retry and rollback paths. Local logs are in ignored
+`artifacts/pause-dates-*.log`. Deploy the API and an updated Flutter build for the
+complete presentation. No database migration is required; deployment and physical
+device verification were not performed.
+
+### Staff confirmation for pause and resume (November 3, 2026)
+
+Both pausing and removing a pause/resuming deliveries now require staff acceptance.
+The customer submits the existing pause/resume form and sees **Pending confirmation**.
+The request has its own status; the order's current status, service dates, end date,
+meal selections and accepted pause remain unchanged while the request is pending.
+Only one pending request is permitted per order. Repeated network submissions use
+the command ID to return the existing request rather than creating duplicates.
+
+Staff see a pause/resume count alongside the existing pending-confirmation alert,
+including when no new purchase orders await approval. The existing Admin Orders
+page lists pending package requests and their proposed dates, with explicit
+accept/decline confirmation. Existing Orders write access controls are preserved.
+The review API requires the Admin role; customers cannot list or review that queue.
+A decline requires a reason and leaves the package unchanged. The app displays
+the reason and allows a new request.
+
+On acceptance the API takes the existing order/service-day locks and checks the
+saved order/schedule state, delivery cutoff, ownership, active package and committed
+deliveries again. Pause/resume and the accepted decision commit in one transaction.
+A failed write rolls back both. Requests whose saved preparation state or dates
+are no longer valid remain pending and cannot silently apply a different schedule;
+staff can decline them and ask for current dates. Accepted pause state continues
+to follow its effective dates (scheduled, then paused). Accepted resume removes
+the pause through the existing rescheduling engine. Payment and entitlement are
+unchanged. The app refreshes visible pending requests every 30 seconds and refreshes
+order details after a decision is received or the app resumes.
+
+**Database setup is required for this approval update.** Before deploying the API,
+apply EF migration `20261103010000_PackageChangeApproval` or the standalone
+`../diet-time-api/database/scripts/20261103_package_change_approval.sql` as the schema
+owner. The script is transactional and idempotent. It adds only
+`package_change_requests`, its audit fields and indexes, including the single-pending
+request constraint. Existing orders, accepted pause history, service-day records
+and meal selections are not rewritten. Review audit history is retained; automatic
+destructive rollback is disabled. The migration is not run by app startup.
+
+Customer endpoints retain their routes and return package management with optional
+`latestRequest`. New staff endpoints are `GET /api/admin/orders/package-requests`
+and `POST /api/admin/orders/package-requests/{id}/review` with `approve` and optional
+review notes (required for a decline).
+
+Changed areas:
+
+- Flutter: package request model/provider/panel, dashboard pending badges, order
+  refresh, English/Arabic strings and generated localization classes, package and
+  dashboard tests.
+- API: customer request routing, package contracts/interface, request entity and
+  mapping, request submission/review service, Admin controller, migration/script,
+  package-management reads and pause/resume transaction participation, regression
+  tests. The existing schedule engines are invoked only by staff acceptance through
+  HTTP; their direct service tests remain in place.
+- Admin: package request API and review component in Orders, pending-confirmation
+  alert, and request/Orders/alert tests.
+
+Validation: **57 targeted Flutter tests passed**; **43 targeted Admin tests passed**;
+Dart analysis and scoped Admin ESLint passed; the Admin production build passed.
+Existing API compiler and Vite bundle-size warnings remain. Database tests cover
+pending/rejected/accepted pause and resume, persisted decisions, duplicate and
+concurrent commands, customer authorization, committed deliveries/cutoff changes,
+atomic rollback, and applying the migration twice. Logs are in ignored
+`artifacts/package-approval-*.log`. Only disposable PostgreSQL databases are used;
+the application database, deployment and physical devices were not accessed.
+
+Rollout order: database setup, updated API/Admin, then the updated Flutter build.
+
+Final API validation: **18 PostgreSQL integration tests passed, zero skipped**.
+The migration was applied twice in a disposable database with pending request
+history retained. The standalone SQL matches the migration SQL. Temporary test
+databases are stopped and removed after verification; no production migration or
+deployment has been performed.
