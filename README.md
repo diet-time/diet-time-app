@@ -152,10 +152,18 @@ screen. This skips the send request in both debug and release builds; the app
 still calls the API to verify the entered code and obtain a real session.
 Changing only the app flag does not enable test login on the server.
 
-In **Build Android APK** or **iOS TestFlight**, select `use_test_otp` when
-running the workflow manually. It defaults to false, including automatic
-TestFlight builds on pushes. Rebuild/reinstall after changing build flags;
-hot reload does not update them.
+**iOS TestFlight** defaults to test OTP for beta builds, both for manual runs and
+pushes to `main`. Its build log and run summary show the effective mode, and the
+workflow checks the generated iOS configuration before archiving. For live
+WhatsApp testing, uncheck `use_test_otp` on a manual run, or set the GitHub Actions
+repository variable `USE_TEST_OTP=false` for automatic builds. A manual selection
+takes precedence over the repository variable.
+
+**Build Android APK** defaults to live delivery; select `use_test_otp` when
+running that workflow manually for test-code login. Rebuild/reinstall after
+changing build flags; hot reload and changing backend settings do not update
+the flags embedded in an already installed app. Install the latest build number
+from TestFlight after the new workflow finishes.
 
 The optional `--dart-define=TEST_PHONE_OTP=123456` displays a tester hint when
 test mode is enabled. It does not change the server's accepted code.
