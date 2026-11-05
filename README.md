@@ -117,10 +117,51 @@ are sent by the automated tests.
 
 Twilio manages code expiry and verification attempts. The backend reports
 unavailable delivery as 503, throttling as 429, and incorrect/expired codes as
-401. Deployed environments never use the legacy static test-code verifier.
-For local development only, a debug Flutter build can use
-`--dart-define=ENABLE_REQUEST_OTP_API=false` against the API's Development-only
-test verifier. Release builds always request real code delivery.
+401. The server logs missing configuration field names or Twilio HTTP/error
+codes when delivery fails, without logging credentials, phone numbers or OTPs.
+If the app says it cannot send a code, check these API logs and the Verify
+service settings; the order-notification WhatsApp configuration alone is not
+enough. A failed send never automatically switches to test mode.
+
+### Test OTP without sending WhatsApp messages
+
+Set these variables on the **staging API**, then redeploy/restart it:
+
+```text
+ASPNETCORE_ENVIRONMENT=Staging
+PhoneOtp__UseTestOtp=true
+PhoneOtp__Enabled=true
+PhoneOtp__TestCode=123456
+```
+
+Use your own six-digit test code if preferred. This explicit test flag takes
+priority over Twilio verification. The server rejects this mode in the
+Production environment. Existing local Development test verification still
+works.
+
+Build/run the Flutter app with:
+
+```sh
+flutter run --dart-define=USE_TEST_OTP=true
+# Installable release APK for staging testing:
+flutter build apk --release --dart-define=USE_TEST_OTP=true
+```
+
+Enter the server's configured test code (`123456` in the example) on the OTP
+screen. This skips the send request in both debug and release builds; the app
+still calls the API to verify the entered code and obtain a real session.
+Changing only the app flag does not enable test login on the server.
+
+In **Build Android APK** or **iOS TestFlight**, select `use_test_otp` when
+running the workflow manually. It defaults to false, including automatic
+TestFlight builds on pushes. Rebuild/reinstall after changing build flags;
+hot reload does not update them.
+
+The optional `--dart-define=TEST_PHONE_OTP=123456` displays a tester hint when
+test mode is enabled. It does not change the server's accepted code.
+`ENABLE_TEST_OTP=true` remains an alias for `USE_TEST_OTP=true`;
+`ENABLE_REQUEST_OTP_API=false` also skips sending. Omit these flags and set
+`PhoneOtp__UseTestOtp=false` to restore live WhatsApp verification.
 
 ## Tomorrow’s Menu implementation
 

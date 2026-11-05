@@ -8,6 +8,11 @@ on:
         required: true
         default: https://diet-time-api-staging.up.railway.app
         type: string
+      use_test_otp:
+        description: Skip WhatsApp delivery (requires test OTP enabled on the staging API)
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -23,6 +28,7 @@ jobs:
     timeout-minutes: 45
     env:
       API_BASE_URL: ${{ inputs.api_base_url }}
+      USE_TEST_OTP: ${{ inputs.use_test_otp }}
       ANDROID_GOOGLE_MAPS_API_KEY: ${{ secrets.ANDROID_GOOGLE_MAPS_API_KEY }}
     steps:
       - name: Checkout repository
@@ -99,7 +105,8 @@ jobs:
         run: |
           flutter build apk --release \
             --build-number "$GITHUB_RUN_NUMBER" \
-            --dart-define="API_BASE_URL=$API_BASE_URL"
+            --dart-define="API_BASE_URL=$API_BASE_URL" \
+            --dart-define="USE_TEST_OTP=$USE_TEST_OTP"
           mkdir -p build/android-download
           cp build/app/outputs/flutter-apk/app-release.apk build/android-download/diet-time.apk
 
@@ -124,6 +131,7 @@ jobs:
             echo '2. Open diet-time.apk on your Android phone.'
             echo '3. Allow installation from your browser or Files app when Android asks, then tap Install.'
             printf '\nAPI: `%s`\n' "$API_BASE_URL"
+            printf '\nTest OTP mode: `%s` (the API must separately enable the test verifier).\n' "$USE_TEST_OTP"
             echo 'This is one universal APK; you do not need to choose a phone architecture.'
             echo 'The APK uses the existing Android test signing configuration.'
           } >> "$GITHUB_STEP_SUMMARY"
