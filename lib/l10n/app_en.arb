@@ -935,7 +935,7 @@
   "packageScheduleChanged": "Unable to update the schedule. Refresh the preview and try again.",
   "packageReason": "Reason (optional)",
   "packageResumeConfirmation": "Staff must accept your resume request before the pause is removed. Your current schedule remains unchanged until acceptance.",
-  "packageCancellationBlocked": "This booking is confirmed and paid. You cannot cancel it from the app. You may pause future deliveries or contact Diet Time.",
+  "packageCancellationBlocked": "This booking is confirmed. Please contact Diet Time to request cancellation. You may also pause future deliveries.",
   "orderCollectionDetails": "COLLECTION DETAILS",
   "orderDeliveryDetails": "DELIVERY DETAILS",
   "orderBranchUnavailable": "Branch not recorded",

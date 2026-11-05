@@ -4565,7 +4565,7 @@ abstract class AppLocalizations {
   /// No description provided for @packageCancellationBlocked.
   ///
   /// In en, this message translates to:
-  /// **'This booking is confirmed and paid. You cannot cancel it from the app. You may pause future deliveries or contact Diet Time.'**
+  /// **'This booking is confirmed. Please contact Diet Time to request cancellation. You may also pause future deliveries.'**
   String get packageCancellationBlocked;
 
   /// No description provided for @orderCollectionDetails.

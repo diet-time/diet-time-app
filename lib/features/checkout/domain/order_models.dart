@@ -288,13 +288,12 @@ class OrderConfirmation {
   final int? snackCount;
   final Map<String, dynamic> review;
   bool get customerCancellationBlocked =>
-      paymentStatus.toUpperCase() == 'PAID' &&
       (const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(status.toUpperCase()) ||
-          review['approvedAt'] != null &&
-              !const {'CANCELLED', 'REJECTED'}.contains(status.toUpperCase()));
+      review['approvedAt'] != null &&
+          !const {'CANCELLED', 'REJECTED'}.contains(status.toUpperCase()));
   bool get canRequestCancellation =>
       rowVersion > 0 &&
-      const {'PENDING_APPROVAL', 'ON_HOLD', 'CONFIRMED'}.contains(status) &&
+      const {'PENDING_APPROVAL', 'PENDING', 'ON_HOLD'}.contains(status) &&
       !customerCancellationBlocked;
   int get rowVersion => (review['rowVersion'] as num?)?.toInt() ?? 0;
   String get statusLabel => orderStatusLabel(status);

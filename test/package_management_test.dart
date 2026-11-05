@@ -391,14 +391,22 @@ void main() {
     },
   );
   test(
-    'cancellation requires both approved state and paid payment; pending payment keeps the existing action',
+    'customer cancellation is available only before confirmation regardless of payment',
     () {
       for (final status in ['CONFIRMED', 'ACTIVE', 'PAUSED']) {
         expect(order(status: status).customerCancellationBlocked, isTrue);
         expect(order(status: status).canRequestCancellation, isFalse);
       }
-      expect(order(payment: 'PENDING').canRequestCancellation, isTrue);
-      expect(order(payment: 'UNPAID').canRequestCancellation, isTrue);
+      expect(order(payment: 'PENDING').canRequestCancellation, isFalse);
+      expect(order(payment: 'UNPAID').canRequestCancellation, isFalse);
+      for (final status in ['PENDING_APPROVAL', 'PENDING', 'ON_HOLD']) {
+        for (final payment in ['PAID', 'PENDING', 'UNPAID']) {
+          expect(
+            order(status: status, payment: payment).canRequestCancellation,
+            isTrue,
+          );
+        }
+      }
       expect(
         order(
           status: 'PENDING_APPROVAL',

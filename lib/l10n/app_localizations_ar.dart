@@ -2487,7 +2487,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get packageCancellationBlocked =>
-      'هذا الحجز مؤكد ومدفوع. لا يمكن إلغاؤه من التطبيق. يمكنك إيقاف الخدمات المستقبلية مؤقتًا أو التواصل مع دايت تايم.';
+      'هذا الحجز مؤكد. يرجى التواصل مع دايت تايم لطلب الإلغاء. يمكنك أيضًا إيقاف التوصيلات المستقبلية مؤقتًا.';
 
   @override
   String get orderCollectionDetails => 'تفاصيل الاستلام';

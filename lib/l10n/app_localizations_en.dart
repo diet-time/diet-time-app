@@ -2533,7 +2533,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get packageCancellationBlocked =>
-      'This booking is confirmed and paid. You cannot cancel it from the app. You may pause future deliveries or contact Diet Time.';
+      'This booking is confirmed. Please contact Diet Time to request cancellation. You may also pause future deliveries.';
 
   @override
   String get orderCollectionDetails => 'COLLECTION DETAILS';
