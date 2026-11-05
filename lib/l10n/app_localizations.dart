@@ -4505,8 +4505,38 @@ abstract class AppLocalizations {
   /// No description provided for @packagePreserveDays.
   ///
   /// In en, this message translates to:
-  /// **'Staff must accept your pause request before any dates change. Until then, your current deliveries remain scheduled.'**
+  /// **'Your request will be reviewed by our team. Until approval, your current deliveries will continue as scheduled.'**
   String get packagePreserveDays;
+
+  /// No description provided for @packagePauseSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Temporarily stop your deliveries and resume later.'**
+  String get packagePauseSubtitle;
+
+  /// No description provided for @packagePauseDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause Details'**
+  String get packagePauseDetails;
+
+  /// No description provided for @packagePauseReasonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us why you want to pause...'**
+  String get packagePauseReasonHint;
+
+  /// No description provided for @packageRemainingAfterResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining service days (after resume)'**
+  String get packageRemainingAfterResume;
+
+  /// No description provided for @packagePauseDayCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 day} other{{count} days}}'**
+  String packagePauseDayCount(int count);
 
   /// No description provided for @packagePreviewPause.
   ///
@@ -4517,13 +4547,13 @@ abstract class AppLocalizations {
   /// No description provided for @packageConfirmPause.
   ///
   /// In en, this message translates to:
-  /// **'Submit pause request'**
+  /// **'Submit Pause Request'**
   String get packageConfirmPause;
 
   /// No description provided for @packageAffectedDays.
   ///
   /// In en, this message translates to:
-  /// **'Service days paused'**
+  /// **'Service days to pause'**
   String get packageAffectedDays;
 
   /// No description provided for @packageRescheduledDays.

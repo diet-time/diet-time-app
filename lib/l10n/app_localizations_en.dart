@@ -2499,16 +2499,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get packagePreserveDays =>
-      'Staff must accept your pause request before any dates change. Until then, your current deliveries remain scheduled.';
+      'Your request will be reviewed by our team. Until approval, your current deliveries will continue as scheduled.';
+
+  @override
+  String get packagePauseSubtitle =>
+      'Temporarily stop your deliveries and resume later.';
+
+  @override
+  String get packagePauseDetails => 'Pause Details';
+
+  @override
+  String get packagePauseReasonHint => 'Tell us why you want to pause...';
+
+  @override
+  String get packageRemainingAfterResume =>
+      'Remaining service days (after resume)';
+
+  @override
+  String packagePauseDayCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get packagePreviewPause => 'Preview pause';
 
   @override
-  String get packageConfirmPause => 'Submit pause request';
+  String get packageConfirmPause => 'Submit Pause Request';
 
   @override
-  String get packageAffectedDays => 'Service days paused';
+  String get packageAffectedDays => 'Service days to pause';
 
   @override
   String get packageRescheduledDays => 'Future service days rescheduled';

@@ -474,6 +474,14 @@ class _PauseDialogState extends State<_PauseDialog> {
   String? _error, _commandId;
   bool _busy = false;
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _previewPause();
+    });
+  }
+
+  @override
   void dispose() {
     _reason.dispose();
     super.dispose();
@@ -573,113 +581,466 @@ class _PauseDialogState extends State<_PauseDialog> {
     }
   }
 
+  Future<void> _chooseResumeDate() async {
+    if (_busy) return;
+    final copy = lookupAppLocalizations(Localizations.localeOf(context));
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _resume.isAfter(_start)
+          ? _resume
+          : _start.add(const Duration(days: 1)),
+      currentDate: widget.qatarNow(),
+      firstDate: _start.add(const Duration(days: 1)),
+      lastDate: packageRestartLimit(widget.qatarNow()),
+      helpText: copy.packageResumeDate,
+    );
+    if (!mounted || date == null || date == _resume) return;
+    setState(() {
+      _resume = date;
+      _preview = null;
+      _commandId = null;
+    });
+    await _previewPause();
+  }
+
   @override
   Widget build(BuildContext context) {
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
+    final preview = _preview;
+    final muted = AppColors.darkGreen.withValues(alpha: .62);
     return PopScope(
       canPop: !_busy,
       child: AlertDialog(
-        title: Text(copy.packagePause),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${copy.packagePauseStart}: ${_dateLabel(context, _preview?.pauseStartDate ?? _start)}',
+        key: const ValueKey('pausePackageDialog'),
+        backgroundColor: const Color(0xFFFCFDFC),
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+        titlePadding: const EdgeInsets.fromLTRB(16, 18, 10, 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        title: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F1ED),
+                borderRadius: BorderRadius.circular(14),
               ),
-              Text(
-                '${copy.packageRemainingDays}: ${_preview?.remainingDays ?? _remainingDays}',
-              ),
-              TextButton(
-                onPressed: _busy
-                    ? null
-                    : () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: _resume.isAfter(_start)
-                              ? _resume
-                              : _start.add(const Duration(days: 1)),
-                          currentDate: widget.qatarNow(),
-                          firstDate: _start.add(const Duration(days: 1)),
-                          lastDate: packageRestartLimit(widget.qatarNow()),
-                          helpText: copy.packageResumeDate,
-                        );
-                        if (mounted && date != null) {
-                          setState(() {
-                            _resume = date;
-                            _preview = null;
-                            _commandId = null;
-                          });
-                        }
-                      },
-                child: Text(
-                  '${copy.packageResumeDate}: ${_dateLabel(context, _resume)}',
-                ),
-              ),
-              Text(copy.packagePreserveDays),
-              Text(copy.packageRestartExplanation),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _reason,
-                enabled: !_busy,
-                maxLength: 500,
-                decoration: InputDecoration(labelText: copy.packageReason),
-                onChanged: (_) {
-                  if (_commandId != null) _commandId = packageCommandId();
-                },
-              ),
-              if (_preview case final preview?) ...[
-                if (preview.actualRestartDate != null)
-                  Text(
-                    '${copy.packageActualRestartDate}: ${_dateLabel(context, preview.actualRestartDate)}',
+              child: const Stack(
+                alignment: Alignment.center,
+                children: [
+                  Icon(
+                    Icons.calendar_month_outlined,
+                    color: AppColors.emeraldGreen,
+                    size: 28,
                   ),
-                Text('${copy.packageAffectedDays}: ${preview.affectedDays}'),
-                Text(
-                  '${copy.packageRescheduledDays}: ${preview.rescheduledDays}',
-                ),
-                if (preview.committedDays > 0)
-                  Text(
-                    '${copy.packageCommittedDays}: ${preview.committedDays}',
+                  Positioned(
+                    right: 6,
+                    bottom: 6,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Color(0xFFE8F1ED),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.pause_circle_filled,
+                        color: AppColors.emeraldGreen,
+                        size: 17,
+                      ),
+                    ),
                   ),
-                Text(
-                  '${copy.packageExpectedEnd}: ${_dateLabel(context, preview.endDate)}',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    copy.packagePause,
+                    style: const TextStyle(
+                      color: AppColors.darkGreen,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    copy.packagePauseSubtitle,
+                    style: TextStyle(
+                      color: muted,
+                      fontSize: 11,
+                      height: 1.3,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              key: const ValueKey('closePausePackage'),
+              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+              onPressed: _busy ? null : () => Navigator.pop(context),
+              constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+              padding: EdgeInsets.zero,
+              style: IconButton.styleFrom(
+                backgroundColor: const Color(0xFFE8F1ED),
+              ),
+              icon: const Icon(
+                Icons.close,
+                size: 17,
+                color: AppColors.darkGreen,
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 380,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0xFFE1E8E3)),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _dateCard(
+                          copy.packagePauseStart,
+                          _preview?.pauseStartDate ?? _start,
+                        ),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4),
+                        child: Icon(
+                          Icons.arrow_forward,
+                          size: 18,
+                          color: AppColors.emeraldGreen,
+                        ),
+                      ),
+                      Expanded(
+                        child: Material(
+                          color: const Color(0xFFE6F3DF),
+                          borderRadius: BorderRadius.circular(10),
+                          child: InkWell(
+                            key: const ValueKey('pauseRestartDate'),
+                            onTap: _busy ? null : _chooseResumeDate,
+                            borderRadius: BorderRadius.circular(10),
+                            child: _dateCard(copy.packageResumeDate, _resume),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 9,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDF5F1),
+                    border: Border.all(color: const Color(0xFFCEE2D8)),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        size: 19,
+                        color: AppColors.emeraldGreen,
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Text(
+                          copy.packagePreserveDays,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            height: 1.4,
+                            color: AppColors.darkGreen,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  copy.packagePauseDetails,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.darkGreen,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  key: const ValueKey('pauseDetailsSummary'),
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0xFFE1E8E3)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      _detailRow(
+                        Icons.calendar_today_outlined,
+                        copy.packageActualRestartDate,
+                        _dateLabel(context, preview?.actualRestartDate),
+                      ),
+                      _detailRow(
+                        Icons.pause_circle_outline,
+                        copy.packageAffectedDays,
+                        preview == null
+                            ? '—'
+                            : copy.packagePauseDayCount(preview.affectedDays),
+                        valueKey: 'pauseAffectedDays',
+                      ),
+                      _detailRow(
+                        Icons.sync,
+                        copy.packageRemainingAfterResume,
+                        copy.packagePauseDayCount(
+                          preview?.remainingDays ?? _remainingDays,
+                        ),
+                        valueKey: 'pauseRemainingDays',
+                      ),
+                      if (preview != null &&
+                          preview.rescheduledDays !=
+                              (preview.remainingDays ?? _remainingDays))
+                        _detailRow(
+                          Icons.event_repeat_outlined,
+                          copy.packageRescheduledDays,
+                          copy.packagePauseDayCount(preview.rescheduledDays),
+                        ),
+                      if (preview != null && preview.committedDays > 0)
+                        _detailRow(
+                          Icons.event_available_outlined,
+                          copy.packageCommittedDays,
+                          copy.packagePauseDayCount(preview.committedDays),
+                        ),
+                      _detailRow(
+                        Icons.calendar_month_outlined,
+                        copy.packageExpectedEnd,
+                        _dateLabel(context, preview?.endDate),
+                        highlight: true,
+                        valueKey: 'pauseExpectedEnd',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  copy.packageReason,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.darkGreen,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                TextField(
+                  key: const ValueKey('pausePackageReason'),
+                  controller: _reason,
+                  enabled: !_busy,
+                  minLines: 3,
+                  maxLines: 4,
+                  maxLength: 500,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.darkGreen,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: copy.packagePauseReasonHint,
+                    hintStyle: TextStyle(fontSize: 11, color: muted),
+                    contentPadding: const EdgeInsets.all(12),
+                    filled: true,
+                    fillColor: Colors.white,
+                    counterStyle: TextStyle(fontSize: 10, color: muted),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(11),
+                      borderSide: const BorderSide(color: Color(0xFFE1E8E3)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(11),
+                      borderSide: const BorderSide(color: Color(0xFFE1E8E3)),
+                    ),
+                  ),
+                  onChanged: (_) {
+                    if (_commandId != null) _commandId = packageCommandId();
+                  },
+                ),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(
+                        color: AppColors.jasper,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                if (_busy)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 10),
+                    child: LinearProgressIndicator(minHeight: 2),
+                  ),
               ],
-              if (_error != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    _error!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ),
-              if (_busy)
-                const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: LinearProgressIndicator(),
-                ),
-            ],
+            ),
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: _busy ? null : () => Navigator.pop(context),
-            child: Text(context.customerCopy('Cancel')),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: OutlinedButton(
+                  onPressed: _busy ? null : () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 43),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    foregroundColor: AppColors.emeraldGreen,
+                    side: const BorderSide(color: AppColors.emeraldGreen),
+                    shape: const StadiumBorder(),
+                    textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  child: Text(context.customerCopy('Cancel')),
+                ),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                flex: 3,
+                child: FilledButton(
+                  key: const ValueKey('submitPausePackage'),
+                  onPressed: _busy
+                      ? null
+                      : preview == null
+                      ? _previewPause
+                      : _confirm,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 43),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    backgroundColor: AppColors.emeraldGreen,
+                    foregroundColor: Colors.white,
+                    shape: const StadiumBorder(),
+                    textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  child: Text(
+                    preview == null
+                        ? copy.packagePreviewPause
+                        : copy.packageConfirmPause,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ],
           ),
-          if (_preview == null)
-            FilledButton(
-              onPressed: _busy ? null : _previewPause,
-              child: Text(copy.packagePreviewPause),
-            )
-          else
-            FilledButton(
-              onPressed: _busy ? null : _confirm,
-              child: Text(copy.packageConfirmPause),
-            ),
         ],
       ),
     );
   }
+
+  Widget _dateCard(String label, DateTime date) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 9),
+    child: Row(
+      children: [
+        const Icon(
+          Icons.calendar_today_outlined,
+          size: 19,
+          color: AppColors.emeraldGreen,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: AppColors.darkGreen,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                _dateLabel(context, date),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.darkGreen,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _detailRow(
+    IconData icon,
+    String label,
+    String value, {
+    bool highlight = false,
+    String? valueKey,
+  }) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+    decoration: BoxDecoration(
+      color: highlight ? const Color(0xFFE6F3DF) : null,
+      borderRadius: highlight ? BorderRadius.circular(6) : null,
+      border: highlight
+          ? null
+          : const Border(bottom: BorderSide(color: Color(0xFFEEF1EE))),
+    ),
+    child: Row(
+      children: [
+        Icon(icon, size: 16, color: AppColors.emeraldGreen),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 3,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              height: 1.25,
+              color: AppColors.darkGreen,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 2,
+          child: Text(
+            value,
+            key: valueKey == null ? null : ValueKey(valueKey),
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              fontSize: 11,
+              height: 1.25,
+              fontWeight: highlight ? FontWeight.w800 : FontWeight.w600,
+              color: highlight ? AppColors.emeraldGreen : AppColors.darkGreen,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }

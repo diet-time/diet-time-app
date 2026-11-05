@@ -2453,7 +2453,35 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get packagePreserveDays =>
-      'يجب قبول طلب الإيقاف المؤقت من الموظفين قبل تغيير أي مواعيد. وحتى ذلك الحين تبقى توصيلاتك الحالية مجدولة.';
+      'سيراجع فريقنا طلبك. وحتى الموافقة، ستستمر توصيلاتك الحالية حسب الجدول.';
+
+  @override
+  String get packagePauseSubtitle => 'أوقف توصيلاتك مؤقتًا واستأنفها لاحقًا.';
+
+  @override
+  String get packagePauseDetails => 'تفاصيل الإيقاف المؤقت';
+
+  @override
+  String get packagePauseReasonHint => 'أخبرنا بسبب رغبتك في الإيقاف المؤقت...';
+
+  @override
+  String get packageRemainingAfterResume =>
+      'أيام الخدمة المتبقية (بعد الاستئناف)';
+
+  @override
+  String packagePauseDayCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count يوم',
+      many: '$count يومًا',
+      few: '$count أيام',
+      two: 'يومان',
+      one: 'يوم واحد',
+      zero: 'لا أيام',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get packagePreviewPause => 'معاينة الإيقاف المؤقت';
@@ -2462,7 +2490,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get packageConfirmPause => 'إرسال طلب الإيقاف المؤقت';
 
   @override
-  String get packageAffectedDays => 'أيام الخدمة الموقوفة مؤقتًا';
+  String get packageAffectedDays => 'أيام الخدمة المطلوب إيقافها';
 
   @override
   String get packageRescheduledDays => 'أيام الخدمة المستقبلية المُعاد جدولتها';

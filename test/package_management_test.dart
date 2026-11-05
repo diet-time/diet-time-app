@@ -216,6 +216,84 @@ class CapturePackageApi extends ApiClient {
 
 void main() {
   for (final language in ['en', 'ar']) {
+    testWidgets(
+      'pause summary fits a narrow screen and refreshes after a date change ($language)',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(320, 640);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPhysicalSize);
+        final repository = PackageOrders();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [ordersRepositoryProvider.overrideWithValue(repository)],
+            child: MaterialApp(
+              locale: Locale(language),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: const TextScaler.linear(1.3)),
+                child: child!,
+              ),
+              home: const Scaffold(
+                body: SingleChildScrollView(
+                  child: PackageManagementPanel(orderId: 'order'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('pausePackage-order')),
+        );
+        await tester.tap(find.byKey(const ValueKey('pausePackage-order')));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.text(
+            MaterialLocalizations.of(
+              tester.element(find.byType(CalendarDatePicker)),
+            ).okButtonLabel,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(repository.previews, 1);
+        expect(repository.commands, isEmpty);
+        expect(
+          find.byKey(const ValueKey('pauseDetailsSummary')),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+        await tester.tap(find.byKey(const ValueKey('pauseRestartDate')));
+        await tester.pumpAndSettle();
+        tester
+            .widget<CalendarDatePicker>(find.byType(CalendarDatePicker))
+            .onDateChanged(DateTime(2026, 11, 10));
+        await tester.pump();
+        await tester.tap(
+          find.text(
+            MaterialLocalizations.of(
+              tester.element(find.byType(CalendarDatePicker)),
+            ).okButtonLabel,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(repository.previews, 2);
+        expect(repository.commands, isEmpty);
+        expect(
+          find.text(DateFormat.yMMMd(language).format(DateTime(2026, 11, 10))),
+          findsWidgets,
+        );
+        final submit = find.byKey(const ValueKey('submitPausePackage'));
+        expect(tester.getBottomRight(submit).dy, lessThanOrEqualTo(640));
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+  for (final language in ['en', 'ar']) {
     for (final type in ['PAUSE', 'RESUME']) {
       testWidgets(
         'declined $type keeps the schedule and permits a new request ($language)',
@@ -554,7 +632,6 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text(copy.packagePreviewPause));
       await tester.pumpAndSettle();
       expect(repository.previewStarts, [DateTime(2026, 11, 5)]);
       expect(repository.commands, isEmpty);
@@ -726,7 +803,6 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.text(copy.packagePreviewPause));
         await tester.pumpAndSettle();
         expect(find.text(copy.packageInvalidRestart), findsOneWidget);
         expect(find.text(copy.packageScheduleChanged), findsNothing);
@@ -781,13 +857,22 @@ void main() {
         await tester.tap(find.text(nativeCopy.okButtonLabel));
         await tester.pumpAndSettle();
         expect(repository.commands, isEmpty);
-        await tester.tap(find.text(copy.packagePreviewPause));
         await tester.pumpAndSettle();
         expect(repository.previews, 1);
         expect(repository.previewStarts, [DateTime(2026, 11, 4)]);
         expect(repository.commands, isEmpty);
-        expect(find.text('${copy.packageAffectedDays}: 1'), findsOneWidget);
-        expect(find.text('${copy.packageRescheduledDays}: 8'), findsOneWidget);
+        expect(
+          tester
+              .widget<Text>(find.byKey(const ValueKey('pauseAffectedDays')))
+              .data,
+          copy.packagePauseDayCount(1),
+        );
+        expect(
+          tester
+              .widget<Text>(find.byKey(const ValueKey('pauseRemainingDays')))
+              .data,
+          copy.packagePauseDayCount(8),
+        );
         expect(find.text(copy.packagePreserveDays), findsOneWidget);
         await tester.tap(find.text(copy.packageConfirmPause));
         await tester.pumpAndSettle();
