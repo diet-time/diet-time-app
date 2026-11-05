@@ -360,7 +360,7 @@ void main() {
     await tester.tap(button);
     await tester.pumpAndSettle();
 
-    expect(otp.requestCount, 0);
+    expect(otp.requestCount, 1);
     expect(find.byType(OtpVerificationPage), findsOneWidget);
     expect(find.text('+974 7445 2435'), findsOneWidget);
   });
@@ -420,7 +420,7 @@ void main() {
     expect(find.byType(PhoneLoginPage), findsOneWidget);
     expect(tester.widget<TextField>(input).controller?.text, '74452435');
     expect(_isButtonEnabled(tester, button), isTrue);
-    expect(otp.requestCount, 0);
+    expect(otp.requestCount, 1);
   });
 
   testWidgets('six digit code verifies and keeps pending destination', (
@@ -546,7 +546,7 @@ void main() {
     expect(_isButtonEnabled(tester, verify), isTrue);
   });
 
-  testWidgets('resend is unavailable while there is no request endpoint', (
+  testWidgets('WhatsApp resend waits 30 seconds and requests another code', (
     tester,
   ) async {
     final otp = _FakeOtpService();
@@ -555,8 +555,14 @@ void main() {
 
     final resend = find.byKey(const ValueKey('resendOtpButton'));
     expect(_isTextButtonEnabled(tester, resend), isFalse);
-    expect(find.text('Resend unavailable in test mode'), findsOneWidget);
-    expect(otp.requestCount, 0);
+    expect(otp.requestCount, 1);
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pump();
+    expect(_isTextButtonEnabled(tester, resend), isTrue);
+    await tester.tap(resend);
+    await tester.pump();
+    expect(otp.requestCount, 2);
+    expect(_isTextButtonEnabled(tester, resend), isFalse);
   });
 
   testWidgets('Arabic flow uses RTL while phone and OTP remain LTR', (

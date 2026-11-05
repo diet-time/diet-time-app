@@ -30,7 +30,7 @@ class OtpAuthState {
     this.sessionExpired = false,
     this.phoneNumber = '',
     this.otpCode = '',
-    this.otpChannel = OtpChannel.sms,
+    this.otpChannel = OtpChannel.whatsapp,
     this.requestId,
     this.expiresInSeconds = 0,
     this.resendSecondsRemaining = 0,
@@ -324,6 +324,18 @@ class OtpAuthController extends Notifier<OtpAuthState> {
       state = state.copyWith(pendingDestination: null);
 
   void setPhoneNumber(String phoneNumber) {
+    if (phoneNumber != state.phoneNumber) {
+      _sessionGeneration++;
+      _resendTimer?.cancel();
+      state = state.copyWith(
+        otpCode: '',
+        requestId: null,
+        expiresInSeconds: 0,
+        resendSecondsRemaining: 0,
+        isRequestingOtp: false,
+        isVerifyingOtp: false,
+      );
+    }
     state = state.copyWith(
       phoneNumber: phoneNumber,
       requestError: null,
@@ -340,10 +352,16 @@ class OtpAuthController extends Notifier<OtpAuthState> {
   }
 
   Future<bool> requestOtp({
-    OtpChannel channel = OtpChannel.sms,
+    OtpChannel channel = OtpChannel.whatsapp,
     bool showConfirmation = false,
   }) async {
-    if (state.isRequestingOtp || state.phoneNumber.isEmpty) return false;
+    if (state.isRequestingOtp ||
+        state.isVerifyingOtp ||
+        state.phoneNumber.isEmpty ||
+        state.resendSecondsRemaining > 0) {
+      return false;
+    }
+    final generation = _sessionGeneration;
     state = state.copyWith(
       isRequestingOtp: true,
       otpChannel: channel,
@@ -364,6 +382,7 @@ class OtpAuthController extends Notifier<OtpAuthState> {
       final result = await ref
           .read(otpServiceProvider)
           .requestOtp(phoneNumber: state.phoneNumber, channel: channel);
+      if (!ref.mounted || generation != _sessionGeneration) return false;
       if (!result.success) {
         state = state.copyWith(
           isRequestingOtp: false,
@@ -373,6 +392,7 @@ class OtpAuthController extends Notifier<OtpAuthState> {
       }
       state = state.copyWith(
         isRequestingOtp: false,
+        otpCode: '',
         requestId: result.requestId,
         expiresInSeconds: result.expiresInSeconds,
         resendSecondsRemaining: 30,
@@ -381,6 +401,7 @@ class OtpAuthController extends Notifier<OtpAuthState> {
       _startResendTimer();
       return true;
     } catch (_) {
+      if (!ref.mounted || generation != _sessionGeneration) return false;
       state = state.copyWith(
         isRequestingOtp: false,
         requestError: OtpUiError.requestFailed,
@@ -390,7 +411,11 @@ class OtpAuthController extends Notifier<OtpAuthState> {
   }
 
   Future<bool> verifyOtp() async {
-    if (state.isVerifyingOtp || state.otpCode.length != 6) return false;
+    if (state.isVerifyingOtp ||
+        state.isRequestingOtp ||
+        !RegExp(r'^[0-9]{6}$').hasMatch(state.otpCode)) {
+      return false;
+    }
     final generation = ++_sessionGeneration;
     state = state.copyWith(
       isVerifyingOtp: true,

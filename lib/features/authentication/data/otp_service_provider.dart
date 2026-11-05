@@ -1,23 +1,58 @@
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:diet_time/core/network/api_client.dart';
+import 'package:diet_time/core/network/api_endpoints.dart';
 
 final otpServiceProvider = Provider<OtpService>((ref) {
-  return const ApiOtpService();
+  return ApiOtpService(ref.read(apiClientProvider));
 });
 
-/// Placeholder for the future send-OTP backend integration.
 class ApiOtpService implements OtpService {
-  const ApiOtpService();
+  const ApiOtpService(this._client);
+
+  final ApiClient _client;
 
   @override
   Future<OtpRequestResult> requestOtp({
     required String phoneNumber,
     required OtpChannel channel,
   }) async {
-    return const OtpRequestResult(
-      success: false,
-      failure: OtpFailure.unavailable,
-    );
+    try {
+      final response = await _client.request(
+        method: 'POST',
+        path: ApiEndpoints.requestPhoneOtp,
+        body: {'phoneNumber': phoneNumber, 'channel': channel.name},
+      );
+      if (!response.isSuccess) {
+        return OtpRequestResult(
+          success: false,
+          failure: response.statusCode == 429
+              ? OtpFailure.tooManyAttempts
+              : OtpFailure.unavailable,
+        );
+      }
+      final data = response.body['data'];
+      if (data is! Map<String, dynamic> ||
+          data['requestId'] is! String ||
+          (data['requestId'] as String).isEmpty ||
+          data['expiresInSeconds'] is! int ||
+          (data['expiresInSeconds'] as int) <= 0) {
+        return const OtpRequestResult(
+          success: false,
+          failure: OtpFailure.unavailable,
+        );
+      }
+      return OtpRequestResult(
+        success: true,
+        requestId: data['requestId'] as String,
+        expiresInSeconds: data['expiresInSeconds'] as int,
+      );
+    } on ApiException {
+      return const OtpRequestResult(
+        success: false,
+        failure: OtpFailure.unavailable,
+      );
+    }
   }
 
   @override

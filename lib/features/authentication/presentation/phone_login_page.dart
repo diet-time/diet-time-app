@@ -103,7 +103,10 @@ class _PhoneLoginPageState extends ConsumerState<PhoneLoginPage> {
     FocusManager.instance.primaryFocus?.unfocus();
     final controller = ref.read(otpAuthControllerProvider.notifier);
     controller.setPhoneNumber('${_country.dialCode}${_phoneController.text}');
-    final succeeded = await controller.requestOtp();
+    final auth = ref.read(otpAuthControllerProvider);
+    final succeeded =
+        (auth.requestId != null && auth.resendSecondsRemaining > 0) ||
+        await controller.requestOtp();
     if (!mounted) return;
     if (!succeeded) {
       setState(() => _isSubmitting = false);

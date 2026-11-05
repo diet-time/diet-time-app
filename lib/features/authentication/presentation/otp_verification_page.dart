@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/config/app_environment.dart';
-import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/authentication/presentation/otp_flow_widgets.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
@@ -98,15 +97,6 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
     final succeeded = await ref
         .read(otpAuthControllerProvider.notifier)
         .resendOtp();
-    if (succeeded && mounted) _setCells('');
-  }
-
-  Future<void> _selectChannel(OtpChannel channel) async {
-    final auth = ref.read(otpAuthControllerProvider);
-    if (auth.otpChannel == channel || auth.isRequestingOtp) return;
-    final succeeded = await ref
-        .read(otpAuthControllerProvider.notifier)
-        .requestOtp(channel: channel, showConfirmation: true);
     if (succeeded && mounted) _setCells('');
   }
 
@@ -289,47 +279,19 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
                                   fontWeight: FontWeight.w600,
                                 ),
                           ),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            spacing: 4,
-                            children: [
-                              TextButton(
-                                key: const ValueKey('resendOtpButton'),
-                                onPressed:
-                                    auth.resendSecondsRemaining == 0 &&
-                                        !auth.isRequestingOtp
-                                    ? _resend
-                                    : null,
-                                child: Text(
-                                  l10n.otpSendViaSms,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              TextButton(
-                                key: const ValueKey('whatsappOtpChannel'),
-                                onPressed:
-                                    auth.isRequestingOtp ||
-                                        auth.otpChannel == OtpChannel.whatsapp
-                                    ? null
-                                    : () => _selectChannel(OtpChannel.whatsapp),
-                                child: Text(
-                                  l10n.otpResendViaWhatsapp,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          TextButton(
+                            key: const ValueKey('resendOtpButton'),
+                            onPressed:
+                                auth.resendSecondsRemaining == 0 &&
+                                    !auth.isRequestingOtp &&
+                                    !auth.isVerifyingOtp
+                                ? _resend
+                                : null,
+                            child: Text(l10n.otpResendViaWhatsapp),
                           ),
                           if (auth.resendConfirmation)
                             Text(
-                              AppEnvironment.enableTestOtp &&
-                                      auth.otpChannel == OtpChannel.whatsapp
-                                  ? l10n.otpWhatsappTestGenerated
-                                  : l10n.otpResendConfirmation,
+                              l10n.otpResendConfirmation,
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 color: Color(0xFF3A9088),

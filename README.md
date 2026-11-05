@@ -92,10 +92,35 @@ Use `flutter gen-l10n` after editing the ARB files.
 
 ## Connecting authentication
 
-Implement `AuthenticationService` with the backend client, persist the returned
-token through `SecureStorageService`, and override
-`authenticationServiceProvider` with the real implementation. Keep token and
-session decisions outside presentation widgets.
+Phone login now requests a six-digit WhatsApp code using
+`POST /api/v1/auth/phone-otp/request`, then verifies it through the existing
+`POST /api/v1/auth/phone-otp` endpoint. Successful verification stores the
+session in secure storage. Resend is available after 30 seconds.
+
+Before deploying this app, deploy the matching `diet-time-api` changes and
+configure these **backend environment variables**:
+
+```text
+TwilioVerify__Enabled=true
+TwilioVerify__ServiceSid=<your VA... Verify service SID>
+TwilioWhatsApp__AccountSid=<your AC... account SID>
+TwilioWhatsApp__AuthToken=<your Twilio auth token>
+```
+
+Create or select a [Twilio Verify service](https://www.twilio.com/docs/verify/api/service),
+set its code length to **6**, and enable/configure its
+[WhatsApp channel](https://www.twilio.com/docs/verify/whatsapp).
+The existing order-notification template is separate from Verify setup.
+Keep credentials on the server; never include them in Flutter build flags.
+Test delivery to a real WhatsApp number after deployment. No live messages
+are sent by the automated tests.
+
+Twilio manages code expiry and verification attempts. The backend reports
+unavailable delivery as 503, throttling as 429, and incorrect/expired codes as
+401. Deployed environments never use the legacy static test-code verifier.
+For local development only, a debug Flutter build can use
+`--dart-define=ENABLE_REQUEST_OTP_API=false` against the API's Development-only
+test verifier. Release builds always request real code delivery.
 
 ## Tomorrow’s Menu implementation
 

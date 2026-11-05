@@ -1,6 +1,7 @@
 abstract final class ApiEndpoints {
   static const takeawayBranches = '/api/v1/takeaway-branches';
   static const phoneOtp = '/api/v1/auth/phone-otp';
+  static const requestPhoneOtp = '/api/v1/auth/phone-otp/request';
   static const refreshSession = '/api/v1/auth/refresh';
   static const guestHome = '/api/v1/guest/home';
   static const guestAllergens = '/api/v1/guest/allergens';

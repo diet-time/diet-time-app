@@ -450,6 +450,19 @@ class _NameApi extends ApiClient {
     Map<String, String> headers = const {},
     Map<String, dynamic>? body,
   }) async {
+    if (path == '/api/v1/auth/phone-otp/request') {
+      expect(method, 'POST');
+      expect(body, {'phoneNumber': '+97474452435', 'channel': 'whatsapp'});
+      return const ApiResponse(
+        statusCode: 200,
+        body: {
+          'data': {
+            'requestId': 'whatsapp-verification',
+            'expiresInSeconds': 600,
+          },
+        },
+      );
+    }
     expect(method, 'PATCH');
     expect(path, '/api/v1/customer/profile/preferred-name');
     expect(headers['Authorization'], 'Bearer token');
