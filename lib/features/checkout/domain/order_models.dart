@@ -157,7 +157,7 @@ class CustomerOrderSummary {
           : status == 'REJECTED'
           ? 'Your order was declined by Diet Time. Please contact us for help.'
           : status == 'PENDING_APPROVAL'
-          ? "Your order has been received and is awaiting confirmation from Diet Time. We'll notify you once it's reviewed."
+          ? "Your order has been received. Our Diet Time team will contact you shortly to confirm the order and arrange payment."
           : null);
   final TakeawayBranch? takeawayBranch;
   final String fulfillmentMethod;
@@ -307,7 +307,7 @@ class OrderConfirmation {
           : status == 'REJECTED'
           ? 'Your order was declined by Diet Time. Please contact us for help.'
           : status == 'PENDING_APPROVAL'
-          ? "Your order has been received and is awaiting confirmation from Diet Time. We'll notify you once it's reviewed."
+          ? "Your order has been received. Our Diet Time team will contact you shortly to confirm the order and arrange payment."
           : null);
   final TakeawayBranch? takeawayBranch;
   final String fulfillmentMethod;

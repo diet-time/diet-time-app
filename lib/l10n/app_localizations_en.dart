@@ -1292,7 +1292,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get customerYourOrderHasBeenReceivedAndIsAwaitingConfirmation =>
-      'Your order has been received and is awaiting confirmation from Diet Time. We\'ll notify you once it\'s reviewed.';
+      'Your order has been received. Our Diet Time team will contact you shortly to confirm the order and arrange payment.';
 
   @override
   String get customerGOTODASHBOARD => 'GO TO DASHBOARD';

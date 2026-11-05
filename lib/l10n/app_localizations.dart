@@ -2321,7 +2321,7 @@ abstract class AppLocalizations {
   /// No description provided for @customerYourOrderHasBeenReceivedAndIsAwaitingConfirmation.
   ///
   /// In en, this message translates to:
-  /// **'Your order has been received and is awaiting confirmation from Diet Time. We\'ll notify you once it\'s reviewed.'**
+  /// **'Your order has been received. Our Diet Time team will contact you shortly to confirm the order and arrange payment.'**
   String get customerYourOrderHasBeenReceivedAndIsAwaitingConfirmation;
 
   /// No description provided for @customerGOTODASHBOARD.

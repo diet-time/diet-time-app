@@ -477,7 +477,7 @@
   "customerAddAddress": "إضافة عنوان",
   "customerOrderSubmitted": "تم إرسال الطلب",
   "customerOrderConfirmed": "تم تأكيد الطلب!",
-  "customerYourOrderHasBeenReceivedAndIsAwaitingConfirmation": "استلمنا طلبك وهو بانتظار تأكيد دايت تايم. سنخطرك بعد مراجعته.",
+  "customerYourOrderHasBeenReceivedAndIsAwaitingConfirmation": "استلمنا طلبك. سيتواصل معك فريق دايت تايم قريبًا لتأكيد الطلب وترتيب الدفع.",
   "customerGOTODASHBOARD": "الانتقال إلى لوحة التحكم",
   "customerORDERNUMBER": "رقم الطلب",
   "customerPLAN": "الباقة",

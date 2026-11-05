@@ -67,7 +67,7 @@ class OrderPlacedScreen extends ConsumerWidget {
                         Text(
                           confirmation.status == 'PENDING_APPROVAL'
                               ? context.customerCopy(
-                                  "Your order has been received and is awaiting confirmation from Diet Time. We'll notify you once it's reviewed.",
+                                  "Your order has been received. Our Diet Time team will contact you shortly to confirm the order and arrange payment.",
                                 )
                               : 'Your ${confirmation.plan.name} Plan is ready.',
                           textAlign: TextAlign.center,

@@ -313,7 +313,7 @@ class _OrderDetails extends ConsumerWidget {
                     Text(
                       context.customerCopy(
                         order.status == 'PENDING_APPROVAL'
-                            ? "Your order has been received and is awaiting confirmation from Diet Time. We'll notify you once it's reviewed."
+                            ? "Your order has been received. Our Diet Time team will contact you shortly to confirm the order and arrange payment."
                             : 'Your plan and delivery schedule are confirmed above.',
                       ),
                       style: TextStyle(

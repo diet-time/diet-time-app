@@ -532,7 +532,7 @@
   "customerAddAddress": "Add Address",
   "customerOrderSubmitted": "Order Submitted",
   "customerOrderConfirmed": "Order Confirmed!",
-  "customerYourOrderHasBeenReceivedAndIsAwaitingConfirmation": "Your order has been received and is awaiting confirmation from Diet Time. We'll notify you once it's reviewed.",
+  "customerYourOrderHasBeenReceivedAndIsAwaitingConfirmation": "Your order has been received. Our Diet Time team will contact you shortly to confirm the order and arrange payment.",
   "customerGOTODASHBOARD": "GO TO DASHBOARD",
   "customerORDERNUMBER": "ORDER NUMBER",
   "customerPLAN": "PLAN",

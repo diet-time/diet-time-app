@@ -443,7 +443,7 @@ extension CustomerCopy on BuildContext {
       "Add Address" => copy.customerAddAddress,
       "Order Submitted" => copy.customerOrderSubmitted,
       "Order Confirmed!" => copy.customerOrderConfirmed,
-      "Your order has been received and is awaiting confirmation from Diet Time. We'll notify you once it's reviewed." =>
+      "Your order has been received. Our Diet Time team will contact you shortly to confirm the order and arrange payment." =>
         copy.customerYourOrderHasBeenReceivedAndIsAwaitingConfirmation,
       "GO TO DASHBOARD" => copy.customerGOTODASHBOARD,
       "ORDER NUMBER" => copy.customerORDERNUMBER,

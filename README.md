@@ -1848,3 +1848,168 @@ The migration was applied twice in a disposable database with pending request
 history retained. The standalone SQL matches the migration SQL. Temporary test
 databases are stopped and removed after verification; no production migration or
 deployment has been performed.
+
+### Twilio WhatsApp workflow (November 5, 2026)
+
+The existing order notification outbox now dispatches the seven requested Content
+Templates. Orders, verified payments, staff cancellations and accepted pauses
+record events in the same transaction as the business change. The background
+worker sends them after commit. Approval continues to leave payment pending;
+Flutter explains that Diet Time will contact the customer to confirm and arrange
+payment. Phone numbers come from the authenticated user's saved phone record.
+
+Staff cancellation remains limited to confirmed orders and existing preparation
+restrictions. It takes one confirmation, with an optional reason. Future service
+days are cancelled atomically; a paid order is marked refund-pending without
+transferring money. Existing customer cancellation rules are preserved.
+
+Pauses notify only after the accepted schedule is saved. Resume notifications are
+scheduled for midnight Qatar on the actual restart date, including automatic
+resumption. Early rescheduling updates the same pending event. Cancelling a pause
+before it takes effect does not announce a transition that never occurred.
+Remaining service days are read from the persisted schedule at resumption.
+
+**Database rollout:** apply EF migration
+`20261105010000_WhatsAppNotifications` in the API project before deploying the
+updated API. It extends `public.order_notifications` with event keys, template and
+recipient routing, JSON context, provider status and delivery/read timestamps;
+`history_id` becomes optional for subscription/reminder events. It adds unique
+event/message indexes and `whatsapp_webhook_receipts` for audited admin replies.
+Existing events/history are retained. The migration does not run on application
+startup. Its destructive rollback is intentionally disabled. No standalone SQL
+file was added. Existing schema prerequisites still apply.
+
+Set these **backend-only Railway variables**:
+
+```text
+TwilioWhatsApp__Enabled=true
+TwilioWhatsApp__AdminActionsEnabled=false
+TwilioWhatsApp__AccountSid=<AC account SID>
+TwilioWhatsApp__AuthToken=<account auth token>
+TwilioWhatsApp__FromNumber=<WhatsApp sender in +E164 form>
+TwilioWhatsApp__OperationsNumber=<admin recipient in +E164 form>
+TwilioWhatsApp__PublicWebhookBaseUrl=https://<public API host>
+OrderWhatsAppTemplates__MealRemindersEnabled=false
+OrderWhatsAppTemplates__ReminderMinutesBeforeCutoff=120
+```
+
+For the initial phase, WhatsApp sends notifications only. Keep
+`TwilioWhatsApp__AdminActionsEnabled=false` (the default), omit the incoming-message
+webhook in Twilio, and approve/reject orders through React. The incoming API route
+returns 404 while disabled. Use an admin notification template without action
+buttons for this phase; the same ten body variables apply. Delivery status
+callbacks remain enabled independently and are set automatically by the API.
+
+`PublicWebhookBaseUrl` is the HTTPS origin only, with no path, query or fragment.
+If WhatsApp actions are enabled in a later phase, set `AdminActionsEnabled=true`
+and configure `TwilioWhatsApp__AuthorizedAdmins__0__Phone` and
+`TwilioWhatsApp__AuthorizedAdmins__0__UserId` with the recipient's E.164 phone and
+existing Admin user UUID. Additional authorized admins use entries `1`, `2`, etc.
+A reply must match
+both this allowlist and a current Identity Admin role. New-order messages go to
+`OperationsNumber`; the replying phone must also match that message's saved
+recipient. Credentials are never included in Flutter, React or the outbox.
+
+Configure the approved Content SID for each template:
+
+| Twilio template | Railway configuration key | Variables, in numeric order |
+|---|---|---|
+| `diet_time_new_order_admin` | `TwilioWhatsApp__NewOrderContentSid` | Order number, customer name, phone, plan, duration, meals/snacks, start date, delivery mode, saved location, amount |
+| `diet_time_order_confirmed` | `OrderWhatsAppTemplates__ApprovedContentSid` | Customer, order number, plan, duration, meals/snacks, start, mode |
+| `diet_time_payment_received` | `OrderWhatsAppTemplates__PaymentReceivedContentSid` | Customer, order number, plan, verified order amount, payment record date |
+| `diet_time_order_cancelled` | `OrderWhatsAppTemplates__CancelledContentSid` | Customer, order number, plan, cancellation date, reason or explicit reason-not-provided text |
+| `diet_time_package_paused` | `OrderWhatsAppTemplates__PausedContentSid` | Customer, order number, plan, pause start, restart, remaining days |
+| `diet_time_package_resumed` | `OrderWhatsAppTemplates__ResumedContentSid` | Customer, order number, plan, actual restart, remaining days, revised end |
+| `diet_time_meal_reminder` | `OrderWhatsAppTemplates__MealReminderContentSid` | Customer, service date, deadline in Qatar time |
+
+Use the **new ten-variable admin template**. Its mapping replaces the previous
+11-variable mapping, so an older Content SID must not be reused without updating
+and approving that template. Optional pre-existing customer receipt/rejection
+SIDs remain supported under `ReceivedContentSid` and `RejectedContentSid`; they
+are independent of the seven templates above.
+
+In Twilio Console:
+
+1. Create/approve the seven WhatsApp Content Templates with the ordered variables
+   above. For a later phase with WhatsApp actions enabled, use the admin template's Quick Reply titles **Approve** and **Reject**,
+   with action IDs exactly `diettime:approve` and `diettime:reject`. No order ID
+   variable is needed in the buttons: the signed original-message SID identifies
+   the saved order notification uniquely.
+2. Only when enabling WhatsApp actions in a later phase, configure the sender's incoming message webhook as **POST**
+   `https://<public API host>/api/webhooks/twilio/whatsapp`.
+3. The API sets the status callback on every dispatched message to
+   `https://<public API host>/api/webhooks/twilio/whatsapp/status?notificationId=<event UUID>`.
+   Preserve that query string. Both routes validate all form fields using the
+   official Twilio SDK and the account auth token against the configured public
+   URL. Unverified requests, arbitrary senders and uncorrelated button/text replies
+   cannot change an order. Repeated replies are recorded once.
+4. Verify the sender, recipient consent and template approvals in the correct
+   Twilio account. Use the Twilio Sandbox only with joined test recipients. Then
+   perform a controlled real-message check after deploying the schema/API/Admin.
+
+The existing Admin order-details dialog now includes an expandable **WhatsApp
+notification history** showing type, recipient, Qatar timestamps, attempts,
+provider status and errors. It uses the new Admin-only endpoint
+`GET /api/admin/orders/{orderId}/whatsapp-notifications`. Existing approve,
+reject, payment, cancellation and customer package routes are reused.
+
+The dispatcher retries explicit transient provider rejections with exponential
+backoff, capped at five attempts. Missing/disabled template configuration stays
+visible as `WAITING_CONFIGURATION` without consuming provider attempts. Permanent
+provider failures become `FAILED`. A timeout, lost response or expired processing
+lease can mean Twilio already accepted the message: those events become `UNKNOWN`
+and are not blindly resent. Signed callbacks can reconcile them. Check the
+Twilio Console and existing Admin message-status lookup before any manual resend.
+Repeated/out-of-order callbacks cannot downgrade a delivered/read message.
+WhatsApp failures never roll back a successful business operation.
+
+Meal reminders are disabled by default. When enabled, they use the saved selection
+cutoff (and the existing cutoff rule when absent), recheck eligibility before
+sending, and deduplicate by customer user ID and service date across orders.
+Completed, locked, paused, cancelled and review-required menus do not receive
+reminders. Existing default-meal finalization after cutoff is unchanged.
+
+Home delivery messages use the order's immutable address snapshot, including
+building, unit, street, zone, area and directions where present. Valid stored
+coordinates add a Google Maps link. A generic pin is omitted and a missing
+location is labelled `Address verification required`. Takeaway messages use the
+saved branch name/address. Current default addresses are never substituted.
+
+Files created in the API:
+`WhatsAppTemplateRegistry.cs`, `WhatsAppDeliveryState.cs`,
+`WhatsAppWebhookReceipt.cs`, `WhatsAppNotificationSchedule.cs`,
+`WhatsAppWebhookService.cs`, `TwilioWebhookController.cs`,
+`OrderWhatsAppHistoryController.cs`, migration
+`20261105010000_WhatsAppNotifications.cs`, `WhatsAppWorkflowTests.cs` and
+`WhatsAppTemplateRegistryTests.cs`.
+Modified API areas: `WhatsApp.cs`, `OrderNotification.cs`,
+`TwilioWhatsAppService.cs`, `DietTimeDbContext.cs`, `OrderNotificationEvents.cs`,
+`OrderWhatsAppNotificationSender.cs`, `PackagePauseService.cs`,
+`StaffOrderService.cs`, `Program.cs`, API project dependencies, existing Twilio,
+checkout-isolation and staff-order tests.
+React adds `orderWhatsAppApi.ts`, `OrderWhatsAppHistory.tsx` and its tests, and
+updates `OrdersPage.tsx` and its tests. Flutter updates `order_placed_screen.dart`,
+`order_models.dart`, `order_details_screen.dart`, `customer_copy.dart`, English/
+Arabic ARBs and generated localizations. This README contains rollout details.
+
+Provider references:
+[Quick Reply payloads](https://www.twilio.com/docs/content/twilio-quick-reply),
+[signed ASP.NET Core webhooks](https://www.twilio.com/docs/usage/tutorials/how-to-secure-your-csharp-aspnet-core-app-by-validating-incoming-twilio-requests),
+[message status callbacks](https://www.twilio.com/docs/messaging/api/message-resource).
+
+No production database, Railway deployment or Twilio Console was changed, and no
+real WhatsApp message was sent during implementation. Configure approved Content
+SIDs and the admin identity mapping before enabling messaging.
+
+Validation: **38 backend unit tests, 27 API/integration tests (17 with real isolated
+PostgreSQL, zero skipped), 33 React tests and 80 Flutter tests passed**. The
+migration upgrades the prior table shape with existing history retained and can
+be applied twice. Coverage includes signed approve/reject, unauthorized replies,
+replays, early/repeated callbacks, payment and immediate staff cancellation,
+schedule rollback, preview silence, accepted pause, early/scheduled resume,
+reminders disabled/enabled/completed/cutoff, transient/permanent/unknown send
+outcomes and configuration recovery. Flutter analysis and scoped React ESLint
+passed; the React production build passed with its existing chunk-size advisory.
+Logs are in ignored `artifacts/whatsapp-*.log`. The disposable PostgreSQL cluster
+was stopped and removed. Production deployment, device testing and real Twilio
+message delivery remain manual rollout checks.

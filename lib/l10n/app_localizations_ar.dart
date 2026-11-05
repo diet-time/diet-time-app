@@ -1264,7 +1264,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get customerYourOrderHasBeenReceivedAndIsAwaitingConfirmation =>
-      'استلمنا طلبك وهو بانتظار تأكيد دايت تايم. سنخطرك بعد مراجعته.';
+      'استلمنا طلبك. سيتواصل معك فريق دايت تايم قريبًا لتأكيد الطلب وترتيب الدفع.';
 
   @override
   String get customerGOTODASHBOARD => 'الانتقال إلى لوحة التحكم';
