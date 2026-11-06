@@ -1457,7 +1457,7 @@ abstract class AppLocalizations {
   /// No description provided for @otpCodeEntryHelper.
   ///
   /// In en, this message translates to:
-  /// **'Please enter the code automatically detected or type it manually'**
+  /// **'Enter the 6-digit verification code sent to your WhatsApp.'**
   String get otpCodeEntryHelper;
 
   /// No description provided for @otpEditPhone.
@@ -1757,7 +1757,7 @@ abstract class AppLocalizations {
   /// No description provided for @otpInvalidCode.
   ///
   /// In en, this message translates to:
-  /// **'Invalid OTP. Please try again.'**
+  /// **'Invalid or expired code. Try again or request a new code.'**
   String get otpInvalidCode;
 
   /// No description provided for @otpAccountConflict.

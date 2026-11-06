@@ -766,7 +766,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get otpCodeEntryHelper =>
-      'أدخل الرمز المكتشف تلقائياً أو اكتبه يدوياً';
+      'أدخل رمز التحقق المكوّن من 6 أرقام المرسل إلى واتساب.';
 
   @override
   String get otpEditPhone => 'تعديل';
@@ -934,7 +934,8 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get otpInvalidCode => 'رمز التحقق غير صحيح. يرجى المحاولة مرة أخرى.';
+  String get otpInvalidCode =>
+      'رمز غير صحيح أو منتهي الصلاحية. حاول مرة أخرى أو اطلب رمزًا جديدًا.';
 
   @override
   String get otpAccountConflict => 'تعذر إنشاء هذا الحساب أو الوصول إليه.';

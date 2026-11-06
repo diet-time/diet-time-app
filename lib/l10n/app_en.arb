@@ -322,7 +322,7 @@
   "otpCodeTitle": "Enter the Code",
   "otpCodeSubtitle": "A 6-digit verification code was sent to:",
   "otpCodeSentTo": "Code sent to",
-  "otpCodeEntryHelper": "Please enter the code automatically detected or type it manually",
+  "otpCodeEntryHelper": "Enter the 6-digit verification code sent to your WhatsApp.",
   "otpEditPhone": "Edit",
   "otpDidntGetCode": "Didn't get the code?",
   "otpVerifyCode": "Verify Code",
@@ -431,7 +431,7 @@
       }
     }
   },
-  "otpInvalidCode": "Invalid OTP. Please try again.",
+  "otpInvalidCode": "Invalid or expired code. Try again or request a new code.",
   "otpAccountConflict": "Unable to create or access this account.",
   "otpPhoneLoginUnavailable": "Phone login is currently unavailable.",
   "otpConnectionError": "Could not connect. Check your connection and try again.",

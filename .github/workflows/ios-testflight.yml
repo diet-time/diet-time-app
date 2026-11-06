@@ -2,12 +2,6 @@ name: iOS TestFlight
 
 on:
   workflow_dispatch:
-    inputs:
-      use_test_otp:
-        description: Skip WhatsApp delivery (requires test OTP enabled on the staging API)
-        required: true
-        default: true
-        type: boolean
   push:
     branches: [main]
 
@@ -24,8 +18,6 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 45
     env:
-      # Manual false must stay false; pushes use the repository variable or the beta default.
-      USE_TEST_OTP: ${{ github.event_name == 'workflow_dispatch' && format('{0}', inputs.use_test_otp) || vars.USE_TEST_OTP || 'true' }}
       APP_BUNDLE_ID: com.diettime.dietTime.9495H8ZN5C
       # Support either Actions Variables or Secrets. Secrets take over when a
       # value has not been created under Settings > Secrets and variables > Variables.
@@ -78,30 +70,7 @@ jobs:
           api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
 
       - name: Prepare iOS dependencies
-        run: flutter build ios --release --no-codesign --build-number "${{ github.run_number }}" --dart-define="USE_TEST_OTP=$USE_TEST_OTP"
-
-      - name: Verify compiled OTP mode
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import base64
-          import os
-          from pathlib import Path
-
-          expected = os.environ['USE_TEST_OTP']
-          if expected not in ('true', 'false'):
-              raise SystemExit('USE_TEST_OTP must be exactly true or false.')
-          config = Path('ios/Flutter/Generated.xcconfig').read_text()
-          encoded = next((line.split('=', 1)[1] for line in config.splitlines()
-                          if line.startswith('DART_DEFINES=')), '')
-          defines = [base64.b64decode(item).decode() for item in encoded.split(',') if item]
-          if f'USE_TEST_OTP={expected}' not in defines:
-              raise SystemExit('OTP build flag is missing from the generated iOS configuration.')
-          message = f'TestFlight USE_TEST_OTP={expected}; test mode skips WhatsApp delivery and verifies the code on the API.'
-          print(message)
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-              summary.write(message + '\n')
-          PY
+        run: flutter build ios --release --no-codesign --build-number "${{ github.run_number }}"
 
       - name: Generate export options
         shell: bash

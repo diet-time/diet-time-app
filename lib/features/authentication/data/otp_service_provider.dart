@@ -42,10 +42,18 @@ class ApiOtpService implements OtpService {
           failure: OtpFailure.unavailable,
         );
       }
+      final cooldown = data['resendAfterSeconds'] ?? 60;
+      if (cooldown is! int || cooldown < 60) {
+        return const OtpRequestResult(
+          success: false,
+          failure: OtpFailure.unavailable,
+        );
+      }
       return OtpRequestResult(
         success: true,
         requestId: data['requestId'] as String,
         expiresInSeconds: data['expiresInSeconds'] as int,
+        resendAfterSeconds: cooldown,
       );
     } on ApiException {
       return const OtpRequestResult(

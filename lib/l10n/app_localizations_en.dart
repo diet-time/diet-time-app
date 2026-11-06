@@ -788,7 +788,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get otpCodeEntryHelper =>
-      'Please enter the code automatically detected or type it manually';
+      'Enter the 6-digit verification code sent to your WhatsApp.';
 
   @override
   String get otpEditPhone => 'Edit';
@@ -960,7 +960,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get otpInvalidCode => 'Invalid OTP. Please try again.';
+  String get otpInvalidCode =>
+      'Invalid or expired code. Try again or request a new code.';
 
   @override
   String get otpAccountConflict => 'Unable to create or access this account.';

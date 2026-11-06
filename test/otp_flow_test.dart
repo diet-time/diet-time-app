@@ -29,6 +29,34 @@ final _testOtp = List.generate(6, (index) => (index + 1).toString()).join();
 final _invalidOtp = List.filled(6, '9').join();
 
 void main() {
+  for (final failure in [OtpFailure.tooManyAttempts, OtpFailure.unavailable]) {
+    testWidgets(
+      'resend delivery failures remain visible on the OTP screen: $failure',
+      (tester) async {
+        final sender = _FakeOtpService();
+        await tester.pumpWidget(_app(otp: sender));
+        await _openOtp(tester);
+        sender.requestFailure = failure;
+        await tester.pump(const Duration(seconds: 60));
+        await tester.pump();
+        await tester.tap(find.byKey(const ValueKey('resendOtpButton')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('otpResendError')), findsOneWidget);
+        expect(find.byType(OtpVerificationPage), findsOneWidget);
+        final copy = AppLocalizations.of(
+          tester.element(find.byType(OtpVerificationPage)),
+        );
+        expect(
+          find.text(
+            failure == OtpFailure.tooManyAttempts
+                ? copy.otpTooManyAttempts
+                : copy.otpRequestFailed,
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+  }
   testWidgets(
     'native long-press Paste replaces a selected digit with the whole OTP',
     (tester) async {
@@ -478,7 +506,10 @@ void main() {
     await tester.tap(verify);
     await tester.pumpAndSettle();
 
-    expect(find.text('Invalid OTP. Please try again.'), findsOneWidget);
+    expect(
+      find.text('Invalid or expired code. Try again or request a new code.'),
+      findsOneWidget,
+    );
     expect(
       tester
           .widget<TextField>(find.byKey(const ValueKey('otpCell0')))
@@ -546,7 +577,7 @@ void main() {
     expect(_isButtonEnabled(tester, verify), isTrue);
   });
 
-  testWidgets('WhatsApp resend waits 30 seconds and requests another code', (
+  testWidgets('WhatsApp resend waits 60 seconds and requests another code', (
     tester,
   ) async {
     final otp = _FakeOtpService();
@@ -556,7 +587,9 @@ void main() {
     final resend = find.byKey(const ValueKey('resendOtpButton'));
     expect(_isTextButtonEnabled(tester, resend), isFalse);
     expect(otp.requestCount, 1);
-    await tester.pump(const Duration(seconds: 30));
+    await tester.pump(const Duration(seconds: 59));
+    expect(_isTextButtonEnabled(tester, resend), isFalse);
+    await tester.pump(const Duration(seconds: 1));
     await tester.pump();
     expect(_isTextButtonEnabled(tester, resend), isTrue);
     await tester.tap(resend);
@@ -832,6 +865,7 @@ Widget _planApp(AuthenticationService authentication) {
 
 class _FakeOtpService implements OtpService {
   int requestCount = 0;
+  OtpFailure? requestFailure;
   String? requestedPhone;
 
   @override
@@ -841,6 +875,9 @@ class _FakeOtpService implements OtpService {
   }) async {
     requestCount++;
     requestedPhone = phoneNumber;
+    if (requestFailure != null) {
+      return OtpRequestResult(success: false, failure: requestFailure);
+    }
     return OtpRequestResult(success: true, requestId: 'request-$requestCount');
   }
 

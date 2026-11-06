@@ -9,7 +9,11 @@ void main() {
       const ApiResponse(
         statusCode: 200,
         body: {
-          'data': {'requestId': 'verification-id', 'expiresInSeconds': 600},
+          'data': {
+            'requestId': 'verification-id',
+            'expiresInSeconds': 300,
+            'resendAfterSeconds': 60,
+          },
         },
       ),
     );
@@ -20,7 +24,8 @@ void main() {
     expect(client.body, {'phoneNumber': '+97455555555', 'channel': 'whatsapp'});
     expect(result.success, isTrue);
     expect(result.requestId, 'verification-id');
-    expect(result.expiresInSeconds, 600);
+    expect(result.expiresInSeconds, 300);
+    expect(result.resendAfterSeconds, 60);
   });
 
   for (final status in [429, 503]) {

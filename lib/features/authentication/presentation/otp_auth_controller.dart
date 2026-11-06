@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 
-import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/features/authentication/data/authentication_repository.dart';
 import 'package:diet_time/features/authentication/data/mock_authentication_service.dart';
 import 'package:diet_time/features/authentication/data/otp_service_provider.dart';
@@ -369,15 +368,6 @@ class OtpAuthController extends Notifier<OtpAuthState> {
       verificationError: null,
       resendConfirmation: false,
     );
-    if (!AppEnvironment.enableRequestOtpApi) {
-      state = state.copyWith(
-        isRequestingOtp: false,
-        requestId: 'local-verification',
-        expiresInSeconds: 0,
-        resendSecondsRemaining: 0,
-      );
-      return true;
-    }
     try {
       final result = await ref
           .read(otpServiceProvider)
@@ -395,7 +385,7 @@ class OtpAuthController extends Notifier<OtpAuthState> {
         otpCode: '',
         requestId: result.requestId,
         expiresInSeconds: result.expiresInSeconds,
-        resendSecondsRemaining: 30,
+        resendSecondsRemaining: result.resendAfterSeconds,
         resendConfirmation: showConfirmation,
       );
       _startResendTimer();
@@ -498,10 +488,6 @@ class OtpAuthController extends Notifier<OtpAuthState> {
   }
 
   Future<bool> resendOtp() async {
-    if (!AppEnvironment.enableRequestOtpApi) {
-      state = state.copyWith(requestError: OtpUiError.resendUnavailable);
-      return false;
-    }
     if (state.resendSecondsRemaining > 0 || state.isRequestingOtp) return false;
     return requestOtp(channel: state.otpChannel, showConfirmation: true);
   }

@@ -92,84 +92,41 @@ Use `flutter gen-l10n` after editing the ARB files.
 
 ## Connecting authentication
 
-Phone login now requests a six-digit WhatsApp code using
-`POST /api/v1/auth/phone-otp/request`, then verifies it through the existing
-`POST /api/v1/auth/phone-otp` endpoint. Successful verification stores the
-session in secure storage. Resend is available after 30 seconds.
+Authentication mode is controlled only by the API's Railway environment variable
+`IsTestAuthentication`. Flutter always requests and verifies an OTP using the
+existing `/api/v1/auth/phone-otp/request` and `/api/v1/auth/phone-otp` endpoints.
+Test and live builds use the same screens and normal JWT/session handling.
+The resend countdown is 60 seconds. OTPs expire after five minutes and allow
+at most five verification attempts per challenge.
 
-Before deploying this app, deploy the matching `diet-time-api` changes and
-configure these **backend environment variables**:
+The previous Flutter `USE_TEST_OTP`, `ENABLE_TEST_OTP`, `TEST_PHONE_OTP`, and
+`ENABLE_REQUEST_OTP_API` flags are removed and have no effect, including on
+TestFlight/APK builds. No test OTP is embedded, shown or autofilled in the app.
+Changing test/live mode now requires an API restart rather than a mobile rebuild.
+An old installed app that skipped send requests must be replaced with this update.
 
-```text
-TwilioVerify__Enabled=true
-TwilioVerify__ServiceSid=<your VA... Verify service SID>
-TwilioWhatsApp__AccountSid=<your AC... account SID>
-TwilioWhatsApp__AuthToken=<your Twilio auth token>
-```
-
-Create or select a [Twilio Verify service](https://www.twilio.com/docs/verify/api/service),
-set its code length to **6**, and enable/configure its
-[WhatsApp channel](https://www.twilio.com/docs/verify/whatsapp).
-The existing order-notification template is separate from Verify setup.
-Keep credentials on the server; never include them in Flutter build flags.
-Test delivery to a real WhatsApp number after deployment. No live messages
-are sent by the automated tests.
-
-Twilio manages code expiry and verification attempts. The backend reports
-unavailable delivery as 503, throttling as 429, and incorrect/expired codes as
-401. The server logs missing configuration field names or Twilio HTTP/error
-codes when delivery fails, without logging credentials, phone numbers or OTPs.
-If the app says it cannot send a code, check these API logs and the Verify
-service settings; the order-notification WhatsApp configuration alone is not
-enough. A failed send never automatically switches to test mode.
-
-### Test OTP without sending WhatsApp messages
-
-Set these variables on the **staging API**, then redeploy/restart it:
+For a separate staging test deployment, set these **backend** variables:
 
 ```text
 ASPNETCORE_ENVIRONMENT=Staging
-PhoneOtp__UseTestOtp=true
-PhoneOtp__Enabled=true
-PhoneOtp__TestCode=123456
+IsTestAuthentication=true
+TestAuthenticationOtp=<your six-digit test code>
+TestAuthenticationAllowedPhoneNumbers=+97450123456
 ```
 
-Use your own six-digit test code if preferred. This explicit test flag takes
-priority over Twilio verification. The server rejects this mode in the
-Production environment. Existing local Development test verification still
-works.
+Only explicitly allowlisted test accounts can request and verify test challenges.
+Multiple authorized test numbers can be comma-separated. Test mode makes no
+Twilio requests, returns no code to the app, and still enforces expiration,
+cooldown, attempt limits and one-time challenge consumption. Production refuses
+test mode at startup. Use `IsTestAuthentication=false` with valid Twilio Verify
+credentials for live authentication; failures never fall back to a test code.
 
-Build/run the Flutter app with:
-
-```sh
-flutter run --dart-define=USE_TEST_OTP=true
-# Installable release APK for staging testing:
-flutter build apk --release --dart-define=USE_TEST_OTP=true
-```
-
-Enter the server's configured test code (`123456` in the example) on the OTP
-screen. This skips the send request in both debug and release builds; the app
-still calls the API to verify the entered code and obtain a real session.
-Changing only the app flag does not enable test login on the server.
-
-**iOS TestFlight** defaults to test OTP for beta builds, both for manual runs and
-pushes to `main`. Its build log and run summary show the effective mode, and the
-workflow checks the generated iOS configuration before archiving. For live
-WhatsApp testing, uncheck `use_test_otp` on a manual run, or set the GitHub Actions
-repository variable `USE_TEST_OTP=false` for automatic builds. A manual selection
-takes precedence over the repository variable.
-
-**Build Android APK** defaults to live delivery; select `use_test_otp` when
-running that workflow manually for test-code login. Rebuild/reinstall after
-changing build flags; hot reload and changing backend settings do not update
-the flags embedded in an already installed app. Install the latest build number
-from TestFlight after the new workflow finishes.
-
-The optional `--dart-define=TEST_PHONE_OTP=123456` displays a tester hint when
-test mode is enabled. It does not change the server's accepted code.
-`ENABLE_TEST_OTP=true` remains an alias for `USE_TEST_OTP=true`;
-`ENABLE_REQUEST_OTP_API=false` also skips sending. Omit these flags and set
-`PhoneOtp__UseTestOtp=false` to restore live WhatsApp verification.
+Create the required `phone_otp_challenges` table using the manual SQL in the
+[API authentication documentation](../diet-time-api/README.md#database-setup-and-abuse-protection)
+before deploying the API. The OTP EF migration file has been removed. This table
+stores challenge metadata only, not plaintext or hashed OTPs. The API guide also
+includes configuration, API examples, modified files and security-test details.
+No schema changes or Twilio/Railway configuration are applied automatically.
 
 ## Tomorrow’s Menu implementation
 

@@ -6,13 +6,15 @@ class OtpRequestResult {
   const OtpRequestResult({
     required this.success,
     this.requestId,
-    this.expiresInSeconds = 120,
+    this.expiresInSeconds = 300,
+    this.resendAfterSeconds = 60,
     this.failure,
   });
 
   final bool success;
   final String? requestId;
   final int expiresInSeconds;
+  final int resendAfterSeconds;
   final OtpFailure? failure;
 }
 

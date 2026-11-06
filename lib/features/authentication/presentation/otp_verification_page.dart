@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
-import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/features/authentication/presentation/otp_auth_controller.dart';
 import 'package:diet_time/features/authentication/presentation/otp_flow_widgets.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
@@ -243,20 +242,6 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
                                 ),
                           ),
                         ),
-                        if (AppEnvironment.enableTestOtp) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            l10n.otpDevelopmentCode(AppEnvironment.testOtp),
-                            key: const ValueKey('developmentOtpHint'),
-                            style: TextStyle(
-                              color: AppColors.emeraldGreen.withValues(
-                                alpha: .62,
-                              ),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
                         if (auth.verificationError != null) ...[
                           const SizedBox(height: 8),
                           Text(
@@ -266,8 +251,19 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
                             style: const TextStyle(color: AppColors.jasper),
                           ),
                         ],
+                        if (auth.requestError != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            auth.requestError == OtpUiError.tooManyAttempts
+                                ? l10n.otpTooManyAttempts
+                                : l10n.otpRequestFailed,
+                            key: const ValueKey('otpResendError'),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: AppColors.jasper),
+                          ),
+                        ],
                         SizedBox(height: compact ? 8 : 14),
-                        if (AppEnvironment.enableRequestOtpApi) ...[
+                        ...[
                           Text(
                             l10n.otpDidntGetCode,
                             textAlign: TextAlign.center,
@@ -303,12 +299,6 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
                           _CountdownRing(
                             seconds: auth.resendSecondsRemaining,
                             compact: compact,
-                          ),
-                        ] else ...[
-                          TextButton(
-                            key: const ValueKey('resendOtpButton'),
-                            onPressed: null,
-                            child: Text(l10n.otpResendTestUnavailable),
                           ),
                         ],
                         const Spacer(),
@@ -518,14 +508,14 @@ class _CountdownRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = (seconds / 30).clamp(0.0, 1.0);
+    final progress = (seconds / 60).clamp(0.0, 1.0);
     return SizedBox.square(
       dimension: compact ? 50 : 58,
       child: CustomPaint(
         painter: _CountdownPainter(progress: progress),
         child: Center(
           child: Text(
-            '00:${seconds.toString().padLeft(2, '0')}',
+            '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}',
             textDirection: TextDirection.ltr,
             style: const TextStyle(color: Color(0xFF316C65), fontSize: 12),
           ),

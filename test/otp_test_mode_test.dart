@@ -1,4 +1,3 @@
-import 'package:diet_time/core/config/app_environment.dart';
 import 'package:diet_time/features/authentication/data/authentication_repository.dart';
 import 'package:diet_time/features/authentication/data/otp_service_provider.dart';
 import 'package:diet_time/features/authentication/domain/auth_models.dart';
@@ -11,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   test(
-    'test mode skips delivery but still verifies the entered code on the server',
+    'the server controls authentication mode and the app always requests a challenge',
     () async {
       FlutterSecureStorage.setMockInitialValues({});
       final sender = _Sender();
@@ -27,7 +26,7 @@ void main() {
       await controller.restoreSession();
       controller.setPhoneNumber('+97455555555');
       expect(await controller.requestOtp(), isTrue);
-      expect(sender.sends, AppEnvironment.enableRequestOtpApi ? 1 : 0);
+      expect(sender.sends, 1);
       controller.setOtpCode('654321');
       expect(await controller.verifyOtp(), isFalse);
       expect(verifier.calls, 1);
