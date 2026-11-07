@@ -2642,6 +2642,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get packagePausePending => 'Pause pending confirmation';
 
   @override
+  String get packagePauseRequested => 'Pause requested';
+
+  @override
+  String get deliveriesPauseEmpty =>
+      'No delivery is scheduled for tomorrow. Paused deliveries will return when your package resumes.';
+
+  @override
   String get packageResumePending => 'Resume pending confirmation';
 
   @override

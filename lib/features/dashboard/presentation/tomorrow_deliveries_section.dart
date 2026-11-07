@@ -104,6 +104,31 @@ class _TomorrowDeliveriesSectionState extends State<TomorrowDeliveriesSection> {
           ],
         ),
         const SizedBox(height: 10),
+        if (ids.isNotEmpty &&
+            ids.every(_loaded.contains) &&
+            menus.length == ids.length &&
+            scheduled == 0)
+          Container(
+            key: const ValueKey('tomorrowDeliveriesEmpty'),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.white.withValues(alpha: .8),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              menus.any(
+                    (menu) =>
+                        menu.orderStatus == 'PAUSED' ||
+                        const {
+                          'PAUSED',
+                          'PAUSE_SCHEDULED',
+                        }.contains(menu.packageDisplayStatus),
+                  )
+                  ? copy.deliveriesPauseEmpty
+                  : copy.deliveriesStatus('NO_DELIVERY'),
+              style: const TextStyle(color: AppColors.darkGreen, fontSize: 13),
+            ),
+          ),
         for (final (_, order) in sorted)
           Padding(
             key: ValueKey('deliveryOrder-${order.id}'),

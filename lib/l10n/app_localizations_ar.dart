@@ -2598,6 +2598,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get packagePausePending => 'إيقاف مؤقت بانتظار التأكيد';
 
   @override
+  String get packagePauseRequested => 'تم طلب الإيقاف المؤقت';
+
+  @override
+  String get deliveriesPauseEmpty =>
+      'لا يوجد توصيل مجدول للغد. ستعود التوصيلات الموقوفة عند استئناف باقتك.';
+
+  @override
   String get packageResumePending => 'استئناف بانتظار التأكيد';
 
   @override

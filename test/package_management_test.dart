@@ -215,6 +215,29 @@ class CapturePackageApi extends ApiClient {
 }
 
 void main() {
+  test(
+    'remote schedule changes notify once; local changes reset the polling baseline',
+    () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final changes = container.read(packageScheduleChangesProvider.notifier);
+      changes.observed('first', 'active');
+      changes.observed('first', 'active');
+      expect(container.read(packageScheduleChangesProvider), isEmpty);
+      changes.observed('first', 'paused');
+      changes.observed('first', 'paused');
+      expect(container.read(packageScheduleChangesProvider), {'first': 1});
+      changes.changed('first');
+      changes.observed('first', 'resumed');
+      expect(container.read(packageScheduleChangesProvider), {'first': 2});
+      changes.observed('second', 'active');
+      changes.observed('second', 'pause requested');
+      expect(container.read(packageScheduleChangesProvider), {
+        'first': 2,
+        'second': 1,
+      });
+    },
+  );
   for (final language in ['en', 'ar']) {
     testWidgets(
       'pause summary fits a narrow screen and refreshes after a date change ($language)',
@@ -290,6 +313,7 @@ void main() {
         expect(tester.getBottomRight(submit).dy, lessThanOrEqualTo(640));
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());
+        await tester.pumpAndSettle();
       },
     );
   }
@@ -931,6 +955,8 @@ void main() {
         );
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());
+        await tester.pumpAndSettle();
+        container.dispose();
       },
     );
   }

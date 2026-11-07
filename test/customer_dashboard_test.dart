@@ -32,6 +32,8 @@ void main() {
     testWidgets(
       'dashboard shows $pauseStatus in the plan card without pause controls',
       (tester) async {
+        await tester.binding.setSurfaceSize(const Size(320, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
         final summary = CustomerOrderSummary.fromJson({
           'id': 'paused-plan',
           'orderNumber': 'ORD-PAUSED',
@@ -48,7 +50,9 @@ void main() {
         });
         final management = PackageManagement.fromJson({
           'rowVersion': 2,
-          'serverNow': '2026-11-02T12:00:00Z',
+          'serverNow': pauseStatus == 'PAUSED'
+              ? '2026-11-04T12:00:00Z'
+              : '2026-11-02T12:00:00Z',
           'status': pauseStatus.endsWith('_PENDING')
               ? 'CONFIRMED'
               : pauseStatus,
@@ -64,6 +68,7 @@ void main() {
                   'id': 'request',
                   'type': pauseStatus == 'PAUSE_PENDING' ? 'PAUSE' : 'RESUME',
                   'status': 'PENDING_APPROVAL',
+                  'pauseStartDate': '2026-11-03',
                   'resumeDate': '2026-12-03',
                 }
               : null,
@@ -106,12 +111,18 @@ void main() {
         expect(find.byIcon(Icons.notifications_none_rounded), findsNothing);
         final card = find.byKey(const ValueKey('activePlan-paused-plan'));
         expect(
+          tester.widget<Material>(card).color,
+          pauseStatus == 'PAUSED'
+              ? const Color(0xFF69736F)
+              : const Color(0xFF8B642D),
+        );
+        expect(
           find.descendant(
             of: card,
             matching: find.text(
               pauseStatus == 'PAUSE_PENDING'
-                  ? '03 Nov - 20 Nov'
-                  : 'Restarts: Dec 5, 2026\nEnds: Dec 20, 2026',
+                  ? 'Requested pause start: Nov 3, 2026\nRestarts: Dec 3, 2026\nEnds: Nov 20, 2026'
+                  : 'Pause start date: Nov 3, 2026\nRestarts: Dec 3, 2026\nEnds: Dec 20, 2026',
             ),
           ),
           findsOneWidget,
@@ -120,7 +131,7 @@ void main() {
           find.descendant(
             of: card,
             matching: find.text(switch (pauseStatus) {
-              'PAUSE_PENDING' => 'Pause pending confirmation',
+              'PAUSE_PENDING' => 'Pause requested',
               'RESUME_PENDING' => 'Resume pending confirmation',
               'PAUSED' => 'Paused',
               _ => 'Pause scheduled',
@@ -133,6 +144,7 @@ void main() {
           find.byKey(const ValueKey('pausePackage-paused-plan')),
           findsNothing,
         );
+        expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());
       },
     );

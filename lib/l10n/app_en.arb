@@ -965,6 +965,8 @@
   "packageDeliveryToday": "Today's delivery (not paused)",
   "packagePauseScheduleNote": "The pause does not cancel today's or already committed deliveries. The end date includes the pause.",
   "packagePausePending": "Pause pending confirmation",
+  "packagePauseRequested": "Pause requested",
+  "deliveriesPauseEmpty": "No delivery is scheduled for tomorrow. Paused deliveries will return when your package resumes.",
   "packageResumePending": "Resume pending confirmation",
   "packagePauseRejected": "Pause request declined",
   "packageResumeRejected": "Resume request declined",

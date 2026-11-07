@@ -1,3 +1,4 @@
+import 'package:diet_time/features/checkout/domain/package_schedule_snapshot.dart';
 import 'order_status.dart';
 import 'package:diet_time/features/plans/domain/meal_entitlement.dart';
 import 'takeaway_branch.dart';
@@ -103,6 +104,7 @@ class CustomerOrderSummary {
     this.review = const {},
     this.mealCount,
     this.snackCount,
+    this.packageSchedule,
   });
 
   factory CustomerOrderSummary.fromJson(Map<String, dynamic> json) =>
@@ -123,6 +125,11 @@ class CustomerOrderSummary {
         mealCount: _integer(json['mealCount']),
         snackCount: _integer(json['snackCount']),
         review: _map(json['review']),
+        packageSchedule: json['packageSchedule'] is Map<String, dynamic>
+            ? PackageScheduleSnapshot.fromJson(
+                json['packageSchedule'] as Map<String, dynamic>,
+              )
+            : null,
         takeawayBranch: json['takeawayBranch'] is Map
             ? TakeawayBranch.fromJson(_map(json['takeawayBranch']))
             : null,
@@ -132,6 +139,7 @@ class CustomerOrderSummary {
       );
 
   final String id;
+  final PackageScheduleSnapshot? packageSchedule;
   final String orderNumber;
   final String planName;
   final String planDurationName;

@@ -4736,6 +4736,18 @@ abstract class AppLocalizations {
   /// **'Pause pending confirmation'**
   String get packagePausePending;
 
+  /// No description provided for @packagePauseRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause requested'**
+  String get packagePauseRequested;
+
+  /// No description provided for @deliveriesPauseEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No delivery is scheduled for tomorrow. Paused deliveries will return when your package resumes.'**
+  String get deliveriesPauseEmpty;
+
   /// No description provided for @packageResumePending.
   ///
   /// In en, this message translates to:

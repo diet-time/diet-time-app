@@ -634,11 +634,25 @@ class _ReferencePlanCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
-    final (background, icon) = switch (summary.status) {
+    final management =
+        summary.rowVersion > 0 &&
+            const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(summary.status)
+        ? ref.watch(packageManagementProvider(summary.id)).value
+        : null;
+    final snapshot = summary.packageSchedule;
+    final displayState =
+        management?.effectiveDisplayStatus ??
+        snapshot?.displayStatus ??
+        summary.status;
+    final (background, icon) = switch (displayState) {
+      'PAUSE_REQUESTED' ||
+      'PAUSE_SCHEDULED' ||
       'PENDING_APPROVAL' ||
       'PENDING' => (const Color(0xFF8B642D), Icons.schedule_rounded),
+      'PAUSED' => (const Color(0xFF69736F), Icons.pause_circle_outline),
       'ON_HOLD' ||
-      'PAUSED' => (const Color(0xFF9B503A), Icons.pause_circle_outline),
+      'CANCELLED' ||
+      'REJECTED' => (const Color(0xFF9B503A), Icons.pause_circle_outline),
       _ => (const Color(0xFF075A43), Icons.check_circle_outline),
     };
     final package = (detail?.entitlement ?? summary.entitlement)?.label(
@@ -649,22 +663,27 @@ class _ReferencePlanCard extends ConsumerWidget {
       ref,
       summary.status,
       summary.rowVersion > 0 ? summary.id : null,
+      displayStatus: displayState,
     );
-    final management =
-        summary.rowVersion > 0 &&
-            const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(summary.status)
-        ? ref.watch(packageManagementProvider(summary.id)).asData?.value
-        : null;
     final pause = management?.currentPause;
+    final pendingPause =
+        management?.hasPendingRequest == true &&
+        management?.latestRequest?.type == 'PAUSE';
+    final pauseStart = management != null
+        ? pause?.start ??
+              (pendingPause ? management.latestRequest?.start : null)
+        : snapshot?.pauseStart;
+    final resume = management != null
+        ? pause?.resume ??
+              (pendingPause ? management.latestRequest?.resume : null)
+        : snapshot?.resume;
+    final end = management?.endDate ?? snapshot?.revisedEnd ?? summary.endDate;
     final dateLocale = Localizations.localeOf(context).toLanguageTag();
-    final planDates = pause == null
-        ? _period(
-            summary.startDate,
-            management?.endDate ?? summary.endDate,
-            locale: dateLocale,
-          )
-        : '${copy.packageRestartShort}: ${DateFormat.yMMMd(dateLocale).format(management!.firstDeliveryAfterPause ?? pause.resume)}\n'
-              '${copy.packageEndShort}: ${DateFormat.yMMMd(dateLocale).format(management.endDate)}';
+    final planDates = pauseStart == null || resume == null
+        ? _period(summary.startDate, end, locale: dateLocale)
+        : '${displayState == 'PAUSE_REQUESTED' ? copy.packageRequestedPauseStart : copy.packagePauseStart}: ${DateFormat.yMMMd(dateLocale).format(pauseStart)}\n'
+              '${copy.packageRestartShort}: ${DateFormat.yMMMd(dateLocale).format(resume)}\n'
+              '${copy.packageEndShort}: ${end == null ? '—' : DateFormat.yMMMd(dateLocale).format(end)}';
     Future<void> openDetails() async {
       await context.push(AppRoutes.orderDetails, extra: summary.id);
       if (context.mounted) {
@@ -763,7 +782,7 @@ class _ReferencePlanCard extends ConsumerWidget {
                       size: 12,
                     ),
                     const SizedBox(width: 6),
-                    Expanded(child: line(planDates, maxLines: 2, size: 10)),
+                    Expanded(child: line(planDates, maxLines: 3, size: 10)),
                     TextButton(
                       key: ValueKey('viewOrder-${summary.id}'),
                       onPressed: openDetails,
@@ -1009,25 +1028,25 @@ String _packageStatusLabel(
   BuildContext context,
   WidgetRef ref,
   String status,
-  String? orderId,
-) {
-  if (orderId != null &&
-      const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(status)) {
-    final data = ref.watch(packageManagementProvider(orderId)).asData?.value;
-    if (data?.hasPendingRequest == true) {
-      final copy = lookupAppLocalizations(Localizations.localeOf(context));
-      return data!.latestRequest!.type == 'PAUSE'
-          ? copy.packagePausePending
-          : copy.packageResumePending;
-    }
-    if (data?.currentPause != null) {
-      final copy = lookupAppLocalizations(Localizations.localeOf(context));
-      return data!.status == 'PAUSED'
-          ? copy.packagePaused
-          : copy.packagePauseScheduled;
-    }
+  String? orderId, {
+  String? displayStatus,
+}) {
+  final data =
+      orderId != null &&
+          const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(status)
+      ? ref.watch(packageManagementProvider(orderId)).value
+      : null;
+  final copy = lookupAppLocalizations(Localizations.localeOf(context));
+  if (data?.hasPendingRequest == true &&
+      data?.latestRequest?.type == 'RESUME') {
+    return copy.packageResumePending;
   }
-  return context.customerCopy(orderStatusLabel(status));
+  return switch (displayStatus ?? data?.effectiveDisplayStatus ?? status) {
+    'PAUSE_REQUESTED' => copy.packagePauseRequested,
+    'PAUSE_SCHEDULED' => copy.packagePauseScheduled,
+    'PAUSED' => copy.packagePaused,
+    _ => context.customerCopy(orderStatusLabel(status)),
+  };
 }
 
 class _HeroStatusPill extends ConsumerWidget {

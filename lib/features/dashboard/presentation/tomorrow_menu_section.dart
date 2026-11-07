@@ -184,11 +184,16 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
     final delay = menu.canConfirm && untilCutoff > Duration.zero
         ? untilCutoff
         : untilMidnight;
-    _refreshTimer = Timer(delay, () {
-      if (!mounted) return;
-      _update(() => _expired = true);
-      if (!_submitting) _load();
-    });
+    _refreshTimer = Timer(
+      !widget.scheduledOnly || delay < const Duration(seconds: 30)
+          ? delay
+          : const Duration(seconds: 30),
+      () {
+        if (!mounted) return;
+        _update(() => _expired = true);
+        if (!_submitting) _load(preserveDraft: true);
+      },
+    );
   }
 
   void _update(VoidCallback action) {

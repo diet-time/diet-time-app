@@ -30,8 +30,14 @@ TomorrowMenu delivery(
   String? reference,
   int mealCount = 3,
   int snackCount = 1,
+  bool? scheduledForDelivery,
+  String? serviceDayStatus,
+  String? packageDisplayStatus,
 }) => TomorrowMenu(
   subscriptionId: order,
+  isScheduledForDelivery: scheduledForDelivery,
+  serviceDayStatus: serviceDayStatus,
+  packageDisplayStatus: packageDisplayStatus,
   dayId: noDelivery ? null : 'day-$order',
   deliveryDate: DateTime(2026, 10, 29),
   planName: name ?? 'Balance $order',
@@ -157,6 +163,90 @@ Finder inCard(String id, String text) =>
     find.descendant(of: card(id), matching: find.text(text));
 
 void main() {
+  testWidgets(
+    'suspended locked meals are hidden independently of a preserved committed package',
+    (tester) async {
+      final repository = DeliveryRepository({
+        'paused': delivery(
+          'paused',
+          confirmed: true,
+          scheduledForDelivery: false,
+          serviceDayStatus: 'PAUSED',
+          packageDisplayStatus: 'PAUSED',
+        ),
+        'committed': delivery(
+          'committed',
+          confirmed: true,
+          scheduledForDelivery: true,
+          serviceDayStatus: 'CONFIRMED',
+          packageDisplayStatus: 'PAUSED',
+        ),
+      });
+      await show(tester, repository);
+      expect(find.byType(TomorrowDeliveryCard), findsOneWidget);
+      expect(find.text('Balance paused'), findsNothing);
+      expect(find.text('Balance committed'), findsOneWidget);
+      final copy = AppLocalizations.of(
+        tester.element(find.byType(TomorrowDeliveriesSection)),
+      );
+      expect(find.text(copy.deliveriesScheduled(1)), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('tomorrowDeliveriesEmpty')),
+        findsNothing,
+      );
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
+    'server schedule polling removes an approved pause and restores recalculated resume deliveries',
+    (tester) async {
+      final repository = DeliveryRepository({
+        'plan': delivery('plan', scheduledForDelivery: true),
+      });
+      await show(tester, repository);
+      repository.responses['plan'] = delivery(
+        'plan',
+        confirmed: true,
+        scheduledForDelivery: false,
+        serviceDayStatus: 'PAUSED',
+        packageDisplayStatus: 'PAUSED',
+      );
+      await tester.pump(const Duration(seconds: 31));
+      await tester.pumpAndSettle();
+      expect(find.byType(TomorrowDeliveryCard), findsNothing);
+      expect(
+        find.byKey(const ValueKey('tomorrowDeliveriesEmpty')),
+        findsOneWidget,
+      );
+      repository.responses['plan'] = delivery(
+        'plan',
+        scheduledForDelivery: true,
+        serviceDayStatus: 'PLANNED',
+        packageDisplayStatus: 'ACTIVE',
+      );
+      await tester.pump(const Duration(seconds: 31));
+      await tester.pumpAndSettle();
+      expect(find.byType(TomorrowDeliveryCard), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('tomorrowDeliveriesEmpty')),
+        findsNothing,
+      );
+      expect(repository.gets.length, greaterThanOrEqualTo(3));
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  test(
+    'legacy locked selections are never proof of delivery when the day is suspended',
+    () {
+      final menu = delivery(
+        'old',
+        confirmed: true,
+        serviceDayStatus: 'SUSPENDED',
+      );
+      expect(menu.locked, isTrue);
+      expect(menu.scheduledForTomorrow, isFalse);
+    },
+  );
   testWidgets(
     'four scheduled orders retain distinct images, states and contextual actions',
     (tester) async {

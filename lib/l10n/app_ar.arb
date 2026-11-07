@@ -908,6 +908,8 @@
   "packageCommittedDelivery": "توصيل ما زال مجدولاً (غير مشمول بالإيقاف)",
   "packageDeliveryToday": "توصيل اليوم (غير مشمول بالإيقاف)",
   "packagePauseScheduleNote": "الإيقاف المؤقت لا يلغي توصيل اليوم أو التوصيلات المؤكدة مسبقاً. تاريخ الانتهاء يشمل فترة الإيقاف.",
+  "packagePauseRequested": "تم طلب الإيقاف المؤقت",
+  "deliveriesPauseEmpty": "لا يوجد توصيل مجدول للغد. ستعود التوصيلات الموقوفة عند استئناف باقتك.",
   "packagePausePending": "إيقاف مؤقت بانتظار التأكيد",
   "packageResumePending": "استئناف بانتظار التأكيد",
   "packagePauseRejected": "تم رفض طلب الإيقاف المؤقت",

@@ -7,6 +7,8 @@ import 'package:diet_time/features/authentication/presentation/otp_auth_controll
 import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
+import 'package:diet_time/features/dashboard/presentation/package_management_provider.dart';
+import 'package:diet_time/features/dashboard/data/upcoming_meals_repository.dart';
 import 'package:diet_time/features/personalization/data/customer_profile_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -78,6 +80,7 @@ final customerDashboardControllerProvider =
 class CustomerDashboardController extends Notifier<CustomerDashboardState> {
   String? _profileId;
   bool _requestInProgress = false;
+  bool _refreshQueued = false;
   bool _initializationInProgress = false;
   bool _hasInitialized = false;
 
@@ -87,6 +90,7 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
   void clear() {
     _profileId = null;
     _requestInProgress = false;
+    _refreshQueued = false;
     _initializationInProgress = false;
     _hasInitialized = false;
     state = const DashboardLoading();
@@ -220,10 +224,20 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
       );
     } finally {
       _requestInProgress = false;
+      if (_refreshQueued && ref.mounted) {
+        _refreshQueued = false;
+        unawaited(refresh());
+      }
     }
   }
 
   Future<void> refresh() async {
+    if (_requestInProgress) {
+      _refreshQueued = true;
+      return;
+    }
+    ref.invalidate(packageManagementProvider);
+    ref.invalidate(upcomingMealDaysProvider);
     final profileId = _profileId;
     if (profileId != null) {
       unawaited(

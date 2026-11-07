@@ -38,6 +38,9 @@ class TomorrowMenu {
     this.selectedSnackCount,
     this.customerConfirmedAt,
     this.autoFinalizedAt,
+    this.isScheduledForDelivery,
+    this.serviceDayStatus,
+    this.packageDisplayStatus,
   });
 
   factory TomorrowMenu.fromJson(Map<String, dynamic> json) {
@@ -61,6 +64,11 @@ class TomorrowMenu {
       autoFinalizedAt: DateTime.tryParse(
         json['autoFinalizedAt']?.toString() ?? '',
       ),
+      isScheduledForDelivery: json['isScheduledForDelivery'] as bool?,
+      serviceDayStatus: json['serviceDayStatus'] as String?,
+      packageDisplayStatus:
+          (json['packageSchedule'] as Map<String, dynamic>?)?['displayStatus']
+              as String?,
       mealCount: json['mealCount'] as int,
       snackCount: json['snackCount'] as int,
       status: json['selectionStatus'] as String,
@@ -95,6 +103,9 @@ class TomorrowMenu {
   final int? selectedSnackCount;
   final DateTime? customerConfirmedAt;
   final DateTime? autoFinalizedAt;
+  final bool? isScheduledForDelivery;
+  final String? serviceDayStatus;
+  final String? packageDisplayStatus;
   final int mealCount;
   final int snackCount;
   final String status;
@@ -119,18 +130,35 @@ class TomorrowMenu {
 
   bool get readOnly => finalized || locked || status == 'LOCKED';
 
-  bool get scheduledForTomorrow =>
-      dayId != null ||
-      const {
-        'SERVICE_DAYS_MISSING',
-        'SERVICE_DAY_INCOMPLETE',
-        'MENU_NOT_CONFIGURED',
-        'FINALIZATION_PENDING',
-        'NEEDS_REVIEW',
-        'LOCKED',
-        'CUSTOMER_CONFIRMED',
-        'AUTO_FINALIZED',
-      }.contains(status);
+  bool get scheduledForTomorrow {
+    if (isScheduledForDelivery != null) return isScheduledForDelivery!;
+    if (deliveryDate.weekday == DateTime.friday ||
+        (serviceDayStatus != null &&
+            !const {'PLANNED', 'CONFIRMED'}.contains(serviceDayStatus)) ||
+        const {
+          'NO_DELIVERY',
+          'INACTIVE_ORDER',
+          'PAUSED',
+          'SUSPENDED',
+          'CANCELLED',
+          'DISPLACED',
+          'NOT_STARTED',
+          'PENDING_ACTIVATION',
+        }.contains(status)) {
+      return false;
+    }
+    return dayId != null ||
+        const {
+          'SERVICE_DAYS_MISSING',
+          'SERVICE_DAY_INCOMPLETE',
+          'MENU_NOT_CONFIGURED',
+          'FINALIZATION_PENDING',
+          'NEEDS_REVIEW',
+          'LOCKED',
+          'CUSTOMER_CONFIRMED',
+          'AUTO_FINALIZED',
+        }.contains(status);
+  }
 
   int get savedMealCount =>
       selectedMealCount ??

@@ -8,7 +8,16 @@ final packageManagementProvider = FutureProvider.autoDispose
       final data = await ref
           .watch(ordersRepositoryProvider)
           .getPackageManagement(id);
-      if (ref.mounted && data.hasPendingRequest) {
+      if (ref.mounted) {
+        unawaited(
+          Future<void>.microtask(() {
+            if (ref.mounted) {
+              ref
+                  .read(packageScheduleChangesProvider.notifier)
+                  .observed(id, data.scheduleFingerprint);
+            }
+          }),
+        );
         final timer = Timer(const Duration(seconds: 30), ref.invalidateSelf);
         ref.onDispose(timer.cancel);
       }
@@ -21,7 +30,19 @@ final packageScheduleChangesProvider =
     );
 
 class PackageScheduleChanges extends Notifier<Map<String, int>> {
+  final Map<String, String> _fingerprints = {};
   @override
   Map<String, int> build() => const {};
-  void changed(String id) => state = {...state, id: (state[id] ?? 0) + 1};
+  void changed(String id) {
+    _fingerprints.remove(id);
+    state = {...state, id: (state[id] ?? 0) + 1};
+  }
+
+  void observed(String id, String fingerprint) {
+    final previous = _fingerprints[id];
+    _fingerprints[id] = fingerprint;
+    if (previous != null && previous != fingerprint) {
+      state = {...state, id: (state[id] ?? 0) + 1};
+    }
+  }
 }

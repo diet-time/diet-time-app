@@ -25,6 +25,7 @@ class PackageManagement {
       serverNow = _date(json['serverNow']).toUtc(),
       receivedAt = DateTime.now().toUtc(),
       status = json['status'] as String,
+      displayStatus = json['displayStatus'] as String?,
       remainingDays = (json['remainingServiceDays'] as num).toInt(),
       nextDelivery = json['nextScheduledDelivery'] == null
           ? null
@@ -47,6 +48,7 @@ class PackageManagement {
           : null;
   final int rowVersion, remainingDays;
   final String status;
+  final String? displayStatus;
   final DateTime serverNow, receivedAt, endDate;
   final DateTime? nextDelivery;
   final DateTime? firstDeliveryAfterPause;
@@ -55,6 +57,50 @@ class PackageManagement {
   final bool canResumeEarly;
   final PackageChangeRequest? latestRequest;
   bool get hasPendingRequest => latestRequest?.status == 'PENDING_APPROVAL';
+
+  String get effectiveDisplayStatus {
+    if (const {'CANCELLED', 'REJECTED', 'ON_HOLD'}.contains(status)) {
+      return status;
+    }
+    if (displayStatus != null) return displayStatus!;
+    final now = qatarNow();
+    final today = DateTime(now.year, now.month, now.day);
+    final pause = currentPause;
+    if (pause != null &&
+        !const {
+          'RESUMED',
+          'CANCELLED',
+          'REJECTED',
+          'COMPLETED',
+        }.contains(pause.status) &&
+        today.isBefore(pause.resume)) {
+      return today.isBefore(pause.start) ? 'PAUSE_SCHEDULED' : 'PAUSED';
+    }
+    if (hasPendingRequest && latestRequest?.type == 'PAUSE') {
+      return 'PAUSE_REQUESTED';
+    }
+    if (pause != null) return 'ACTIVE';
+    return switch (status) {
+      'CONFIRMED' || 'RESUMED' => 'ACTIVE',
+      'SCHEDULED' => 'PAUSE_SCHEDULED',
+      _ => status,
+    };
+  }
+
+  String get scheduleFingerprint => [
+    rowVersion,
+    effectiveDisplayStatus,
+    currentPause?.id,
+    currentPause?.start,
+    currentPause?.resume,
+    endDate,
+    nextDelivery,
+    firstDeliveryAfterPause,
+    remainingDays,
+    latestRequest?.id,
+    latestRequest?.status,
+    latestRequest?.type,
+  ].join('|');
 
   DateTime qatarNow({DateTime? utcNow}) {
     final elapsed = (utcNow ?? DateTime.now().toUtc()).difference(receivedAt);
