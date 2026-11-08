@@ -948,6 +948,7 @@ class _NoOrders extends OrdersRepository {
   Future<List<CustomerOrderSummary>> getCustomerOrders(
     String profileId, {
     int pageSize = 20,
+    bool dashboard = false,
   }) async => [];
 }
 

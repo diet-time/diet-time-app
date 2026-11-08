@@ -2,25 +2,40 @@ import 'package:diet_time/features/language/presentation/language_controller.dar
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:diet_time/core/performance/performance_trace.dart';
 
 import 'package:diet_time/core/config/app_environment.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final apiClientProvider = Provider<ApiClient>(
-  (ref) => ApiClient(
+final apiClientProvider = Provider<ApiClient>((ref) {
+  final client = ApiClient(
     languageCode: () => ref.read(languageControllerProvider).languageCode,
-  ),
-);
+  );
+  ref.onDispose(client.close);
+  return client;
+});
 
 class ApiClient {
   ApiClient({
     HttpClient Function()? clientFactory,
     String Function()? languageCode,
+    this.requestTimeout = const Duration(seconds: 40),
+    this.baseUrl = AppEnvironment.apiBaseUrl,
   }) : _languageCode = languageCode,
        _clientFactory = clientFactory ?? HttpClient.new;
 
   final HttpClient Function() _clientFactory;
   final String Function()? _languageCode;
+  final Duration requestTimeout;
+  final String baseUrl;
+  HttpClient? _client;
+  bool _closed = false;
+
+  void close() {
+    _closed = true;
+    _client?.close(force: true);
+    _client = null;
+  }
 
   Future<ApiResponse> request({
     required String method,
@@ -30,18 +45,45 @@ class ApiClient {
     Map<String, dynamic>? body,
   }) async {
     final uri = Uri.parse(
-      AppEnvironment.apiBaseUrl,
+      baseUrl,
     ).resolve(path).replace(queryParameters: queryParameters);
-    final client = _clientFactory()
-      ..connectionTimeout = const Duration(seconds: 15);
+    if (_closed) throw StateError('ApiClient is closed');
+    final client = _client ??= (_clientFactory()
+      ..connectionTimeout = const Duration(seconds: 15));
+    final watch = Stopwatch()..start();
+    HttpClientRequest? pending;
+    var expired = false;
+    var outcome = 'failure';
+    Duration remaining(Duration limit) {
+      final available = requestTimeout - watch.elapsed;
+      if (available <= Duration.zero) {
+        throw TimeoutException('Request deadline');
+      }
+      return available < limit ? available : limit;
+    }
+
     try {
-      final request = await switch (method) {
+      final openBudget = remaining(const Duration(seconds: 15));
+      final opening = switch (method) {
         'GET' => client.getUrl(uri),
         'POST' => client.postUrl(uri),
         'PUT' => client.putUrl(uri),
         'PATCH' => client.patchUrl(uri),
         _ => throw ArgumentError.value(method, 'method'),
-      }.timeout(const Duration(seconds: 15));
+      };
+      final request = await opening
+          .then((request) {
+            if (expired || _closed) {
+              request.abort();
+              throw TimeoutException(
+                'Connection finished after request deadline',
+              );
+            }
+            pending = request;
+            return request;
+          })
+          .timeout(openBudget);
+      remaining(requestTimeout);
       request.headers
         ..set('X-Client-App', 'FLUTTER')
         ..set(HttpHeaders.acceptHeader, 'application/json')
@@ -52,9 +94,11 @@ class ApiClient {
       headers.forEach(request.headers.set);
       if (body != null) request.write(jsonEncode(body));
       final response = await request.close().timeout(
-        const Duration(seconds: 25),
+        remaining(const Duration(seconds: 25)),
       );
-      final text = await utf8.decoder.bind(response).join();
+      final bodyBudget = remaining(requestTimeout);
+      final text = await _readBody(response, bodyBudget);
+      outcome = '${response.statusCode}';
       Map<String, dynamic> decoded = const {};
       if (text.trim().isNotEmpty) {
         final value = jsonDecode(text);
@@ -64,13 +108,60 @@ class ApiClient {
     } on ApiException {
       rethrow;
     } on TimeoutException {
+      expired = true;
+      pending?.abort();
+      outcome = 'timeout';
       throw const ApiException(ApiFailure.timeout);
     } on SocketException {
       throw const ApiException(ApiFailure.network);
     } on Object {
       throw const ApiException(ApiFailure.invalidResponse);
     } finally {
-      client.close(force: true);
+      final family = path.endsWith('/orders/dashboard')
+          ? 'dashboard_summary'
+          : path.endsWith('/tomorrow-menu')
+          ? 'tomorrow_menu'
+          : path.endsWith('/package-management')
+          ? 'package_management'
+          : path.endsWith('/upcoming-meals')
+          ? 'delivery_calendar'
+          : path.contains('/service-days/')
+          ? 'service_day'
+          : path.contains('/orders')
+          ? 'orders'
+          : path.contains('meal-plan')
+          ? 'meal_plans'
+          : path.contains('auth')
+          ? 'auth'
+          : 'other';
+      PerformanceTrace.record('api.$method.$family', watch, outcome: outcome);
+    }
+  }
+
+  Future<String> _readBody(HttpClientResponse response, Duration budget) async {
+    final complete = Completer<String>();
+    final buffer = StringBuffer();
+    final subscription = utf8.decoder
+        .bind(response)
+        .listen(
+          buffer.write,
+          onError: (Object error, StackTrace stack) {
+            if (!complete.isCompleted) complete.completeError(error, stack);
+          },
+          onDone: () {
+            if (!complete.isCompleted) complete.complete(buffer.toString());
+          },
+          cancelOnError: true,
+        );
+    final deadline = Timer(budget, () {
+      if (complete.isCompleted) return;
+      unawaited(subscription.cancel());
+      complete.completeError(TimeoutException('Response body deadline'));
+    });
+    try {
+      return await complete.future;
+    } finally {
+      deadline.cancel();
     }
   }
 }

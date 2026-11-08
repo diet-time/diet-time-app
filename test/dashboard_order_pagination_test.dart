@@ -5,6 +5,58 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
+    'dashboard uses one summary request without history pagination',
+    () async {
+      final api = DashboardOrdersApi();
+      final repository = OrdersRepository(
+        apiClient: api,
+        accessTokenProvider: () async => 'token',
+      );
+      final orders = await repository.getCustomerOrders(
+        'profile',
+        dashboard: true,
+      );
+      expect(orders.single.id, 'active');
+      expect(api.paths, ['/api/v1/customer-profiles/profile/orders/dashboard']);
+    },
+  );
+  test(
+    'an older API without a dashboard route falls back to complete history',
+    () async {
+      final api = DashboardOrdersApi()..summaryStatus = 404;
+      final repository = OrdersRepository(
+        apiClient: api,
+        accessTokenProvider: () async => 'token',
+      );
+      final orders = await repository.getCustomerOrders(
+        'profile',
+        dashboard: true,
+      );
+      expect(orders.single.id, 'active');
+      expect(api.paths, [
+        '/api/v1/customer-profiles/profile/orders/dashboard',
+        '/api/v1/customer-profiles/profile/orders',
+      ]);
+    },
+  );
+  test(
+    'summary authorization and server failures do not trigger history fallback',
+    () async {
+      for (final status in [401, 500]) {
+        final api = DashboardOrdersApi()..summaryStatus = status;
+        final repository = OrdersRepository(
+          apiClient: api,
+          accessTokenProvider: () async => 'token',
+        );
+        await expectLater(
+          repository.getCustomerOrders('profile', dashboard: true),
+          throwsA(isA<ApiException>()),
+        );
+        expect(api.paths.length, 1);
+      }
+    },
+  );
+  test(
     'an older active order on the second page remains visible to the dashboard',
     () async {
       final api = PagedOrdersApi();
@@ -38,6 +90,30 @@ void main() {
       isTrue,
     );
   });
+}
+
+class DashboardOrdersApi extends ApiClient {
+  int summaryStatus = 200;
+  final paths = <String>[];
+  @override
+  Future<ApiResponse> request({
+    required String method,
+    required String path,
+    Map<String, String> queryParameters = const {},
+    Map<String, String> headers = const {},
+    Map<String, dynamic>? body,
+  }) async {
+    paths.add(path);
+    return ApiResponse(
+      statusCode: path.endsWith('/dashboard') ? summaryStatus : 200,
+      body: {
+        'items': [orderJson('active', 'ACTIVE')],
+        'pageNumber': 1,
+        'pageSize': 20,
+        'totalCount': 1,
+      },
+    );
+  }
 }
 
 Map<String, dynamic> orderJson(String id, String status) => {

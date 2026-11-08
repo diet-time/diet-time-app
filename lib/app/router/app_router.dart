@@ -29,6 +29,7 @@ import 'package:diet_time/features/personalization/presentation/profile_persiste
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:diet_time/core/performance/performance_trace.dart';
 
 abstract final class AppRoutes {
   static const splash = '/';
@@ -62,6 +63,7 @@ abstract final class AppRoutes {
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    observers: [PerformanceNavigatorObserver()],
     initialLocation: AppRoutes.splash,
     routes: [
       GoRoute(
@@ -301,6 +303,7 @@ CustomTransitionPage<void> _slidePage({
 }) {
   return CustomTransitionPage<void>(
     key: state.pageKey,
+    name: state.fullPath,
     transitionDuration: const Duration(milliseconds: 360),
     reverseTransitionDuration: const Duration(milliseconds: 300),
     child: child,

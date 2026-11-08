@@ -8,6 +8,7 @@ import 'package:diet_time/features/dashboard/data/upcoming_meals_repository.dart
 import 'package:diet_time/features/dashboard/domain/upcoming_meals.dart';
 import 'package:diet_time/features/dashboard/presentation/daily_meals_panel.dart';
 import 'package:flutter/material.dart';
+import 'package:diet_time/core/performance/performance_trace.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -28,7 +29,8 @@ class UpcomingDeliveriesScreen extends ConsumerStatefulWidget {
 }
 
 class _UpcomingDeliveriesScreenState
-    extends ConsumerState<UpcomingDeliveriesScreen> {
+    extends ConsumerState<UpcomingDeliveriesScreen>
+    with FirstContentTrace {
   late DateTime _visibleMonth;
   DateTime? _selectedDate;
   final Map<String, List<UpcomingMealDay>> _serviceDays = {};
@@ -114,6 +116,7 @@ class _UpcomingDeliveriesScreenState
       });
     }
     final byDate = _byDate;
+    traceFirstContent('delivery_calendar', ready: !loading && !failed);
     if (!loading && !failed && !byDate.containsKey(_selectedDate)) {
       final dates = byDate.keys.toList()..sort();
       final today = DateUtils.dateOnly(

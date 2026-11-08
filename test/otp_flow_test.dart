@@ -367,6 +367,46 @@ void main() {
     );
   });
 
+  test(
+    'simultaneous unauthorized responses rotate the refresh token once',
+    () async {
+      final storage = SecureStorageService(
+        storage: const FlutterSecureStorage(),
+      );
+      await storage.write(SecureStorageService.accessTokenKey, 'valid-access');
+      await storage.write(
+        SecureStorageService.accessTokenExpiresAtKey,
+        DateTime.now()
+            .toUtc()
+            .add(const Duration(minutes: 10))
+            .toIso8601String(),
+      );
+      await storage.write(
+        SecureStorageService.refreshTokenKey,
+        'refresh-token',
+      );
+      await storage.write(
+        SecureStorageService.refreshTokenExpiresAtKey,
+        DateTime.now().toUtc().add(const Duration(days: 30)).toIso8601String(),
+      );
+      final repository = _RefreshAuthenticationRepository();
+      final container = ProviderContainer(
+        overrides: [
+          secureStorageServiceProvider.overrideWithValue(storage),
+          authenticationRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(otpAuthControllerProvider.notifier);
+      expect(await controller.restoreSession(), isTrue);
+      final results = await Future.wait(
+        List.generate(8, (_) => controller.refreshAfterUnauthorized()),
+      );
+      expect(results, everyElement(isTrue));
+      expect(repository.refreshCount, 1);
+    },
+  );
+
   testWidgets('valid Qatar phone is normalized and requests OTP once', (
     tester,
   ) async {

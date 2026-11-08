@@ -1223,6 +1223,7 @@ class _FakeOrdersRepository extends OrdersRepository {
   Future<List<CustomerOrderSummary>> getCustomerOrders(
     String profileId, {
     int pageSize = 20,
+    bool dashboard = false,
   }) async => orders;
 
   @override
@@ -1333,6 +1334,7 @@ class _FailingOrdersRepository extends OrdersRepository {
   Future<List<CustomerOrderSummary>> getCustomerOrders(
     String profileId, {
     int pageSize = 20,
+    bool dashboard = false,
   }) => throw const ApiException(ApiFailure.server, statusCode: 500);
 }
 
@@ -1346,6 +1348,7 @@ class _CountingOrdersRepository extends OrdersRepository {
   Future<List<CustomerOrderSummary>> getCustomerOrders(
     String profileId, {
     int pageSize = 20,
+    bool dashboard = false,
   }) async {
     profileIds.add(profileId);
     return const [];

@@ -155,7 +155,7 @@ ApiResponse _successResponse() => const ApiResponse(
   },
 );
 
-class _FakeApiClient implements ApiClient {
+class _FakeApiClient extends ApiClient {
   _FakeApiClient(this.result);
 
   final Object result;

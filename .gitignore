@@ -121,3 +121,6 @@ app.*.symbols
 
 # Local API keys (commit the matching .example files only)
 android/local.properties
+
+# Local performance measurements and disposable PostgreSQL clusters
+/artifacts/performance*

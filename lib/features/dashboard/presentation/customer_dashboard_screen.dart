@@ -1,6 +1,8 @@
 import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/language/presentation/dashboard_language_switcher.dart';
 import 'dart:async';
+import 'package:diet_time/core/performance/performance_trace.dart';
+import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/dashboard/presentation/package_management_provider.dart';
 import 'package:diet_time/features/app_tour/app_tour_controller.dart';
 import 'package:diet_time/features/app_tour/app_tour_host.dart';
@@ -39,9 +41,18 @@ class _CustomerDashboardScreenState
     extends ConsumerState<CustomerDashboardScreen>
     with WidgetsBindingObserver {
   int _tabIndex = 0;
+  final Set<int> _visitedTabs = {0};
+  final Stopwatch _firstContentWatch = Stopwatch()..start();
+  bool _contentRecorded = false;
   bool _profileLoadQueued = false;
   bool _setupRedirectQueued = false;
   String? _tourDestination;
+
+  void _selectTab(int index) => setState(() {
+    _visitedTabs.add(_tabIndex);
+    _visitedTabs.add(index);
+    _tabIndex = index;
+  });
 
   @override
   void initState() {
@@ -93,10 +104,22 @@ class _CustomerDashboardScreenState
     ref.watch(appTourIdentityProvider);
     ref.read(appTourControllerProvider.notifier).navigate = _tourNavigate;
     final ready =
+        state is DashboardSummariesReady ||
         state is DashboardNoOrders ||
         state is DashboardWithoutActivePlan ||
         state is DashboardWithActivePlan ||
         state is DashboardWithMultipleActivePlans;
+    if (ready && !_contentRecorded) {
+      _contentRecorded = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          PerformanceTrace.record(
+            'dashboard.first_content_frame',
+            _firstContentWatch,
+          );
+        }
+      });
+    }
     if (ready && profile.isCompleted && _tabIndex == 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted &&
@@ -109,6 +132,8 @@ class _CustomerDashboardScreenState
               .maybeStart(
                 hasPlanCards: dashboardPlanOrders(state).isNotEmpty,
                 hasActivePlan:
+                    state is DashboardSummariesReady &&
+                        state.activeOrders.isNotEmpty ||
                     state is DashboardWithActivePlan ||
                     state is DashboardWithMultipleActivePlans,
               );
@@ -119,12 +144,12 @@ class _CustomerDashboardScreenState
       _DashboardHome(
         state: state,
         name: profile.preferredName,
-        onViewAll: () => setState(() => _tabIndex = 1),
+        onViewAll: () => _selectTab(1),
       ),
       _CustomerOrders(state: state),
       _DashboardCalendar(state: state),
       CustomerProfileTab(
-        onBack: () => setState(() => _tabIndex = 0),
+        onBack: () => _selectTab(0),
         onEditAddress: _editAddress,
         onEditProfile: _openCustomerProfile,
         onQuestionnaire: _openQuestionnaire,
@@ -135,12 +160,21 @@ class _CustomerDashboardScreenState
     return Scaffold(
       backgroundColor: const Color(0xFFF8F6EF),
       body: SafeArea(
-        child: IndexedStack(index: _tabIndex, children: pages),
+        child: IndexedStack(
+          index: _tabIndex,
+          children: [
+            for (var index = 0; index < pages.length; index++)
+              if (_visitedTabs.contains(index) || index == _tabIndex)
+                pages[index]
+              else
+                const SizedBox.shrink(),
+          ],
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         key: const ValueKey('dashboardNavigation'),
         selectedIndex: _tabIndex,
-        onDestinationSelected: (index) => setState(() => _tabIndex = index),
+        onDestinationSelected: _selectTab,
         backgroundColor: AppColors.white,
         indicatorColor: AppColors.emeraldGreen.withValues(alpha: .14),
         destinations: [
@@ -198,14 +232,12 @@ class _CustomerDashboardScreenState
     }
     _tourDestination = destination;
     if (!mounted) return;
-    setState(
-      () => _tabIndex = switch (destination) {
-        'orders' => 1,
-        'calendar' => 2,
-        'profile' => 3,
-        _ => 0,
-      },
-    );
+    _selectTab(switch (destination) {
+      'orders' => 1,
+      'calendar' => 2,
+      'profile' => 3,
+      _ => 0,
+    });
     if (destination == 'menu') {
       unawaited(context.push(AppRoutes.menu, extra: 'dashboard'));
     }
@@ -373,6 +405,12 @@ class _DashboardHome extends ConsumerWidget {
       if (single != null) single.order.id: single.detail,
       if (multiple != null) ...multiple.details,
     };
+    final activeOrders = switch (state) {
+      DashboardSummariesReady(:final activeOrders) => activeOrders,
+      DashboardWithActivePlan(:final order) => [order],
+      DashboardWithMultipleActivePlans(:final activeOrders) => activeOrders,
+      _ => <CustomerOrderSummary>[],
+    };
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
     return RefreshIndicator(
       onRefresh: () =>
@@ -447,13 +485,9 @@ class _DashboardHome extends ConsumerWidget {
               )
             else
               _MultiPlanCarousel(orders: plans, details: details),
-            if (single != null || multiple != null) ...[
+            if (activeOrders.isNotEmpty) ...[
               const SizedBox(height: 16),
-              TomorrowDeliveriesSection(
-                orders: single != null
-                    ? [single.order]
-                    : multiple!.activeOrders,
-              ),
+              TomorrowDeliveriesSection(orders: activeOrders),
             ],
           ] else if (state is DashboardWithoutActivePlan ||
               state is DashboardNoOrders) ...[
@@ -1529,9 +1563,12 @@ class _DashboardCalendar extends ConsumerWidget {
         state is DashboardNeedsOnboarding) {
       return const Center(child: CircularProgressIndicator());
     }
-    final orders = _ordersFrom(
-      state,
-    ).where((o) => o.isCurrent || o.isCompleted).toList();
+    final history = _historyFor(ref, state);
+    if (history.isLoading) return const _DashboardSkeleton();
+    if (history.hasError) return _historyError(context, ref);
+    final orders = history.requireValue
+        .where((o) => o.isCurrent || o.isCompleted)
+        .toList();
     if (orders.isNotEmpty) {
       return CustomerDeliveryCalendar(
         orders: orders,
@@ -1625,104 +1662,139 @@ class _CustomerOrdersState extends ConsumerState<_CustomerOrders> {
         state is DashboardNeedsOnboarding) {
       return const Center(child: CircularProgressIndicator());
     }
-    final orders = _ordersFrom(state);
+    final history = _historyFor(ref, state);
+    if (history.isLoading) return const _DashboardSkeleton();
+    if (history.hasError) return _historyError(context, ref);
+    final orders = history.requireValue;
     final filtered = _filter == 'ALL'
         ? orders
         : orders.where((order) => order.status == _filter).toList();
     return RefreshIndicator(
       onRefresh: () =>
           ref.read(customerDashboardControllerProvider.notifier).refresh(),
-      child: ListView(
+      child: CustomScrollView(
         key: const ValueKey('tourOrdersList'),
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      context.customerCopy('My Orders'),
-                      style: TextStyle(
-                        color: AppColors.darkGreen,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
+            sliver: SliverMainAxisGroup(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  context.customerCopy('My Orders'),
+                                  style: TextStyle(
+                                    color: AppColors.darkGreen,
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                SizedBox(height: 3),
+                                Text(
+                                  context.customerCopy(
+                                    'All your meal orders in one place',
+                                  ),
+                                  style: TextStyle(
+                                    color: Color(0xFF81908B),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: AppColors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.darkGreen.withValues(
+                                  alpha: .07,
+                                ),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.filter_list_rounded,
+                              color: AppColors.darkGreen,
+                              size: 20,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            for (final filter in [
+                              ('ALL', context.customerCopy('All Orders')),
+                              (
+                                'PENDING_APPROVAL',
+                                context.customerCopy('Pending Approval'),
+                              ),
+                              ('ON_HOLD', context.customerCopy('On Hold')),
+                              ('REJECTED', context.customerCopy('Rejected')),
+                              ('CONFIRMED', context.customerCopy('Confirmed')),
+                              ('PENDING', context.customerCopy('Pending')),
+                              ('CANCELLED', context.customerCopy('Cancelled')),
+                            ]) ...[
+                              _OrderFilterChip(
+                                label: filter.$2,
+                                count: filter.$1 == 'ALL'
+                                    ? orders.length
+                                    : orders
+                                          .where(
+                                            (order) =>
+                                                order.status == filter.$1,
+                                          )
+                                          .length,
+                                selected: _filter == filter.$1,
+                                onTap: () =>
+                                    setState(() => _filter = filter.$1),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      if (filtered.isEmpty)
+                        _SurfaceCard(
+                          child: Text(
+                            context.customerCopy(
+                              'No orders found for this status.',
+                            ),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: AppColors.darkGreen),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (filtered.isNotEmpty)
+                  SliverList.builder(
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _DetailedOrderCard(
+                        key: ValueKey(filtered[index].id),
+                        order: filtered[index],
                       ),
                     ),
-                    SizedBox(height: 3),
-                    Text(
-                      context.customerCopy('All your meal orders in one place'),
-                      style: TextStyle(color: Color(0xFF81908B), fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.darkGreen.withValues(alpha: .07),
                   ),
-                ),
-                child: const Icon(
-                  Icons.filter_list_rounded,
-                  color: AppColors.darkGreen,
-                  size: 20,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final filter in [
-                  ('ALL', context.customerCopy('All Orders')),
-                  (
-                    'PENDING_APPROVAL',
-                    context.customerCopy('Pending Approval'),
-                  ),
-                  ('ON_HOLD', context.customerCopy('On Hold')),
-                  ('REJECTED', context.customerCopy('Rejected')),
-                  ('CONFIRMED', context.customerCopy('Confirmed')),
-                  ('PENDING', context.customerCopy('Pending')),
-                  ('CANCELLED', context.customerCopy('Cancelled')),
-                ]) ...[
-                  _OrderFilterChip(
-                    label: filter.$2,
-                    count: filter.$1 == 'ALL'
-                        ? orders.length
-                        : orders
-                              .where((order) => order.status == filter.$1)
-                              .length,
-                    selected: _filter == filter.$1,
-                    onTap: () => setState(() => _filter = filter.$1),
-                  ),
-                  const SizedBox(width: 8),
-                ],
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          if (filtered.isEmpty)
-            _SurfaceCard(
-              child: Text(
-                context.customerCopy('No orders found for this status.'),
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.darkGreen),
-              ),
-            )
-          else
-            for (final order in filtered) ...[
-              _DetailedOrderCard(order: order),
-              const SizedBox(height: 12),
-            ],
         ],
       ),
     );
@@ -1771,7 +1843,7 @@ class _OrderFilterChip extends StatelessWidget {
 }
 
 class _DetailedOrderCard extends ConsumerWidget {
-  const _DetailedOrderCard({required this.order});
+  const _DetailedOrderCard({super.key, required this.order});
 
   final CustomerOrderSummary order;
 
@@ -2147,12 +2219,31 @@ void _startNewOrder(BuildContext context, WidgetRef ref) {
 
 List<CustomerOrderSummary> _ordersFrom(CustomerDashboardState state) =>
     switch (state) {
+      DashboardSummariesReady(:final orders) => orders,
       DashboardWithActivePlan(:final orders) => orders,
       DashboardWithMultipleActivePlans(:final orders) => orders,
       DashboardWithoutActivePlan(:final orders) => orders,
       DashboardNoOrders() => const [],
       _ => const [],
     };
+
+AsyncValue<List<CustomerOrderSummary>> _historyFor(
+  WidgetRef ref,
+  CustomerDashboardState state,
+) {
+  final id = ref.read(customerDashboardControllerProvider.notifier).profileId;
+  return id == null
+      ? AsyncData(_ordersFrom(state))
+      : ref.watch(customerOrderHistoryProvider(id));
+}
+
+Widget _historyError(BuildContext context, WidgetRef ref) =>
+    _DashboardErrorView(
+      message: context.customerCopy(
+        'We could not load your orders. Please try again.',
+      ),
+      onRetry: () => ref.invalidate(customerOrderHistoryProvider),
+    );
 
 String _displayName(String? name) {
   final value = name?.trim();

@@ -1,0 +1,280 @@
+Diet Time performance investigation and implementation
+8 November 2026
+
+Scope and evidence
+------------------
+Changes are in the Flutter repository and the sibling diet-time-api repository.
+No deployment, production database, real OTP, WhatsApp message or paid service
+was used. The API and schedule tests used disposable local PostgreSQL 18 databases.
+Railway metrics and physical Android/iOS devices were not available.
+
+These measurements identify local application costs. They do not establish
+production endpoint rankings, mobile render times, Railway cold starts, or
+compliance with the 500 ms / 2 second targets.
+
+Root causes found
+-----------------
+1. ApiClient created and force-closed a dart:io HttpClient on every request.
+   The pre-change loopback test opened six connections for six sequential calls.
+   A shared client now opens one connection and closes with its Riverpod provider.
+   Headers, bearer tokens, response bodies and customer data are not cached.
+
+2. Dashboard loading fetched every history page sequentially, then waited for
+   every current order's full details, before publishing any cards. A controlled
+   pending-detail test observed DashboardLoading before the change and
+   DashboardSummariesReady afterward. A detail timeout now leaves summaries usable.
+
+3. The initial IndexedStack built unvisited tabs. Calendar/history work could
+   start before the customer opened those tabs. Tabs now mount on first visit
+   and remain mounted on later switches. A regression test verifies that service
+   day requests are absent before opening Calendar.
+
+4. The Orders tab eagerly built every detailed card, which watches an order-detail
+   provider. SliverList.builder now constructs cards lazily. Complete history is
+   still fetched through the existing paginated endpoint when Orders or Calendar
+   is visited; progressive history pagination is a possible later improvement.
+
+5. Catalog images and 36 logical-pixel read-only dish images lacked decode bounds.
+   They now specify display-size cacheWidth. Flutter's shared image cache and
+   existing API thumbnail selection are retained. cacheWidth reduces decoded
+   bitmap memory; it does not turn a full-resolution server object into a smaller
+   network download. Media without an existing thumbnail still needs one upstream.
+
+6. Simultaneous protected 401 responses could each rotate the refresh token.
+   They now share one refresh promise. Eight concurrent callers are tested to
+   cause one rotation. Secure storage, session validation and OTP verification
+   remain in place. Startup session restoration was already coalesced.
+
+Measured before and after
+-------------------------
+Database-backed service benchmark, final run:
+  Fixture: 80 newer cancelled orders and one older active plan.
+  PostgreSQL 18, Npgsql connection pooling enabled, five warm runs per path.
+  Baseline: retained full-history path, five pages plus active order details.
+  Optimized: dashboard summary path; details are deferred from initial rendering.
+
+  Metric                          Before             After
+  SELECT command count            38                 6
+  Service median                  25.607 ms          3.578 ms
+  Minimum                         20.100 ms          3.193 ms
+  Maximum                         49.354 ms          5.141 ms
+
+These are service timings, excluding HTTP, auth, audit writes, TLS and mobile
+network time. The baseline and optimized paths execute in the same test build.
+Warm-host variability is material: an earlier pooled run measured 73.448 ms
+versus 11.175 ms with the same command counts. An initial run with fixture
+pooling disabled measured 1069.524 ms versus 137.961 ms and is not used as the
+headline comparison. Production Npgsql pooling was already enabled by default;
+no production connection-pooling configuration was changed.
+
+Transport benchmark:
+  Six loopback requests: six connections before, one afterward.
+  First isolated comparison: 166.946 ms before, 127.935 ms afterward.
+  These single elapsed-time samples are noisy; connection count is the regression
+  assertion. A later pooled run completed in 56.586 ms. No production TLS or DNS
+  speedup is claimed from these loopback timings.
+
+Slowest measured HTTP operations
+--------------------------------
+Final local ASP.NET TestServer + PostgreSQL run, pooling enabled, one active plan.
+Three warm requests per endpoint; median duration includes the local request
+pipeline and response read. Network transport, TLS and Railway are absent.
+
+  Endpoint family             Median       Response bytes
+  tomorrow-menu               19.591 ms    5883
+  orders/dashboard            12.049 ms     714
+  customer orders              8.918 ms     715
+  upcoming-meals               8.130 ms    6583
+  package-management           7.929 ms     447
+  order details                7.047 ms    1033
+
+This one-order fixture is for route-level timing and ownership/cache-header
+verification. It is separate from the 81-order service benchmark. The meal-plan
+catalog, cold requests and production endpoints have not been ranked.
+
+Database plans and indexes
+--------------------------
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ran against captured, parameterized SELECTs
+in a disposable fixture database. Final execution times:
+  Order summaries joined with purchased meals/delivery weekdays: 0.246 ms
+  Confirmed future pauses:                                     0.033 ms
+  Profile ownership check:                                     0.031 ms
+  Meal-type lookup:                                           0.030 ms
+  Persisted service days:                                     0.030 ms
+  Package change requests:                                    0.017 ms
+
+All plans are small local fixtures, not representative production distributions.
+They do not justify new indexes. Database indexes added: NONE. Migrations: NONE.
+The main demonstrated database improvement is fewer round trips and historical
+rows loaded for initial cards, rather than a faster individual SQL plan.
+
+The existing repeatable-read transaction, ownership check, purchased entitlements,
+PackageScheduleProjection and SubscriptionScheduleRules remain authoritative.
+EF calls on each DbContext remain sequential. No concurrent EF context use was
+introduced. Existing Twilio OTP calls use async HTTP with a timeout; notification
+sends already use the background outbox. Those workflows were not rewritten.
+
+Dashboard API and freshness
+--------------------------
+New authorized GET:
+  /api/v1/customer-profiles/{customerProfileId}/orders/dashboard
+
+It returns all current/reviewable plans plus the three newest orders, even when
+an active plan is older than every recent historical order. It returns purchased
+summary fields and authoritative schedule summaries, without a full meal calendar
+or historical-order payload. Response Cache-Control is no-store.
+
+Flutter falls back to the previous complete-history endpoint only for 404/405
+to support staged API rollout. Server/authentication failures are not hidden by
+that fallback. On the current API, complete entitlement/schedule summaries need
+no full order-detail requests for home. Older/incomplete responses hydrate details
+independently while summaries and tomorrow's delivery section render.
+
+No persistent cache was added for schedules, deliveries, selections or customers.
+History providers are profile-keyed, shared only while mounted, and invalidated
+on dashboard refresh and customer clear. Session identity changes clear dashboard
+state. Generation checks prevent an old asynchronous result restoring a signed-out
+customer's dashboard. Existing order/address/selection/package mutation refresh
+paths and schedule fingerprint notifications remain in place. Existing package
+polling and app-resume refresh continue to detect server-side changes.
+
+Only the public meal-plan catalog gets an explicit five-minute provider TTL,
+keyed by language. Failed catalog requests are not retained. Price validation at
+checkout and image URL resolution are unchanged. Catalog navigation now shows
+static skeleton cards immediately, with no shimmer timer or additional dependency.
+
+Diagnostics and measurement procedure
+------------------------------------
+Flutter:
+  flutter run --profile --dart-define=PERFORMANCE_TRACE=true
+  Use Flutter DevTools Performance view and the diet_time.performance log stream.
+  Events include startup.first_frame, navigation.<route>.first_frame,
+  auth.restore, auth.refresh_after_401, dashboard.summaries_ready,
+  dashboard.details_ready for legacy hydration, dashboard.first_content_frame,
+  order_details / delivery_calendar / meal_plans / meal_plan_details content frames,
+  API endpoint-family duration/outcome, and plan image first-frame/cache outcome.
+  A skeleton's first frame is distinct from successful data's content frame.
+  Screen content traces start when their state mounts; navigation traces start
+  when the route is pushed/popped. They are not interchangeable metrics.
+
+API:
+  API_STARTUP is logged at Information when the server starts accepting requests.
+  API_REQUEST covers total pipeline duration, including audit work.
+  API_ACTION covers controller execution, including awaited service work, excluding
+  middleware audit recording and response serialization. It is an inclusive
+  controller/service metric, not independent instrumentation of every service.
+  DB_COMMAND logs execution duration and a SHA-256 SQL fingerprint.
+  DB_CONNECTION_OPEN separates pooled/new connection acquisition latency.
+  TraceId correlates events. Static route templates replace customer/order IDs.
+  New diagnostics do not log SQL parameters, tokens, bodies or connection strings.
+  Successful fast operations log at Debug; requests/actions >=500 ms, commands
+  >=200 ms and connection opens >=100 ms log at Warning. Exceptions remain in the
+  existing exception logs. EF command timing excludes full result materialization.
+
+For a bounded staging measurement window, set this Serilog category override:
+  Serilog__MinimumLevel__Override__DietTime.Meal.Api.Middleware=Debug
+Restore the normal log level afterward. Rank endpoint and query-fingerprint p50,
+p95 and maximum over repeated cold and warm runs. Compare total API_REQUEST with
+API_ACTION and DB_COMMAND; the existing synchronous audit persistence adds its
+own work and has deliberately not been bypassed or made lossy.
+
+Local reproducible database check, from the Flutter repository:
+  powershell -File tool/run_performance_database.ps1
+Optional parameters: -PostgresBin <installed bin directory> -Port <unused port>.
+The script creates a unique loopback-only PostgreSQL cluster, runs the sibling
+API tests, stops the server and removes only that generated cluster. It does not
+use application database credentials. Both repositories must contain this change.
+
+Validation and remaining release checks
+--------------------------------------
+Full Flutter suite: 559 passed. Final targeted suite: 127 passed, covering the
+image/skeleton/tab/summary and authentication changes. Full-suite evidence is in
+artifacts/performance-full-final-tests.log.
+Final Dart analysis: no issues. API build: passed, existing compiler warnings.
+Real PostgreSQL integration/benchmark tests: 6 passed, zero skipped.
+Coverage includes old active plans, multiple plans, pending/approved pause,
+resumption, committed tomorrow, suspended days, ownership isolation, no-store
+headers, summary fallback, detail failure, logout races, token-refresh coalescing,
+stalled body timeout, connection reuse and per-request bearer isolation.
+
+Android release build was attempted and could not start Gradle: JAVA_HOME was
+unset and no java executable was available. No JDK was installed or SDK settings
+changed. Build again with an installed supported JDK and Android toolchain.
+iOS/TestFlight builds require macOS/Xcode; they could not be run on Windows.
+
+Physical cold/warm startup, first/return dashboard, Order Details, Calendar,
+Meal Plans, bottom-tab switching, slow mobile networks and frame-drop profiling
+remain device checks. Run them with multiple subscriptions and after order,
+pause approval, cancellation, resumption, meal selection and address changes.
+Compare repeated p50/p95 timings on both release platforms; widget tests and
+TestServer measurements cannot substitute for that matrix.
+
+Railway recommendation
+----------------------
+No configuration or paid infrastructure changes are justified by current evidence.
+On staging, capture API_STARTUP, first-versus-subsequent API_REQUEST times, separate
+DB_CONNECTION_OPEN times, deployment/restart timestamps, CPU and memory charts,
+and request rates across the same test interval. Compare client API elapsed time
+with server pipeline time to separate network from server work. Verify the actual
+database region/connection configuration and pool occupancy before changing it.
+Recommend cold-start/resource settings only if those measurements establish the
+cause. No Railway account, deployment or resource settings were accessed here.
+
+Files changed
+-------------
+Flutter application:
+  .gitignore
+  lib/main.dart
+  lib/app/router/app_router.dart
+  lib/core/performance/performance_trace.dart (new)
+  lib/core/network/api_client.dart
+  lib/core/widgets/meal_plan_image.dart
+  lib/features/authentication/presentation/otp_auth_controller.dart
+  lib/features/checkout/data/orders_repository.dart
+  lib/features/dashboard/presentation/customer_dashboard_controller.dart
+  lib/features/dashboard/presentation/customer_dashboard_screen.dart
+  lib/features/dashboard/presentation/order_details_screen.dart
+  lib/features/dashboard/presentation/tomorrow_delivery_card.dart
+  lib/features/dashboard/presentation/upcoming_deliveries_screen.dart
+  lib/features/plans/data/meal_plan_repository.dart
+  lib/features/plans/presentation/meal_plan_screen.dart
+  lib/features/plans/presentation/meal_plan_details_screen.dart
+Flutter tests:
+  api_connection_performance_test.dart (new), dashboard_performance_test.dart (new),
+  dashboard_order_pagination_test.dart, calendar_multiple_orders_test.dart,
+  otp_flow_test.dart, authentication_repository_test.dart, customer_dashboard_test.dart,
+  new_customer_onboarding_test.dart, questionnaire_checkout_flow_test.dart,
+  questionnaire_landing_test.dart, widget_test.dart.
+  Existing repository fakes were adjusted for the optional dashboard request flag.
+Tools/documentation:
+  tool/run_performance_database.ps1 (new), docs/performance-report.txt (new).
+Sibling API:
+  src/Apis/DietTime.Meal.Api/Controllers/OrdersController.cs
+  src/Apis/DietTime.Meal.Api/Program.cs
+  src/Apis/DietTime.Meal.Api/Middleware/PerformanceDiagnostics.cs (new)
+  src/BuildingBlocks/DietTime.Application/Abstractions.cs
+  src/BuildingBlocks/DietTime.Persistence/OrderService.cs
+  tests/DietTime.Meal.Api.IntegrationTests/CustomerPerformanceTests.cs (new)
+  tests/DietTime.Meal.Api.IntegrationTests/PauseDashboardScheduleTests.cs
+
+Evidence artifacts (generated locally, excluded from Git)
+--------------------------------------------------------
+  artifacts/performance/postgres-benchmark.txt
+  artifacts/performance/postgres-plans.txt
+  artifacts/performance/local-http-endpoints.txt
+  artifacts/performance-api-tests.log
+  artifacts/performance-api-build-final.log
+  artifacts/performance-full-tests.log
+  artifacts/performance-final-targeted-tests.log
+  artifacts/performance-full-final-tests.log
+  artifacts/performance-analysis-final.log
+  artifacts/performance-android-release.log
+
+Technical references
+--------------------
+Persistent dart:io HttpClient connections:
+https://api.flutter.dev/flutter/dart-io/HttpClient-class.html
+EF Core DbContext concurrency restrictions:
+https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/
+PostgreSQL EXPLAIN ANALYZE/BUFFERS execution semantics:
+https://www.postgresql.org/docs/18/sql-explain.html

@@ -6,6 +6,7 @@ import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:diet_time/core/performance/performance_trace.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:diet_time/features/personalization/presentation/customer_onboarding_coordinator.dart';
@@ -18,7 +19,8 @@ class MealPlanScreen extends ConsumerStatefulWidget {
   ConsumerState<MealPlanScreen> createState() => _MealPlanScreenState();
 }
 
-class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
+class _MealPlanScreenState extends ConsumerState<MealPlanScreen>
+    with FirstContentTrace {
   String? _selectedCode;
   bool _opening = false;
 
@@ -43,6 +45,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
   Widget build(BuildContext context) {
     final language = Localizations.localeOf(context).languageCode;
     final plans = ref.watch(mealPlansProvider(language));
+    traceFirstContent('meal_plans', ready: plans.hasValue);
     final canPop = Navigator.of(context).canPop();
     final dashboardAvailable = ref.watch(customerDashboardAvailableProvider);
     return Scaffold(
@@ -77,11 +80,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen> {
               ),
             Expanded(
               child: plans.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.emeraldGreen,
-                  ),
-                ),
+                loading: () => const _PlanSkeleton(),
                 error: (_, _) => _PlanLoadState(
                   onRetry: () => ref.invalidate(mealPlansProvider(language)),
                 ),
@@ -294,12 +293,38 @@ class _PlanCard extends StatelessWidget {
   );
 }
 
-class _PlanImage extends StatelessWidget {
+class _PlanImage extends StatefulWidget {
   const _PlanImage({this.imageUrl});
   final String? imageUrl;
   @override
+  State<_PlanImage> createState() => _PlanImageState();
+}
+
+class _PlanImageState extends State<_PlanImage> {
+  Stopwatch _watch = Stopwatch()..start();
+  bool _recorded = false;
+  @override
+  void didUpdateWidget(_PlanImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageUrl != widget.imageUrl) {
+      _watch = Stopwatch()..start();
+      _recorded = false;
+    }
+  }
+
+  void _record(String outcome) {
+    if (_recorded) return;
+    _recorded = true;
+    PerformanceTrace.record(
+      'image.plan_catalog.first_frame',
+      _watch,
+      outcome: outcome,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final url = _resolveImageUrl(imageUrl);
+    final url = _resolveImageUrl(widget.imageUrl);
     const placeholder = ColoredBox(
       color: Color(0xFFEAF0E3),
       child: Center(
@@ -312,13 +337,47 @@ class _PlanImage extends StatelessWidget {
     );
     return url.isEmpty
         ? placeholder
-        : Image.network(
-            url,
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-            errorBuilder: (_, _, _) => placeholder,
+        : LayoutBuilder(
+            builder: (context, constraints) => Image.network(
+              url,
+              cacheWidth:
+                  (constraints.maxWidth *
+                          MediaQuery.devicePixelRatioOf(context))
+                      .ceil(),
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              errorBuilder: (_, _, _) {
+                _record('failure');
+                return placeholder;
+              },
+              frameBuilder: (_, child, frame, cached) {
+                if (frame == null && !cached) return placeholder;
+                _record(cached ? 'cached' : 'loaded');
+                return child;
+              },
+            ),
           );
   }
+}
+
+class _PlanSkeleton extends StatelessWidget {
+  const _PlanSkeleton();
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: ListView.separated(
+      key: const ValueKey('mealPlanSkeleton'),
+      padding: const EdgeInsets.all(16),
+      itemCount: 3,
+      separatorBuilder: (_, _) => const SizedBox(height: 16),
+      itemBuilder: (_, _) => Container(
+        height: 130,
+        decoration: BoxDecoration(
+          color: const Color(0xFFE4E8DF),
+          borderRadius: BorderRadius.circular(18),
+        ),
+      ),
+    ),
+  );
 }
 
 class _PlanLoadState extends StatelessWidget {

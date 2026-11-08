@@ -150,6 +150,8 @@ void main() {
             child: const MaterialApp(home: CustomerDashboardScreen()),
           ),
         );
+        await tester.pump();
+        expect(repository.dayRequests, isEmpty);
         await tester.tap(find.byKey(const ValueKey('dashboardCalendarTab')));
         await tester.pumpAndSettle();
         expect(find.text('2 scheduled deliveries'), findsOneWidget);

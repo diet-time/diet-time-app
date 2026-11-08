@@ -303,6 +303,8 @@ class _ReadOnlyDish extends StatelessWidget {
               child: item.imageUrl?.isNotEmpty == true
                   ? Image.network(
                       item.imageUrl!,
+                      cacheWidth: (36 * MediaQuery.devicePixelRatioOf(context))
+                          .ceil(),
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => const Icon(
                         Icons.restaurant_outlined,

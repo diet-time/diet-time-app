@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:diet_time/core/performance/performance_trace.dart';
 import 'package:diet_time/features/personalization/presentation/profile_persistence_controller.dart';
 import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 
@@ -121,6 +122,7 @@ final otpAuthControllerProvider =
 class OtpAuthController extends Notifier<OtpAuthState> {
   Timer? _resendTimer;
   Future<bool>? _sessionRestore;
+  Future<bool>? _unauthorizedRefresh;
   int _sessionGeneration = 0;
   Future<void>? _credentialWrite;
 
@@ -133,9 +135,13 @@ class OtpAuthController extends Notifier<OtpAuthState> {
 
   Future<bool> restoreSession() {
     if (state.isAuthenticated) return Future.value(true);
-    return _sessionRestore ??= _restoreSession().whenComplete(() {
-      _sessionRestore = null;
-    });
+    return _sessionRestore ??=
+        PerformanceTrace.measure(
+          'auth.restore',
+          () => _restoreSession(),
+        ).whenComplete(() {
+          _sessionRestore = null;
+        });
   }
 
   /// Recheck expiry even if this controller previously restored the session.
@@ -250,7 +256,13 @@ class OtpAuthController extends Notifier<OtpAuthState> {
 
   /// Retries the application's existing refresh-token flow after a protected
   /// endpoint returns 401. A failed refresh clears the resumable session.
-  Future<bool> refreshAfterUnauthorized() async {
+  Future<bool> refreshAfterUnauthorized() =>
+      _unauthorizedRefresh ??= PerformanceTrace.measure(
+        'auth.refresh_after_401',
+        _refreshAfterUnauthorized,
+      ).whenComplete(() => _unauthorizedRefresh = null);
+
+  Future<bool> _refreshAfterUnauthorized() async {
     final generation = _sessionGeneration;
     final refreshed = await _refreshStoredSession(
       preserveSessionOnTransientFailure: false,

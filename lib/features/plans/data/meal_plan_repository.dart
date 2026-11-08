@@ -4,6 +4,7 @@ import 'package:diet_time/core/storage/secure_storage_service.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 
 final mealPlanRepositoryProvider = Provider<MealPlanRepository>((ref) {
   final storage = ref.watch(secureStorageServiceProvider);
@@ -14,10 +15,21 @@ final mealPlanRepositoryProvider = Provider<MealPlanRepository>((ref) {
   );
 });
 
-final mealPlansProvider = FutureProvider.family<List<MealPlanOption>, String>(
-  (ref, language) =>
-      ref.watch(mealPlanRepositoryProvider).getMealPlans(language: language),
-);
+final mealPlansProvider = FutureProvider.autoDispose
+    .family<List<MealPlanOption>, String>((ref, language) async {
+      final plans = await ref
+          .watch(mealPlanRepositoryProvider)
+          .getMealPlans(language: language);
+      if (ref.mounted) {
+        final link = ref.keepAlive();
+        final expiry = Timer(const Duration(minutes: 5), () {
+          link.close();
+          ref.invalidateSelf();
+        });
+        ref.onDispose(expiry.cancel);
+      }
+      return plans;
+    }, retry: (_, _) => null);
 
 typedef MealPlanDetailsRequest = ({MealPlanOption plan, String language});
 

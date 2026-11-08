@@ -6,6 +6,7 @@ import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
 import 'package:flutter/material.dart';
+import 'package:diet_time/core/performance/performance_trace.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:diet_time/core/network/api_client.dart';
@@ -27,7 +28,7 @@ class OrderDetailsScreen extends ConsumerStatefulWidget {
 }
 
 class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, FirstContentTrace {
   String get orderId => widget.orderId;
   @override
   void initState() {
@@ -53,6 +54,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
   @override
   Widget build(BuildContext context) {
     final order = ref.watch(orderDetailsProvider(orderId));
+    traceFirstContent('order_details', ready: order.hasValue);
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F1),
       appBar: AppBar(

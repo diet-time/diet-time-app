@@ -12,6 +12,7 @@ import 'package:diet_time/features/plans/domain/meal_plan_purchase_selection.dar
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
 import 'package:diet_time/features/plans/presentation/subscription_selection_widgets.dart';
 import 'package:flutter/material.dart';
+import 'package:diet_time/core/performance/performance_trace.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:diet_time/features/personalization/presentation/customer_onboarding_coordinator.dart';
@@ -30,7 +31,8 @@ class MealPlanDetailsScreen extends ConsumerStatefulWidget {
       _MealPlanDetailsScreenState();
 }
 
-class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
+class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen>
+    with FirstContentTrace {
   String? _configurationId;
   String? _priceId;
 
@@ -39,6 +41,7 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen> {
     final language = Localizations.localeOf(context).languageCode;
     final request = (plan: widget.plan, language: language);
     final configurations = ref.watch(mealPlanConfigurationsProvider(request));
+    traceFirstContent('meal_plan_details', ready: configurations.hasValue);
     return _PageBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,

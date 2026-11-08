@@ -15,6 +15,14 @@ final ordersRepositoryProvider = Provider<OrdersRepository>((ref) {
   );
 });
 
+// Mounted history tabs share this request; home never subscribes to it.
+final customerOrderHistoryProvider = FutureProvider.autoDispose
+    .family<List<CustomerOrderSummary>, String>(
+      (ref, profileId) =>
+          ref.watch(ordersRepositoryProvider).getCustomerOrders(profileId),
+      retry: (_, _) => null,
+    );
+
 class OrdersRepository {
   const OrdersRepository({
     required this.apiClient,
@@ -54,7 +62,24 @@ class OrdersRepository {
   Future<List<CustomerOrderSummary>> getCustomerOrders(
     String profileId, {
     int pageSize = 20,
+    bool dashboard = false,
   }) async {
+    if (dashboard) {
+      try {
+        final response = await _request(
+          method: 'GET',
+          path: '${ApiEndpoints.customerOrders(profileId)}/dashboard',
+        );
+        final page = CustomerOrdersPage.fromJson(response.body);
+        if (page.items.length != page.totalCount) {
+          throw const ApiException(ApiFailure.invalidResponse);
+        }
+        return page.items;
+      } on ApiException catch (error) {
+        // Older API deployments remain usable; never hide auth/server failures.
+        if (error.statusCode != 404 && error.statusCode != 405) rethrow;
+      }
+    }
     final orders = <CustomerOrderSummary>[];
     final seenIds = <String>{};
     var pageNumber = 1;
