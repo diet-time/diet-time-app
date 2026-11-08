@@ -1,6 +1,6 @@
 import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
-import 'package:diet_time/features/plans/presentation/package_discount_details.dart';
+
 import 'package:diet_time/features/plans/presentation/meal_plan_price_formatter.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/app_button.dart';
@@ -11,7 +11,52 @@ Duration selectionAnimationDuration(BuildContext context) =>
     ? Duration.zero
     : const Duration(milliseconds: 180);
 
-/// A compact, content-sized option shared by the meal and duration selectors.
+/// Dimensions depend on viewport and accessibility settings, never on selection.
+abstract final class SubscriptionCardLayout {
+  static double titleHeight(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(15) * 1.25 * 2;
+  static double subtitleHeight(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(12) * 1.35 * 2;
+  static double priceHeight(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(19) * 1.25;
+  static double discountHeight(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(12) * 1.3 + 8;
+  static double footerHeight(BuildContext context) =>
+      8 + priceHeight(context) + 4 + discountHeight(context);
+  static double height(BuildContext context) =>
+      27 +
+      titleHeight(context) +
+      5 +
+      subtitleHeight(context) +
+      footerHeight(context);
+  static double width(BuildContext context, double available) {
+    final scale = (MediaQuery.textScalerOf(context).scale(15) / 15).clamp(
+      1.0,
+      1.25,
+    );
+    return ((available - 10) / 2)
+        .clamp(180.0 * scale, 240.0 * scale)
+        .clamp(0.0, available);
+  }
+}
+
+class SubscriptionSelectionRow extends StatelessWidget {
+  const SubscriptionSelectionRow({required this.builder, super.key});
+  final List<Widget> Function(double width) builder;
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: builder(
+          SubscriptionCardLayout.width(context, constraints.maxWidth),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Equal slots keep labels, prices and indicators aligned across every option.
 class SubscriptionSelectionCard extends StatelessWidget {
   const SubscriptionSelectionCard({
     required this.title,
@@ -19,10 +64,9 @@ class SubscriptionSelectionCard extends StatelessWidget {
     required this.onTap,
     this.subtitle,
     this.footer,
-    this.width = 176,
+    this.width = 180,
     super.key,
   });
-
   final String title;
   final String? subtitle;
   final Widget? footer;
@@ -38,6 +82,7 @@ class SubscriptionSelectionCard extends StatelessWidget {
     child: AnimatedContainer(
       duration: selectionAnimationDuration(context),
       width: width,
+      height: SubscriptionCardLayout.height(context),
       decoration: BoxDecoration(
         color: selected ? const Color(0xFFE6F2E9) : const Color(0xFFFFFEFA),
         borderRadius: BorderRadius.circular(18),
@@ -56,47 +101,57 @@ class SubscriptionSelectionCard extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.darkGreen,
-                          fontSize: 15,
-                          height: 1.25,
-                          fontWeight: FontWeight.w700,
+                SizedBox(
+                  height: SubscriptionCardLayout.titleHeight(context),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.darkGreen,
+                            fontSize: 15,
+                            height: 1.25,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    Icon(
-                      selected ? Icons.check_circle : Icons.circle_outlined,
-                      size: 17,
-                      color: selected
-                          ? AppColors.emeraldGreen
-                          : const Color(0xFF9CAA99),
-                    ),
-                  ],
+                      const SizedBox(width: 6),
+                      Icon(
+                        selected ? Icons.check_circle : Icons.circle_outlined,
+                        size: 17,
+                        color: selected
+                            ? AppColors.emeraldGreen
+                            : const Color(0xFF9CAA99),
+                      ),
+                    ],
+                  ),
                 ),
-                if (subtitle?.isNotEmpty == true) ...[
-                  const SizedBox(height: 5),
-                  Text(
-                    subtitle!,
+                const SizedBox(height: 5),
+                SizedBox(
+                  height: SubscriptionCardLayout.subtitleHeight(context),
+                  width: double.infinity,
+                  child: Text(
+                    subtitle ?? '',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: AppColors.darkGreen.withValues(alpha: .7),
                       fontSize: 12,
                       height: 1.35,
                     ),
                   ),
-                ],
-                ?footer,
+                ),
+                SizedBox(
+                  height: SubscriptionCardLayout.footerHeight(context),
+                  width: double.infinity,
+                  child: footer,
+                ),
               ],
             ),
           ),
@@ -113,11 +168,13 @@ class PackageSelectionCard extends StatelessWidget {
     required this.onTap,
     this.description,
     this.package,
+    this.width = 180,
     super.key,
   });
   final String name;
   final String? description;
   final MealPlanPackage? package;
+  final double width;
   final bool selected;
   final VoidCallback onTap;
 
@@ -130,7 +187,7 @@ class PackageSelectionCard extends StatelessWidget {
     footer: package == null ? null : PackageCardPrice(package: package!),
     selected: selected,
     onTap: onTap,
-    width: 180,
+    width: width,
   );
 }
 
@@ -225,13 +282,23 @@ class SubscriptionPricingSummary extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            selection,
-                            key: const ValueKey('summaryServiceDays'),
-                            style: TextStyle(
-                              color: AppColors.darkGreen.withValues(alpha: .7),
-                              fontSize: 12,
-                              height: 1.35,
+                          SizedBox(
+                            height:
+                                MediaQuery.textScalerOf(context).scale(12) *
+                                1.35 *
+                                3,
+                            child: Text(
+                              selection,
+                              key: const ValueKey('summaryServiceDays'),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: AppColors.darkGreen.withValues(
+                                  alpha: .7,
+                                ),
+                                fontSize: 12,
+                                height: 1.35,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -247,17 +314,51 @@ class SubscriptionPricingSummary extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    total,
-                                    key: const ValueKey('packageTotal'),
-                                    style: const TextStyle(
-                                      color: AppColors.darkGreen,
-                                      fontSize: 28,
-                                      height: 1.15,
-                                      fontWeight: FontWeight.w800,
+                                  SizedBox(
+                                    height:
+                                        MediaQuery.textScalerOf(
+                                          context,
+                                        ).scale(28) *
+                                        1.15,
+                                    width: double.infinity,
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment:
+                                          AlignmentDirectional.centerStart,
+                                      child: Text(
+                                        total,
+                                        key: const ValueKey('packageTotal'),
+                                        maxLines: 1,
+                                        style: const TextStyle(
+                                          color: AppColors.darkGreen,
+                                          fontSize: 28,
+                                          height: 1.15,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  ?discountDetails,
+                                  SizedBox(
+                                    height:
+                                        SubscriptionCardLayout.discountHeight(
+                                              context,
+                                            ) *
+                                            2 +
+                                        14,
+                                    width: double.infinity,
+                                    child: discountDetails == null
+                                        ? null
+                                        : Align(
+                                            alignment:
+                                                AlignmentDirectional.topStart,
+                                            child: FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              alignment:
+                                                  AlignmentDirectional.topStart,
+                                              child: discountDetails!,
+                                            ),
+                                          ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -302,26 +403,93 @@ class PackageCardPrice extends StatelessWidget {
   const PackageCardPrice({required this.package, super.key});
   final MealPlanPackage package;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 8),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: AlignmentDirectional.centerStart,
-          child: Text(
-            '${package.currencyCode} ${formatMealPlanPriceAmount(package.totalPrice, Localizations.localeOf(context).toLanguageTag())}',
-            style: const TextStyle(
-              color: AppColors.darkGreen,
-              fontSize: 19,
-              fontWeight: FontWeight.w800,
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final arabic = Directionality.of(context) == TextDirection.rtl;
+    String amount(double value) => formatMealPlanPriceAmount(value, locale);
+    Widget fitted(Widget child) => FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: AlignmentDirectional.centerStart,
+      child: child,
+    );
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: SubscriptionCardLayout.priceHeight(context),
+            child: fitted(
+              Text(
+                '${package.currencyCode} ${amount(package.totalPrice)}',
+                maxLines: 1,
+                style: const TextStyle(
+                  color: AppColors.darkGreen,
+                  fontSize: 19,
+                  height: 1.25,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ),
-        ),
-        if (package.hasDiscount)
-          PackageDiscountDetails(package: package, showSavings: false),
-      ],
-    ),
-  );
+          const SizedBox(height: 4),
+          SizedBox(
+            height: SubscriptionCardLayout.discountHeight(context),
+            child: package.hasDiscount
+                ? Row(
+                    children: [
+                      Expanded(
+                        child: fitted(
+                          Text(
+                            '${package.currencyCode} ${amount(package.originalPrice)}',
+                            maxLines: 1,
+                            style: TextStyle(
+                              decoration: TextDecoration.lineThrough,
+                              fontSize: 12,
+                              height: 1.3,
+                              color: AppColors.darkGreen.withValues(alpha: .65),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDDF1E3),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                arabic
+                                    ? 'خصم ${amount(package.discountPercentage.roundToDouble())}٪'
+                                    : '${amount(package.discountPercentage.roundToDouble())}% OFF',
+                                maxLines: 1,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  height: 1.2,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.darkGreen,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
 }

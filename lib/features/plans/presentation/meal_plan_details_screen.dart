@@ -105,58 +105,52 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen>
                       subtitleAr: 'اختر مجموعة الوجبات التي تناسبك.',
                     ),
                     const SizedBox(height: 8),
-                    SingleChildScrollView(
+                    SubscriptionSelectionRow(
                       key: const ValueKey('mealConfigurations'),
-                      scrollDirection: Axis.horizontal,
-                      child: IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            for (final item in configurations) ...[
-                              if (item != configurations.first)
-                                const SizedBox(width: 10),
-                              PackageSelectionCard(
-                                key: ValueKey('configuration-${item.id}'),
-                                name: item.displayName(
-                                  Localizations.localeOf(context).languageCode,
-                                ),
-                                description: item.description,
-                                package:
-                                    item.packages
-                                        .where(
-                                          (p) =>
-                                              p.isValid &&
-                                              p.serviceDays ==
-                                                  package.serviceDays,
-                                        )
-                                        .firstOrNull ??
-                                    item.packages
-                                        .where((p) => p.isValid)
-                                        .firstOrNull,
-                                selected: item.id == configuration.id,
-                                onTap: () => setState(() {
-                                  _configurationId = item.id;
-                                  final matching = item.packages.where(
-                                    (candidate) =>
-                                        candidate.isValid &&
-                                        candidate.name == package.name &&
-                                        candidate.serviceDays ==
-                                            package.serviceDays,
-                                  );
-                                  final valid = item.packages.where(
-                                    (p) => p.isValid,
-                                  );
-                                  _priceId = matching.isNotEmpty
-                                      ? matching.first.selectionKey
-                                      : valid.isNotEmpty
-                                      ? valid.first.selectionKey
-                                      : item.packages.first.selectionKey;
-                                }),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
+                      builder: (width) => [
+                        for (final item in configurations) ...[
+                          if (item != configurations.first)
+                            const SizedBox(width: 10),
+                          PackageSelectionCard(
+                            width: width,
+                            key: ValueKey('configuration-${item.id}'),
+                            name: item.displayName(
+                              Localizations.localeOf(context).languageCode,
+                            ),
+                            description: item.description,
+                            package:
+                                item.packages
+                                    .where(
+                                      (p) =>
+                                          p.isValid &&
+                                          p.serviceDays == package.serviceDays,
+                                    )
+                                    .firstOrNull ??
+                                item.packages
+                                    .where((p) => p.isValid)
+                                    .firstOrNull,
+                            selected: item.id == configuration.id,
+                            onTap: () => setState(() {
+                              _configurationId = item.id;
+                              final matching = item.packages.where(
+                                (candidate) =>
+                                    candidate.isValid &&
+                                    candidate.name == package.name &&
+                                    candidate.serviceDays ==
+                                        package.serviceDays,
+                              );
+                              final valid = item.packages.where(
+                                (p) => p.isValid,
+                              );
+                              _priceId = matching.isNotEmpty
+                                  ? matching.first.selectionKey
+                                  : valid.isNotEmpty
+                                  ? valid.first.selectionKey
+                                  : item.packages.first.selectionKey;
+                            }),
+                          ),
+                        ],
+                      ],
                     ),
                     if (configurations.length > 1)
                       Padding(
@@ -177,66 +171,36 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen>
                       titleAr: 'اختر المدة',
                     ),
                     const SizedBox(height: 10),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final count = configuration.packages.length;
-                        final scale = MediaQuery.textScalerOf(context).scale(1);
-                        final fit =
-                            count <= 3 &&
-                            constraints.maxWidth / count >= 104 * scale;
-                        final width = fit
-                            ? ((constraints.maxWidth - (count - 1) * 10) /
-                                      count)
-                                  .clamp(104.0, 180.0)
-                            : 146.0 * scale.clamp(1, 1.5);
-                        return SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: IntrinsicHeight(
-                            child: Row(
-                              key: const ValueKey('packageDurations'),
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                for (final option
-                                    in configuration.packages) ...[
-                                  if (option != configuration.packages.first)
-                                    const SizedBox(width: 10),
-                                  DurationSelectionCard(
-                                    key: ValueKey(
-                                      'duration-${option.selectionKey}',
-                                    ),
-                                    name: option.name,
-                                    priceDetails: option.isValid
-                                        ? PackageCardPrice(package: option)
-                                        : null,
-                                    deliveryDays: option.isValid
-                                        ? _serviceDaysLabel(
-                                            context,
-                                            option.serviceDays,
-                                          )
-                                        : Directionality.of(context) ==
-                                              TextDirection.rtl
-                                        ? 'غير متاح حالياً'
-                                        : context.customerCopy(
-                                            'Currently unavailable',
-                                          ),
-                                    selected:
-                                        option.isValid &&
-                                        option.selectionKey ==
-                                            package.selectionKey,
-                                    width: width,
-                                    onTap: option.isValid
-                                        ? () => setState(
-                                            () =>
-                                                _priceId = option.selectionKey,
-                                          )
-                                        : null,
-                                  ),
-                                ],
-                              ],
-                            ),
+                    SubscriptionSelectionRow(
+                      key: const ValueKey('packageDurations'),
+                      builder: (width) => [
+                        for (final option in configuration.packages) ...[
+                          if (option != configuration.packages.first)
+                            const SizedBox(width: 10),
+                          DurationSelectionCard(
+                            key: ValueKey('duration-${option.selectionKey}'),
+                            name: option.name,
+                            priceDetails: option.isValid
+                                ? PackageCardPrice(package: option)
+                                : null,
+                            deliveryDays: option.isValid
+                                ? _serviceDaysLabel(context, option.serviceDays)
+                                : Directionality.of(context) ==
+                                      TextDirection.rtl
+                                ? 'غير متاح حالياً'
+                                : context.customerCopy('Currently unavailable'),
+                            selected:
+                                option.isValid &&
+                                option.selectionKey == package.selectionKey,
+                            width: width,
+                            onTap: option.isValid
+                                ? () => setState(
+                                    () => _priceId = option.selectionKey,
+                                  )
+                                : null,
                           ),
-                        );
-                      },
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 10),
                     Text(

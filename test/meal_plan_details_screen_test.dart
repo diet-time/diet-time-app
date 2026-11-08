@@ -16,6 +16,64 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final width in [320.0, 390.0, 430.0, 768.0]) {
+    for (final language in ['en', 'ar']) {
+      testWidgets('cards and footer stay fixed at $width in $language', (
+        tester,
+      ) async {
+        await tester.binding.setSurfaceSize(Size(width, 844));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final configurations = (_planJson['mealConfigurations'] as List)
+            .cast<Map<String, dynamic>>();
+        final plus = configurations.last;
+        final options = (plus['packages'] as List).cast<Map<String, dynamic>>();
+        final plan = MealPlanOption.fromJson({
+          ..._planJson,
+          'mealConfigurations': [
+            configurations.first,
+            {
+              ...plus,
+              'packages': [
+                {...options.first, 'regularPrice': 900, 'discountedPrice': 720},
+                options.last,
+              ],
+            },
+          ],
+        });
+        await tester.pumpWidget(_app(plan: plan, locale: Locale(language)));
+        await tester.pumpAndSettle();
+        final meal = find.byKey(const ValueKey('configuration-three'));
+        final otherMeal = find.byKey(const ValueKey('configuration-plus'));
+        final firstDuration = find.byKey(const ValueKey('duration-three-week'));
+        final summary = find.byType(SubscriptionPricingSummary);
+        final button = find.byKey(const ValueKey('detailsContinue'));
+        final mealSize = tester.getSize(meal);
+        final durationSize = tester.getSize(firstDuration);
+        final summaryRect = tester.getRect(summary);
+        final buttonRect = tester.getRect(button);
+        expect(tester.getSize(otherMeal), mealSize);
+        await _tapChoice(tester, 'configuration-plus');
+        await tester.pumpAndSettle();
+        for (final id in ['plus-week', 'plus-month']) {
+          final duration = find.byKey(ValueKey('duration-$id'));
+          expect(tester.getSize(duration), durationSize);
+          await _tapChoice(tester, 'duration-$id');
+          await tester.pumpAndSettle();
+          expect(tester.getSize(meal), mealSize);
+          expect(tester.getSize(otherMeal), mealSize);
+          expect(tester.getSize(duration), durationSize);
+          expect(tester.getRect(summary), summaryRect);
+          expect(tester.getRect(button), buttonRect);
+          expect(tester.takeException(), isNull);
+        }
+        await _tapChoice(tester, 'configuration-three');
+        await tester.pumpAndSettle();
+        expect(tester.getSize(firstDuration), durationSize);
+        expect(tester.getRect(summary), summaryRect);
+        expect(tester.getRect(button), buttonRect);
+      });
+    }
+  }
   for (final language in ['en', 'ar']) {
     testWidgets(
       'discounted package fits a compact phone with large $language text',
@@ -502,7 +560,13 @@ void main() {
         final card = find.byKey(const ValueKey('configuration-three'));
         await tester.ensureVisible(card);
         await tester.pumpAndSettle();
-        expect(tester.getSize(card).width, 180);
+        expect(
+          tester.getSize(card).width,
+          SubscriptionCardLayout.width(
+            tester.element(card),
+            (size.width - 40).clamp(0.0, 680.0),
+          ),
+        );
         expect(tester.takeException(), isNull);
       });
     }
