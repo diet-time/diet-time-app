@@ -337,15 +337,18 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
 
 int _statusPriority(String status) => switch (status) {
   'ACTIVE' => 0,
+  'PAUSE_REQUESTED' => 0,
   'CONFIRMED' => 1,
+  'UPCOMING' => 1,
+  'PAUSE_SCHEDULED' => 2,
   'PAUSED' => 2,
   _ => 3,
 };
 
 int _currentFirst(CustomerOrderSummary left, CustomerOrderSummary right) {
   final status = _statusPriority(
-    left.status,
-  ).compareTo(_statusPriority(right.status));
+    left.dashboardStatus,
+  ).compareTo(_statusPriority(right.dashboardStatus));
   if (status != 0) return status;
   return _dateValue(right.startDate).compareTo(_dateValue(left.startDate));
 }
@@ -355,7 +358,8 @@ int _newestFirst(CustomerOrderSummary left, CustomerOrderSummary right) =>
 
 int _dateValue(DateTime? value) => value?.millisecondsSinceEpoch ?? 0;
 
-// Display eligibility is deliberately separate from isCurrent/canFulfill.
+// Plan visibility is separate from fulfillment permission and uses the API's
+// dashboard eligibility projection, with a status fallback for older APIs.
 // Both the order list and active-plan state use the purchased order's ID.
 List<CustomerOrderSummary> dashboardPlanOrders(CustomerDashboardState state) {
   final orders = switch (state) {

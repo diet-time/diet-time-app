@@ -9,11 +9,18 @@ class PackageScheduleSnapshot {
       nextDelivery = DateTime.tryParse(
         json['nextScheduledDelivery']?.toString() ?? '',
       ),
-      tomorrowScheduled = json['tomorrowScheduled'] == true;
+      tomorrowScheduled = json['tomorrowScheduled'] == true,
+      dashboardEligible = json['dashboardEligible'] as bool?,
+      dashboardStatus = json['dashboardStatus'] as String?,
+      dashboardExclusionReason = json['dashboardExclusionReason'] as String?,
+      serverNow = DateTime.tryParse(json['serverNow']?.toString() ?? '');
   final String displayStatus;
   final String? pauseApprovalStatus;
   final DateTime? pauseStart, resume, nextDelivery;
   final DateTime revisedEnd;
   final int remainingDays;
   final bool tomorrowScheduled;
+  final bool? dashboardEligible;
+  final String? dashboardStatus, dashboardExclusionReason;
+  final DateTime? serverNow;
 }

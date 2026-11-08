@@ -498,10 +498,11 @@ void main() {
         orders: orders,
       );
       final plans = dashboardPlanOrders(state);
-      expect(plans.map((p) => p.id), ['active']);
+      expect(plans.map((p) => p.id), ['active', 'confirmed']);
       expect(pending.isCurrent, isFalse);
       expect(hold.isCurrent, isFalse);
-      expect(confirmed.isCurrent, isFalse);
+      expect(confirmed.isCurrent, isTrue);
+      expect(confirmed.canChooseMeals, isFalse);
       expect(active.isCurrent, isTrue);
       expect(pending.paymentLabel, 'Unpaid');
       final rejected = CustomerOrderSummary.fromJson({
@@ -745,32 +746,38 @@ void main() {
     },
   );
 
-  testWidgets('held and payment-blocked orders stay outside active plans', (
-    tester,
-  ) async {
-    final orders = [
-      _reviewSummary('hold', 'ON_HOLD'),
-      _reviewSummary('confirmed', 'CONFIRMED', blocked: true),
-    ];
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          customerDashboardControllerProvider.overrideWith(
-            () =>
-                _DashboardControllerForTest(DashboardWithoutActivePlan(orders)),
-          ),
-        ],
-        child: const MaterialApp(home: CustomerDashboardScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('noActivePlan')), findsOneWidget);
-    expect(find.byKey(const ValueKey('activePlan-hold')), findsNothing);
-    expect(find.byKey(const ValueKey('activePlan-confirmed')), findsNothing);
-    expect(find.byKey(const ValueKey('tomorrowDeliveries')), findsNothing);
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox());
-  });
+  testWidgets(
+    'held orders stay in history while approved unpaid plans remain visible',
+    (tester) async {
+      final orders = [
+        _reviewSummary('hold', 'ON_HOLD'),
+        _reviewSummary('confirmed', 'CONFIRMED', blocked: true),
+      ];
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            customerDashboardControllerProvider.overrideWith(
+              () => _DashboardControllerForTest(
+                DashboardWithoutActivePlan(orders),
+              ),
+            ),
+          ],
+          child: const MaterialApp(home: CustomerDashboardScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('noActivePlan')), findsNothing);
+      expect(find.byKey(const ValueKey('activePlan-hold')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('activePlan-confirmed')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('dashboardChooseMeals')), findsNothing);
+      expect(find.byKey(const ValueKey('tomorrowDeliveries')), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 
   testWidgets('dashboard initialization runs once across widget rebuilds', (
     tester,

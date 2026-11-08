@@ -422,6 +422,18 @@ class _DashboardHome extends ConsumerWidget {
       return const Center(child: CircularProgressIndicator());
     }
     final orders = _ordersFrom(state);
+    final pendingOrders = orders
+        .where(
+          (order) =>
+              const {'PENDING_APPROVAL', 'PENDING'}.contains(order.status),
+        )
+        .toList();
+    final previousOrders = orders
+        .where(
+          (order) =>
+              !const {'PENDING_APPROVAL', 'PENDING'}.contains(order.status),
+        )
+        .toList();
     final dashboardState = state;
     final single = dashboardState is DashboardWithActivePlan
         ? dashboardState
@@ -435,6 +447,9 @@ class _DashboardHome extends ConsumerWidget {
       if (multiple != null) ...multiple.details,
     };
     final activeOrders = plans;
+    final deliveryOrders = activeOrders
+        .where((order) => order.review['canFulfill'] != false)
+        .toList();
     final canChooseMeals = activeOrders.any((order) {
       if (!order.canChooseMeals) return false;
       if (order.rowVersion < 1) return true;
@@ -517,6 +532,12 @@ class _DashboardHome extends ConsumerWidget {
             subtitle: _dashboardSubtitle(context, state),
           ),
           const SizedBox(height: 18),
+          if (pendingOrders.isNotEmpty) ...[
+            _SectionTitle(context.customerCopy('Pending Approval')),
+            const SizedBox(height: 8),
+            _OrdersCard(orders: pendingOrders),
+            const SizedBox(height: 16),
+          ],
           if (plans.isNotEmpty) ...[
             Row(
               children: [
@@ -541,11 +562,11 @@ class _DashboardHome extends ConsumerWidget {
               )
             else
               _MultiPlanCarousel(orders: plans, details: details),
-            if (activeOrders.isNotEmpty) ...[
+            if (deliveryOrders.isNotEmpty) ...[
               const SizedBox(height: 16),
               TomorrowDeliveriesSection(
                 key: mealSectionKey,
-                orders: activeOrders,
+                orders: deliveryOrders,
               ),
             ],
           ] else if (state is DashboardWithoutActivePlan ||
@@ -573,7 +594,7 @@ class _DashboardHome extends ConsumerWidget {
               onNewPlan: () => _startNewOrder(context, ref),
             ),
           ],
-          if (orders.isNotEmpty) ...[
+          if (previousOrders.isNotEmpty) ...[
             const SizedBox(height: 28),
             Row(
               children: [
@@ -591,7 +612,7 @@ class _DashboardHome extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 8),
-            _OrdersCard(orders: orders.take(3).toList(growable: false)),
+            _OrdersCard(orders: previousOrders.take(3).toList(growable: false)),
           ],
         ],
       ),
@@ -756,13 +777,22 @@ class _ReferencePlanCard extends ConsumerWidget {
         ? ref.watch(packageManagementProvider(summary.id)).value
         : null;
     final snapshot = summary.packageSchedule;
+    final liveStatus = management?.effectiveDisplayStatus;
     final displayState =
-        management?.effectiveDisplayStatus ??
-        snapshot?.displayStatus ??
-        summary.status;
+        const {
+          'PAUSED',
+          'PAUSE_SCHEDULED',
+          'PAUSE_REQUESTED',
+        }.contains(liveStatus)
+        ? liveStatus!
+        : snapshot?.dashboardStatus ??
+              (summary.dashboardStatus == 'UPCOMING'
+                  ? 'UPCOMING'
+                  : liveStatus ?? summary.dashboardStatus);
     final (background, icon) = switch (displayState) {
       'PAUSE_REQUESTED' ||
       'PAUSE_SCHEDULED' ||
+      'UPCOMING' ||
       'PENDING_APPROVAL' ||
       'PENDING' => (const Color(0xFF8B642D), Icons.schedule_rounded),
       'PAUSED' => (const Color(0xFF69736F), Icons.pause_circle_outline),
@@ -1158,6 +1188,8 @@ String _packageStatusLabel(
     return copy.packageResumePending;
   }
   return switch (displayStatus ?? data?.effectiveDisplayStatus ?? status) {
+    'UPCOMING' => context.customerCopy('Upcoming'),
+    'ACTIVE' => context.customerCopy('Active'),
     'PAUSE_REQUESTED' => copy.packagePauseRequested,
     'PAUSE_SCHEDULED' => copy.packagePauseScheduled,
     'PAUSED' => copy.packagePaused,
@@ -2429,6 +2461,7 @@ Color _statusColor(String status) => switch (status) {
   'ACTIVE' => AppColors.emeraldGreen,
   'CONFIRMED' => const Color(0xFF2467A7),
   'PAUSED' => const Color(0xFF9A6500),
+  'UPCOMING' || 'PENDING_APPROVAL' || 'PENDING' => const Color(0xFF8B642D),
   'CANCELLED' => AppColors.jasper,
   _ => AppColors.darkGreen,
 };

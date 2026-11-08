@@ -1,0 +1,155 @@
+Diet Time: Active plans missing from dashboard
+Date: 2026-11-08
+
+Confirmed root cause
+
+The previous Flutter CustomerOrderSummary.isCurrent predicate required
+review.canFulfill != false for CONFIRMED/ACTIVE orders. The API's canFulfill
+field means permission to fulfill meals, not permission to display an approved
+subscription. It deliberately returns false for required prepayment that has
+not arrived, payment failures/refund states, or other fulfillment blocks.
+Consequently an owned, confirmed order returned by the dashboard endpoint could
+be removed by Flutter and become the "No active plan" state.
+
+The backend also lacked a distinct dashboard eligibility/state projection. Its
+remaining-service count depended on initialized rows (zero before prepayment
+unlocks initialization), and its display status mapped fulfillment-eligible
+CONFIRMED orders to ACTIVE even before their start date.
+
+The API query itself already included all owned CONFIRMED, ACTIVE and PAUSED
+orders, even when older than the three recent history items. It did not filter
+those orders by payment. Ownership checks correctly resolve the authenticated
+user through the active customer profile. These checks were retained.
+
+Verification scope
+
+The exclusion path was reproduced through the real API and disposable PostgreSQL
+using a confirmed prepaid order with payment pending. No live affected order ID,
+Railway response or production database connection was supplied. This report
+does not claim to have inspected that customer's live row or deployed a fix.
+
+Before and after: reproduced case
+
+Purchased service period: 2026-10-27 through 2026-11-09, six weekdays excluding
+Friday. Qatar business date: 2026-10-26. Order status remains CONFIRMED and
+payment status remains PENDING throughout.
+
+Before (prior API projection and Flutter predicate):
+  review.canFulfill: false
+  packageSchedule.remainingServiceDays: 0 (no service rows initialized yet)
+  Flutter visible plan: false
+
+After (HTTP response asserted in DashboardPlanEligibilityApiTests):
+  review.canFulfill: false
+  packageSchedule.dashboardEligible: true
+  packageSchedule.dashboardStatus: UPCOMING
+  packageSchedule.dashboardExclusionReason: null
+  packageSchedule.dashboardScheduleSource: PURCHASED_WEEKDAYS
+  packageSchedule.remainingServiceDays: 12
+  packageSchedule.tomorrowScheduled: false
+  Flutter visible plan: true
+
+On the Qatar start date, dashboardStatus becomes ACTIVE while canFulfill stays
+false until payment rules permit fulfillment. No delivery rows are created by
+this classification and meal selection remains blocked. The API test emits a
+DASHBOARD_BEFORE_AFTER log containing only synthetic order identifiers/statuses.
+
+Backend behavior
+
+DashboardPlanEligibility evaluates approved order status, Qatar business date,
+inclusive service-period boundaries, effective approved pauses and valid
+remaining service dates independently from payment/fulfillment permission.
+
+It classifies ACTIVE, UPCOMING, PAUSED, PAUSE_SCHEDULED and PAUSE_REQUESTED.
+Pending approval is separate. Cancelled/rejected/completed orders, ended service
+periods and schedules with no remaining valid dates are excluded with a reason.
+
+Persisted service rows are authoritative once initialized: consumed, cancelled,
+skipped closure and displaced rows are excluded; Friday and purchased weekday
+rules apply. Moved pause dates remain intact. For an approved order with no
+initialized service rows, the purchased weekdays provide a visibility/count
+fallback, not permission to prepare or deliver meals. No existing managed
+schedule is regenerated. There is no separate configured holiday-date store in
+the current purchase scheduling implementation; persisted skipped closures are
+respected, and no holiday dates or new holiday policy were invented.
+
+Package management and the dashboard use the same projected remaining count.
+Existing delivery scheduling, payment approval, kitchen, pause mutation and
+meal-selection authorization rules remain in force. Existing domain approval
+status is CONFIRMED; no new APPROVED write status was introduced.
+
+Flutter behavior
+
+The customer order model consumes dashboardEligible/dashboardStatus. It keeps
+approved orders visible independently from canFulfill, including responses from
+older APIs. canFulfill still gates meal-selection actions and delivery sections.
+Upcoming plans are amber, active plans green, paused plans grey, and scheduled
+pauses amber. Existing carousel and specific-order details navigation remain.
+Pending approvals have a separate section. Cancelled and completed plans remain
+in history. Loading/API errors do not render a no-plan result.
+
+Existing refresh paths after placement, approval/status polling, cancellation,
+pause/resumption, details return, app resumption and pull-to-refresh are retained.
+Refresh keeps current content visible. A regression test confirms an older empty
+response cannot replace a newer customer's loaded dashboard after identity reset.
+
+Temporary diagnostics
+
+Enable Orders__EnableDashboardDiagnostics=true in the API environment (or
+Orders:EnableDashboardDiagnostics in configuration), then refresh the customer
+dashboard. Disable after diagnosis. The option is off by default.
+
+DashboardEligibility logs include authenticated user/profile IDs, retrieved order
+count, order IDs/statuses, payment status, recorded approval, projected
+subscription state, start/end dates, remaining days, Qatar date, visibility,
+exclusion reason, fulfillment permission and schedule source. They contain no
+authentication tokens, names, phone numbers, addresses or answer data.
+
+Database/deployment
+
+No schema migration, historical data rewrite or production SQL mutation is
+required. Deploy both the updated API and Flutter app for the complete
+authoritative classification. Production Railway verification remains pending
+the affected order's ID/response or access to its diagnostic log.
+
+Files changed
+
+API repository (diet-time-api):
+  src/BuildingBlocks/DietTime.Application/DashboardPlanEligibility.cs
+  src/BuildingBlocks/DietTime.Application/SubscriptionScheduleRules.cs
+  src/BuildingBlocks/DietTime.Contracts/PackagePauseContracts.cs
+  src/BuildingBlocks/DietTime.Persistence/OrderService.cs
+  src/BuildingBlocks/DietTime.Persistence/PackagePauseService.cs
+  tests/DietTime.UnitTests/DashboardPlanEligibilityTests.cs
+  tests/DietTime.Meal.Api.IntegrationTests/DashboardPlanEligibilityApiTests.cs
+
+Flutter repository (diet-time-app):
+  lib/features/checkout/domain/order_models.dart
+  lib/features/checkout/domain/order_status.dart
+  lib/features/checkout/domain/package_schedule_snapshot.dart
+  lib/features/dashboard/presentation/customer_dashboard_controller.dart
+  lib/features/dashboard/presentation/customer_dashboard_screen.dart
+  lib/app/localization/customer_copy.dart
+  test/active_plan_eligibility_test.dart
+  test/customer_dashboard_test.dart
+  test/dashboard_performance_test.dart
+  docs/active-plan-dashboard-fix.txt
+
+Validation
+
+API unit tests: 69 passed (dashboard eligibility, scheduling and order workflow).
+Flutter full regression suite: 607 passed.
+PostgreSQL/API integration regressions: 10 passed, including package-management
+count consistency, pause/resumption, prepayment and cancellation history.
+Static analysis: no issues. Diff whitespace checks: clean in both repositories.
+
+Coverage includes confirmed paid/unpaid current and future plans, pending
+approval, effective/scheduled pauses, terminal orders, multiple owned purchases
+older than recent history, Qatar midnight, inclusive start/end dates, expired
+periods, skipped closures/Fridays, no remaining dates, no orders, API failure,
+approval refresh, legacy responses and stale-empty-result protection.
+
+Local logs (ignored artifacts):
+  artifacts/active-plan-unit-tests.log
+  artifacts/active-plan-api-tests.log
+  artifacts/active-plan-full-flutter-tests.log

@@ -168,14 +168,41 @@ class CustomerOrderSummary {
       : fulfillmentLabel;
 
   bool get isValid => id.isNotEmpty && orderNumber.isNotEmpty;
-  bool get isCurrent =>
-      status == 'PAUSED' ||
-      review['canFulfill'] != false &&
-          const {'CONFIRMED', 'ACTIVE'}.contains(status);
+  bool get isCurrent {
+    if (!const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(status)) return false;
+    // Payment/fulfillment permission must never hide an approved subscription.
+    return packageSchedule?.dashboardEligible ?? true;
+  }
+
+  String get dashboardStatus {
+    final snapshot = packageSchedule;
+    if (snapshot?.dashboardStatus case final value?) return value;
+    if (const {
+      'PAUSED',
+      'PAUSE_SCHEDULED',
+      'PAUSE_REQUESTED',
+    }.contains(snapshot?.displayStatus)) {
+      return snapshot!.displayStatus;
+    }
+    final serverNow = snapshot?.serverNow?.toUtc().add(
+      const Duration(hours: 3),
+    );
+    if (serverNow != null &&
+        startDate != null &&
+        isCurrent &&
+        startDate!.isAfter(
+          DateTime(serverNow.year, serverNow.month, serverNow.day),
+        )) {
+      return 'UPCOMING';
+    }
+    return status;
+  }
+
   bool get canChooseMeals =>
       isCurrent &&
+      review['canFulfill'] != false &&
       status != 'PAUSED' &&
-      packageSchedule?.displayStatus != 'PAUSED';
+      dashboardStatus != 'PAUSED';
   bool get isCompleted => status == 'COMPLETED';
   bool get isCancelled => status == 'CANCELLED';
 }

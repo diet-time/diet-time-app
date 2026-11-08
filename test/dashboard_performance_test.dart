@@ -9,6 +9,35 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
+    'an old empty result cannot overwrite the newer customer dashboard',
+    () async {
+      final repository = _QueuedSummariesRepository();
+      final container = ProviderContainer(
+        overrides: [ordersRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(
+        customerDashboardControllerProvider.notifier,
+      );
+      final old = controller.load('old-profile');
+      controller.clear();
+      final current = controller.load('current-profile');
+      final fixture = _SlowDetailRepository()..withSnapshot = true;
+      repository.current.complete(
+        await fixture.getCustomerOrders('current-profile'),
+      );
+      await current;
+      final visible = container.read(customerDashboardControllerProvider);
+      repository.old.complete([]);
+      await old;
+      expect(
+        container.read(customerDashboardControllerProvider),
+        same(visible),
+      );
+      expect(dashboardPlanOrders(visible).single.id, 'active');
+    },
+  );
+  test(
     'refresh keeps the existing dashboard visible until new summaries arrive',
     () async {
       final repository = _SlowDetailRepository()..withSnapshot = true;
@@ -147,4 +176,17 @@ class _SlowDetailRepository extends OrdersRepository {
     detailRequested.complete();
     return detail.future;
   }
+}
+
+class _QueuedSummariesRepository extends OrdersRepository {
+  _QueuedSummariesRepository()
+    : super(apiClient: ApiClient(), accessTokenProvider: () async => null);
+  final old = Completer<List<CustomerOrderSummary>>();
+  final current = Completer<List<CustomerOrderSummary>>();
+  @override
+  Future<List<CustomerOrderSummary>> getCustomerOrders(
+    String profileId, {
+    int pageSize = 20,
+    bool dashboard = false,
+  }) => profileId == 'old-profile' ? old.future : current.future;
 }

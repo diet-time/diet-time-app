@@ -8,6 +8,7 @@ String orderStatusLabel(String status) => switch (status.toUpperCase()) {
   'COMPLETED' => 'Completed',
   'PENDING_ACTIVATION' => 'Awaiting Activation',
   'PAUSED' => 'Paused',
+  'UPCOMING' => 'Upcoming',
   'PAUSE_REQUESTED' => 'Pause requested',
   'PAUSE_SCHEDULED' => 'Pause scheduled',
   _ => 'Under Review',
