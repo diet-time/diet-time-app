@@ -144,7 +144,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Choose your meals'), findsOneWidget);
+      expect(find.text('Daily Meal Option'), findsOneWidget);
       expect(find.text('Three meals and a snack'), findsWidgets);
       expect(find.byKey(const ValueKey('duration-week-price')), findsOneWidget);
       expect(

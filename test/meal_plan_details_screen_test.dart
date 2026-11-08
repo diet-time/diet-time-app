@@ -16,6 +16,66 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets(
+    'reference layout has two visible cards, mint summary and no allergen block',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final plan = MealPlanOption.fromJson({
+        'id': 'reference',
+        'code': 'BALANCE',
+        'name': 'Complete Balance',
+        'mealConfigurations': [
+          for (var index = 0; index < 2; index++)
+            {
+              'id': 'reference-$index',
+              'name': '${index + 1} Meals + 1 Snack',
+              'packages': [
+                {
+                  'mealPlanPriceId': 'week-$index',
+                  'name': '6 Days',
+                  'serviceDays': 6,
+                  'totalPrice': index == 0 ? 329 : 500,
+                  'regularPrice': index == 0 ? 350 : 599,
+                  'discountedPrice': index == 0 ? 329 : 500,
+                  'currencyCode': 'QAR',
+                },
+                {
+                  'mealPlanPriceId': 'fortnight-$index',
+                  'name': '2 Weeks',
+                  'serviceDays': 12,
+                  'totalPrice': 1200,
+                  'currencyCode': 'QAR',
+                },
+              ],
+            },
+        ],
+      });
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: const ValueKey('referencePreview'),
+          child: _app(plan: plan),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Choose Your Plan'), findsOneWidget);
+      expect(find.text('Daily Meal Option'), findsOneWidget);
+      expect(find.text('Choose Duration'), findsOneWidget);
+      expect(find.byType(ClipOval), findsOneWidget);
+      expect(find.byKey(const ValueKey('allergenInformation')), findsNothing);
+      for (final id in [
+        'configuration-reference-0',
+        'configuration-reference-1',
+        'duration-week-0',
+        'duration-fortnight-0',
+      ]) {
+        final rect = tester.getRect(find.byKey(ValueKey(id)));
+        expect(rect.left, greaterThanOrEqualTo(18));
+        expect(rect.right, lessThanOrEqualTo(372));
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
   for (final width in [320.0, 390.0, 430.0, 768.0]) {
     for (final language in ['en', 'ar']) {
       testWidgets('cards and footer stay fixed at $width in $language', (
@@ -238,13 +298,13 @@ void main() {
     expect(configurations, isEmpty);
   });
 
-  testWidgets('selected plan image is a cropped hero background', (
+  testWidgets('selected plan image uses the circular reference hero', (
     tester,
   ) async {
     await tester.pumpWidget(_app(plan: _plan));
     await tester.pump();
 
-    expect(find.text('Complete Balance'), findsOneWidget);
+    expect(find.text('Choose Your Plan'), findsOneWidget);
     final image = tester.widget<Image>(find.byKey(const ValueKey('heroImage')));
     expect(image.fit, BoxFit.cover);
     expect(image.fit, isNot(BoxFit.fill));
@@ -254,7 +314,7 @@ void main() {
     expect(find.text('Your plan'), findsNothing);
     expect(find.byKey(const ValueKey('detailsLanguageSelector')), findsNothing);
     final description = tester.widget<Text>(
-      find.text('Balanced meals, fresh ingredients and daily variety.'),
+      find.text('Select your daily meal option and subscription duration.'),
     );
     expect(description.maxLines, 3);
     expect(find.textContaining('RECOMMENDED'), findsNothing);
@@ -564,7 +624,7 @@ void main() {
           tester.getSize(card).width,
           SubscriptionCardLayout.width(
             tester.element(card),
-            (size.width - 40).clamp(0.0, 680.0),
+            (size.width - 36).clamp(0.0, 680.0),
           ),
         );
         expect(tester.takeException(), isNull);
@@ -726,6 +786,7 @@ Widget _app({
       ),
     ],
     child: MaterialApp(
+      debugShowCheckedModeBanner: false,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(
           context,

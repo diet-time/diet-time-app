@@ -1,10 +1,8 @@
 import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/app/router/app_router.dart';
-import 'package:diet_time/features/plans/presentation/package_discount_details.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/core/widgets/meal_plan_image.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
-import 'package:diet_time/features/personalization/presentation/personalization_controller.dart';
 import 'package:diet_time/features/plans/data/meal_plan_repository.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_option.dart';
 import 'package:diet_time/features/plans/domain/meal_plan_package.dart';
@@ -76,18 +74,12 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen>
       (item) => item.selectionKey == _priceId,
       orElse: () => configuration.packages.first,
     );
-    final profile = ref.watch(personalizationControllerProvider);
-    final hasRecordedAllergens =
-        profile.allergensConfirmed &&
-        profile.allergens.any(
-          (value) => value.toUpperCase() != 'NONE' && value.isNotEmpty,
-        );
     return Column(
       children: [
         Expanded(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsetsDirectional.fromSTEB(20, 10, 20, 20),
+            padding: const EdgeInsetsDirectional.fromSTEB(18, 2, 18, 8),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 680),
@@ -97,12 +89,9 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen>
                     _PlanHero(plan: widget.plan),
                     const SizedBox(height: 16),
                     _SectionTitle(
-                      titleEn: context.customerCopy('Choose your meals'),
+                      icon: Icons.restaurant_outlined,
+                      titleEn: 'Daily Meal Option',
                       titleAr: 'اختر وجباتك اليومية',
-                      subtitleEn: context.customerCopy(
-                        "Pick how many meals you'd like each day.",
-                      ),
-                      subtitleAr: 'اختر مجموعة الوجبات التي تناسبك.',
                     ),
                     const SizedBox(height: 8),
                     SubscriptionSelectionRow(
@@ -152,22 +141,10 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen>
                         ],
                       ],
                     ),
-                    if (configurations.length > 1)
-                      Padding(
-                        padding: EdgeInsets.only(top: 6),
-                        child: Text(
-                          context.customerCopy(
-                            'Swipe to explore meal packages →',
-                          ),
-                          style: TextStyle(
-                            color: AppColors.darkGreen,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
                     const SizedBox(height: 16),
                     _SectionTitle(
-                      titleEn: context.customerCopy('Choose your duration'),
+                      icon: Icons.calendar_month_outlined,
+                      titleEn: 'Choose Duration',
                       titleAr: 'اختر المدة',
                     ),
                     const SizedBox(height: 10),
@@ -202,22 +179,6 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen>
                         ],
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      Directionality.of(context) == TextDirection.rtl
-                          ? 'المدد المتاحة لباقة الوجبات المختارة.'
-                          : context.customerCopy(
-                              'Swipe to explore package durations →',
-                            ),
-                      style: TextStyle(
-                        color: AppColors.darkGreen.withValues(alpha: .7),
-                        fontSize: 12,
-                      ),
-                    ),
-                    if (hasRecordedAllergens) ...[
-                      const SizedBox(height: 14),
-                      const _AllergenInformation(),
-                    ],
                   ],
                 ),
               ),
@@ -225,11 +186,12 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen>
           ),
         ),
         SubscriptionPricingSummary(
-          discountDetails: package.hasDiscount
-              ? PackageDiscountDetails(package: package)
-              : null,
-          selection:
-              '${configuration.displayName(Localizations.localeOf(context).languageCode)} · ${package.name} · ${_serviceDaysLabel(context, package.serviceDays)}',
+          package: package,
+          meals: configuration.displayName(
+            Localizations.localeOf(context).languageCode,
+          ),
+          duration:
+              '${package.name} (${_serviceDaysLabel(context, package.serviceDays)})',
           total: package.isValid
               ? '${package.currencyCode} ${_amount(context, package.totalPrice)}'
               : Directionality.of(context) == TextDirection.rtl
@@ -267,143 +229,172 @@ class _MealPlanDetailsScreenState extends ConsumerState<MealPlanDetailsScreen>
 
 class _DetailsHeader extends StatelessWidget implements PreferredSizeWidget {
   const _DetailsHeader();
-
   @override
-  Size get preferredSize => const Size.fromHeight(58);
-
+  Size get preferredSize => const Size.fromHeight(44);
   @override
-  Widget build(BuildContext context) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      surfaceTintColor: Colors.transparent,
-      leading: IconButton(
-        key: const ValueKey('detailsBack'),
-        onPressed: () => context.pop(),
-        icon: Icon(
-          Directionality.of(context) == TextDirection.rtl
-              ? Icons.arrow_forward_rounded
-              : Icons.arrow_back_rounded,
+  Widget build(BuildContext context) => AppBar(
+    toolbarHeight: 44,
+    centerTitle: true,
+    elevation: 0,
+    backgroundColor: Colors.transparent,
+    surfaceTintColor: Colors.transparent,
+    leading: Center(
+      child: SizedBox.square(
+        dimension: 32,
+        child: IconButton(
+          key: const ValueKey('detailsBack'),
+          padding: EdgeInsets.zero,
+          style: IconButton.styleFrom(backgroundColor: const Color(0xFFE0F0E4)),
+          onPressed: () => context.pop(),
+          icon: Icon(
+            Directionality.of(context) == TextDirection.rtl
+                ? Icons.chevron_right_rounded
+                : Icons.chevron_left_rounded,
+            size: 24,
+            color: AppColors.darkGreen,
+          ),
         ),
       ),
-      title: Text(
-        context.customerCopy('Diet Time'),
-        style: TextStyle(
-          color: AppColors.darkGreen,
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-        ),
+    ),
+    title: Text(
+      context.customerCopy('Diet Time'),
+      style: const TextStyle(
+        color: AppColors.darkGreen,
+        fontSize: 16,
+        fontWeight: FontWeight.w800,
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _PageBackground extends StatelessWidget {
   const _PageBackground({required this.child});
-
   final Widget child;
-
   @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      key: const ValueKey('detailsBackground'),
-      color: const Color(0xFFF5F3E9),
-      child: child,
-    );
-  }
+  Widget build(BuildContext context) => ColoredBox(
+    key: const ValueKey('detailsBackground'),
+    color: const Color(0xFFFFFCF9),
+    child: child,
+  );
 }
 
 class _PlanHero extends StatelessWidget {
   const _PlanHero({required this.plan});
-
   final MealPlanOption plan;
-
   @override
   Widget build(BuildContext context) {
-    final isArabic = Directionality.of(context) == TextDirection.rtl;
-    return Container(
+    final arabic = Directionality.of(context) == TextDirection.rtl;
+    return Padding(
       key: const ValueKey('planHero'),
-      constraints: const BoxConstraints(minHeight: 180),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F7EF),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: AppColors.emeraldGreen.withValues(alpha: .55),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.darkGreen.withValues(alpha: .08),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Positioned.fill(child: _HeroImage(imageUrl: plan.imageUrl)),
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: AlignmentDirectional.centerStart,
-                  end: AlignmentDirectional.centerEnd,
-                  colors: const [
-                    Color(0xFFF7F8EE),
-                    Color(0xE8F0F5E9),
-                    Color(0x73F0F5E9),
-                  ],
-                  stops: const [0, .52, 1],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDDF0DF),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    arabic ? 'الخطوة 1 من 2' : 'Step 1 of 2',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      height: 1.2,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.darkGreen,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 5),
+                Text(
+                  arabic ? 'اختر خطتك' : 'Choose Your Plan',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    height: 1.1,
+                    letterSpacing: -.7,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.darkGreen,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  arabic
+                      ? 'اختر وجباتك اليومية ومدة اشتراكك.'
+                      : 'Select your daily meal option and subscription duration.',
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    height: 1.25,
+                    color: Color(0xFF7D827C),
+                  ),
+                ),
+              ],
             ),
           ),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: FractionallySizedBox(
-              widthFactor: MediaQuery.textScalerOf(context).scale(1) > 1.3
-                  ? .88
-                  : .70,
-              child: Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(16, 15, 10, 14),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      plan.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.darkGreen,
-                        fontSize: 21,
-                        fontWeight: FontWeight.w700,
-                        height: 1.05,
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 92,
+            height: 104,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                PositionedDirectional(
+                  end: -18,
+                  top: 6,
+                  bottom: -4,
+                  width: 94,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE7F0E2),
+                      borderRadius: BorderRadiusDirectional.only(
+                        topStart: Radius.circular(50),
+                        bottomStart: Radius.circular(60),
                       ),
                     ),
-                    if (plan.description case final description?) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        description,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppColors.darkGreen.withValues(alpha: .68),
-                          height: 1.35,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 18),
-                    if (plan.dailyCaloriesKcal case final calories?)
-                      _HeroFact(
-                        key: const ValueKey('heroCalories'),
-                        icon: Icons.local_fire_department_outlined,
-                        label: isArabic
-                            ? 'تقريباً ${calories.round()} سعرة / يوم'
-                            : 'Approx. ${calories.round()} kcal/day',
-                      ),
-                  ],
+                  ),
                 ),
-              ),
+                PositionedDirectional(
+                  start: -17,
+                  top: 37,
+                  child: Transform.rotate(
+                    angle: -.6,
+                    child: const Icon(
+                      Icons.eco,
+                      color: Color(0xFF73AC80),
+                      size: 27,
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.darkGreen.withValues(alpha: .18),
+                            blurRadius: 9,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: _HeroImage(imageUrl: plan.imageUrl),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -414,153 +405,62 @@ class _PlanHero extends StatelessWidget {
 
 class _HeroImage extends StatelessWidget {
   const _HeroImage({this.imageUrl});
-
   final String? imageUrl;
-
   @override
   Widget build(BuildContext context) {
     final url = _resolveImageUrl(imageUrl);
-    return ClipRRect(
+    return ClipOval(
       key: const ValueKey('heroImageClip'),
-      borderRadius: BorderRadius.circular(21),
-      child: SizedBox.expand(
-        child: url.isEmpty
-            ? const _MealImagePlaceholder()
-            : Image.network(
-                url,
-                key: const ValueKey('heroImage'),
-                fit: BoxFit.cover,
-                alignment: AlignmentDirectional.centerEnd,
-                frameBuilder: (context, child, frame, _) => AnimatedOpacity(
-                  opacity: frame == null ? 0 : 1,
-                  duration: selectionAnimationDuration(context),
-                  child: frame == null ? const _ImageSkeleton() : child,
-                ),
-                errorBuilder: (_, _, _) => const _MealImagePlaceholder(),
-              ),
-      ),
+      child: url.isEmpty
+          ? const _MealImagePlaceholder()
+          : Image.network(
+              url,
+              key: const ValueKey('heroImage'),
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              frameBuilder: (_, child, frame, _) =>
+                  frame == null ? const _MealImagePlaceholder() : child,
+              errorBuilder: (_, _, _) => const _MealImagePlaceholder(),
+            ),
     );
   }
-}
-
-class _HeroFact extends StatelessWidget {
-  const _HeroFact({required this.icon, required this.label, super.key});
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Icon(icon, size: 17, color: AppColors.emeraldGreen),
-      const SizedBox(width: 6),
-      Flexible(
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.emeraldGreen,
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-    ],
-  );
 }
 
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle({
     required this.titleEn,
     required this.titleAr,
-    this.subtitleEn,
-    this.subtitleAr,
+    required this.icon,
   });
   final String titleEn;
   final String titleAr;
-  final String? subtitleEn;
-  final String? subtitleAr;
-
+  final IconData icon;
   @override
-  Widget build(BuildContext context) {
-    final isArabic = Directionality.of(context) == TextDirection.rtl;
-    final subtitle = isArabic ? subtitleAr : subtitleEn;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          isArabic ? titleAr : titleEn,
+  Widget build(BuildContext context) => Row(
+    children: [
+      Container(
+        width: 23,
+        height: 23,
+        decoration: BoxDecoration(
+          color: const Color(0xFFEDF6EE),
+          borderRadius: BorderRadius.circular(5),
+        ),
+        child: Icon(icon, size: 18, color: AppColors.emeraldGreen),
+      ),
+      const SizedBox(width: 7),
+      Expanded(
+        child: Text(
+          Directionality.of(context) == TextDirection.rtl ? titleAr : titleEn,
           style: const TextStyle(
+            fontSize: 14,
+            height: 1.2,
+            fontWeight: FontWeight.w800,
             color: AppColors.darkGreen,
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
           ),
         ),
-        if (subtitle != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: AppColors.darkGreen.withValues(alpha: .62),
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _AllergenInformation extends StatelessWidget {
-  const _AllergenInformation();
-  @override
-  Widget build(BuildContext context) {
-    final isArabic = Directionality.of(context) == TextDirection.rtl;
-    return Container(
-      key: const ValueKey('allergenInformation'),
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEAF6EC),
-        borderRadius: BorderRadius.circular(18),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.shield_outlined, color: AppColors.emeraldGreen),
-          const SizedBox(width: 11),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isArabic
-                      ? 'تم حفظ تفضيلات مسببات الحساسية لديك'
-                      : context.customerCopy(
-                          'Your allergen preferences are saved',
-                        ),
-                  style: const TextStyle(
-                    color: AppColors.darkGreen,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  isArabic
-                      ? 'سنستخدم معلومات الحساسية المسجلة عند عرض الوجبات المناسبة. راجع تفاصيل مسببات الحساسية لكل وجبة قبل الطلب.'
-                      : context.customerCopy(
-                          'We’ll use your recorded allergen information when showing suitable meal choices. Please review each meal’s allergen details before ordering.',
-                        ),
-                  style: TextStyle(
-                    color: AppColors.darkGreen.withValues(alpha: .66),
-                    fontSize: 12,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    ],
+  );
 }
 
 class _LoadingBody extends StatelessWidget {
@@ -690,25 +590,13 @@ class _EmptyPackages extends StatelessWidget {
   );
 }
 
-class _ImageSkeleton extends StatelessWidget {
-  const _ImageSkeleton();
-  @override
-  Widget build(BuildContext context) =>
-      const ColoredBox(color: Color(0xFFDDEBDD));
-}
-
 class _MealImagePlaceholder extends StatelessWidget {
   const _MealImagePlaceholder();
   @override
-  Widget build(BuildContext context) => const ColoredBox(
-    color: Color(0xFFDDEBDD),
-    child: Center(
-      child: Icon(
-        Icons.restaurant_rounded,
-        size: 42,
-        color: AppColors.emeraldGreen,
-      ),
-    ),
+  Widget build(BuildContext context) => Image.asset(
+    'assets/images/onboarding_1.png',
+    fit: BoxFit.cover,
+    alignment: const Alignment(0, -.1),
   );
 }
 
