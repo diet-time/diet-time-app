@@ -534,6 +534,17 @@ class _DashboardHome extends ConsumerWidget {
           const SizedBox(height: 18),
           if (pendingOrders.isNotEmpty) ...[
             _SectionTitle(context.customerCopy('Pending Approval')),
+            const SizedBox(height: 4),
+            Text(
+              context.customerCopy(
+                "Your order is awaiting approval. We'll update your plan here once confirmed.",
+              ),
+              key: const ValueKey('pendingPlanMessage'),
+              style: TextStyle(
+                color: AppColors.darkGreen.withValues(alpha: .62),
+                fontSize: 12,
+              ),
+            ),
             const SizedBox(height: 8),
             _OrdersCard(orders: pendingOrders),
             const SizedBox(height: 16),
@@ -569,8 +580,9 @@ class _DashboardHome extends ConsumerWidget {
                 orders: deliveryOrders,
               ),
             ],
-          ] else if (state is DashboardWithoutActivePlan ||
-              state is DashboardNoOrders) ...[
+          ] else if (pendingOrders.isEmpty &&
+              (state is DashboardWithoutActivePlan ||
+                  state is DashboardNoOrders)) ...[
             const _NoActivePlanCard(),
           ],
           const SizedBox(height: 22),
@@ -579,7 +591,9 @@ class _DashboardHome extends ConsumerWidget {
             const SizedBox(height: 10),
             _QuickActions(
               canChooseMeals: canChooseMeals,
-              showExplorePlans: plans.isNotEmpty && !canChooseMeals,
+              showExplorePlans:
+                  (plans.isNotEmpty || pendingOrders.isNotEmpty) &&
+                  !canChooseMeals,
               onPlan: () {
                 final target = mealSectionKey.currentContext;
                 if (target != null) {

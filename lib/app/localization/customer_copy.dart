@@ -7,6 +7,8 @@ extension CustomerCopy on BuildContext {
     final copy = lookupAppLocalizations(Localizations.localeOf(this));
     final arabic = Localizations.localeOf(this).languageCode == 'ar';
     return switch (value) {
+      "Your order is awaiting approval. We'll update your plan here once confirmed." =>
+        arabic ? 'طلبك بانتظار الموافقة. سنحدّث خطتك هنا بمجرد تأكيده.' : value,
       'Upcoming' => arabic ? 'قادمة' : value,
       'No payment due — Cancelled' =>
         arabic ? 'لا توجد دفعة مستحقة — ملغي' : value,

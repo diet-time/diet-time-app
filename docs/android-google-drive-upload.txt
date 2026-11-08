@@ -1,0 +1,64 @@
+Android APK uploads to Google Drive
+
+The Build Android APK workflow can upload the APK directly to a Google Drive
+folder after building it. Each run uploads diet-time-<run>-<attempt>.apk. Older
+builds are retained. The GitHub artifact remains available as a fallback.
+The run summary links to the uploaded APK. The folder's existing access settings
+apply; this workflow does not make the file public or change sharing permissions.
+
+One-time setup for a personal Google Drive
+
+1. Create or choose a Drive folder for Android builds. Copy its folder ID:
+   https://drive.google.com/drive/folders/FOLDER_ID
+
+2. Install rclone on your own computer: https://rclone.org/install/
+   Create your own Google OAuth client and enable the Drive API by following:
+   https://rclone.org/drive/#making-your-own-client-id
+   Use your own OAuth client ID/secret, not rclone's shared client credentials.
+   For a personal OAuth app in Testing mode, follow rclone's publishing guidance
+   to avoid the refresh token expiring after seven days.
+
+3. Create a dedicated rclone configuration, with a remote named exactly gdrive:
+     rclone config --config ./diet-time-drive.conf
+   Choose New remote, name gdrive, storage Google Drive (drive), then enter your
+   Google OAuth client ID and client secret. Select the scope that permits writing
+   to your existing destination folder (the standard drive scope supports this).
+   Complete the browser sign-in with the Google account that owns the folder.
+   For My Drive, do not select a Shared Drive. A Shared Drive destination can
+   instead use a properly authorized Shared Drive remote configuration.
+
+4. In the app's GitHub repository, open Settings > Secrets and variables > Actions.
+   Add a repository secret:
+     GDRIVE_RCLONE_CONFIG = the full contents of diet-time-drive.conf
+   Keep this dedicated config unencrypted by an rclone config password, since the
+   runner must read it unattended. Store it only as a GitHub secret, never in the
+   repository, workflow input, issue, chat, or build artifact. It contains OAuth
+   credentials and a refresh token. The workflow writes a private temporary copy
+   on the runner and removes it when the upload step exits.
+
+5. Add a repository variable (or secret):
+     GDRIVE_FOLDER_ID = the folder ID from step 1
+   The account authorized in the config must be able to upload into this folder.
+
+Run the workflow
+
+Push these workflow changes to GitHub, open Actions > Build Android APK, and
+choose Run workflow. Leave Upload to Google Drive enabled. Optionally override
+the destination using the google_drive_folder_id input (ID only, not its URL).
+The workflow uploads the actual .apk, then adds a Drive download link to Summary.
+
+If neither setting exists, Drive upload is skipped with a warning and the normal
+APK artifact still builds. If only one setting exists, configuration validation
+fails before the build. You can disable Drive upload for a GitHub-only build.
+A configured Drive upload failure fails the run; the previously uploaded GitHub
+artifact and its download instructions remain accessible.
+
+Re-authorize the dedicated rclone config and replace GDRIVE_RCLONE_CONFIG if
+Google revokes the token. Do not paste tokens into logs while troubleshooting.
+
+Implementation references
+  https://rclone.org/drive/
+  https://rclone.org/commands/rclone_copyto/
+
+Local validation cannot verify a real upload without the folder and GitHub
+Actions secret. No APK was uploaded to Drive while editing this workflow.

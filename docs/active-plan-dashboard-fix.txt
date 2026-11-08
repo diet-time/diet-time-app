@@ -153,3 +153,14 @@ Local logs (ignored artifacts):
   artifacts/active-plan-unit-tests.log
   artifacts/active-plan-api-tests.log
   artifacts/active-plan-full-flutter-tests.log
+
+Pending-only dashboard follow-up
+
+Clarification: active plans display correctly. The remaining issue was the large
+no-active-plan card shown alongside orders awaiting approval. The empty-state
+condition checked only for eligible plans, without distinguishing pending orders.
+It now renders that card only when there are neither eligible nor pending plans.
+Pending orders retain a compact approval message and their order rows. Explore
+Plans remains available as a quick action. Active cards and backend delivery or
+payment permissions are unchanged. No API/database changes were needed for this
+follow-up. Validation: 84 targeted Flutter tests passed; Dart analysis clean.

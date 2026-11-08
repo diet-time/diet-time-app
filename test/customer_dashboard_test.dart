@@ -380,6 +380,8 @@ void main() {
       expect(find.byKey(const ValueKey('dashboardChooseMeals')), findsNothing);
       expect(find.byKey(const ValueKey('orderAnotherPlan')), findsNothing);
       expect(find.text('Explore Plans'), findsOneWidget);
+      expect(find.byKey(const ValueKey('noActivePlan')), findsNothing);
+      expect(find.byKey(const ValueKey('pendingPlanMessage')), findsOneWidget);
       await tester.ensureVisible(
         find.byKey(const ValueKey('dashboardOrdersAction')),
       );
@@ -444,7 +446,7 @@ void main() {
       await tester.pump(const Duration(minutes: 1));
       await tester.pump();
       expect(controller.refreshCalls, 1);
-      expect(find.byKey(const ValueKey('noActivePlan')), findsOneWidget);
+      expect(find.byKey(const ValueKey('noActivePlan')), findsNothing);
       await tester.pumpWidget(const SizedBox());
     },
   );
@@ -644,7 +646,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.byKey(const ValueKey('activePlan-pending')), findsNothing);
-        expect(find.byKey(const ValueKey('noActivePlan')), findsOneWidget);
+        expect(find.byKey(const ValueKey('noActivePlan')), findsNothing);
         expect(find.byKey(const ValueKey('tomorrowDeliveries')), findsNothing);
         final row = find.byKey(const ValueKey('order-pending'));
         await tester.scrollUntilVisible(
@@ -717,7 +719,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('noActivePlan')), findsOneWidget);
+      expect(find.byKey(const ValueKey('noActivePlan')), findsNothing);
       expect(find.byKey(const ValueKey('activePlan-purchase')), findsNothing);
       for (final status in ['CONFIRMED', 'ACTIVE']) {
         final updated = _reviewSummary('purchase', status);

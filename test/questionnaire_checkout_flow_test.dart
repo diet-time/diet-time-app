@@ -71,7 +71,9 @@ void main() {
         expect(find.byKey(const ValueKey('resumeSelectedPlan')), findsNothing);
         final startPlan = find.byKey(
           ValueKey(
-            status == 'PENDING_APPROVAL' ? 'choosePlan' : 'orderAnotherPlan',
+            status == 'PENDING_APPROVAL'
+                ? 'dashboardExplorePlans'
+                : 'orderAnotherPlan',
           ),
         );
         await tester.scrollUntilVisible(
