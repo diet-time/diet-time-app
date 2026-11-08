@@ -1,4 +1,4 @@
-﻿param([string]$PostgresBin = 'C:\Program Files\PostgreSQL\18\bin', [int]$Port = 55489)
+param([string]$PostgresBin = 'C:\Program Files\PostgreSQL\18\bin', [int]$Port = 55489, [string]$TestFilter = 'FullyQualifiedName~Performance_dashboard|FullyQualifiedName~Pause_dashboard', [string]$TestLog = 'performance-api-tests.log')
 $ErrorActionPreference = 'Stop'
 $workspace = Split-Path -Parent $PSScriptRoot
 $apiRoot = Join-Path (Split-Path -Parent $workspace) 'diet-time-api'
@@ -18,7 +18,7 @@ try {
     $started = $true
     $env:UPCOMING_MEALS_TEST_CONNECTION = "Host=127.0.0.1;Port=$Port;Database=postgres;Username=postgres;Pooling=false"
     $env:PERFORMANCE_REPORT_DIRECTORY = $reportDirectory
-    & dotnet test (Join-Path $apiRoot 'tests\DietTime.Meal.Api.IntegrationTests\DietTime.Meal.Api.IntegrationTests.csproj') --no-restore --filter 'FullyQualifiedName~Performance_dashboard|FullyQualifiedName~Pause_dashboard' --logger 'console;verbosity=normal' *> (Join-Path $artifactsRoot 'performance-api-tests.log')
+    & dotnet test (Join-Path $apiRoot 'tests\DietTime.Meal.Api.IntegrationTests\DietTime.Meal.Api.IntegrationTests.csproj') --no-restore --filter $TestFilter --logger 'console;verbosity=normal' *> (Join-Path $artifactsRoot $TestLog)
     $testExit = $LASTEXITCODE
 } finally {
     $canRemove = -not $started

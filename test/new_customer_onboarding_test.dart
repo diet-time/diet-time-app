@@ -288,6 +288,66 @@ void main() {
       );
     },
   );
+  test(
+    'editing a goal preserves saved collections without resubmitting them',
+    () async {
+      final client = _Client(200, {
+        'data': {
+          'id': 'profile',
+          'goalCode': 'MAINTAIN_WEIGHT',
+          'preferences': [
+            {'preferenceCode': 'HIGH_PROTEIN'},
+          ],
+          'allergens': [
+            {'allergenId': 'previously-saved-allergen'},
+          ],
+        },
+      });
+      final repository = HttpCustomerProfileRepository(
+        clientFactory: () => client,
+      );
+      final loaded = (await repository.getProfile())!;
+      await repository.updateProfile(loaded.copyWith(goalCode: 'LOSE_WEIGHT'));
+      final body = jsonDecode(client.body) as Map;
+      expect(body['goalCode'], 'LOSE_WEIGHT');
+      expect(body.containsKey('allergens'), isFalse);
+      expect(body.containsKey('preferences'), isFalse);
+
+      // Explicitly clearing a collection must still reach the server.
+      await repository.updateProfile(
+        loaded.copyWith(allergens: {}, preferences: {}),
+      );
+      final cleared = jsonDecode(client.body) as Map;
+      expect(cleared['allergens'], isEmpty);
+      expect(cleared['preferences'], isEmpty);
+    },
+  );
+
+  for (final errors in [
+    {
+      'DateOfBirth': ['Invalid date'],
+    },
+    [
+      {'field': 'DateOfBirth', 'message': 'Invalid date'},
+    ],
+  ]) {
+    test('save validation identifies the rejected section: $errors', () async {
+      final repository = HttpCustomerProfileRepository(
+        clientFactory: () => _Client(400, {'errors': errors}),
+      );
+      await expectLater(
+        repository.updateProfile(completeProfile),
+        throwsA(
+          isA<CustomerProfileException>().having(
+            (error) => error.message,
+            'message',
+            'Please review your date of birth and retry saving.',
+          ),
+        ),
+      );
+    });
+  }
+
   test('creation with no saved profile identifier is an API failure', () async {
     final repository = HttpCustomerProfileRepository(
       clientFactory: () => _Client(200, {'data': {}}),

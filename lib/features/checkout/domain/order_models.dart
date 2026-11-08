@@ -155,18 +155,8 @@ class CustomerOrderSummary {
   final Map<String, dynamic> review;
   int get rowVersion => (review['rowVersion'] as num?)?.toInt() ?? 0;
   String get statusLabel => orderStatusLabel(status);
-  String get paymentLabel => paymentStatusLabel(paymentStatus);
-  String? get reviewMessage =>
-      review['rejectionReason'] as String? ??
-      review['holdReason'] as String? ??
-      review['fulfillmentBlockedReason'] as String? ??
-      (review['awaitingPayment'] == true
-          ? 'Your order is confirmed and awaiting the required payment.'
-          : status == 'REJECTED'
-          ? 'Your order was declined by Diet Time. Please contact us for help.'
-          : status == 'PENDING_APPROVAL'
-          ? "Your order has been received. Our Diet Time team will contact you shortly to confirm the order and arrange payment."
-          : null);
+  String get paymentLabel => orderPaymentLabel(status, paymentStatus);
+  String? get reviewMessage => orderReviewMessage(status, review);
   final TakeawayBranch? takeawayBranch;
   final String fulfillmentMethod;
   MealEntitlement? get entitlement =>
@@ -179,14 +169,13 @@ class CustomerOrderSummary {
 
   bool get isValid => id.isNotEmpty && orderNumber.isNotEmpty;
   bool get isCurrent =>
+      status == 'PAUSED' ||
       review['canFulfill'] != false &&
-      const {
-        'CONFIRMED',
-        'ACTIVE',
-        'PAUSED',
-        'PENDING',
-        'PENDING_ACTIVATION',
-      }.contains(status);
+          const {'CONFIRMED', 'ACTIVE'}.contains(status);
+  bool get canChooseMeals =>
+      isCurrent &&
+      status != 'PAUSED' &&
+      packageSchedule?.displayStatus != 'PAUSED';
   bool get isCompleted => status == 'COMPLETED';
   bool get isCancelled => status == 'CANCELLED';
 }
@@ -263,8 +252,8 @@ class OrderConfirmation {
       OrderConfirmation(
         id: _text(json['id'] ?? json['orderId']),
         orderNumber: _text(json['orderNumber']),
-        status: _text(json['status']),
-        paymentStatus: _text(json['paymentStatus']),
+        status: _text(json['status']).toUpperCase(),
+        paymentStatus: _text(json['paymentStatus']).toUpperCase(),
         plan: OrderPlan.fromJson(_map(json['plan'])),
         meals: _list(
           json['meals'],
@@ -305,18 +294,8 @@ class OrderConfirmation {
       !customerCancellationBlocked;
   int get rowVersion => (review['rowVersion'] as num?)?.toInt() ?? 0;
   String get statusLabel => orderStatusLabel(status);
-  String get paymentLabel => paymentStatusLabel(paymentStatus);
-  String? get reviewMessage =>
-      review['rejectionReason'] as String? ??
-      review['holdReason'] as String? ??
-      review['fulfillmentBlockedReason'] as String? ??
-      (review['awaitingPayment'] == true
-          ? 'Your order is confirmed and awaiting the required payment.'
-          : status == 'REJECTED'
-          ? 'Your order was declined by Diet Time. Please contact us for help.'
-          : status == 'PENDING_APPROVAL'
-          ? "Your order has been received. Our Diet Time team will contact you shortly to confirm the order and arrange payment."
-          : null);
+  String get paymentLabel => orderPaymentLabel(status, paymentStatus);
+  String? get reviewMessage => orderReviewMessage(status, review);
   final TakeawayBranch? takeawayBranch;
   final String fulfillmentMethod;
   MealEntitlement get entitlement => mealCount == null

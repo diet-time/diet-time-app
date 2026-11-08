@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/dashboard/presentation/package_management_panel.dart';
 import 'package:diet_time/features/dashboard/presentation/package_management_provider.dart';
+import 'package:diet_time/features/dashboard/presentation/customer_dashboard_controller.dart';
 
 final orderDetailsProvider = FutureProvider.autoDispose
     .family<OrderConfirmation, String>(
@@ -34,7 +35,6 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    Future.microtask(() => ref.invalidate(orderDetailsProvider(orderId)));
   }
 
   @override
@@ -147,6 +147,9 @@ class _OrderDetails extends ConsumerWidget {
                     .read(ordersRepositoryProvider)
                     .cancelOrder(order.id, order.rowVersion, reason);
                 ref.invalidate(orderDetailsProvider(order.id));
+                await ref
+                    .read(customerDashboardControllerProvider.notifier)
+                    .refresh();
               } catch (error) {
                 if (error is ApiException &&
                     error.code == 'ORDER_CANCELLATION_NOT_ALLOWED') {
@@ -294,7 +297,9 @@ class _OrderDetails extends ConsumerWidget {
                 radius: 18,
                 backgroundColor: AppColors.emeraldGreen,
                 child: Icon(
-                  Icons.check_rounded,
+                  const {'CANCELLED', 'REJECTED'}.contains(order.status)
+                      ? Icons.info_outline_rounded
+                      : Icons.receipt_long_outlined,
                   color: AppColors.white,
                   size: 19,
                 ),
@@ -305,7 +310,17 @@ class _OrderDetails extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      context.customerCopy('Thank you for your order!'),
+                      context.customerCopy(switch (order.status) {
+                        'CANCELLED' => 'Order cancelled',
+                        'REJECTED' => 'Order declined',
+                        'PENDING_APPROVAL' ||
+                        'PENDING' ||
+                        'ON_HOLD' ||
+                        'PENDING_ACTIVATION' => 'Awaiting confirmation',
+                        'COMPLETED' => 'Plan completed',
+                        'PAUSED' => 'Plan paused',
+                        _ => 'Your order',
+                      }),
                       style: TextStyle(
                         color: AppColors.darkGreen,
                         fontWeight: FontWeight.w900,
@@ -313,11 +328,7 @@ class _OrderDetails extends ConsumerWidget {
                     ),
                     SizedBox(height: 3),
                     Text(
-                      context.customerCopy(
-                        order.status == 'PENDING_APPROVAL'
-                            ? "Your order has been received. Our Diet Time team will contact you shortly to confirm the order and arrange payment."
-                            : 'Your plan and delivery schedule are confirmed above.',
-                      ),
+                      context.customerCopy(orderCustomerMessage(order.status)),
                       style: TextStyle(
                         color: AppColors.darkGreen,
                         fontSize: 11,

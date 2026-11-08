@@ -199,7 +199,7 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
     _requestInProgress = true;
     final generation = _generation;
     final watch = Stopwatch()..start();
-    state = const DashboardLoading();
+    if (!force) state = const DashboardLoading();
     try {
       final repository = ref.read(ordersRepositoryProvider);
       List<CustomerOrderSummary> orders;
@@ -379,17 +379,5 @@ List<CustomerOrderSummary> dashboardPlanOrders(CustomerDashboardState state) {
       byId[order.id] = order;
     }
   }
-  return List.unmodifiable(
-    byId.values.where(
-      (order) => const {
-        'PENDING_APPROVAL',
-        'ON_HOLD',
-        'CONFIRMED',
-        'ACTIVE',
-        'PAUSED',
-        'PENDING',
-        'PENDING_ACTIVATION',
-      }.contains(order.status),
-    ),
-  );
+  return List.unmodifiable(byId.values.where((order) => order.isCurrent));
 }

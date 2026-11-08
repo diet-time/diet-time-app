@@ -82,14 +82,17 @@ void main() {
       );
     },
   );
-  test('pending activation orders are recognized as current plans', () {
-    expect(
-      CustomerOrderSummary.fromJson(
-        orderJson('pending', 'PENDING_ACTIVATION'),
-      ).isCurrent,
-      isTrue,
-    );
-  });
+  test(
+    'pending activation orders await confirmation and are not current plans',
+    () {
+      expect(
+        CustomerOrderSummary.fromJson(
+          orderJson('pending', 'PENDING_ACTIVATION'),
+        ).isCurrent,
+        isFalse,
+      );
+    },
+  );
 }
 
 class DashboardOrdersApi extends ApiClient {

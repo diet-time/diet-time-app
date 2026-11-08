@@ -1,0 +1,130 @@
+Diet Time: Order status, navigation and dashboard review
+Date: 2026-11-08
+
+Implemented behavior
+
+Cancelled unpaid/pending/failed payments display "No payment due — Cancelled".
+Rejected unpaid orders display "No payment due — Rejected". Paid, refund-pending,
+partially refunded and refunded states retain their distinct labels. A legacy
+PARTIALLY_PAID value displays "Partially paid — Settlement under review".
+These labels do not change stored payment records or claim a refund completed.
+
+Order Details uses a contextual message for cancellation, rejection, pending
+approval, completion and pause. It no longer promises confirmed deliveries for
+every order. Stale awaiting-payment review messages are suppressed for terminal
+orders. Order summaries and details share the same label/message helpers.
+
+Only eligible confirmed/active subscriptions and paused subscriptions appear in
+the plan carousel. Pending, held, rejected and cancelled purchases remain in
+order history. Payment-blocked confirmed orders are excluded from active plans.
+The existing backend canFulfill and package-schedule projections remain the
+source of truth; meal locks do not establish delivery eligibility.
+
+Choose Meals scrolls to the existing dashboard meal-selection section. Orders
+opens the same Orders tab used by the bottom navigation. Individual View Details
+links retain their purchased order ID. No additional order screen was created.
+With no active plan, the dashboard offers one green
+Explore Plans button and Orders, Calendar and Support quick actions. With an
+eligible subscription, actions are Choose Meals, Orders, New Plan and Support.
+When a plan exists but meal selection is unavailable (for example, paused),
+Explore Plans replaces Choose Meals and Calendar replaces the duplicate New Plan.
+The existing support behavior is retained.
+
+Menu and Language use matching 44-pixel minimum heights, rounded outlines,
+18-pixel icons and consistent padding. Menu disables the rectangular theme
+background builder and uses a clipped, zero-elevation surface. The language
+control's heavy shadow was removed. Quick-action cards have equal responsive
+widths and heights, two-line labels and clipped tap feedback. The no-plan card
+is smaller, uses sentence case, and has the requested message and green button.
+
+Dashboard refresh preserves existing content while summaries load. Existing
+refreshes after order placement, package changes, cancellation, returning from
+details and app resumption remain available. Open orders also refresh every
+minute while the dashboard route is visible and the app is in the foreground.
+An empty or terminal-only dashboard does not poll. Tab changes reuse existing
+pages and providers. The initial duplicate Order Details invalidation was removed.
+
+Root causes
+
+1. Payment labels received payment status alone, ignoring terminal order status.
+2. The Order Details confirmation banner was unconditional.
+3. Legacy PENDING/PENDING_ACTIVATION statuses counted as current subscriptions;
+   a separate carousel filter also included pending and blocked purchases.
+4. My Plan duplicated Orders navigation instead of opening meal selection.
+5. The global filled-button backgroundBuilder paints a rectangular gradient
+   outside the Menu button's rounded surface. Its local style now removes that
+   builder rather than covering the artifact with another layer.
+6. Empty-state styling explicitly selected black and oversized spacing.
+7. Refresh replaced ready dashboard content with a full loading state.
+8. Rejection did not invalidate provisional future service rows; terminal
+   package summaries could count stale rows as remaining services.
+9. Cancelling/rejecting a partially refunded order reset its actual partial
+   refund state to REFUND_PENDING.
+
+Backend and database
+
+StaffOrderService now marks future undelivered service rows CANCELLED on
+rejection as well as cancellation, inside the existing transaction. Existing
+cancellation guards for already committed services remain unchanged. Service
+and meal-selection history are retained. Partial and completed refunds remain
+unchanged on cancellation/rejection. The existing PAID -> REFUND_PENDING
+business transition and its audit history are preserved.
+
+SubscriptionScheduleRules reports zero remaining services for cancelled,
+rejected and completed orders, even if stale provisional rows exist. Its existing
+scheduled-service predicate already excludes those orders from future delivery.
+Kitchen reports use the same fulfillment policy. Reminder creation and dispatch
+already recheck fulfillment eligibility and do not deliver meal reminders for
+cancelled orders. No payment-reminder workflow was added.
+
+No schema migration or historical data rewrite is required. Order status and
+payment status remain separate fields. The API currently records payment states,
+not partial-payment amounts; this work adds no new payment collection or refund
+execution workflow. PARTIALLY_PAID handling is read/display compatibility, not
+a new API payment-write transition.
+
+Files changed for this task (paths relative to their repository)
+
+Flutter app:
+  lib/app/localization/customer_copy.dart
+  lib/features/checkout/domain/order_status.dart
+  lib/features/checkout/domain/order_models.dart
+  lib/features/dashboard/presentation/customer_dashboard_controller.dart
+  lib/features/dashboard/presentation/customer_dashboard_screen.dart
+  lib/features/dashboard/presentation/order_details_screen.dart
+  lib/features/language/presentation/language_dropdown.dart
+  test/customer_dashboard_test.dart
+  test/dashboard_order_pagination_test.dart
+  test/dashboard_performance_test.dart
+  test/language_dashboard_test.dart
+  test/questionnaire_checkout_flow_test.dart
+  tool/run_performance_database.ps1
+  docs/order-dashboard-review.txt
+
+Sibling diet-time-api repository:
+  src/BuildingBlocks/DietTime.Persistence/StaffOrderService.cs
+  src/BuildingBlocks/DietTime.Application/SubscriptionScheduleRules.cs
+  tests/DietTime.Meal.Api.IntegrationTests/OrderDashboardLifecycleTests.cs
+  tests/DietTime.UnitTests/SubscriptionScheduleRulesTests.cs
+
+Validation
+
+Flutter full suite: 587 passed. Dart analysis: no issues.
+API unit tests: 70 passed (workflow policy, scheduling, kitchen aggregation).
+PostgreSQL integration tests: 6 passed against a disposable local database.
+
+Coverage includes cancelled pending/unpaid, paid, partial-payment display,
+refund-pending, partially refunded and refunded states; rejected and pending
+orders; confirmed paid/unpaid orders; one active plus cancelled purchases;
+history/details navigation; matching button dimensions under iOS and Android
+themes; English/Arabic compact screens and larger text; silent refresh; multiple
+orders/calendars; service cleanup; and preserved payment/selection history.
+
+Logs (ignored local artifacts):
+  artifacts/order-dashboard-full-flutter-tests.log
+  artifacts/order-dashboard-unit-tests.log
+  artifacts/order-dashboard-api-tests.log
+
+API tests use a disposable local PostgreSQL cluster, not production data.
+iOS/Android checks are Flutter widget/platform-theme tests; physical-device
+rendering has not been verified. No release or database deployment was performed.

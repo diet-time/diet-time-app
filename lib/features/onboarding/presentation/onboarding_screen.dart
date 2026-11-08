@@ -146,7 +146,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     if (widget.editMode) {
       _editingCompletedProfile = profile.isCompleted;
       _controller.dispose();
-      _index = _editingCompletedProfile ? 1 : 0;
+      _index = 0;
       _controller = PageController(initialPage: _index);
       setState(() => _initialized = true);
     }
@@ -565,7 +565,7 @@ class _PersonalizationScreenState extends ConsumerState<PersonalizationScreen> {
     final steps = _buildSteps(l10n, locale.languageCode, allergenState);
     final persistence = ref.watch(profilePersistenceControllerProvider);
     final localCompletionPercentage = _editingCompletedProfile
-        ? (_index.clamp(0, CustomerQuestionnaire.steps.length) *
+        ? ((_index - 1).clamp(0, CustomerQuestionnaire.steps.length) *
                   100 /
                   CustomerQuestionnaire.steps.length)
               .round()

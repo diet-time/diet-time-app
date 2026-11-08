@@ -267,7 +267,7 @@ void main() {
   });
 
   testWidgets(
-    'Adjust Plan starts at the first editing step with saved answers and step progress',
+    'Adjust Plan starts at zero and counts reviewed answers after saving',
     (tester) async {
       final service = _FakeProfilePersistenceService(
         profile: const CustomerProfile(
@@ -306,7 +306,13 @@ void main() {
         find.byKey(const ValueKey('onboardingHeaderBack')),
         findsOneWidget,
       );
-      expect(find.text('17%'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('serverCompletionPercentage-0')),
+        findsOneWidget,
+      );
+      expect(service.saveProgressCalls, 0);
+      await _continue(tester);
+      expect(find.text('0%'), findsOneWidget);
       final selectedGoal = tester.widget<AnimatedContainer>(
         find.descendant(
           of: find.byKey(const ValueKey('goal-maintain')),
@@ -317,14 +323,20 @@ void main() {
       expect(service.profile!.isCompleted, isTrue);
       expect(service.saveProgressCalls, 0);
       await tester.tap(find.byKey(const ValueKey('goal-lose')).hitTestable());
+      service.failSave = true;
+      await _continue(tester);
+      expect(find.text('0%'), findsOneWidget);
+      expect(find.byKey(const ValueKey('personalizationError')), findsOneWidget);
+      expect(service.profile!.goalCode, 'MAINTAIN_WEIGHT');
+      service.failSave = false;
       await _continue(tester);
       expect(service.lastSubmitted?.goalCode, 'LOSE_WEIGHT');
       expect(service.profile!.isCompleted, isTrue);
       expect(service.profile!.preferences, contains('INTERNATIONAL'));
-      expect(find.text('33%'), findsOneWidget);
+      expect(find.text('17%'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('onboardingHeaderBack')));
       await tester.pumpAndSettle();
-      expect(find.text('17%'), findsOneWidget);
+      expect(find.text('0%'), findsOneWidget);
       for (var step = 0; step < 4; step++) {
         await _continue(tester);
       }

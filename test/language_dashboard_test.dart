@@ -14,8 +14,52 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart' show Intl;
+import 'package:diet_time/app/theme/app_theme.dart';
 
 void main() {
+  for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+    testWidgets(
+      'Menu and Language have matching flat rounded surfaces on $platform',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(320, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              customerDashboardControllerProvider.overrideWith(
+                _EmptyDashboard.new,
+              ),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.light(
+                const Locale('en'),
+              ).copyWith(platform: platform),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: const CustomerDashboardScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final menu = find.byKey(const ValueKey('dashboardMenuButton'));
+        final language = find.byKey(
+          const ValueKey('dashboardLanguageSelector'),
+        );
+        expect(tester.getSize(menu).height, 44);
+        expect(tester.getSize(language).height, 44);
+        final button = tester.widget<FilledButton>(menu);
+        expect(button.clipBehavior, Clip.antiAlias);
+        expect(button.style!.elevation!.resolve({}), 0);
+        const child = SizedBox();
+        expect(
+          button.style!.backgroundBuilder!(tester.element(menu), {}, child),
+          same(child),
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
   testWidgets(
     'compact Menu shortcut opens existing screen and arrow restores the same dashboard',
     (tester) async {
@@ -103,7 +147,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('dashboard-language-ar')));
       await tester.pumpAndSettle();
       expect(find.text('القائمة'), findsOneWidget);
-      expect(find.text('الطلبات'), findsOneWidget);
+      expect(find.text('الطلبات'), findsWidgets);
       expect(
         Directionality.of(tester.element(find.byType(CustomerDashboardScreen))),
         TextDirection.rtl,

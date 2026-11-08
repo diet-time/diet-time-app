@@ -25,6 +25,7 @@ class LanguageDropdown extends StatelessWidget {
         tooltip: context.customerCopy('Language'),
         onSelected: onSelected,
         position: PopupMenuPosition.under,
+        borderRadius: BorderRadius.circular(99),
         color: AppColors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         itemBuilder: (context) => [
@@ -42,21 +43,14 @@ class LanguageDropdown extends StatelessWidget {
           ),
         ],
         child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 10, 8),
+          constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             color: AppColors.white,
             borderRadius: BorderRadius.circular(99),
             border: Border.all(
               color: AppColors.emeraldGreen.withValues(alpha: .18),
             ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x120B3226),
-                blurRadius: 24,
-                offset: Offset(0, 9),
-              ),
-            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

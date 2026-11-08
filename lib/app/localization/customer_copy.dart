@@ -5,7 +5,43 @@ import 'package:diet_time/l10n/app_localizations.dart';
 extension CustomerCopy on BuildContext {
   String customerCopy(String value) {
     final copy = lookupAppLocalizations(Localizations.localeOf(this));
+    final arabic = Localizations.localeOf(this).languageCode == 'ar';
     return switch (value) {
+      'No payment due — Cancelled' =>
+        arabic ? 'لا توجد دفعة مستحقة — ملغي' : value,
+      'No payment due — Rejected' =>
+        arabic ? 'لا توجد دفعة مستحقة — مرفوض' : value,
+      'Partially Paid' => arabic ? 'مدفوع جزئياً' : value,
+      'Partially paid — Settlement under review' =>
+        arabic ? 'مدفوع جزئياً — التسوية قيد المراجعة' : value,
+      'Choose Meals' => arabic ? 'اختر الوجبات' : value,
+      'Explore Plans' => arabic ? 'استكشف الخطط' : value,
+      'Calendar' => arabic ? 'التقويم' : value,
+      'No active plan' => arabic ? 'لا توجد خطة نشطة' : value,
+      "You don't have an active meal plan yet. Explore our plans to get started." =>
+        arabic ? 'ليس لديك خطة وجبات نشطة بعد. استكشف خططنا للبدء.' : value,
+      'Order cancelled' => arabic ? 'تم إلغاء الطلب' : value,
+      'Order declined' => arabic ? 'تم رفض الطلب' : value,
+      'Awaiting confirmation' => arabic ? 'بانتظار التأكيد' : value,
+      'Plan completed' => arabic ? 'اكتملت الخطة' : value,
+      'Plan paused' => arabic ? 'الخطة متوقفة مؤقتاً' : value,
+      'Your order' => arabic ? 'طلبك' : value,
+      'This order has been cancelled. No further deliveries are scheduled.' =>
+        arabic ? 'تم إلغاء هذا الطلب. لا توجد توصيلات أخرى مجدولة.' : value,
+      'This order has been declined. No deliveries are scheduled.' =>
+        arabic ? 'تم رفض هذا الطلب. لا توجد توصيلات مجدولة.' : value,
+      'Your order is awaiting confirmation. Deliveries have not been scheduled yet.' =>
+        arabic ? 'طلبك بانتظار التأكيد. لم تتم جدولة التوصيلات بعد.' : value,
+      'This plan has been completed. Your order details are kept here.' =>
+        arabic ? 'اكتملت هذه الخطة. تفاصيل طلبك محفوظة هنا.' : value,
+      'Your plan is paused. Check your schedule for the restart date.' =>
+        arabic
+            ? 'خطتك متوقفة مؤقتاً. تحقق من الجدول لمعرفة تاريخ الاستئناف.'
+            : value,
+      'Check your plan and delivery schedule above for the latest details.' =>
+        arabic
+            ? 'تحقق من خطتك وجدول التوصيل أعلاه للاطلاع على آخر التفاصيل.'
+            : value,
       "Please choose an available service start date. Next-day bookings close at 9:00 PM Qatar time." =>
         copy.customerBookingCutoff,
       "Tomorrow’s Deliveries" => copy.deliveriesTitle,

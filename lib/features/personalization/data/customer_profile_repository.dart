@@ -37,12 +37,14 @@ class HttpCustomerProfileRepository implements CustomerProfileRepository {
   final HttpClient Function() _clientFactory;
   final Future<String?> Function()? _accessTokenProvider;
   final Future<String?> Function()? _temporaryPhoneProvider;
+  CustomerProfile? _persistedProfile;
 
   @override
   Future<CustomerProfile?> getProfile() async {
     final result = await _request(method: 'GET');
     if (result.statusCode == HttpStatus.notFound &&
         _errorCode(result.body) == 'profile_not_found') {
+      _persistedProfile = null;
       return null;
     }
     if (result.statusCode < 200 || result.statusCode >= 300) {
@@ -55,23 +57,36 @@ class HttpCustomerProfileRepository implements CustomerProfileRepository {
     if (profile == null || profile.profileId == null) {
       throw const CustomerProfileException(statusCode: 502);
     }
+    _persistedProfile = profile;
     return profile;
   }
 
   @override
   Future<CustomerProfile> updateProfile(CustomerProfile profile) async {
-    final result = await _request(
-      method: 'PUT',
-      body: {
-        ...profile.toJson(),
-        'preferredLanguage': profile.preferredLanguage,
-        if (profile.profileId == null) 'createOnly': true,
-      },
-    );
+    final body = {
+      ...profile.toJson(),
+      'preferredLanguage': profile.preferredLanguage,
+      if (profile.profileId == null) 'createOnly': true,
+    };
+    final baseline = _persistedProfile;
+    if (profile.profileId != null &&
+        baseline != null &&
+        baseline.profileId == profile.profileId) {
+      // Omitted collections are preserved by the API. Do not revalidate or
+      // replace saved allergies/preferences while editing another answer.
+      if (setEquals(profile.allergens, baseline.allergens)) {
+        body.remove('allergens');
+      }
+      if (setEquals(profile.preferences, baseline.preferences)) {
+        body.remove('preferences');
+      }
+    }
+    final result = await _request(method: 'PUT', body: body);
     if (result.statusCode < 200 || result.statusCode >= 300) {
       throw CustomerProfileException(
         statusCode: result.statusCode,
         code: _errorCode(result.body),
+        validationFields: _validationFields(result.body),
       );
     }
     final saved = _profileFromEnvelope(
@@ -85,6 +100,7 @@ class HttpCustomerProfileRepository implements CustomerProfileRepository {
     if (saved == null || saved.profileId == null) {
       throw const CustomerProfileException(statusCode: 502);
     }
+    _persistedProfile = saved;
     return saved;
   }
 
@@ -143,7 +159,10 @@ class HttpCustomerProfileRepository implements CustomerProfileRepository {
         final fields = errors is Map
             ? errors.keys.join(',')
             : errors is List
-            ? errors.whereType<Map>().map((e) => e['code']).join(',')
+            ? errors
+                  .whereType<Map>()
+                  .map((e) => e['field'] ?? e['target'] ?? e['code'])
+                  .join(',')
             : '';
         final correlation =
             response.headers.value('x-correlation-id') ?? decoded['traceId'];
@@ -177,23 +196,67 @@ CustomerProfile? _profileFromEnvelope(
 }
 
 class CustomerProfileException implements Exception {
-  const CustomerProfileException({this.statusCode, this.code});
+  const CustomerProfileException({
+    this.statusCode,
+    this.code,
+    this.validationFields = const {},
+  });
 
   final int? statusCode;
   final String? code;
-  String get message => switch (statusCode) {
-    400 || 422 =>
-      'Some answers could not be accepted. Review your selections and retry.',
-    401 || 403 =>
-      'Your session has expired. Your answers are kept; sign in again to save.',
-    409 =>
-      'Your profile changed elsewhere. Your answers are kept; retry saving.',
-    429 => 'Too many attempts. Please wait briefly and retry.',
-    null =>
-      'We could not reach the server. Your answers are kept; please retry.',
-    _ =>
-      'The server could not save your answers. Your answers are kept; please retry.',
-  };
+  final Set<String> validationFields;
+  String get message {
+    if (statusCode == 400 || statusCode == 422) {
+      final sections = <String>{};
+      for (final field in validationFields) {
+        final name = field.toLowerCase().replaceFirst(RegExp(r'^\$\.'), '');
+        for (final entry in const {
+          'goal': 'goal',
+          'gender': 'gender',
+          'dateofbirth': 'date of birth',
+          'height': 'height',
+          'weight': 'weight',
+          'dailyroutine': 'daily routine',
+          'activitylevel': 'activity level',
+          'preferences': 'food preferences',
+          'allergens': 'allergy selections',
+          'preferredlanguage': 'language',
+        }.entries) {
+          if (name.startsWith(entry.key)) sections.add(entry.value);
+        }
+      }
+      if (code == 'invalid_allergen_id') sections.add('allergy selections');
+      if (sections.isNotEmpty) {
+        return 'Please review your ${sections.join(', ')} and retry saving.';
+      }
+    }
+    return switch (statusCode) {
+      400 || 422 =>
+        'Some answers could not be accepted. Review your selections and retry.',
+      401 || 403 =>
+        'Your session has expired. Your answers are kept; sign in again to save.',
+      409 =>
+        'Your profile changed elsewhere. Your answers are kept; retry saving.',
+      429 => 'Too many attempts. Please wait briefly and retry.',
+      null =>
+        'We could not reach the server. Your answers are kept; please retry.',
+      _ =>
+        'The server could not save your answers. Your answers are kept; please retry.',
+    };
+  }
+}
+
+Set<String> _validationFields(Map<String, dynamic> body) {
+  final errors = body['errors'];
+  if (errors is Map) return errors.keys.map((key) => key.toString()).toSet();
+  if (errors is List) {
+    return errors
+        .whereType<Map>()
+        .map((error) => error['field'] ?? error['target'])
+        .whereType<String>()
+        .toSet();
+  }
+  return const {};
 }
 
 String? _errorCode(Map<String, dynamic> body) {

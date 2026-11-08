@@ -69,10 +69,18 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.byKey(const ValueKey('resumeSelectedPlan')), findsNothing);
-        await tester.ensureVisible(
-          find.byKey(const ValueKey('orderAnotherPlan')),
+        final startPlan = find.byKey(
+          ValueKey(
+            status == 'PENDING_APPROVAL' ? 'choosePlan' : 'orderAnotherPlan',
+          ),
         );
-        await tester.tap(find.byKey(const ValueKey('orderAnotherPlan')));
+        await tester.scrollUntilVisible(
+          startPlan,
+          250,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.ensureVisible(startPlan);
+        await tester.tap(startPlan);
         await tester.pumpAndSettle();
         expect(find.text('Fresh plan selection'), findsOneWidget);
         expect(container.read(checkoutControllerProvider).selection, isNull);

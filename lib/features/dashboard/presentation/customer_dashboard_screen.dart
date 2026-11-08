@@ -12,7 +12,6 @@ import 'package:diet_time/features/dashboard/presentation/tomorrow_deliveries_se
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:diet_time/app/router/app_router.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
-import 'package:diet_time/core/widgets/app_button.dart';
 import 'package:diet_time/features/authentication/domain/otp_service.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/checkout/presentation/checkout_controller.dart';
@@ -47,6 +46,9 @@ class _CustomerDashboardScreenState
   bool _profileLoadQueued = false;
   bool _setupRedirectQueued = false;
   String? _tourDestination;
+  final _mealSectionKey = GlobalKey();
+  Timer? _statusRefresh;
+  bool _foreground = true;
 
   void _selectTab(int index) => setState(() {
     _visitedTabs.add(_tabIndex);
@@ -58,6 +60,25 @@ class _CustomerDashboardScreenState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _statusRefresh = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (!mounted || !_foreground) return;
+      final route = GoRouter.maybeOf(
+        context,
+      )?.routerDelegate.currentConfiguration.lastOrNull?.route.path;
+      if (route != null && route != AppRoutes.home) return;
+      final orders = _ordersFrom(ref.read(customerDashboardControllerProvider));
+      if (orders.any(
+        (order) => !const {
+          'CANCELLED',
+          'REJECTED',
+          'COMPLETED',
+        }.contains(order.status),
+      )) {
+        unawaited(
+          ref.read(customerDashboardControllerProvider.notifier).refresh(),
+        );
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(customerDashboardControllerProvider.notifier).initialize();
@@ -67,11 +88,13 @@ class _CustomerDashboardScreenState
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _statusRefresh?.cancel();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
     if (state == AppLifecycleState.resumed) {
       unawaited(
         ref.read(customerDashboardControllerProvider.notifier).refresh(),
@@ -142,9 +165,11 @@ class _CustomerDashboardScreenState
     }
     final pages = [
       _DashboardHome(
+        mealSectionKey: _mealSectionKey,
         state: state,
         name: profile.preferredName,
         onViewAll: () => _selectTab(1),
+        onCalendar: () => _selectTab(2),
       ),
       _CustomerOrders(state: state),
       _DashboardCalendar(state: state),
@@ -355,14 +380,18 @@ class _CustomerDashboardScreenState
 
 class _DashboardHome extends ConsumerWidget {
   const _DashboardHome({
+    required this.mealSectionKey,
     required this.state,
     required this.name,
     required this.onViewAll,
+    required this.onCalendar,
   });
 
   final CustomerDashboardState state;
   final String? name;
   final VoidCallback onViewAll;
+  final VoidCallback onCalendar;
+  final GlobalKey mealSectionKey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -405,12 +434,23 @@ class _DashboardHome extends ConsumerWidget {
       if (single != null) single.order.id: single.detail,
       if (multiple != null) ...multiple.details,
     };
-    final activeOrders = switch (state) {
-      DashboardSummariesReady(:final activeOrders) => activeOrders,
-      DashboardWithActivePlan(:final order) => [order],
-      DashboardWithMultipleActivePlans(:final activeOrders) => activeOrders,
-      _ => <CustomerOrderSummary>[],
-    };
+    final activeOrders = plans;
+    final canChooseMeals = activeOrders.any((order) {
+      if (!order.canChooseMeals) return false;
+      if (order.rowVersion < 1) return true;
+      // Reuse the plan card's live management data, including older APIs that
+      // do not include a package-schedule snapshot in their order summaries.
+      final management = ref
+          .watch(packageManagementProvider(order.id))
+          .asData
+          ?.value;
+      return !const {
+        'PAUSED',
+        'CANCELLED',
+        'REJECTED',
+        'COMPLETED',
+      }.contains(management?.effectiveDisplayStatus);
+    });
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
     return RefreshIndicator(
       onRefresh: () =>
@@ -438,19 +478,35 @@ class _DashboardHome extends ConsumerWidget {
                     Localizations.localeOf(context),
                   ).menuButton,
                 ),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, 44),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  foregroundColor: AppColors.emeraldGreen,
-                  backgroundColor: AppColors.white,
-                  shape: const StadiumBorder(),
-                  side: BorderSide(
-                    color: AppColors.emeraldGreen.withValues(alpha: .18),
-                  ),
-                ),
+                style:
+                    FilledButton.styleFrom(
+                      minimumSize: const Size(0, 44),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      foregroundColor: AppColors.emeraldGreen,
+                      backgroundColor: AppColors.white,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: const StadiumBorder(),
+                      side: BorderSide(
+                        color: AppColors.emeraldGreen.withValues(alpha: .18),
+                      ),
+                    ).copyWith(
+                      backgroundBuilder: (context, states, child) =>
+                          child ?? const SizedBox.shrink(),
+                      elevation: const WidgetStatePropertyAll(0),
+                      shadowColor: const WidgetStatePropertyAll(
+                        Colors.transparent,
+                      ),
+                      surfaceTintColor: const WidgetStatePropertyAll(
+                        Colors.transparent,
+                      ),
+                      textStyle: const WidgetStatePropertyAll(
+                        TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                clipBehavior: Clip.antiAlias,
               ),
               const DashboardLanguageSwitcher(),
             ],
@@ -487,22 +543,33 @@ class _DashboardHome extends ConsumerWidget {
               _MultiPlanCarousel(orders: plans, details: details),
             if (activeOrders.isNotEmpty) ...[
               const SizedBox(height: 16),
-              TomorrowDeliveriesSection(orders: activeOrders),
+              TomorrowDeliveriesSection(
+                key: mealSectionKey,
+                orders: activeOrders,
+              ),
             ],
           ] else if (state is DashboardWithoutActivePlan ||
               state is DashboardNoOrders) ...[
             const _NoActivePlanCard(),
           ],
           const SizedBox(height: 22),
-          if (plans.isNotEmpty) ...[
-            const SizedBox(height: 24),
+          ...[
             _SectionTitle(context.customerCopy('QUICK ACTIONS')),
             const SizedBox(height: 10),
             _QuickActions(
-              onPlan: plans.length == 1
-                  ? () => _openReviewedOrder(context, plans.single.id)
-                  : onViewAll,
+              canChooseMeals: canChooseMeals,
+              showExplorePlans: plans.isNotEmpty && !canChooseMeals,
+              onPlan: () {
+                final target = mealSectionKey.currentContext;
+                if (target != null) {
+                  Scrollable.ensureVisible(
+                    target,
+                    duration: const Duration(milliseconds: 300),
+                  );
+                }
+              },
               onOrders: onViewAll,
+              onCalendar: onCalendar,
               onNewPlan: () => _startNewOrder(context, ref),
             ),
           ],
@@ -619,33 +686,48 @@ class _NoActivePlanCard extends ConsumerWidget {
         const Icon(
           Icons.restaurant_menu_rounded,
           color: AppColors.emeraldGreen,
-          size: 38,
+          size: 28,
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 8),
         Text(
-          context.customerCopy('NO ACTIVE PLAN'),
+          context.customerCopy('No active plan'),
           textAlign: TextAlign.center,
           style: TextStyle(
             color: AppColors.darkGreen,
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          context.customerCopy("You don't have an active meal plan right now."),
+          context.customerCopy(
+            "You don't have an active meal plan yet. Explore our plans to get started.",
+          ),
           textAlign: TextAlign.center,
           style: TextStyle(
             color: AppColors.darkGreen.withValues(alpha: .62),
             height: 1.4,
           ),
         ),
-        const SizedBox(height: 20),
-        AppButton(
+        const SizedBox(height: 12),
+        FilledButton(
           key: const ValueKey('choosePlan'),
-          label: context.customerCopy('CHOOSE A PLAN'),
-          backgroundColor: AppColors.black,
+          style:
+              FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                foregroundColor: AppColors.white,
+                backgroundColor: AppColors.darkGreen,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ).copyWith(
+                backgroundBuilder: (context, states, child) =>
+                    child ?? const SizedBox.shrink(),
+                elevation: const WidgetStatePropertyAll(0),
+              ),
+          clipBehavior: Clip.antiAlias,
           onPressed: () => _startNewOrder(context, ref),
+          child: Text(context.customerCopy('Explore Plans')),
         ),
       ],
     ),
@@ -1344,44 +1426,66 @@ class _CompactPlanCard extends StatelessWidget {
 
 class _QuickActions extends StatelessWidget {
   const _QuickActions({
+    required this.canChooseMeals,
+    required this.showExplorePlans,
     required this.onPlan,
     required this.onOrders,
+    required this.onCalendar,
     required this.onNewPlan,
   });
 
   final VoidCallback onPlan;
+  final bool canChooseMeals;
+  final bool showExplorePlans;
   final VoidCallback onOrders;
+  final VoidCallback onCalendar;
   final VoidCallback onNewPlan;
 
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Expanded(
-        child: _QuickAction(
-          icon: Icons.badge_outlined,
-          key: const ValueKey('dashboardMyPlan'),
-          label: context.customerCopy('My Plan'),
-          onTap: onPlan,
+      if (canChooseMeals || showExplorePlans)
+        Expanded(
+          child: _QuickAction(
+            icon: Icons.restaurant_menu_rounded,
+            key: ValueKey(
+              canChooseMeals ? 'dashboardChooseMeals' : 'dashboardExplorePlans',
+            ),
+            label: context.customerCopy(
+              canChooseMeals ? 'Choose Meals' : 'Explore Plans',
+            ),
+            onTap: canChooseMeals ? onPlan : onNewPlan,
+          ),
         ),
-      ),
-      const SizedBox(width: 8),
+      if (canChooseMeals || showExplorePlans) const SizedBox(width: 8),
       Expanded(
         child: _QuickAction(
           icon: Icons.local_shipping_outlined,
+          key: const ValueKey('dashboardOrdersAction'),
           label: context.customerCopy('Orders'),
           onTap: onOrders,
         ),
       ),
       const SizedBox(width: 8),
-      Expanded(
-        child: _QuickAction(
-          icon: Icons.add_circle_outline_rounded,
-          key: const ValueKey('orderAnotherPlan'),
-          label: context.customerCopy('New Plan'),
-          onTap: onNewPlan,
+      if (!canChooseMeals)
+        Expanded(
+          child: _QuickAction(
+            icon: Icons.calendar_month_outlined,
+            label: context.customerCopy('Calendar'),
+            onTap: onCalendar,
+          ),
         ),
-      ),
-      const SizedBox(width: 8),
+      if (!canChooseMeals) const SizedBox(width: 8),
+      if (canChooseMeals)
+        Expanded(
+          child: _QuickAction(
+            icon: Icons.add_circle_outline_rounded,
+            key: const ValueKey('orderAnotherPlan'),
+            label: context.customerCopy('New Plan'),
+            onTap: onNewPlan,
+          ),
+        ),
+      if (canChooseMeals) const SizedBox(width: 8),
       Expanded(
         child: _QuickAction(
           icon: Icons.support_agent_rounded,
@@ -1414,12 +1518,15 @@ class _QuickAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: AppColors.white,
+    clipBehavior: Clip.antiAlias,
     borderRadius: BorderRadius.circular(16),
     child: InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        height: 78,
+        height:
+            86 +
+            (MediaQuery.textScalerOf(context).scale(10) - 10).clamp(0, 30) * 2,
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
@@ -1432,7 +1539,8 @@ class _QuickAction extends StatelessWidget {
             const SizedBox(height: 7),
             Text(
               label,
-              maxLines: 1,
+              maxLines: 2,
+              textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: AppColors.darkGreen,

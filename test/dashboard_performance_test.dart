@@ -9,6 +9,33 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
+    'refresh keeps the existing dashboard visible until new summaries arrive',
+    () async {
+      final repository = _SlowDetailRepository()..withSnapshot = true;
+      final container = ProviderContainer(
+        overrides: [ordersRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(
+        customerDashboardControllerProvider.notifier,
+      );
+      await controller.load('profile');
+      final visible = container.read(customerDashboardControllerProvider);
+      repository.summaryPending = Completer<List<CustomerOrderSummary>>();
+      final refresh = controller.load('profile', force: true);
+      expect(
+        container.read(customerDashboardControllerProvider),
+        same(visible),
+      );
+      repository.summaryPending!.complete([]);
+      await refresh;
+      expect(
+        container.read(customerDashboardControllerProvider),
+        isA<DashboardNoOrders>(),
+      );
+    },
+  );
+  test(
     'complete schedule summaries do not download full order calendars for home',
     () async {
       final repository = _SlowDetailRepository()..withSnapshot = true;
@@ -85,31 +112,35 @@ class _SlowDetailRepository extends OrdersRepository {
   final detail = Completer<OrderConfirmation>();
   final detailRequested = Completer<void>();
   bool withSnapshot = false;
+  Completer<List<CustomerOrderSummary>>? summaryPending;
 
   @override
   Future<List<CustomerOrderSummary>> getCustomerOrders(
     String profileId, {
     int pageSize = 20,
     bool dashboard = false,
-  }) async => [
-    CustomerOrderSummary.fromJson({
-      'id': 'active',
-      'orderNumber': 'ORD-A',
-      'planName': 'Balance',
-      'status': 'ACTIVE',
-      'paymentStatus': 'PAID',
-      if (withSnapshot) ...{
-        'mealCount': 3,
-        'snackCount': 1,
-        'packageSchedule': {
-          'displayStatus': 'ACTIVE',
-          'revisedEndDate': '2026-12-01',
-          'remainingServiceDays': 12,
-          'tomorrowScheduled': true,
+  }) async {
+    if (summaryPending case final pending?) return pending.future;
+    return [
+      CustomerOrderSummary.fromJson({
+        'id': 'active',
+        'orderNumber': 'ORD-A',
+        'planName': 'Balance',
+        'status': 'ACTIVE',
+        'paymentStatus': 'PAID',
+        if (withSnapshot) ...{
+          'mealCount': 3,
+          'snackCount': 1,
+          'packageSchedule': {
+            'displayStatus': 'ACTIVE',
+            'revisedEndDate': '2026-12-01',
+            'remainingServiceDays': 12,
+            'tomorrowScheduled': true,
+          },
         },
-      },
-    }),
-  ];
+      }),
+    ];
+  }
 
   @override
   Future<OrderConfirmation> getOrder(String orderId) {
