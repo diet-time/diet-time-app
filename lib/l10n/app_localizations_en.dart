@@ -2682,7 +2682,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get packagePendingSummary =>
-      'Awaiting Diet Time approval. Deliveries continue until approved.';
+      'Awaiting Diet Time approval. Meal selection is on hold for the requested dates; deliveries continue until approved.';
+
+  @override
+  String get packageMealSelectionPending =>
+      'Meal selection is on hold for this date while your pause request awaits Diet Time approval.';
 
   @override
   String get packageScheduledSummary =>

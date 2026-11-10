@@ -45,16 +45,20 @@ class TomorrowDeliveryCard extends StatelessWidget {
     );
     final pending = state == TomorrowDeliveryState.selectionPending;
     final ready = state == TomorrowDeliveryState.readyToConfirm;
-    final actionable = pending || ready;
-    final label = switch (state) {
-      TomorrowDeliveryState.selectionPending => copy.deliveriesPending,
-      TomorrowDeliveryState.readyToConfirm => copy.deliveriesReady,
-      TomorrowDeliveryState.confirmed => copy.deliveriesConfirmed,
-      TomorrowDeliveryState.automaticallySelected => copy.deliveriesAutomatic,
-      TomorrowDeliveryState.locked => copy.deliveriesLocked,
-      TomorrowDeliveryState.unavailable => copy.deliveriesWaiting,
-    };
-    final accent = actionable
+    final actionable =
+        !menu.selectionBlockedByPendingPause && (pending || ready);
+    final label = menu.selectionBlockedByPendingPause
+        ? copy.packagePauseRequested
+        : switch (state) {
+            TomorrowDeliveryState.selectionPending => copy.deliveriesPending,
+            TomorrowDeliveryState.readyToConfirm => copy.deliveriesReady,
+            TomorrowDeliveryState.confirmed => copy.deliveriesConfirmed,
+            TomorrowDeliveryState.automaticallySelected =>
+              copy.deliveriesAutomatic,
+            TomorrowDeliveryState.locked => copy.deliveriesLocked,
+            TomorrowDeliveryState.unavailable => copy.deliveriesWaiting,
+          };
+    final accent = actionable || menu.selectionBlockedByPendingPause
         ? const Color(0xFF886018)
         : AppColors.emeraldGreen;
     final actionStyle = TextButton.styleFrom(
@@ -132,7 +136,17 @@ class TomorrowDeliveryCard extends StatelessWidget {
                   .map((m) => (nutrition: m.nutrition, quantity: m.quantity)),
             ),
           ),
-          if (actionable) ...[
+          if (menu.selectionBlockedByPendingPause) ...[
+            const SizedBox(height: 8),
+            Text(
+              copy.packageMealSelectionPending,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF886018),
+                height: 1.4,
+              ),
+            ),
+          ] else if (actionable) ...[
             const SizedBox(height: 8),
             if (pending) ...[
               ClipRRect(

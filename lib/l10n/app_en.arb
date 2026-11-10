@@ -977,7 +977,8 @@
   "packageResumeOn": "Resume on",
   "orderPickupLocation": "Pickup location",
   "orderDeliveryAddress": "Delivery address",
-  "packagePendingSummary": "Awaiting Diet Time approval. Deliveries continue until approved.",
+  "packagePendingSummary": "Awaiting Diet Time approval. Meal selection is on hold for the requested dates; deliveries continue until approved.",
+  "packageMealSelectionPending": "Meal selection is on hold for this date while your pause request awaits Diet Time approval.",
   "packageScheduledSummary": "Approved. Deliveries continue until the pause begins.",
   "packagePausedSummary": "Deliveries are paused until the scheduled restart."
 }

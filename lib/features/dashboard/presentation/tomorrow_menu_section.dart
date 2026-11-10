@@ -185,7 +185,8 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
         ? untilCutoff
         : untilMidnight;
     _refreshTimer = Timer(
-      !widget.scheduledOnly || delay < const Duration(seconds: 30)
+      (!widget.scheduledOnly && !menu.selectionBlockedByPendingPause) ||
+              delay < const Duration(seconds: 30)
           ? delay
           : const Duration(seconds: 30),
       () {
@@ -202,7 +203,9 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
   }
 
   Future<void> _openSelection() async {
-    if (_selectionOpening) return;
+    if (_selectionOpening || _menu?.selectionBlockedByPendingPause == true) {
+      return;
+    }
     _selectionOpening = true;
     try {
       await Navigator.of(context).push<void>(
@@ -240,6 +243,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
       !_loading &&
       !_expired &&
       !_submitting &&
+      _menu?.selectionBlockedByPendingPause == false &&
       _menu?.canConfirm == true &&
       _menu?.readOnly == false;
 
@@ -333,6 +337,9 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
               'subscription_inactive' => context.customerCopy(
                 'Your subscription is no longer active for this delivery.',
               ),
+              'pause_request_pending' => lookupAppLocalizations(
+                Localizations.localeOf(context),
+              ).packageMealSelectionPending,
               'meal_unavailable' || 'invalid_selection' => context.customerCopy(
                 'A dish is no longer available. Please review the refreshed menu.',
               ),
@@ -386,6 +393,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
                 _update(() => _showConfirmed = !_showConfirmed),
             onChoose:
                 !_submitting &&
+                    !menu.selectionBlockedByPendingPause &&
                     menu.dayId != null &&
                     !menu.readOnly &&
                     (menu.meals.isNotEmpty || menu.snacks.isNotEmpty)
@@ -438,7 +446,11 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
   Widget _buildAction(BuildContext context) {
     final menu = _menu;
     final draft = _draft;
-    if (_loading || menu == null || draft == null || menu.readOnly) {
+    if (_loading ||
+        menu == null ||
+        draft == null ||
+        menu.readOnly ||
+        menu.selectionBlockedByPendingPause) {
       return const SizedBox.shrink();
     }
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
@@ -533,6 +545,17 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
           ).label(Localizations.localeOf(context).languageCode),
         ),
         const SizedBox(height: 12),
+        if (menu.selectionBlockedByPendingPause) ...[
+          Text(
+            copy.packageMealSelectionPending,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF886018),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         Text(
           copy.deliveriesProgress(count, total),
           style: const TextStyle(fontWeight: FontWeight.w700),

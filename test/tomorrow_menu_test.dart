@@ -84,6 +84,30 @@ TomorrowMenu menu({
 );
 
 void main() {
+  for (final held in [false, true]) {
+    test('tomorrow response parses pending pause selection hold: $held', () {
+      final parsed = TomorrowMenu.fromJson({
+        'subscriptionId': 'order',
+        'subscriptionServiceDayId': 'day',
+        'deliveryDate': '2026-10-27',
+        'mealPlanName': 'Complete Balance',
+        'mealCount': 2,
+        'snackCount': 1,
+        'selectionStatus': 'DEFAULT_PENDING',
+        'selectionLocked': false,
+        'canConfirm': !held,
+        'cutoffAt': '2026-10-26T18:00:00Z',
+        'serverNow': '2026-10-26T12:00:00Z',
+        'selectedMeals': [],
+        'availableMeals': [],
+        'availableSnacks': [],
+        if (held) 'selectionBlockedByPendingPause': true,
+      });
+      expect(parsed.selectionBlockedByPendingPause, held);
+      expect(parsed.finalized, isFalse);
+      expect(parsed.readOnly, isFalse);
+    });
+  }
   Future<void> show(
     WidgetTester tester,
     FakeRepository repository, {

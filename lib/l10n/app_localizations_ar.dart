@@ -2638,7 +2638,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get packagePendingSummary =>
-      'بانتظار موافقة دايت تايم. يستمر التوصيل حتى الموافقة.';
+      'بانتظار موافقة دايت تايم. اختيار الوجبات معلق للتواريخ المطلوبة؛ يستمر التوصيل حتى الموافقة.';
+
+  @override
+  String get packageMealSelectionPending =>
+      'اختيار الوجبات معلق لهذا التاريخ حتى مراجعة طلب الإيقاف المؤقت من دايت تايم.';
 
   @override
   String get packageScheduledSummary =>

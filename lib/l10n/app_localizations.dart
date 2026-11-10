@@ -4811,8 +4811,14 @@ abstract class AppLocalizations {
   /// No description provided for @packagePendingSummary.
   ///
   /// In en, this message translates to:
-  /// **'Awaiting Diet Time approval. Deliveries continue until approved.'**
+  /// **'Awaiting Diet Time approval. Meal selection is on hold for the requested dates; deliveries continue until approved.'**
   String get packagePendingSummary;
+
+  /// No description provided for @packageMealSelectionPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Meal selection is on hold for this date while your pause request awaits Diet Time approval.'**
+  String get packageMealSelectionPending;
 
   /// No description provided for @packageScheduledSummary.
   ///

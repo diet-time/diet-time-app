@@ -484,6 +484,7 @@ void main() {
             );
             expect(button.onPressed, isNotNull);
             expect(data.currentPause, isNull);
+            expect(data.effectiveDisplayStatus, 'ACTIVE');
           } else {
             expect(find.text(copy.packageResumeEarly), findsOneWidget);
             expect(find.text(copy.packagePauseScheduled), findsOneWidget);

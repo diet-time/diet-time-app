@@ -33,11 +33,13 @@ TomorrowMenu delivery(
   bool? scheduledForDelivery,
   String? serviceDayStatus,
   String? packageDisplayStatus,
+  bool pendingPause = false,
 }) => TomorrowMenu(
   subscriptionId: order,
   isScheduledForDelivery: scheduledForDelivery,
   serviceDayStatus: serviceDayStatus,
   packageDisplayStatus: packageDisplayStatus,
+  selectionBlockedByPendingPause: pendingPause,
   dayId: noDelivery ? null : 'day-$order',
   deliveryDate: DateTime(2026, 10, 29),
   planName: name ?? 'Balance $order',
@@ -163,6 +165,92 @@ Finder inCard(String id, String text) =>
     find.descendant(of: card(id), matching: find.text(text));
 
 void main() {
+  for (final arabic in [false, true]) {
+    testWidgets(
+      'pending pause holds only its own meal selection and rejection restores it ($arabic)',
+      (tester) async {
+        final repository = DeliveryRepository({
+          'held': delivery(
+            'held',
+            pendingPause: true,
+            scheduledForDelivery: true,
+            packageDisplayStatus: 'PAUSE_REQUESTED',
+          ),
+          'unaffected': delivery('unaffected', scheduledForDelivery: true),
+        });
+        await show(tester, repository, width: 320, scale: 1.3, arabic: arabic);
+        final copy = AppLocalizations.of(
+          tester.element(find.byType(TomorrowDeliveriesSection)),
+        );
+        expect(inCard('held', copy.packagePauseRequested), findsOneWidget);
+        expect(
+          inCard('held', copy.packageMealSelectionPending),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: card('held'),
+            matching: find.byKey(const ValueKey('chooseTomorrowMeals')),
+          ),
+          findsNothing,
+        );
+        expect(
+          find.descendant(
+            of: card('unaffected'),
+            matching: find.byKey(const ValueKey('chooseTomorrowMeals')),
+          ),
+          findsOneWidget,
+        );
+        expect(repository.confirmations, isEmpty);
+        expect(tester.takeException(), isNull);
+
+        // Staff rejection releases the hold on the next authoritative schedule refresh.
+        repository.responses['held'] = delivery(
+          'held',
+          scheduledForDelivery: true,
+          packageDisplayStatus: 'ACTIVE',
+        );
+        await tester.pump(const Duration(seconds: 31));
+        await tester.pumpAndSettle();
+        expect(inCard('held', copy.packagePauseRequested), findsNothing);
+        expect(inCard('held', copy.packageMealSelectionPending), findsNothing);
+        final choose = find.descendant(
+          of: card('held'),
+          matching: find.byKey(const ValueKey('chooseTomorrowMeals')),
+        );
+        expect(choose, findsOneWidget);
+        await tester.ensureVisible(choose);
+        await tester.tap(choose);
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('confirmTomorrowMeals')),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
+  testWidgets('pending pause preserves already confirmed dishes for viewing', (
+    tester,
+  ) async {
+    final repository = DeliveryRepository({
+      'committed': delivery(
+        'committed',
+        confirmed: true,
+        pendingPause: true,
+        scheduledForDelivery: true,
+      ),
+    });
+    await show(tester, repository);
+    expect(find.byKey(const ValueKey('chooseTomorrowMeals')), findsNothing);
+    expect(find.byKey(const ValueKey('toggleConfirmedMeals')), findsOneWidget);
+    expect(repository.confirmations, isEmpty);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets(
     'suspended locked meals are hidden independently of a preserved committed package',
     (tester) async {

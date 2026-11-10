@@ -41,6 +41,7 @@ class TomorrowMenu {
     this.isScheduledForDelivery,
     this.serviceDayStatus,
     this.packageDisplayStatus,
+    this.selectionBlockedByPendingPause = false,
   });
 
   factory TomorrowMenu.fromJson(Map<String, dynamic> json) {
@@ -66,6 +67,8 @@ class TomorrowMenu {
       ),
       isScheduledForDelivery: json['isScheduledForDelivery'] as bool?,
       serviceDayStatus: json['serviceDayStatus'] as String?,
+      selectionBlockedByPendingPause:
+          json['selectionBlockedByPendingPause'] == true,
       packageDisplayStatus:
           (json['packageSchedule'] as Map<String, dynamic>?)?['displayStatus']
               as String?,
@@ -106,6 +109,7 @@ class TomorrowMenu {
   final bool? isScheduledForDelivery;
   final String? serviceDayStatus;
   final String? packageDisplayStatus;
+  final bool selectionBlockedByPendingPause;
   final int mealCount;
   final int snackCount;
   final String status;
@@ -187,7 +191,9 @@ class TomorrowMenu {
       return TomorrowDeliveryState.automaticallySelected;
     }
     if (readOnly) return TomorrowDeliveryState.locked;
-    if (!canConfirm || expired) return TomorrowDeliveryState.unavailable;
+    if (!canConfirm || expired || selectionBlockedByPendingPause) {
+      return TomorrowDeliveryState.unavailable;
+    }
     return (mealsSelected ?? savedMealCount) == mealCount &&
             (snacksSelected ?? savedSnackCount) == snackCount &&
             mealCount + snackCount > 0
