@@ -2623,4 +2623,28 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get packageRequestedPauseStart => 'بداية الإيقاف المؤقت المطلوبة';
+
+  @override
+  String get orderServiceDays => 'أيام الخدمة';
+
+  @override
+  String get packageResumeOn => 'الاستئناف في';
+
+  @override
+  String get orderPickupLocation => 'موقع الاستلام';
+
+  @override
+  String get orderDeliveryAddress => 'عنوان التوصيل';
+
+  @override
+  String get packagePendingSummary =>
+      'بانتظار موافقة دايت تايم. يستمر التوصيل حتى الموافقة.';
+
+  @override
+  String get packageScheduledSummary =>
+      'تمت الموافقة. يستمر التوصيل حتى بدء الإيقاف المؤقت.';
+
+  @override
+  String get packagePausedSummary =>
+      'التوصيل متوقف مؤقتًا حتى موعد الاستئناف المحدد.';
 }

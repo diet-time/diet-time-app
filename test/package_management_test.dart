@@ -215,6 +215,122 @@ class CapturePackageApi extends ApiClient {
 }
 
 void main() {
+  for (final language in ['en', 'ar']) {
+    for (final width in [320.0, 390.0]) {
+      for (final phase in [
+        'active',
+        'pending',
+        'scheduled',
+        'paused',
+        'resumed',
+      ]) {
+        testWidgets(
+          'compact order $phase fits $width with larger text ($language)',
+          (tester) async {
+            tester.view.devicePixelRatio = 1;
+            tester.view.physicalSize = Size(width, 844);
+            addTearDown(tester.view.resetDevicePixelRatio);
+            addTearDown(tester.view.resetPhysicalSize);
+            final approved = phase == 'scheduled' || phase == 'paused';
+            final data = PackageManagement.fromJson({
+              ...management(paused: approved || phase == 'resumed'),
+              'serverNow': phase == 'paused'
+                  ? '2026-11-05T12:00:00Z'
+                  : phase == 'resumed'
+                  ? '2026-11-10T12:00:00Z'
+                  : '2026-11-02T12:00:00Z',
+              if (phase == 'pending')
+                'latestRequest': {
+                  'id': 'request',
+                  'type': 'PAUSE',
+                  'status': 'PENDING_APPROVAL',
+                  'pauseStartDate': '2026-11-04',
+                  'resumeDate': '2026-11-10',
+                },
+            });
+            final copy = lookupAppLocalizations(Locale(language));
+            await tester.pumpWidget(
+              ProviderScope(
+                overrides: [
+                  ordersRepositoryProvider.overrideWithValue(PackageOrders()),
+                  orderDetailsProvider(
+                    'order',
+                  ).overrideWith((ref) async => order(status: 'ACTIVE')),
+                  packageManagementProvider(
+                    'order',
+                  ).overrideWith((ref) async => data),
+                ],
+                child: MaterialApp(
+                  locale: Locale(language),
+                  localizationsDelegates:
+                      AppLocalizations.localizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  builder: (context, child) => MediaQuery(
+                    data: MediaQuery.of(
+                      context,
+                    ).copyWith(textScaler: const TextScaler.linear(1.3)),
+                    child: child!,
+                  ),
+                  home: const OrderDetailsScreen(orderId: 'order'),
+                ),
+              ),
+            );
+            await tester.pumpAndSettle();
+            final master = find.byKey(const ValueKey('orderMasterCard'));
+            expect(
+              find.descendant(of: master, matching: find.text('Balanced')),
+              findsOneWidget,
+            );
+            expect(
+              find.descendant(
+                of: master,
+                matching: find.text(copy.orderServiceDays),
+              ),
+              findsOneWidget,
+            );
+            expect(
+              find.descendant(
+                of: master,
+                matching: find.byKey(const ValueKey('orderFulfillmentDetails')),
+              ),
+              findsOneWidget,
+            );
+            expect(find.text(copy.packageCancellationBlocked), findsNothing);
+            await tester.scrollUntilVisible(
+              find.byKey(const ValueKey('packageManagement-order')),
+              160,
+            );
+            expect(
+              find.text(copy.packageRevisedEnd),
+              approved ? findsOneWidget : findsNothing,
+            );
+            expect(
+              find.text(copy.packageRemainingDays),
+              phase == 'pending' ? findsNothing : findsOneWidget,
+            );
+            expect(
+              find.text(copy.packagePauseRequested),
+              phase == 'pending' ? findsOneWidget : findsNothing,
+            );
+            expect(
+              find.text(copy.packagePauseScheduled),
+              phase == 'scheduled' ? findsOneWidget : findsNothing,
+            );
+            if (approved) {
+              expect(find.text(copy.packageResumeEarly), findsOneWidget);
+              expect(find.text(copy.packageExpectedEnd), findsNothing);
+            }
+            await tester.scrollUntilVisible(
+              find.byKey(const ValueKey('orderContactSupport')),
+              160,
+            );
+            expect(tester.takeException(), isNull);
+            await tester.pumpWidget(const SizedBox());
+          },
+        );
+      }
+    }
+  }
   test(
     'remote schedule changes notify once; local changes reset the polling baseline',
     () {
@@ -363,7 +479,7 @@ void main() {
           );
           expect(find.text('Please choose later dates'), findsOneWidget);
           if (type == 'PAUSE') {
-            final button = tester.widget<FilledButton>(
+            final button = tester.widget<OutlinedButton>(
               find.byKey(const ValueKey('pausePackage-order')),
             );
             expect(button.onPressed, isNotNull);
@@ -422,28 +538,20 @@ void main() {
           find.text('${copy.packageDeliveryToday}: ${date(11, 3)}'),
           findsOneWidget,
         );
-        expect(
-          find.text('${copy.packageRequestedRestart}: ${date(12, 4)}'),
-          findsOneWidget,
-        );
+        expect(find.text(date(12, 4)), findsOneWidget);
         expect(
           find.text('${copy.packageActualRestartDate}: ${date(12, 5)}'),
           findsOneWidget,
         );
-        expect(
-          find.text('${copy.packageRevisedEnd}: ${date(12, 10)}'),
-          findsOneWidget,
-        );
+        expect(find.text(date(12, 10)), findsOneWidget);
         expect(find.textContaining(copy.packageNextDelivery), findsNothing);
         expect(find.text(copy.packagePauseScheduleNote), findsOneWidget);
         await tester.scrollUntilVisible(
           find.textContaining(copy.packagePlanStarted),
           200,
         );
-        expect(
-          find.textContaining('${copy.packageRevisedEnd}: ${date(12, 10)}'),
-          findsWidgets,
-        );
+        expect(find.text(copy.packageRevisedEnd), findsOneWidget);
+        expect(find.text(date(12, 10)), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );
@@ -681,13 +789,13 @@ void main() {
         );
         await tester.pumpAndSettle();
         final copy = lookupAppLocalizations(Locale(language));
-        expect(find.text(copy.packageCancellationBlocked), findsOneWidget);
+        expect(find.text(copy.packageCancellationBlocked), findsNothing);
         expect(find.byIcon(Icons.cancel_outlined), findsNothing);
         expect(
           find.byKey(const ValueKey('orderDetailsHeader')),
           findsOneWidget,
         );
-        expect(find.text('Balanced'), findsWidgets);
+        expect(find.text('Balanced'), findsOneWidget);
         expect(
           find.byKey(const ValueKey('packageManagement-order')),
           findsOneWidget,
@@ -732,9 +840,7 @@ void main() {
             find.descendant(
               of: row,
               matching: find.text(
-                takeaway
-                    ? copy.orderCollectionDetails
-                    : copy.orderDeliveryDetails,
+                takeaway ? copy.orderPickupLocation : copy.orderDeliveryAddress,
               ),
             ),
             findsOneWidget,
@@ -768,24 +874,11 @@ void main() {
           await tester.pump();
           expect(find.text(copy.orderSupportPending), findsOneWidget);
           expect(find.byIcon(Icons.chat_bubble_outline_rounded), findsNothing);
-          await tester.scrollUntilVisible(
+          expect(
             find.byKey(const ValueKey('orderConfirmationCard')),
-            100,
+            findsNothing,
           );
-          expect(
-            tester.getRect(support).bottom,
-            lessThan(
-              tester
-                  .getRect(find.byKey(const ValueKey('orderConfirmationCard')))
-                  .top,
-            ),
-          );
-          expect(
-            tester
-                .getRect(find.byKey(const ValueKey('orderConfirmationCard')))
-                .bottom,
-            lessThanOrEqualTo(844 - 34),
-          );
+          expect(tester.getRect(support).bottom, lessThanOrEqualTo(844 - 34));
           expect(tester.takeException(), isNull);
         },
       );
@@ -911,7 +1004,7 @@ void main() {
         );
         expect(repository.commands.first, repository.commands.last);
         expect(find.byType(AlertDialog), findsNothing);
-        expect(find.text(copy.packagePausePending), findsOneWidget);
+        expect(find.text(copy.packagePauseRequested), findsOneWidget);
         expect(find.text(copy.packagePauseScheduled), findsNothing);
         expect(repository.paused, isFalse);
         expect(container.read(packageScheduleChangesProvider), {'order': 1});
@@ -975,7 +1068,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final button = tester.widget<FilledButton>(
+    final button = tester.widget<OutlinedButton>(
       find.byKey(const ValueKey('pausePackage-order')),
     );
     expect(button.onPressed, isNull);

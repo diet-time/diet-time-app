@@ -106,7 +106,10 @@ class _OrderDetails extends ConsumerWidget {
             const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(order.status)
         ? ref.watch(packageManagementProvider(order.id)).asData?.value
         : null;
-    final paused = management?.currentPause != null;
+    final paused = const {
+      'PAUSED',
+      'PAUSE_SCHEDULED',
+    }.contains(management?.effectiveDisplayStatus);
     return ListView(
       key: const ValueKey('orderDetails'),
       padding: EdgeInsets.fromLTRB(
@@ -116,22 +119,6 @@ class _OrderDetails extends ConsumerWidget {
         30 + MediaQuery.viewPaddingOf(context).bottom,
       ),
       children: [
-        _OrderHeaderCard(order: order),
-        if (order.customerCancellationBlocked)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              lookupAppLocalizations(
-                Localizations.localeOf(context),
-              ).packageCancellationBlocked,
-            ),
-          ),
-        if (order.rowVersion > 0 &&
-            const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(order.status))
-          PackageManagementPanel(
-            orderId: order.id,
-            onChanged: () => ref.invalidate(orderDetailsProvider(order.id)),
-          ),
         if (order.canRequestCancellation)
           TextButton.icon(
             icon: const Icon(Icons.cancel_outlined),
@@ -183,50 +170,48 @@ class _OrderDetails extends ConsumerWidget {
           ),
         _SectionCard(
           children: [
+            _OrderHeaderCard(
+              order: order,
+              status: management?.effectiveDisplayStatus == 'PAUSED'
+                  ? 'PAUSED'
+                  : order.status == 'PAUSED' && management != null
+                  ? 'ACTIVE'
+                  : order.status,
+            ),
+            if (const {'CANCELLED', 'REJECTED'}.contains(order.status))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(
+                  context.customerCopy(orderCustomerMessage(order.status)),
+                  style: const TextStyle(fontSize: 12, height: 1.4),
+                ),
+              ),
             _InformationRow(
               icon: Icons.calendar_month_outlined,
-              label: context.customerCopy('PLAN PERIOD'),
+              label: paused
+                  ? copy.packagePlanStarted
+                  : context.customerCopy('PLAN PERIOD'),
               value: paused
-                  ? '${copy.packagePlanStarted}: ${delivery.startDate == null ? '—' : DateFormat.yMMMd(locale).format(delivery.startDate!)}\n'
-                        '${copy.packageRevisedEnd}: ${DateFormat.yMMMd(locale).format(management!.endDate)}'
+                  ? (delivery.startDate == null
+                        ? '—'
+                        : DateFormat.yMMMd(locale).format(delivery.startDate!))
                   : _period(
                       delivery.startDate,
                       management?.endDate ?? delivery.endDate,
+                      locale,
                     ),
-            ),
-            _InformationRow(
-              icon: Icons.restaurant_rounded,
-              label: context.customerCopy('MEALS INCLUDED'),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    order.entitlement.label(
-                      Localizations.localeOf(context).languageCode,
-                    ),
-                    style: const _ValueStyle(),
-                  ),
-                ],
-              ),
             ),
             _InformationRow(
               icon: Icons.event_available_outlined,
-              label: order.isTakeaway
-                  ? context.customerCopy('COLLECTION DAYS')
-                  : context.customerCopy('DELIVERY DAYS'),
-              value:
-                  '${lookupAppLocalizations(Localizations.localeOf(context)).customerDaysPerWeek(delivery.daysPerWeek)}\n${_weekdays(context, delivery.days)}',
+              label: copy.orderServiceDays,
+              value: _weekdays(context, delivery.days),
             ),
             _InformationRow(
               key: const ValueKey('orderFulfillmentDetails'),
               icon: Icons.location_on_outlined,
               label: order.isTakeaway
-                  ? lookupAppLocalizations(
-                      Localizations.localeOf(context),
-                    ).orderCollectionDetails
-                  : lookupAppLocalizations(
-                      Localizations.localeOf(context),
-                    ).orderDeliveryDetails,
+                  ? copy.orderPickupLocation
+                  : copy.orderDeliveryAddress,
               value: order.isTakeaway
                   ? [
                           order.takeawayBranch?.name ??
@@ -239,227 +224,114 @@ class _OrderDetails extends ConsumerWidget {
                         .where((v) => v.trim().isNotEmpty)
                         .join('\n')
                   : [
-                      address.displayName,
                       address.area,
-                      address.streetLine,
-                      address.formattedAddress,
+                      if (address.buildingNo.isNotEmpty ||
+                          address.streetNo.isNotEmpty ||
+                          address.zoneNo.isNotEmpty)
+                        address.streetLine,
+                      if (address.unitNumber?.isNotEmpty == true)
+                        address.unitNumber!,
+                      if (address.buildingNo.isEmpty &&
+                          address.streetNo.isEmpty &&
+                          address.zoneNo.isEmpty)
+                        address.formattedAddress,
                     ].where((v) => v.trim().isNotEmpty).toSet().join('\n'),
               last: order.isTakeaway,
             ),
-            if (!order.isTakeaway)
+            if (!order.isTakeaway &&
+                (delivery.timeSlot.name.isNotEmpty ||
+                    delivery.timeSlot.startTime.isNotEmpty))
               _InformationRow(
                 icon: Icons.schedule_rounded,
                 label: context.customerCopy('DELIVERY TIME'),
                 value:
-                    '${delivery.timeSlot.name}\n${_time(delivery.timeSlot.startTime)} - ${_time(delivery.timeSlot.endTime)}',
+                    '${delivery.timeSlot.name} · ${_time(delivery.timeSlot.startTime)} – ${_time(delivery.timeSlot.endTime)}',
                 last: true,
               ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _MetricTile(
-                icon: Icons.payments_outlined,
-                label: context.customerCopy('PRICING'),
-                value:
-                    '${formatMealPlanPriceAmount(order.pricing.totalAmount, locale)} ${order.pricing.currencyCode}',
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _MetricTile(
-                icon: Icons.credit_card_rounded,
-                label: context.customerCopy('PAYMENT STATUS'),
-                value: context.customerCopy(order.paymentLabel),
-                accent: true,
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _MetricTile(
+                    label: context.customerCopy('PRICING'),
+                    value:
+                        '${formatMealPlanPriceAmount(order.pricing.totalAmount, locale)} ${order.pricing.currencyCode}',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _MetricTile(
+                    label: context.customerCopy('PAYMENT STATUS'),
+                    value: context.customerCopy(order.paymentLabel),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
+        if (order.rowVersion > 0 &&
+            const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(order.status))
+          PackageManagementPanel(
+            orderId: order.id,
+            onChanged: () => ref.invalidate(orderDetailsProvider(order.id)),
+          ),
+        const SizedBox(height: 10),
         const _SupportBar(),
-        const SizedBox(height: 12),
-        Container(
-          key: const ValueKey('orderConfirmationCard'),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.teaGreen.withValues(alpha: .2),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.emeraldGreen.withValues(alpha: .1),
-            ),
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.emeraldGreen,
-                child: Icon(
-                  const {'CANCELLED', 'REJECTED'}.contains(order.status)
-                      ? Icons.info_outline_rounded
-                      : Icons.receipt_long_outlined,
-                  color: AppColors.white,
-                  size: 19,
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      context.customerCopy(switch (order.status) {
-                        'CANCELLED' => 'Order cancelled',
-                        'REJECTED' => 'Order declined',
-                        'PENDING_APPROVAL' ||
-                        'PENDING' ||
-                        'ON_HOLD' ||
-                        'PENDING_ACTIVATION' => 'Awaiting confirmation',
-                        'COMPLETED' => 'Plan completed',
-                        'PAUSED' => 'Plan paused',
-                        _ => 'Your order',
-                      }),
-                      style: TextStyle(
-                        color: AppColors.darkGreen,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    SizedBox(height: 3),
-                    Text(
-                      context.customerCopy(orderCustomerMessage(order.status)),
-                      style: TextStyle(
-                        color: AppColors.darkGreen,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
 }
 
 class _OrderHeaderCard extends StatelessWidget {
-  const _OrderHeaderCard({required this.order});
+  const _OrderHeaderCard({required this.order, required this.status});
 
   final OrderConfirmation order;
+  final String status;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => Padding(
     key: const ValueKey('orderDetailsHeader'),
-    padding: const EdgeInsets.all(15),
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFFFFFFF), Color(0xFFEAF4EC)],
-      ),
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: AppColors.emeraldGreen.withValues(alpha: .1)),
-      boxShadow: [
-        BoxShadow(
-          color: AppColors.darkGreen.withValues(alpha: .04),
-          blurRadius: 18,
-          offset: const Offset(0, 7),
-        ),
-      ],
-    ),
+    padding: const EdgeInsets.symmetric(vertical: 14),
     child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: AppColors.emeraldGreen.withValues(alpha: .12),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.assignment_turned_in_outlined,
-                color: AppColors.emeraldGreen,
-                size: 26,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Label(context.customerCopy('PLAN')),
-                  const SizedBox(height: 4),
-                  Text(
-                    order.plan.name,
-                    style: const TextStyle(
-                      color: AppColors.darkGreen,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 13),
-          child: Divider(
-            height: 1,
-            color: AppColors.darkGreen.withValues(alpha: .08),
-          ),
-        ),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Label(context.customerCopy('STATUS')),
-                  const SizedBox(height: 6),
-                  _StatusPill(order.status),
-                ],
+              flex: 2,
+              child: Text(
+                order.plan.name,
+                style: const TextStyle(
+                  color: AppColors.darkGreen,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
-            Container(
-              width: 1,
-              height: 42,
-              margin: const EdgeInsets.symmetric(horizontal: 12),
-              color: AppColors.darkGreen.withValues(alpha: .08),
-            ),
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Label(context.customerCopy('PLAN')),
-                  const SizedBox(height: 5),
-                  Text(
-                    order.plan.name,
-                    style: const TextStyle(
-                      color: AppColors.darkGreen,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  if (order.plan.durationName.isNotEmpty)
-                    Text(
-                      order.plan.durationName,
-                      style: TextStyle(
-                        color: AppColors.darkGreen.withValues(alpha: .56),
-                        fontSize: 10,
-                      ),
-                    ),
-                ],
+            const SizedBox(width: 8),
+            Flexible(
+              child: Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: _StatusPill(status),
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          [
+            order.entitlement.label(
+              Localizations.localeOf(context).languageCode,
+            ),
+            order.plan.durationName,
+          ].where((v) => v.isNotEmpty).join(' · '),
+          style: const TextStyle(
+            color: Color(0xFF657B72),
+            fontSize: 12,
+            height: 1.4,
+          ),
         ),
       ],
     ),
@@ -473,6 +345,7 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
+    key: const ValueKey('orderMasterCard'),
     padding: const EdgeInsets.symmetric(horizontal: 14),
     decoration: BoxDecoration(
       color: AppColors.white,
@@ -486,7 +359,10 @@ class _SectionCard extends StatelessWidget {
         ),
       ],
     ),
-    child: Column(children: children),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: children,
+    ),
   );
 }
 
@@ -495,7 +371,6 @@ class _InformationRow extends StatelessWidget {
     required this.icon,
     required this.label,
     this.value,
-    this.child,
     this.last = false,
     super.key,
   });
@@ -503,20 +378,19 @@ class _InformationRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String? value;
-  final Widget? child;
   final bool last;
 
   @override
   Widget build(BuildContext context) => Column(
     children: [
       Padding(
-        padding: const EdgeInsets.symmetric(vertical: 13),
+        padding: const EdgeInsets.symmetric(vertical: 9),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 35,
-              height: 35,
+              width: 24,
+              height: 24,
               decoration: BoxDecoration(
                 color: AppColors.teaGreen.withValues(alpha: .25),
                 shape: BoxShape.circle,
@@ -530,11 +404,10 @@ class _InformationRow extends StatelessWidget {
                 children: [
                   _Label(label),
                   const SizedBox(height: 4),
-                  child ??
-                      Text(
-                        value?.trim().isNotEmpty == true ? value! : '—',
-                        style: const _ValueStyle(),
-                      ),
+                  Text(
+                    value?.trim().isNotEmpty == true ? value! : '—',
+                    style: const _ValueStyle(),
+                  ),
                 ],
               ),
             ),
@@ -548,65 +421,17 @@ class _InformationRow extends StatelessWidget {
 }
 
 class _MetricTile extends StatelessWidget {
-  const _MetricTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.accent = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final bool accent;
-
+  const _MetricTile({required this.label, required this.value});
+  final String label, value;
   @override
-  Widget build(BuildContext context) => Container(
-    constraints: const BoxConstraints(minHeight: 96),
-    padding: const EdgeInsets.all(13),
-    decoration: BoxDecoration(
-      color: AppColors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: AppColors.darkGreen.withValues(alpha: .07)),
-    ),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 29,
-              height: 29,
-              decoration: BoxDecoration(
-                color: AppColors.teaGreen.withValues(alpha: .26),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: AppColors.emeraldGreen, size: 15),
-            ),
-            const SizedBox(width: 8),
-            Expanded(child: _Label(label)),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Container(
-          padding: accent
-              ? const EdgeInsets.symmetric(horizontal: 9, vertical: 4)
-              : EdgeInsets.zero,
-          decoration: accent
-              ? BoxDecoration(
-                  color: AppColors.cream,
-                  borderRadius: BorderRadius.circular(99),
-                )
-              : null,
-          child: Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.darkGreen,
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ),
+        _Label(label),
+        const SizedBox(height: 4),
+        Text(value, style: const _ValueStyle()),
       ],
     ),
   );
@@ -641,8 +466,8 @@ class _Label extends Text {
     : super(
         style: const TextStyle(
           color: Color(0xFF83928D),
-          fontSize: 8,
-          letterSpacing: .65,
+          fontSize: 10,
+          letterSpacing: .2,
           fontWeight: FontWeight.w900,
         ),
       );
@@ -666,6 +491,7 @@ class _StatusPill extends StatelessWidget {
   Color get color => switch (status) {
     'PENDING_APPROVAL' => const Color(0xFF8A5100),
     'ON_HOLD' => const Color(0xFF954515),
+    'PAUSED' => const Color(0xFF69736F),
     'REJECTED' => const Color(0xFFB3261E),
     'CANCELLED' => const Color(0xFF575757),
     _ => AppColors.emeraldGreen,
@@ -703,7 +529,7 @@ class _StatusPill extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: color,
-              fontSize: 9,
+              fontSize: 11,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -720,7 +546,7 @@ class _OrderDetailsLoading extends StatelessWidget {
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.all(12),
     children: [
-      for (final height in [145.0, 420.0, 96.0]) ...[
+      for (final height in [330.0, 180.0, 48.0]) ...[
         Container(
           height: height,
           decoration: BoxDecoration(
@@ -757,9 +583,9 @@ class _OrderError extends StatelessWidget {
   );
 }
 
-String _period(DateTime? start, DateTime? end) {
+String _period(DateTime? start, DateTime? end, String locale) {
   if (start == null || end == null) return '—';
-  return '${DateFormat('dd MMM yyyy').format(start)} - ${DateFormat('dd MMM yyyy').format(end)}';
+  return '${DateFormat.MMMd(locale).format(start)} – ${DateFormat.yMMMd(locale).format(end)}';
 }
 
 String _weekdays(BuildContext context, List<int> days) {

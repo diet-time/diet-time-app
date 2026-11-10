@@ -916,5 +916,12 @@
   "packageResumeRejected": "تم رفض طلب الاستئناف",
   "packageRequestPending": "يوجد طلب للباقة بانتظار تأكيد الموظفين بالفعل.",
   "packageApprovalExplanation": "تبقى حالتك ومواعيد التوصيل الحالية دون تغيير حتى يقبل الموظفون هذا الطلب.",
-  "packageRequestedPauseStart": "بداية الإيقاف المؤقت المطلوبة"
+  "packageRequestedPauseStart": "بداية الإيقاف المؤقت المطلوبة",
+  "orderServiceDays": "أيام الخدمة",
+  "packageResumeOn": "الاستئناف في",
+  "orderPickupLocation": "موقع الاستلام",
+  "orderDeliveryAddress": "عنوان التوصيل",
+  "packagePendingSummary": "بانتظار موافقة دايت تايم. يستمر التوصيل حتى الموافقة.",
+  "packageScheduledSummary": "تمت الموافقة. يستمر التوصيل حتى بدء الإيقاف المؤقت.",
+  "packagePausedSummary": "التوصيل متوقف مؤقتًا حتى موعد الاستئناف المحدد."
 }

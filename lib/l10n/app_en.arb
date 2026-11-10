@@ -917,7 +917,7 @@
   "packagePause": "Pause Package",
   "packagePaused": "Paused",
   "packagePauseScheduled": "Pause scheduled",
-  "packageResumeEarly": "Request resume",
+  "packageResumeEarly": "Request Early Resume",
   "packageRemainingDays": "Remaining service days",
   "packageNextDelivery": "Next scheduled delivery",
   "packageExpectedEnd": "Expected package end date",
@@ -972,5 +972,12 @@
   "packageResumeRejected": "Resume request declined",
   "packageRequestPending": "A package request is already awaiting staff confirmation.",
   "packageApprovalExplanation": "Your current status and delivery dates stay unchanged until staff accept this request.",
-  "packageRequestedPauseStart": "Requested pause start"
+  "packageRequestedPauseStart": "Requested pause start",
+  "orderServiceDays": "Service days",
+  "packageResumeOn": "Resume on",
+  "orderPickupLocation": "Pickup location",
+  "orderDeliveryAddress": "Delivery address",
+  "packagePendingSummary": "Awaiting Diet Time approval. Deliveries continue until approved.",
+  "packageScheduledSummary": "Approved. Deliveries continue until the pause begins.",
+  "packagePausedSummary": "Deliveries are paused until the scheduled restart."
 }

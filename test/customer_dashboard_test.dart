@@ -75,10 +75,9 @@ void main() {
           scrollable: find.byType(Scrollable).first,
         );
         expect(find.text(scenario.$3), findsOneWidget);
-        await tester.scrollUntilVisible(
+        expect(
           find.byKey(const ValueKey('orderConfirmationCard')),
-          250,
-          scrollable: find.byType(Scrollable).first,
+          findsNothing,
         );
         expect(find.text('Thank you for your order!'), findsNothing);
         expect(

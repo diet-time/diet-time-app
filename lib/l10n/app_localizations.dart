@@ -4463,7 +4463,7 @@ abstract class AppLocalizations {
   /// No description provided for @packageResumeEarly.
   ///
   /// In en, this message translates to:
-  /// **'Request resume'**
+  /// **'Request Early Resume'**
   String get packageResumeEarly;
 
   /// No description provided for @packageRemainingDays.
@@ -4783,6 +4783,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Requested pause start'**
   String get packageRequestedPauseStart;
+
+  /// No description provided for @orderServiceDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Service days'**
+  String get orderServiceDays;
+
+  /// No description provided for @packageResumeOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume on'**
+  String get packageResumeOn;
+
+  /// No description provided for @orderPickupLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup location'**
+  String get orderPickupLocation;
+
+  /// No description provided for @orderDeliveryAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery address'**
+  String get orderDeliveryAddress;
+
+  /// No description provided for @packagePendingSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting Diet Time approval. Deliveries continue until approved.'**
+  String get packagePendingSummary;
+
+  /// No description provided for @packageScheduledSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved. Deliveries continue until the pause begins.'**
+  String get packageScheduledSummary;
+
+  /// No description provided for @packagePausedSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Deliveries are paused until the scheduled restart.'**
+  String get packagePausedSummary;
 }
 
 class _AppLocalizationsDelegate

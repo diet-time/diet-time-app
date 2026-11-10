@@ -2478,7 +2478,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get packagePauseScheduled => 'Pause scheduled';
 
   @override
-  String get packageResumeEarly => 'Request resume';
+  String get packageResumeEarly => 'Request Early Resume';
 
   @override
   String get packageRemainingDays => 'Remaining service days';
@@ -2667,4 +2667,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get packageRequestedPauseStart => 'Requested pause start';
+
+  @override
+  String get orderServiceDays => 'Service days';
+
+  @override
+  String get packageResumeOn => 'Resume on';
+
+  @override
+  String get orderPickupLocation => 'Pickup location';
+
+  @override
+  String get orderDeliveryAddress => 'Delivery address';
+
+  @override
+  String get packagePendingSummary =>
+      'Awaiting Diet Time approval. Deliveries continue until approved.';
+
+  @override
+  String get packageScheduledSummary =>
+      'Approved. Deliveries continue until the pause begins.';
+
+  @override
+  String get packagePausedSummary =>
+      'Deliveries are paused until the scheduled restart.';
 }
