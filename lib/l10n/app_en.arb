@@ -859,6 +859,7 @@
   "dashboardMyPlans": "My Plans",
   "dashboardPendingApproval": "Pending Approval",
   "dashboardAwaitingConfirmation": "Awaiting Diet Time confirmation",
+  "dashboardNextPickup": "Next scheduled pickup",
   "dashboardPlanCount": "{count, plural, one{1 PLAN} other{{count} PLANS}}",
   "@dashboardPlanCount": {
     "placeholders": {

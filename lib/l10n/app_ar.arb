@@ -804,6 +804,7 @@
   "dashboardMyPlans": "خططي",
   "dashboardPendingApproval": "بانتظار الموافقة",
   "dashboardAwaitingConfirmation": "بانتظار تأكيد دايت تايم",
+  "dashboardNextPickup": "موعد الاستلام القادم",
   "dashboardPlanCount": "{count} خطط",
   "@dashboardPlanCount": {
     "placeholders": {

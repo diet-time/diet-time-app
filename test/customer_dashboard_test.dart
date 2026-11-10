@@ -100,7 +100,7 @@ void main() {
   }
 
   testWidgets(
-    'Choose Meals reaches the existing meal section and action cards have equal sizes',
+    'Choose Meals quick action is removed and remaining actions stay aligned',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -124,35 +124,31 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final choose = find.byKey(const ValueKey('dashboardChooseMeals'));
+      expect(find.byKey(const ValueKey('dashboardChooseMeals')), findsNothing);
+      final ordersAction = find.byKey(const ValueKey('dashboardOrdersAction'));
       await tester.scrollUntilVisible(
-        choose,
+        ordersAction,
         250,
         scrollable: find.byType(Scrollable).first,
       );
       expect(
-        tester.getSize(choose),
-        tester.getSize(find.byKey(const ValueKey('dashboardOrdersAction'))),
-      );
-      expect(
-        tester.getSize(choose),
+        tester.getSize(ordersAction),
         tester.getSize(find.byKey(const ValueKey('orderAnotherPlan'))),
       );
-      await tester.tap(choose);
+      expect(find.text('MY ORDERS'), findsNothing);
+      expect(find.text('PREVIOUS ORDERS'), findsNothing);
+      expect(find.byKey(const ValueKey('order-choose')), findsNothing);
+      await tester.tap(ordersAction);
       await tester.pumpAndSettle();
-      expect(
-        tester.getRect(find.byKey(const ValueKey('tomorrowDeliveries'))).top,
-        greaterThanOrEqualTo(0),
-      );
       expect(
         tester
             .widget<NavigationBar>(
               find.byKey(const ValueKey('dashboardNavigation')),
             )
             .selectedIndex,
-        0,
+        1,
       );
-      expect(repository.getOrderCalls, 0);
+      expect(repository.getOrderCalls, 1);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     },
@@ -248,16 +244,20 @@ void main() {
         expect(
           tester.widget<Material>(card).color,
           pauseStatus == 'PAUSED'
-              ? const Color(0xFF69736F)
-              : const Color(0xFF8B642D),
+              ? const Color(0xFFE5E7EB)
+              : pauseStatus == 'PAUSE_PENDING'
+              ? const Color(0xFFFFF0D5)
+              : const Color(0xFFDCEAF4),
         );
         expect(
           find.descendant(
             of: card,
             matching: find.text(
               pauseStatus == 'PAUSE_PENDING'
-                  ? 'Requested pause start: Nov 3, 2026\nRestarts: Dec 3, 2026\nEnds: Nov 20, 2026'
-                  : 'Pause start date: Nov 3, 2026\nRestarts: Dec 3, 2026\nEnds: Dec 20, 2026',
+                  ? 'Requested pause start: Nov 3, 2026\nAwaiting Diet Time confirmation'
+                  : pauseStatus == 'PAUSED'
+                  ? 'Resume on: Dec 3, 2026'
+                  : 'Pause start date: Nov 3, 2026\nResume on: Dec 3, 2026',
             ),
           ),
           findsOneWidget,
@@ -299,7 +299,7 @@ void main() {
   for (final language in ['en', 'ar']) {
     for (final width in [320.0, 800.0]) {
       testWidgets(
-        'recent order status and arrow stay on the trailing edge: $language $width',
+        'Home omits history while Orders remains available: $language $width',
         (tester) async {
           await tester.binding.setSurfaceSize(Size(width, 1100));
           addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -325,23 +325,16 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
-          final row = find.byKey(const ValueKey('order-alignment'));
-          await tester.scrollUntilVisible(
-            row,
-            300,
-            scrollable: find.byType(Scrollable).first,
-          );
-          await tester.pumpAndSettle();
-          final arrow = find.descendant(
-            of: find.byKey(const ValueKey('orderTrailing-alignment')),
-            matching: find.byIcon(Icons.chevron_right_rounded),
-          );
-          final bounds = tester.getRect(row);
-          final arrowBounds = tester.getRect(arrow);
-          if (language == 'en') {
-            expect(arrowBounds.right, closeTo(bounds.right - 16, 1));
-          } else {
-            expect(arrowBounds.left, closeTo(bounds.left + 16, 1));
+          expect(find.byKey(const ValueKey('order-alignment')), findsNothing);
+          expect(find.text('MY ORDERS'), findsNothing);
+          expect(find.text('PREVIOUS ORDERS'), findsNothing);
+          if (width >= 800) {
+            await tester.tap(find.byKey(const ValueKey('dashboardOrdersTab')));
+            await tester.pumpAndSettle();
+            expect(
+              find.byKey(const ValueKey('detailedOrder-alignment')),
+              findsOneWidget,
+            );
           }
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox());
@@ -380,7 +373,8 @@ void main() {
       expect(find.byKey(const ValueKey('orderAnotherPlan')), findsNothing);
       expect(find.text('Explore Plans'), findsOneWidget);
       expect(find.byKey(const ValueKey('noActivePlan')), findsNothing);
-      expect(find.byKey(const ValueKey('pendingPlanMessage')), findsOneWidget);
+      expect(find.byKey(const ValueKey('pendingPlanMessage')), findsNothing);
+      expect(find.byKey(const ValueKey('dashboardPlanCount')), findsOneWidget);
       await tester.ensureVisible(
         find.byKey(const ValueKey('dashboardOrdersAction')),
       );
@@ -499,7 +493,7 @@ void main() {
         orders: orders,
       );
       final plans = dashboardPlanOrders(state);
-      expect(plans.map((p) => p.id), ['active', 'confirmed']);
+      expect(plans.map((p) => p.id), ['active', 'confirmed', 'purchase']);
       expect(pending.isCurrent, isFalse);
       expect(hold.isCurrent, isFalse);
       expect(confirmed.isCurrent, isTrue);
@@ -563,7 +557,7 @@ void main() {
         dashboardPlanOrders(
           container.read(customerDashboardControllerProvider),
         ),
-        isEmpty,
+        isNotEmpty,
       );
       orders[0] = _reviewSummary('purchase', 'CONFIRMED');
       await controller.refresh();
@@ -598,7 +592,7 @@ void main() {
 
   for (final locale in ['en', 'ar']) {
     testWidgets(
-      'pending order remains in history on a compact $locale dashboard',
+      'pending plan opens its order details on a compact $locale dashboard',
       (tester) async {
         await tester.binding.setSurfaceSize(const Size(320, 900));
         addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -644,10 +638,13 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.byKey(const ValueKey('activePlan-pending')), findsNothing);
+        expect(
+          find.byKey(const ValueKey('activePlan-pending')),
+          findsOneWidget,
+        );
         expect(find.byKey(const ValueKey('noActivePlan')), findsNothing);
         expect(find.byKey(const ValueKey('tomorrowDeliveries')), findsNothing);
-        final row = find.byKey(const ValueKey('order-pending'));
+        final row = find.byKey(const ValueKey('viewOrder-pending'));
         await tester.scrollUntilVisible(
           row,
           250,
@@ -692,11 +689,11 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('1 PLAN'), findsOneWidget);
+      expect(find.text('2 PLANS'), findsOneWidget);
       expect(find.byKey(const ValueKey('activePlan-active')), findsOneWidget);
-      expect(find.byKey(const ValueKey('activePlan-pending')), findsNothing);
+      expect(find.byKey(const ValueKey('activePlan-pending')), findsOneWidget);
       expect(find.byKey(const ValueKey('activePlan-cancelled')), findsNothing);
-      expect(find.byKey(const ValueKey('activePlansCarousel')), findsNothing);
+      expect(find.byKey(const ValueKey('activePlansCarousel')), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     },
@@ -719,7 +716,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('noActivePlan')), findsNothing);
-      expect(find.byKey(const ValueKey('activePlan-purchase')), findsNothing);
+      expect(find.byKey(const ValueKey('activePlan-purchase')), findsOneWidget);
       for (final status in ['CONFIRMED', 'ACTIVE']) {
         final updated = _reviewSummary('purchase', status);
         controller.show(

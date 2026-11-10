@@ -4154,6 +4154,12 @@ abstract class AppLocalizations {
   /// **'Awaiting Diet Time confirmation'**
   String get dashboardAwaitingConfirmation;
 
+  /// No description provided for @dashboardNextPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Next scheduled pickup'**
+  String get dashboardNextPickup;
+
   /// No description provided for @dashboardPlanCount.
   ///
   /// In en, this message translates to:

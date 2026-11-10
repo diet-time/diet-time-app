@@ -55,7 +55,10 @@ class _TomorrowDeliveriesSectionState extends State<TomorrowDeliveriesSection> {
         .map((entry) => entry.value)
         .toList();
     final scheduled = menus.where((menu) => menu.scheduledForTomorrow).length;
-    final sorted = widget.orders.indexed.toList()
+    final uniqueOrders = {
+      for (final order in widget.orders) order.id: order,
+    }.values;
+    final sorted = uniqueOrders.indexed.toList()
       ..sort((a, b) {
         final priority = _priority(a.$2.id).compareTo(_priority(b.$2.id));
         return priority == 0 ? a.$1.compareTo(b.$1) : priority;

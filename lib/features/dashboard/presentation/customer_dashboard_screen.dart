@@ -1,3 +1,5 @@
+import 'package:diet_time/features/dashboard/presentation/dashboard_plan_status_colors.dart';
+import 'package:diet_time/features/dashboard/domain/package_management.dart';
 import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/language/presentation/dashboard_language_switcher.dart';
 import 'dart:async';
@@ -421,19 +423,6 @@ class _DashboardHome extends ConsumerWidget {
         state is DashboardNeedsOnboarding) {
       return const Center(child: CircularProgressIndicator());
     }
-    final orders = _ordersFrom(state);
-    final pendingOrders = orders
-        .where(
-          (order) =>
-              const {'PENDING_APPROVAL', 'PENDING'}.contains(order.status),
-        )
-        .toList();
-    final previousOrders = orders
-        .where(
-          (order) =>
-              !const {'PENDING_APPROVAL', 'PENDING'}.contains(order.status),
-        )
-        .toList();
     final dashboardState = state;
     final single = dashboardState is DashboardWithActivePlan
         ? dashboardState
@@ -441,14 +430,45 @@ class _DashboardHome extends ConsumerWidget {
     final multiple = dashboardState is DashboardWithMultipleActivePlans
         ? dashboardState
         : null;
-    final plans = dashboardPlanOrders(state);
+    final plans = [...dashboardPlanOrders(state)];
+    final management = {
+      for (final order in plans)
+        if (order.rowVersion > 0 &&
+            const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(order.status))
+          order.id: ref.watch(packageManagementProvider(order.id)).value,
+    };
+    plans.removeWhere(
+      (order) => const {
+        'CANCELLED',
+        'REJECTED',
+        'COMPLETED',
+      }.contains(management[order.id]?.effectiveDisplayStatus),
+    );
+    final positions = {
+      for (final (index, order) in plans.indexed) order.id: index,
+    };
+    plans.sort((a, b) {
+      final priority =
+          dashboardPlanStatusPriority(
+            _dashboardPlanStatus(a, management[a.id]),
+          ).compareTo(
+            dashboardPlanStatusPriority(
+              _dashboardPlanStatus(b, management[b.id]),
+            ),
+          );
+      return priority == 0
+          ? positions[a.id]!.compareTo(positions[b.id]!)
+          : priority;
+    });
     final details = {
       if (single != null) single.order.id: single.detail,
       if (multiple != null) ...multiple.details,
     };
     final activeOrders = plans;
     final deliveryOrders = activeOrders
-        .where((order) => order.review['canFulfill'] != false)
+        .where(
+          (order) => order.isCurrent && order.review['canFulfill'] != false,
+        )
         .toList();
     final canChooseMeals = activeOrders.any((order) {
       if (!order.canChooseMeals) return false;
@@ -532,23 +552,6 @@ class _DashboardHome extends ConsumerWidget {
             subtitle: _dashboardSubtitle(context, state),
           ),
           const SizedBox(height: 18),
-          if (pendingOrders.isNotEmpty) ...[
-            _SectionTitle(context.customerCopy('Pending Approval')),
-            const SizedBox(height: 4),
-            Text(
-              context.customerCopy(
-                "Your order is awaiting approval. We'll update your plan here once confirmed.",
-              ),
-              key: const ValueKey('pendingPlanMessage'),
-              style: TextStyle(
-                color: AppColors.darkGreen.withValues(alpha: .62),
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 8),
-            _OrdersCard(orders: pendingOrders),
-            const SizedBox(height: 16),
-          ],
           if (plans.isNotEmpty) ...[
             Row(
               children: [
@@ -580,9 +583,8 @@ class _DashboardHome extends ConsumerWidget {
                 orders: deliveryOrders,
               ),
             ],
-          ] else if (pendingOrders.isEmpty &&
-              (state is DashboardWithoutActivePlan ||
-                  state is DashboardNoOrders)) ...[
+          ] else if (state is DashboardWithoutActivePlan ||
+              state is DashboardNoOrders) ...[
             const _NoActivePlanCard(),
           ],
           const SizedBox(height: 22),
@@ -591,42 +593,11 @@ class _DashboardHome extends ConsumerWidget {
             const SizedBox(height: 10),
             _QuickActions(
               canChooseMeals: canChooseMeals,
-              showExplorePlans:
-                  (plans.isNotEmpty || pendingOrders.isNotEmpty) &&
-                  !canChooseMeals,
-              onPlan: () {
-                final target = mealSectionKey.currentContext;
-                if (target != null) {
-                  Scrollable.ensureVisible(
-                    target,
-                    duration: const Duration(milliseconds: 300),
-                  );
-                }
-              },
+              showExplorePlans: plans.isNotEmpty && !canChooseMeals,
               onOrders: onViewAll,
               onCalendar: onCalendar,
               onNewPlan: () => _startNewOrder(context, ref),
             ),
-          ],
-          if (previousOrders.isNotEmpty) ...[
-            const SizedBox(height: 28),
-            Row(
-              children: [
-                Expanded(
-                  child: _SectionTitle(
-                    plans.isEmpty
-                        ? context.customerCopy('PREVIOUS ORDERS')
-                        : context.customerCopy('MY ORDERS'),
-                  ),
-                ),
-                TextButton(
-                  onPressed: onViewAll,
-                  child: Text(context.customerCopy('VIEW ALL')),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _OrdersCard(orders: previousOrders.take(3).toList(growable: false)),
           ],
         ],
       ),
@@ -769,6 +740,23 @@ class _NoActivePlanCard extends ConsumerWidget {
   );
 }
 
+String _dashboardPlanStatus(
+  CustomerOrderSummary order,
+  PackageManagement? management,
+) {
+  if (const {'PENDING', 'PENDING_APPROVAL'}.contains(order.status)) {
+    return 'PENDING_APPROVAL';
+  }
+  final status = management?.effectiveDisplayStatus ?? order.dashboardStatus;
+  if (management != null && status == 'ACTIVE' && order.startDate != null) {
+    final now = management.qatarNow();
+    if (order.startDate!.isAfter(DateTime(now.year, now.month, now.day))) {
+      return 'UPCOMING';
+    }
+  }
+  return status == 'CONFIRMED' ? 'ACTIVE' : status;
+}
+
 double _activePlanCardHeight(BuildContext context) =>
     164 +
     (MediaQuery.textScalerOf(context).scale(14) - 14).clamp(
@@ -791,29 +779,16 @@ class _ReferencePlanCard extends ConsumerWidget {
         ? ref.watch(packageManagementProvider(summary.id)).value
         : null;
     final snapshot = summary.packageSchedule;
-    final liveStatus = management?.effectiveDisplayStatus;
-    final displayState =
-        const {
-          'PAUSED',
-          'PAUSE_SCHEDULED',
-          'PAUSE_REQUESTED',
-        }.contains(liveStatus)
-        ? liveStatus!
-        : snapshot?.dashboardStatus ??
-              (summary.dashboardStatus == 'UPCOMING'
-                  ? 'UPCOMING'
-                  : liveStatus ?? summary.dashboardStatus);
-    final (background, icon) = switch (displayState) {
+    final displayState = _dashboardPlanStatus(summary, management);
+    final colors = dashboardPlanStatusColors(displayState);
+    final icon = switch (displayState) {
+      'PAUSED' => Icons.pause_circle_outline,
       'PAUSE_REQUESTED' ||
       'PAUSE_SCHEDULED' ||
       'UPCOMING' ||
       'PENDING_APPROVAL' ||
-      'PENDING' => (const Color(0xFF8B642D), Icons.schedule_rounded),
-      'PAUSED' => (const Color(0xFF69736F), Icons.pause_circle_outline),
-      'ON_HOLD' ||
-      'CANCELLED' ||
-      'REJECTED' => (const Color(0xFF9B503A), Icons.pause_circle_outline),
-      _ => (const Color(0xFF075A43), Icons.check_circle_outline),
+      'PENDING' => Icons.schedule_rounded,
+      _ => Icons.check_circle_outline,
     };
     final package = (detail?.entitlement ?? summary.entitlement)?.label(
       Localizations.localeOf(context).languageCode,
@@ -837,13 +812,24 @@ class _ReferencePlanCard extends ConsumerWidget {
         ? pause?.resume ??
               (pendingPause ? management.latestRequest?.resume : null)
         : snapshot?.resume;
-    final end = management?.endDate ?? snapshot?.revisedEnd ?? summary.endDate;
     final dateLocale = Localizations.localeOf(context).toLanguageTag();
-    final planDates = pauseStart == null || resume == null
-        ? _period(summary.startDate, end, locale: dateLocale)
-        : '${displayState == 'PAUSE_REQUESTED' ? copy.packageRequestedPauseStart : copy.packagePauseStart}: ${DateFormat.yMMMd(dateLocale).format(pauseStart)}\n'
-              '${copy.packageRestartShort}: ${DateFormat.yMMMd(dateLocale).format(resume)}\n'
-              '${copy.packageEndShort}: ${end == null ? '—' : DateFormat.yMMMd(dateLocale).format(end)}';
+    String date(DateTime? value) =>
+        value == null ? '—' : DateFormat.yMMMd(dateLocale).format(value);
+    final next = management?.nextDelivery ?? snapshot?.nextDelivery;
+    final planDates = switch (displayState) {
+      'PAUSE_REQUESTED' =>
+        '${copy.packageRequestedPauseStart}: ${date(pauseStart)}\n${copy.dashboardAwaitingConfirmation}',
+      'PAUSE_SCHEDULED' =>
+        '${copy.packagePauseStart}: ${date(pauseStart)}\n${copy.packageResumeOn}: ${date(resume)}',
+      'PAUSED' => '${copy.packageResumeOn}: ${date(resume)}',
+      'UPCOMING' => '${copy.customerStartDate}: ${date(summary.startDate)}',
+      'PENDING' || 'PENDING_APPROVAL' =>
+        '${copy.customerStartDate}: ${date(summary.startDate)}\n${copy.dashboardAwaitingConfirmation}',
+      _ =>
+        next == null
+            ? context.customerCopy('Schedule ready')
+            : '${summary.isTakeaway ? copy.dashboardNextPickup : copy.packageNextDelivery}: ${date(next)}',
+    };
     Future<void> openDetails() async {
       await context.push(AppRoutes.orderDetails, extra: summary.id);
       if (context.mounted) {
@@ -857,11 +843,11 @@ class _ReferencePlanCard extends ConsumerWidget {
       value,
       maxLines: maxLines,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(color: AppColors.white, fontSize: size),
+      style: TextStyle(color: colors.foreground, fontSize: size),
     );
     return Material(
       key: ValueKey('activePlan-${summary.id}'),
-      color: background,
+      color: colors.background,
       borderRadius: BorderRadius.circular(18),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -882,8 +868,8 @@ class _ReferencePlanCard extends ConsumerWidget {
                         summary.planName,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.white,
+                        style: TextStyle(
+                          color: colors.foreground,
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
                         ),
@@ -899,21 +885,21 @@ class _ReferencePlanCard extends ConsumerWidget {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.white.withValues(alpha: .14),
+                          color: colors.background,
                           borderRadius: BorderRadius.circular(99),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(icon, size: 13, color: AppColors.white),
+                            Icon(icon, size: 13, color: colors.foreground),
                             const SizedBox(width: 4),
                             Flexible(
                               child: Text(
                                 status,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: AppColors.white,
+                                style: TextStyle(
+                                  color: colors.foreground,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -936,9 +922,9 @@ class _ReferencePlanCard extends ConsumerWidget {
                 const Spacer(),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.calendar_today_outlined,
-                      color: AppColors.white,
+                      color: colors.foreground,
                       size: 12,
                     ),
                     const SizedBox(width: 6),
@@ -947,7 +933,7 @@ class _ReferencePlanCard extends ConsumerWidget {
                       key: ValueKey('viewOrder-${summary.id}'),
                       onPressed: openDetails,
                       style: TextButton.styleFrom(
-                        foregroundColor: AppColors.white,
+                        foregroundColor: colors.foreground,
                         minimumSize: const Size(0, 44),
                         padding: const EdgeInsets.symmetric(horizontal: 6),
                         textStyle: const TextStyle(
@@ -1277,12 +1263,17 @@ class _MultiPlanCarouselState extends State<_MultiPlanCarousel> {
           padEnds: false,
           itemCount: widget.orders.length,
           onPageChanged: (page) => setState(() => _page = page),
+          findChildIndexCallback: (key) {
+            final index = widget.orders.indexWhere(
+              (order) => ValueKey('planPage-${order.id}') == key,
+            );
+            return index < 0 ? null : index;
+          },
           itemBuilder: (context, index) {
             final order = widget.orders[index];
             return Padding(
-              padding: EdgeInsetsDirectional.only(
-                end: index == widget.orders.length - 1 ? 0 : 10,
-              ),
+              key: ValueKey('planPage-${order.id}'),
+              padding: const EdgeInsetsDirectional.only(end: 10),
               child: _ReferencePlanCard(
                 summary: order,
                 detail: widget.details[order.id],
@@ -1474,13 +1465,11 @@ class _QuickActions extends StatelessWidget {
   const _QuickActions({
     required this.canChooseMeals,
     required this.showExplorePlans,
-    required this.onPlan,
     required this.onOrders,
     required this.onCalendar,
     required this.onNewPlan,
   });
 
-  final VoidCallback onPlan;
   final bool canChooseMeals;
   final bool showExplorePlans;
   final VoidCallback onOrders;
@@ -1490,20 +1479,17 @@ class _QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      if (canChooseMeals || showExplorePlans)
+      if (showExplorePlans) ...[
         Expanded(
           child: _QuickAction(
             icon: Icons.restaurant_menu_rounded,
-            key: ValueKey(
-              canChooseMeals ? 'dashboardChooseMeals' : 'dashboardExplorePlans',
-            ),
-            label: context.customerCopy(
-              canChooseMeals ? 'Choose Meals' : 'Explore Plans',
-            ),
-            onTap: canChooseMeals ? onPlan : onNewPlan,
+            key: const ValueKey('dashboardExplorePlans'),
+            label: context.customerCopy('Explore Plans'),
+            onTap: onNewPlan,
           ),
         ),
-      if (canChooseMeals || showExplorePlans) const SizedBox(width: 8),
+        const SizedBox(width: 8),
+      ],
       Expanded(
         child: _QuickAction(
           icon: Icons.local_shipping_outlined,
@@ -1601,6 +1587,8 @@ class _QuickAction extends StatelessWidget {
   );
 }
 
+// Home no longer renders this legacy order-history card.
+// ignore: unused_element
 class _OrdersCard extends StatelessWidget {
   const _OrdersCard({required this.orders});
 

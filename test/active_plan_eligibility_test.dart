@@ -147,10 +147,10 @@ void main() {
   });
 
   for (final scenario in [
-    ('ACTIVE', const Color(0xFF075A43), 'Active'),
-    ('UPCOMING', const Color(0xFF8B642D), 'Upcoming'),
-    ('PAUSED', const Color(0xFF69736F), 'Paused'),
-    ('PAUSE_SCHEDULED', const Color(0xFF8B642D), 'Pause scheduled'),
+    ('ACTIVE', const Color(0xFF205B46), 'Active'),
+    ('UPCOMING', const Color(0xFFDDF1ED), 'Upcoming'),
+    ('PAUSED', const Color(0xFFE5E7EB), 'Paused'),
+    ('PAUSE_SCHEDULED', const Color(0xFFDCEAF4), 'Pause scheduled'),
   ]) {
     testWidgets(
       'dashboard renders approved unpaid ${scenario.$1} without an empty state',

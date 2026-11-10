@@ -2271,6 +2271,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get dashboardAwaitingConfirmation => 'بانتظار تأكيد دايت تايم';
 
   @override
+  String get dashboardNextPickup => 'موعد الاستلام القادم';
+
+  @override
   String dashboardPlanCount(int count) {
     return '$count خطط';
   }

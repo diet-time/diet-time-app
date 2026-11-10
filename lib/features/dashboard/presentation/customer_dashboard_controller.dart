@@ -335,21 +335,25 @@ class CustomerDashboardController extends Notifier<CustomerDashboardState> {
       };
 }
 
-int _statusPriority(String status) => switch (status) {
-  'ACTIVE' => 0,
-  'PAUSE_REQUESTED' => 0,
-  'CONFIRMED' => 1,
-  'UPCOMING' => 1,
+int dashboardPlanStatusPriority(String status) => switch (status) {
+  'ACTIVE' || 'CONFIRMED' => 0,
+  'PAUSE_REQUESTED' => 1,
   'PAUSE_SCHEDULED' => 2,
-  'PAUSED' => 2,
-  _ => 3,
+  'PAUSED' => 3,
+  'UPCOMING' => 4,
+  'PENDING' || 'PENDING_APPROVAL' => 5,
+  _ => 6,
 };
 
 int _currentFirst(CustomerOrderSummary left, CustomerOrderSummary right) {
-  final status = _statusPriority(
+  final status = dashboardPlanStatusPriority(
     left.dashboardStatus,
-  ).compareTo(_statusPriority(right.dashboardStatus));
+  ).compareTo(dashboardPlanStatusPriority(right.dashboardStatus));
   if (status != 0) return status;
+  if (left.dashboardStatus != right.dashboardStatus) {
+    if (left.dashboardStatus == 'ACTIVE') return -1;
+    if (right.dashboardStatus == 'ACTIVE') return 1;
+  }
   return _dateValue(right.startDate).compareTo(_dateValue(left.startDate));
 }
 
@@ -383,5 +387,14 @@ List<CustomerOrderSummary> dashboardPlanOrders(CustomerDashboardState state) {
       byId[order.id] = order;
     }
   }
-  return List.unmodifiable(byId.values.where((order) => order.isCurrent));
+  final plans =
+      byId.values
+          .where(
+            (order) =>
+                order.isCurrent ||
+                const {'PENDING', 'PENDING_APPROVAL'}.contains(order.status),
+          )
+          .toList()
+        ..sort(_currentFirst);
+  return List.unmodifiable(plans);
 }

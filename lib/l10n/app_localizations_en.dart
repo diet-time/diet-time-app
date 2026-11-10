@@ -2311,6 +2311,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardAwaitingConfirmation => 'Awaiting Diet Time confirmation';
 
   @override
+  String get dashboardNextPickup => 'Next scheduled pickup';
+
+  @override
   String dashboardPlanCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

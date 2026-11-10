@@ -130,6 +130,7 @@ Future<void> show(
   bool arabic = false,
   double scale = 1,
   double width = 390,
+  List<CustomerOrderSummary>? orders,
 }) async {
   await tester.binding.setSurfaceSize(Size(width, 844));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -150,7 +151,7 @@ Future<void> show(
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: TomorrowDeliveriesSection(
-              orders: repository.responses.keys.map(summary).toList(),
+              orders: orders ?? repository.responses.keys.map(summary).toList(),
             ),
           ),
         ),
@@ -165,6 +166,47 @@ Finder inCard(String id, String text) =>
     find.descendant(of: card(id), matching: find.text(text));
 
 void main() {
+  testWidgets(
+    'aggregates active and pause-requested plans once while excluding approved paused deliveries',
+    (tester) async {
+      final repository = DeliveryRepository({
+        'active': delivery('active', scheduledForDelivery: true),
+        'requested': delivery(
+          'requested',
+          pendingPause: true,
+          scheduledForDelivery: true,
+          packageDisplayStatus: 'PAUSE_REQUESTED',
+        ),
+        'paused': delivery(
+          'paused',
+          scheduledForDelivery: false,
+          serviceDayStatus: 'PAUSED',
+          packageDisplayStatus: 'PAUSED',
+        ),
+      });
+      await show(
+        tester,
+        repository,
+        orders: [
+          summary('active'),
+          summary('requested'),
+          summary('active'),
+          summary('paused'),
+        ],
+      );
+      final copy = AppLocalizations.of(
+        tester.element(find.byType(TomorrowDeliveriesSection)),
+      );
+      expect(find.text(copy.deliveriesScheduled(2)), findsOneWidget);
+      expect(find.byType(TomorrowDeliveryCard), findsNWidgets(2));
+      expect(card('active'), findsOneWidget);
+      expect(card('requested'), findsOneWidget);
+      expect(card('paused'), findsNothing);
+      expect(repository.gets.where((id) => id == 'active'), hasLength(1));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
   for (final arabic in [false, true]) {
     testWidgets(
       'pending pause holds only its own meal selection and rejection restores it ($arabic)',
