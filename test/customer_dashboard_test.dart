@@ -697,7 +697,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('2 PLANS'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('dashboardPlanCount')),
+          matching: find.text('2'),
+        ),
+        findsOneWidget,
+      );
       expect(find.byKey(const ValueKey('activePlan-active')), findsOneWidget);
       expect(find.byKey(const ValueKey('activePlan-pending')), findsOneWidget);
       expect(find.byKey(const ValueKey('activePlan-cancelled')), findsNothing);
@@ -881,7 +887,13 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const ValueKey('activePlansCarousel')), findsOneWidget);
-    expect(find.text('2 PLANS'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('dashboardPlanCount')),
+        matching: find.text('2'),
+      ),
+      findsOneWidget,
+    );
     expect(
       tester.getSize(find.byKey(const ValueKey('activePlan-active'))).height,
       lessThan(170),

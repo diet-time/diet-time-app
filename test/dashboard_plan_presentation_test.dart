@@ -1,4 +1,5 @@
 import 'package:diet_time/app/router/app_router.dart';
+import 'package:diet_time/app/theme/app_theme.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/dashboard/domain/package_management.dart';
 import 'package:diet_time/features/dashboard/presentation/customer_dashboard_controller.dart';
@@ -225,6 +226,7 @@ void main() {
             ),
           ],
           child: MaterialApp(
+            theme: AppTheme.light(const Locale('en')),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const CustomerDashboardScreen(),
@@ -235,6 +237,19 @@ void main() {
       final card = find.byKey(const ValueKey('activePlan-plan'));
       expect(find.byKey(const ValueKey('noActivePlan')), findsNothing);
       expect(find.byKey(const ValueKey('dashboardAddPlan')), findsOneWidget);
+      final addPlan = find.byKey(const ValueKey('dashboardAddPlan'));
+      final button = tester.widget<TextButton>(addPlan);
+      expect(
+        button.style!.backgroundColor!.resolve({}),
+        const Color(0xFF00674E),
+      );
+      expect(button.style!.foregroundColor!.resolve({}), Colors.white);
+      expect(button.style!.shape!.resolve({}), isA<StadiumBorder>());
+      const child = SizedBox();
+      expect(
+        button.style!.backgroundBuilder!(tester.element(addPlan), {}, child),
+        same(child),
+      );
       expect(tester.widget<Material>(card).color, Color(background));
       final badge = find.byKey(const ValueKey('planStatus-plan'));
       expect(
@@ -323,7 +338,34 @@ void main() {
         );
         await tester.pumpAndSettle();
         final copy = lookupAppLocalizations(Locale(language));
-        expect(find.text(copy.dashboardPlanCount(3)), findsOneWidget);
+        final count = find.byKey(const ValueKey('dashboardPlanCount'));
+        expect(
+          find.descendant(of: count, matching: find.text('3')),
+          findsOneWidget,
+        );
+        expect(
+          tester
+              .widget<Semantics>(
+                find
+                    .ancestor(of: count, matching: find.byType(Semantics))
+                    .first,
+              )
+              .properties
+              .label,
+          copy.dashboardPlanCount(3),
+        );
+        final addPlan = find.byKey(const ValueKey('dashboardAddPlan'));
+        if (language == 'en') {
+          expect(
+            tester.getRect(count).right,
+            lessThan(tester.getRect(addPlan).left),
+          );
+        } else {
+          expect(
+            tester.getRect(count).left,
+            greaterThan(tester.getRect(addPlan).right),
+          );
+        }
         expect(
           find.byKey(const ValueKey('dashboardChooseMeals')),
           findsNothing,

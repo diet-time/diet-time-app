@@ -567,31 +567,66 @@ class _DashboardHome extends ConsumerWidget {
           if (plans.isNotEmpty) ...[
             Row(
               children: [
-                Expanded(child: _SectionTitle(copy.dashboardMyPlans)),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(child: _SectionTitle(copy.dashboardMyPlans)),
+                      const SizedBox(width: 8),
+                      Semantics(
+                        label: copy.dashboardPlanCount(plans.length),
+                        excludeSemantics: true,
+                        child: Container(
+                          key: const ValueKey('dashboardPlanCount'),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.teaGreen.withValues(alpha: .25),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Text(
+                            '${plans.length}',
+                            style: const TextStyle(
+                              color: AppColors.darkGreen,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
                 TextButton.icon(
                   key: const ValueKey('dashboardAddPlan'),
                   onPressed: () => _startNewOrder(context, ref),
                   icon: const Icon(Icons.add, size: 16),
                   label: Text(copy.dashboardAddPlan),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.emeraldGreen,
-                    minimumSize: const Size(0, 44),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    textStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  copy.dashboardPlanCount(plans.length),
-                  key: const ValueKey('dashboardPlanCount'),
-                  style: const TextStyle(
-                    color: AppColors.emeraldGreen,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style:
+                      TextButton.styleFrom(
+                        foregroundColor: AppColors.white,
+                        backgroundColor: AppColors.emeraldGreen,
+                        shape: const StadiumBorder(),
+                        side: BorderSide.none,
+                        minimumSize: const Size(0, 44),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        textStyle: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ).copyWith(
+                        backgroundBuilder: (_, _, child) =>
+                            child ?? const SizedBox.shrink(),
+                        elevation: const WidgetStatePropertyAll(0),
+                        shadowColor: const WidgetStatePropertyAll(
+                          Colors.transparent,
+                        ),
+                        surfaceTintColor: const WidgetStatePropertyAll(
+                          Colors.transparent,
+                        ),
+                      ),
                 ),
               ],
             ),
