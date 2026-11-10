@@ -65,6 +65,138 @@ void main() {
     'UPCOMING',
     'PENDING_APPROVAL',
   ];
+  CustomerOrderSummary terminal(String status) => CustomerOrderSummary.fromJson(
+    {'id': status, 'orderNumber': 'ORD-$status', 'status': status},
+  );
+  final noPlansCases = <String, List<CustomerOrderSummary>>{
+    'no subscriptions': [],
+    'cancelled only': [terminal('CANCELLED')],
+    'rejected only': [terminal('REJECTED')],
+    'completed only': [terminal('COMPLETED')],
+    'all terminal statuses': [
+      terminal('CANCELLED'),
+      terminal('REJECTED'),
+      terminal('COMPLETED'),
+    ],
+    'API excludes the remaining subscription': [
+      CustomerOrderSummary.fromJson({
+        'id': 'exhausted',
+        'orderNumber': 'ORD-EXHAUSTED',
+        'status': 'ACTIVE',
+        'packageSchedule': {
+          'displayStatus': 'COMPLETED',
+          'dashboardStatus': 'COMPLETED',
+          'dashboardEligible': false,
+          'remainingServiceDays': 0,
+          'revisedEndDate': '2026-11-09',
+          'serverNow': '2026-11-10T09:00:00Z',
+        },
+      }),
+    ],
+  };
+  for (final scenario in noPlansCases.entries) {
+    for (final language in ['en', 'ar']) {
+      testWidgets(
+        'no-plan card for ${scenario.key} preserves controls and opens existing selection ($language)',
+        (tester) async {
+          await tester.binding.setSurfaceSize(const Size(320, 844));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          final router = GoRouter(
+            initialLocation: '/',
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (_, _) => const CustomerDashboardScreen(),
+              ),
+              GoRoute(
+                path: AppRoutes.startPlan,
+                builder: (_, _) =>
+                    const Scaffold(body: Text('Existing plan selection')),
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                customerDashboardControllerProvider.overrideWith(
+                  () => Dashboard(scenario.value),
+                ),
+              ],
+              child: MaterialApp.router(
+                routerConfig: router,
+                locale: Locale(language),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                builder: (context, child) => MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: const TextScaler.linear(1.3)),
+                  child: child!,
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final copy = lookupAppLocalizations(Locale(language));
+          final empty = find.byKey(const ValueKey('noActivePlan'));
+          expect(empty, findsOneWidget);
+          expect(tester.getRect(empty).center.dx, closeTo(160, .1));
+          expect(find.text(copy.dashboardNoPlansTitle), findsOneWidget);
+          expect(find.text(copy.dashboardNoPlansDescription), findsOneWidget);
+          expect(find.text(copy.dashboardExploreMealPlans), findsOneWidget);
+          if (language == 'en') {
+            expect(find.text('Ready to eat healthier?'), findsOneWidget);
+            expect(
+              find.text(
+                'Explore our freshly prepared meal plans and find the perfect fit for your lifestyle.',
+              ),
+              findsOneWidget,
+            );
+            expect(find.text('Explore Meal Plans'), findsOneWidget);
+          }
+          expect(find.text(copy.dashboardMyPlans), findsNothing);
+          for (final key in [
+            'activePlansCarousel',
+            'dashboardAddPlan',
+            'tomorrowDeliveries',
+            'dashboardOrdersAction',
+            'orderAnotherPlan',
+          ]) {
+            expect(find.byKey(ValueKey(key)), findsNothing);
+          }
+          expect(find.text('QUICK ACTIONS'), findsNothing);
+          expect(find.text('MY ORDERS'), findsNothing);
+          for (final key in [
+            'dashboardMenuButton',
+            'dashboardSupportButton',
+            'dashboardLanguageSelector',
+            'dashboardHomeTab',
+            'dashboardOrdersTab',
+            'dashboardCalendarTab',
+            'dashboardProfileTab',
+          ]) {
+            expect(find.byKey(ValueKey(key)), findsOneWidget);
+          }
+          final button = find.byKey(const ValueKey('choosePlan'));
+          expect(
+            tester
+                .widget<FilledButton>(button)
+                .style!
+                .backgroundColor!
+                .resolve({}),
+            const Color(0xFF17352D),
+          );
+          await tester.ensureVisible(button);
+          await tester.tap(button);
+          await tester.pumpAndSettle();
+          expect(find.text('Existing plan selection'), findsOneWidget);
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox());
+        },
+      );
+    }
+  }
   const palette = [
     ('ACTIVE', 0xFF205B46, 0xFFFFFFFF),
     ('UPCOMING', 0xFFDDF1ED, 0xFF176B62),
@@ -101,6 +233,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       final card = find.byKey(const ValueKey('activePlan-plan'));
+      expect(find.byKey(const ValueKey('noActivePlan')), findsNothing);
+      expect(find.byKey(const ValueKey('dashboardAddPlan')), findsOneWidget);
       expect(tester.widget<Material>(card).color, Color(background));
       final badge = find.byKey(const ValueKey('planStatus-plan'));
       expect(

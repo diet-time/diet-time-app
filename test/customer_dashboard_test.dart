@@ -100,7 +100,7 @@ void main() {
   }
 
   testWidgets(
-    'Choose Meals quick action is removed and remaining actions stay aligned',
+    'Quick Actions are removed and header support preserves its existing action',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -124,21 +124,29 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(find.text('QUICK ACTIONS'), findsNothing);
+      expect(find.byKey(const ValueKey('dashboardOrdersAction')), findsNothing);
       expect(find.byKey(const ValueKey('dashboardChooseMeals')), findsNothing);
-      final ordersAction = find.byKey(const ValueKey('dashboardOrdersAction'));
-      await tester.scrollUntilVisible(
-        ordersAction,
-        250,
-        scrollable: find.byType(Scrollable).first,
-      );
+      expect(find.byKey(const ValueKey('orderAnotherPlan')), findsNothing);
+      expect(find.byKey(const ValueKey('dashboardAddPlan')), findsOneWidget);
+      final support = find.byKey(const ValueKey('dashboardSupportButton'));
+      expect(tester.widget<IconButton>(support).tooltip, 'Support');
+      expect(tester.getSize(support).width, greaterThanOrEqualTo(48));
+      expect(tester.getSize(support).height, greaterThanOrEqualTo(48));
       expect(
-        tester.getSize(ordersAction),
-        tester.getSize(find.byKey(const ValueKey('orderAnotherPlan'))),
+        tester.getRect(support).left,
+        greaterThan(
+          tester
+              .getRect(find.byKey(const ValueKey('dashboardMenuButton')))
+              .right,
+        ),
       );
+      await tester.tap(support);
+      await tester.pumpAndSettle();
+      expect(find.text('Support will be available soon.'), findsOneWidget);
       expect(find.text('MY ORDERS'), findsNothing);
       expect(find.text('PREVIOUS ORDERS'), findsNothing);
-      expect(find.byKey(const ValueKey('order-choose')), findsNothing);
-      await tester.tap(ordersAction);
+      await tester.tap(find.byKey(const ValueKey('dashboardOrdersTab')));
       await tester.pumpAndSettle();
       expect(
         tester
@@ -277,7 +285,7 @@ void main() {
         expect(find.byType(PackageManagementPanel), findsNothing);
         if (pauseStatus == 'PAUSED') {
           await tester.scrollUntilVisible(
-            find.byKey(const ValueKey('dashboardExplorePlans')),
+            find.byKey(const ValueKey('dashboardAddPlan')),
             200,
             scrollable: find.byType(Scrollable).first,
           );
@@ -371,14 +379,14 @@ void main() {
       expect(find.byKey(const ValueKey('dashboardMyPlan')), findsNothing);
       expect(find.byKey(const ValueKey('dashboardChooseMeals')), findsNothing);
       expect(find.byKey(const ValueKey('orderAnotherPlan')), findsNothing);
-      expect(find.text('Explore Plans'), findsOneWidget);
+      expect(find.byKey(const ValueKey('dashboardAddPlan')), findsOneWidget);
       expect(find.byKey(const ValueKey('noActivePlan')), findsNothing);
       expect(find.byKey(const ValueKey('pendingPlanMessage')), findsNothing);
       expect(find.byKey(const ValueKey('dashboardPlanCount')), findsOneWidget);
       await tester.ensureVisible(
-        find.byKey(const ValueKey('dashboardOrdersAction')),
+        find.byKey(const ValueKey('dashboardOrdersTab')),
       );
-      await tester.tap(find.byKey(const ValueKey('dashboardOrdersAction')));
+      await tester.tap(find.byKey(const ValueKey('dashboardOrdersTab')));
       await tester.pumpAndSettle();
       expect(
         tester
@@ -838,14 +846,10 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const ValueKey('activePlan-active')), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('QUICK ACTIONS'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('QUICK ACTIONS'), findsOneWidget);
+    expect(find.text('QUICK ACTIONS'), findsNothing);
     expect(find.textContaining('ORDER ANOTHER PLAN'), findsNothing);
-    expect(find.byKey(const ValueKey('orderAnotherPlan')), findsOneWidget);
+    expect(find.byKey(const ValueKey('orderAnotherPlan')), findsNothing);
+    expect(find.byKey(const ValueKey('dashboardAddPlan')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

@@ -2265,6 +2265,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get dashboardMyPlans => 'خططي';
 
   @override
+  String get dashboardNoPlansTitle => 'هل أنت مستعد لتناول طعام صحي أكثر؟';
+
+  @override
+  String get dashboardNoPlansDescription =>
+      'اكتشف خطط وجباتنا الطازجة والمحضّرة بعناية، واعثر على الخطة الأنسب لأسلوب حياتك.';
+
+  @override
+  String get dashboardExploreMealPlans => 'استكشف خطط الوجبات';
+
+  @override
+  String get dashboardAddPlan => 'إضافة خطة';
+
+  @override
   String get dashboardPendingApproval => 'بانتظار الموافقة';
 
   @override

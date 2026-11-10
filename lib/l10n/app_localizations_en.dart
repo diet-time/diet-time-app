@@ -2305,6 +2305,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardMyPlans => 'My Plans';
 
   @override
+  String get dashboardNoPlansTitle => 'Ready to eat healthier?';
+
+  @override
+  String get dashboardNoPlansDescription =>
+      'Explore our freshly prepared meal plans and find the perfect fit for your lifestyle.';
+
+  @override
+  String get dashboardExploreMealPlans => 'Explore Meal Plans';
+
+  @override
+  String get dashboardAddPlan => 'Add Plan';
+
+  @override
   String get dashboardPendingApproval => 'Pending Approval';
 
   @override

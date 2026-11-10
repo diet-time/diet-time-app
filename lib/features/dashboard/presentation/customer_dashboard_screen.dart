@@ -170,8 +170,6 @@ class _CustomerDashboardScreenState
         mealSectionKey: _mealSectionKey,
         state: state,
         name: profile.preferredName,
-        onViewAll: () => _selectTab(1),
-        onCalendar: () => _selectTab(2),
       ),
       _CustomerOrders(state: state),
       _DashboardCalendar(state: state),
@@ -385,14 +383,10 @@ class _DashboardHome extends ConsumerWidget {
     required this.mealSectionKey,
     required this.state,
     required this.name,
-    required this.onViewAll,
-    required this.onCalendar,
   });
 
   final CustomerDashboardState state;
   final String? name;
-  final VoidCallback onViewAll;
-  final VoidCallback onCalendar;
   final GlobalKey mealSectionKey;
 
   @override
@@ -470,22 +464,6 @@ class _DashboardHome extends ConsumerWidget {
           (order) => order.isCurrent && order.review['canFulfill'] != false,
         )
         .toList();
-    final canChooseMeals = activeOrders.any((order) {
-      if (!order.canChooseMeals) return false;
-      if (order.rowVersion < 1) return true;
-      // Reuse the plan card's live management data, including older APIs that
-      // do not include a package-schedule snapshot in their order summaries.
-      final management = ref
-          .watch(packageManagementProvider(order.id))
-          .asData
-          ?.value;
-      return !const {
-        'PAUSED',
-        'CANCELLED',
-        'REJECTED',
-        'COMPLETED',
-      }.contains(management?.effectiveDisplayStatus);
-    });
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
     return RefreshIndicator(
       onRefresh: () =>
@@ -503,45 +481,79 @@ class _DashboardHome extends ConsumerWidget {
             spacing: 12,
             runSpacing: 8,
             children: [
-              FilledButton.tonalIcon(
-                key: const ValueKey('dashboardMenuButton'),
-                onPressed: () =>
-                    context.push(AppRoutes.menu, extra: 'dashboard'),
-                icon: const Icon(Icons.restaurant_menu_rounded, size: 18),
-                label: Text(
-                  lookupAppLocalizations(
-                    Localizations.localeOf(context),
-                  ).menuButton,
-                ),
-                style:
-                    FilledButton.styleFrom(
-                      minimumSize: const Size(0, 44),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      foregroundColor: AppColors.emeraldGreen,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FilledButton.tonalIcon(
+                    key: const ValueKey('dashboardMenuButton'),
+                    onPressed: () =>
+                        context.push(AppRoutes.menu, extra: 'dashboard'),
+                    icon: const Icon(Icons.restaurant_menu_rounded, size: 18),
+                    label: Text(
+                      lookupAppLocalizations(
+                        Localizations.localeOf(context),
+                      ).menuButton,
+                    ),
+                    style:
+                        FilledButton.styleFrom(
+                          minimumSize: const Size(0, 44),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          foregroundColor: AppColors.emeraldGreen,
+                          backgroundColor: AppColors.white,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: const StadiumBorder(),
+                          side: BorderSide(
+                            color: AppColors.emeraldGreen.withValues(
+                              alpha: .18,
+                            ),
+                          ),
+                        ).copyWith(
+                          backgroundBuilder: (context, states, child) =>
+                              child ?? const SizedBox.shrink(),
+                          elevation: const WidgetStatePropertyAll(0),
+                          shadowColor: const WidgetStatePropertyAll(
+                            Colors.transparent,
+                          ),
+                          surfaceTintColor: const WidgetStatePropertyAll(
+                            Colors.transparent,
+                          ),
+                          textStyle: const WidgetStatePropertyAll(
+                            TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                    clipBehavior: Clip.antiAlias,
+                  ),
+                  const SizedBox(width: 6),
+                  IconButton.filled(
+                    key: const ValueKey('dashboardSupportButton'),
+                    tooltip: copy.customerSupport,
+                    icon: const Icon(Icons.headset_mic_outlined, size: 20),
+                    style: IconButton.styleFrom(
+                      minimumSize: const Size(48, 48),
                       backgroundColor: AppColors.white,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      shape: const StadiumBorder(),
+                      foregroundColor: AppColors.emeraldGreen,
+                      shape: const CircleBorder(),
                       side: BorderSide(
                         color: AppColors.emeraldGreen.withValues(alpha: .18),
                       ),
-                    ).copyWith(
-                      backgroundBuilder: (context, states, child) =>
-                          child ?? const SizedBox.shrink(),
-                      elevation: const WidgetStatePropertyAll(0),
-                      shadowColor: const WidgetStatePropertyAll(
-                        Colors.transparent,
-                      ),
-                      surfaceTintColor: const WidgetStatePropertyAll(
-                        Colors.transparent,
-                      ),
-                      textStyle: const WidgetStatePropertyAll(
-                        TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                    ),
+                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          context.customerCopy(
+                            'Support will be available soon.',
+                          ),
+                        ),
                       ),
                     ),
-                clipBehavior: Clip.antiAlias,
+                  ),
+                ],
               ),
               const DashboardLanguageSwitcher(),
             ],
@@ -556,7 +568,22 @@ class _DashboardHome extends ConsumerWidget {
             Row(
               children: [
                 Expanded(child: _SectionTitle(copy.dashboardMyPlans)),
-                const Spacer(),
+                TextButton.icon(
+                  key: const ValueKey('dashboardAddPlan'),
+                  onPressed: () => _startNewOrder(context, ref),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: Text(copy.dashboardAddPlan),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.emeraldGreen,
+                    minimumSize: const Size(0, 44),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Text(
                   copy.dashboardPlanCount(plans.length),
                   key: const ValueKey('dashboardPlanCount'),
@@ -583,21 +610,8 @@ class _DashboardHome extends ConsumerWidget {
                 orders: deliveryOrders,
               ),
             ],
-          ] else if (state is DashboardWithoutActivePlan ||
-              state is DashboardNoOrders) ...[
+          ] else ...[
             const _NoActivePlanCard(),
-          ],
-          const SizedBox(height: 22),
-          ...[
-            _SectionTitle(context.customerCopy('QUICK ACTIONS')),
-            const SizedBox(height: 10),
-            _QuickActions(
-              canChooseMeals: canChooseMeals,
-              showExplorePlans: plans.isNotEmpty && !canChooseMeals,
-              onOrders: onViewAll,
-              onCalendar: onCalendar,
-              onNewPlan: () => _startNewOrder(context, ref),
-            ),
           ],
         ],
       ),
@@ -686,17 +700,30 @@ class _NoActivePlanCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => _SurfaceCard(
     key: const ValueKey('noActivePlan'),
+    padding: const EdgeInsets.all(24),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Icon(
-          Icons.restaurant_menu_rounded,
-          color: AppColors.emeraldGreen,
-          size: 28,
+        Center(
+          child: Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.teaGreen.withValues(alpha: .3),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.restaurant_menu_rounded,
+              color: AppColors.emeraldGreen,
+              size: 28,
+            ),
+          ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         Text(
-          context.customerCopy('No active plan'),
+          lookupAppLocalizations(
+            Localizations.localeOf(context),
+          ).dashboardNoPlansTitle,
           textAlign: TextAlign.center,
           style: TextStyle(
             color: AppColors.darkGreen,
@@ -706,16 +733,16 @@ class _NoActivePlanCard extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          context.customerCopy(
-            "You don't have an active meal plan yet. Explore our plans to get started.",
-          ),
+          lookupAppLocalizations(
+            Localizations.localeOf(context),
+          ).dashboardNoPlansDescription,
           textAlign: TextAlign.center,
           style: TextStyle(
             color: AppColors.darkGreen.withValues(alpha: .62),
             height: 1.4,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 20),
         FilledButton(
           key: const ValueKey('choosePlan'),
           style:
@@ -733,7 +760,11 @@ class _NoActivePlanCard extends ConsumerWidget {
               ),
           clipBehavior: Clip.antiAlias,
           onPressed: () => _startNewOrder(context, ref),
-          child: Text(context.customerCopy('Explore Plans')),
+          child: Text(
+            lookupAppLocalizations(
+              Localizations.localeOf(context),
+            ).dashboardExploreMealPlans,
+          ),
         ),
       ],
     ),
@@ -1459,132 +1490,6 @@ class _CompactPlanCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _QuickActions extends StatelessWidget {
-  const _QuickActions({
-    required this.canChooseMeals,
-    required this.showExplorePlans,
-    required this.onOrders,
-    required this.onCalendar,
-    required this.onNewPlan,
-  });
-
-  final bool canChooseMeals;
-  final bool showExplorePlans;
-  final VoidCallback onOrders;
-  final VoidCallback onCalendar;
-  final VoidCallback onNewPlan;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      if (showExplorePlans) ...[
-        Expanded(
-          child: _QuickAction(
-            icon: Icons.restaurant_menu_rounded,
-            key: const ValueKey('dashboardExplorePlans'),
-            label: context.customerCopy('Explore Plans'),
-            onTap: onNewPlan,
-          ),
-        ),
-        const SizedBox(width: 8),
-      ],
-      Expanded(
-        child: _QuickAction(
-          icon: Icons.local_shipping_outlined,
-          key: const ValueKey('dashboardOrdersAction'),
-          label: context.customerCopy('Orders'),
-          onTap: onOrders,
-        ),
-      ),
-      const SizedBox(width: 8),
-      if (!canChooseMeals)
-        Expanded(
-          child: _QuickAction(
-            icon: Icons.calendar_month_outlined,
-            label: context.customerCopy('Calendar'),
-            onTap: onCalendar,
-          ),
-        ),
-      if (!canChooseMeals) const SizedBox(width: 8),
-      if (canChooseMeals)
-        Expanded(
-          child: _QuickAction(
-            icon: Icons.add_circle_outline_rounded,
-            key: const ValueKey('orderAnotherPlan'),
-            label: context.customerCopy('New Plan'),
-            onTap: onNewPlan,
-          ),
-        ),
-      if (canChooseMeals) const SizedBox(width: 8),
-      Expanded(
-        child: _QuickAction(
-          icon: Icons.support_agent_rounded,
-          label: context.customerCopy('Support'),
-          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                context.customerCopy('Support will be available soon.'),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ],
-  );
-}
-
-class _QuickAction extends StatelessWidget {
-  const _QuickAction({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: AppColors.white,
-    clipBehavior: Clip.antiAlias,
-    borderRadius: BorderRadius.circular(16),
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        height:
-            86 +
-            (MediaQuery.textScalerOf(context).scale(10) - 10).clamp(0, 30) * 2,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.darkGreen.withValues(alpha: .08)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: AppColors.emeraldGreen, size: 22),
-            const SizedBox(height: 7),
-            Text(
-              label,
-              maxLines: 2,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.darkGreen,
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }
 
 // Home no longer renders this legacy order-history card.

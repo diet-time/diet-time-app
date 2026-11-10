@@ -4142,6 +4142,30 @@ abstract class AppLocalizations {
   /// **'My Plans'**
   String get dashboardMyPlans;
 
+  /// No description provided for @dashboardNoPlansTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to eat healthier?'**
+  String get dashboardNoPlansTitle;
+
+  /// No description provided for @dashboardNoPlansDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore our freshly prepared meal plans and find the perfect fit for your lifestyle.'**
+  String get dashboardNoPlansDescription;
+
+  /// No description provided for @dashboardExploreMealPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore Meal Plans'**
+  String get dashboardExploreMealPlans;
+
+  /// No description provided for @dashboardAddPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Plan'**
+  String get dashboardAddPlan;
+
   /// No description provided for @dashboardPendingApproval.
   ///
   /// In en, this message translates to:

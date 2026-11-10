@@ -69,13 +69,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.byKey(const ValueKey('resumeSelectedPlan')), findsNothing);
-        final startPlan = find.byKey(
-          ValueKey(
-            status == 'PENDING_APPROVAL'
-                ? 'dashboardExplorePlans'
-                : 'orderAnotherPlan',
-          ),
-        );
+        final startPlan = find.byKey(const ValueKey('dashboardAddPlan'));
         await tester.scrollUntilVisible(
           startPlan,
           250,

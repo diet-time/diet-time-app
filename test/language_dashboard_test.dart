@@ -47,6 +47,17 @@ void main() {
         );
         expect(tester.getSize(menu).height, 44);
         expect(tester.getSize(language).height, 44);
+        final support = find.byKey(const ValueKey('dashboardSupportButton'));
+        expect(tester.getSize(support), const Size(48, 48));
+        expect(tester.widget<IconButton>(support).tooltip, 'Support');
+        expect(
+          tester.getRect(support).left,
+          closeTo(tester.getRect(menu).right + 6, .1),
+        );
+        expect(
+          tester.getRect(language).right,
+          greaterThan(tester.getRect(support).right),
+        );
         final button = tester.widget<FilledButton>(menu);
         expect(button.clipBehavior, Clip.antiAlias);
         expect(button.style!.elevation!.resolve({}), 0);
@@ -55,6 +66,9 @@ void main() {
           button.style!.backgroundBuilder!(tester.element(menu), {}, child),
           same(child),
         );
+        await tester.tap(support);
+        await tester.pumpAndSettle();
+        expect(find.text('Support will be available soon.'), findsOneWidget);
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());
       },
