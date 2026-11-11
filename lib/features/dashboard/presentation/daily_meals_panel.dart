@@ -2,6 +2,7 @@ import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/menu/domain/meal_nutrition.dart';
 import 'package:diet_time/features/menu/presentation/meal_nutrition_view.dart';
 import 'package:diet_time/features/plans/domain/meal_entitlement.dart';
+import 'package:diet_time/features/dashboard/presentation/calendar_day_meals.dart';
 import 'dart:async';
 
 import 'package:diet_time/app/theme/app_colors.dart';
@@ -18,11 +19,17 @@ class DailyMealsPanel extends ConsumerStatefulWidget {
     required this.request,
     required this.date,
     required this.planName,
+    this.calendarMode = false,
+    this.showCalendarNutrition = true,
+    this.onReview,
     super.key,
   });
   final DailyMenuRequest request;
   final DateTime date;
   final String planName;
+  final bool calendarMode;
+  final bool showCalendarNutrition;
+  final VoidCallback? onReview;
 
   @override
   ConsumerState<DailyMealsPanel> createState() => _DailyMealsPanelState();
@@ -82,6 +89,25 @@ class _DailyMealsPanelState extends ConsumerState<DailyMealsPanel> {
           );
         }
         _watchDeadline(menu);
+        if (widget.calendarMode) {
+          return TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 220),
+            builder: (context, value, child) =>
+                Opacity(opacity: value, child: child),
+            child: CalendarDayMeals(
+              menu: menu,
+              planName: widget.planName,
+              showNutrition: widget.showCalendarNutrition,
+              onReview: widget.onReview ?? () {},
+              onChange: menu.editable
+                  ? (selection) => _changeMeal(menu, selection)
+                  : null,
+            ),
+          );
+        }
         final cutoff = menu.cutoffAt?.toUtc().add(const Duration(hours: 3));
         return Column(
           key: ValueKey('dailyMenu-${menu.dayId}'),

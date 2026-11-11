@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/menu/domain/meal_nutrition.dart';
 import 'package:diet_time/features/menu/presentation/meal_nutrition_view.dart';
 import 'package:diet_time/app/theme/app_colors.dart';
@@ -20,6 +22,8 @@ class TomorrowDeliveryCard extends StatelessWidget {
     required this.onChoose,
     required this.onToggleDishes,
     required this.onRefresh,
+    this.animateReminder = true,
+    this.onReminderShown,
   });
 
   final TomorrowMenu menu;
@@ -30,6 +34,8 @@ class TomorrowDeliveryCard extends StatelessWidget {
   final VoidCallback? onChoose;
   final VoidCallback onToggleDishes;
   final VoidCallback? onRefresh;
+  final bool animateReminder;
+  final VoidCallback? onReminderShown;
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +50,13 @@ class TomorrowDeliveryCard extends StatelessWidget {
       expired: expired,
     );
     final pending = state == TomorrowDeliveryState.selectionPending;
-    final ready = state == TomorrowDeliveryState.readyToConfirm;
+    final ready =
+        state == TomorrowDeliveryState.readyToConfirm &&
+        menu.scheduledForTomorrow;
+    final confirmed = state == TomorrowDeliveryState.confirmed;
+    final cutoff = DateFormat.jm(
+      Localizations.localeOf(context).toLanguageTag(),
+    ).format(menu.cutoffAt.toUtc().add(const Duration(hours: 3)));
     final actionable =
         !menu.selectionBlockedByPendingPause && (pending || ready);
     final label = menu.selectionBlockedByPendingPause
@@ -136,6 +148,26 @@ class TomorrowDeliveryCard extends StatelessWidget {
                   .map((m) => (nutrition: m.nutrition, quantity: m.quantity)),
             ),
           ),
+          if (ready || confirmed) ...[
+            const SizedBox(height: 8),
+            if (ready)
+              Text(
+                copy.deliveriesProgress(selected, total),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.darkGreen,
+                ),
+              ),
+            if (ready) const SizedBox(height: 6),
+            _ConfirmationNotice(
+              key: ValueKey('confirmationNotice-${menu.dayId}'),
+              confirmed: confirmed,
+              cutoff: cutoff,
+              animate: animateReminder,
+              onShown: onReminderShown,
+              onReview: onChoose,
+            ),
+          ],
           if (menu.selectionBlockedByPendingPause) ...[
             const SizedBox(height: 8),
             Text(
@@ -146,8 +178,13 @@ class TomorrowDeliveryCard extends StatelessWidget {
                 height: 1.4,
               ),
             ),
-          ] else if (actionable) ...[
+          ] else if (pending && actionable) ...[
             const SizedBox(height: 8),
+            Text(
+              context.customerCopy('Choose your meals for tomorrow'),
+              style: const TextStyle(fontSize: 12, color: AppColors.darkGreen),
+            ),
+            const SizedBox(height: 6),
             if (pending) ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(99),
@@ -175,12 +212,12 @@ class TomorrowDeliveryCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  copy.deliveriesDeadline,
+                  '${context.customerCopy('Selection deadline')}: $cutoff',
                   style: TextStyle(fontSize: 11, color: accent),
                 ),
               ],
             ),
-          ] else if (!menu.readOnly) ...[
+          ] else if (!menu.readOnly && !ready) ...[
             const SizedBox(height: 8),
             Text(
               menu.emptyReason ??
@@ -209,23 +246,27 @@ class TomorrowDeliveryCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 2,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                decoration: BoxDecoration(
-                  color: actionable
-                      ? const Color(0xFFFFF1D8)
-                      : const Color(0xFFE2EDDF),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: accent,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+              if (!ready && !confirmed)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: actionable
+                        ? const Color(0xFFFFF1D8)
+                        : const Color(0xFFE2EDDF),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: accent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
               if (menu.readOnly)
                 TextButton(
                   key: const ValueKey('toggleConfirmedMeals'),
@@ -239,7 +280,7 @@ class TomorrowDeliveryCard extends StatelessWidget {
                         : copy.deliveriesViewSelected,
                   ),
                 )
-              else if (onChoose != null)
+              else if (onChoose != null && !ready)
                 FilledButton(
                   key: const ValueKey('chooseTomorrowMeals'),
                   onPressed: onChoose,
@@ -266,11 +307,11 @@ class TomorrowDeliveryCard extends StatelessWidget {
                     ready
                         ? copy.deliveriesReviewConfirm
                         : pending
-                        ? copy.deliveriesChoose
+                        ? context.customerCopy('Choose Meals')
                         : copy.deliveriesViewMenu,
                   ),
                 )
-              else
+              else if (!ready)
                 TextButton(
                   onPressed: onRefresh,
                   style: actionStyle,
@@ -294,6 +335,243 @@ class TomorrowDeliveryCard extends StatelessWidget {
                   : const SizedBox(width: double.infinity),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _ConfirmationNotice extends StatefulWidget {
+  const _ConfirmationNotice({
+    super.key,
+    required this.confirmed,
+    required this.cutoff,
+    required this.animate,
+    required this.onShown,
+    required this.onReview,
+  });
+
+  final bool confirmed, animate;
+  final String cutoff;
+  final VoidCallback? onShown, onReview;
+
+  @override
+  State<_ConfirmationNotice> createState() => _ConfirmationNoticeState();
+}
+
+class _ConfirmationNoticeState extends State<_ConfirmationNotice>
+    with TickerProviderStateMixin {
+  late final _entrance = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 450),
+    value: 1,
+  );
+  late final _breathing = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2800),
+  );
+  late final _check = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+    value: 1,
+  );
+  bool _started = false;
+  bool get _reducedMotion =>
+      MediaQuery.disableAnimationsOf(context) ||
+      MediaQuery.accessibleNavigationOf(context);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_reducedMotion) {
+      _entrance.stop();
+      _entrance.value = 1;
+      _breathing.stop();
+      _breathing.value = 0;
+      _check.stop();
+      _check.value = 1;
+    }
+    if (_started) return;
+    _started = true;
+    if (!widget.confirmed) {
+      widget.onShown?.call();
+      if (widget.animate && !_reducedMotion) {
+        _entrance.forward(from: 0);
+        // Each controller iteration is one complete, gentle breathing cycle.
+        _breathing.repeat(count: 2);
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _ConfirmationNotice oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.confirmed && !oldWidget.confirmed) {
+      _breathing.stop();
+      _breathing.value = 0;
+      _entrance.value = 1;
+      if (!_reducedMotion) _check.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _entrance.dispose();
+    _breathing.dispose();
+    _check.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const green = Color(0xFF17684F);
+    const amber = Color(0xFF895C25);
+    final duration = _reducedMotion
+        ? Duration.zero
+        : const Duration(milliseconds: 250);
+    return FadeTransition(
+      opacity: _entrance,
+      child: SlideTransition(
+        position: Tween(
+          begin: const Offset(0, .06),
+          end: Offset.zero,
+        ).chain(CurveTween(curve: Curves.easeOutCubic)).animate(_entrance),
+        child: AnimatedContainer(
+          duration: duration,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: widget.confirmed
+                ? const Color(0xFFE8F3EB)
+                : const Color(0xFFFFF0D5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: AnimatedSwitcher(
+            duration: duration,
+            child: widget.confirmed
+                ? Row(
+                    key: const ValueKey('mealsConfirmedIndicator'),
+                    children: [
+                      ScaleTransition(
+                        scale: Tween(begin: .75, end: 1.0).animate(_check),
+                        child: FadeTransition(
+                          opacity: _check,
+                          child: const Icon(
+                            Icons.check_circle_rounded,
+                            size: 18,
+                            color: green,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          context.customerCopy('Meals Confirmed'),
+                          style: const TextStyle(
+                            color: green,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    key: const ValueKey('mealConfirmationReminder'),
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.schedule_rounded,
+                            size: 18,
+                            color: amber,
+                          ),
+                          const SizedBox(width: 7),
+                          Expanded(
+                            child: Text(
+                              '${context.customerCopy('Confirm your meals by')} ${widget.cutoff}',
+                              style: const TextStyle(
+                                color: amber,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        context.customerCopy(
+                          "Your meals are selected. Please confirm them to complete tomorrow's order.",
+                        ),
+                        style: const TextStyle(
+                          color: amber,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      AnimatedBuilder(
+                        animation: _breathing,
+                        builder: (context, child) {
+                          final wave =
+                              (1 - math.cos(_breathing.value * 2 * math.pi)) /
+                              2;
+                          return Transform.scale(
+                            key: const ValueKey('mealConfirmationBreathing'),
+                            scale: 1 + .012 * wave,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: green.withValues(alpha: .09 * wave),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: FilledButton(
+                          key: const ValueKey('chooseTomorrowMeals'),
+                          onPressed: widget.onReview,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: green,
+                            foregroundColor: AppColors.white,
+                            minimumSize: const Size(0, 44),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 10,
+                            ),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  context.customerCopy(
+                                    'Review & Confirm Meals',
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.arrow_forward_rounded, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
       ),
     );
   }

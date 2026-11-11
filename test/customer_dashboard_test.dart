@@ -933,7 +933,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('dashboardCalendarTab')));
     await tester.pump();
 
-    expect(find.text('Upcoming Meals'), findsOneWidget);
+    expect(find.text('Your Meal Calendar'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('upcomingDeliveriesScreen')),
       findsOneWidget,

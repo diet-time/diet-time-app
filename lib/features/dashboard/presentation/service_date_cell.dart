@@ -2,15 +2,15 @@ import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 IconData serviceStatusIcon(String? status) => switch (status) {
-  'customized' => Icons.tune_rounded,
-  'locked' => Icons.lock_outline_rounded,
+  'actionNeeded' => Icons.schedule_rounded,
+  'confirmed' ||
   'delivered' ||
   'DELIVERED' ||
   'collected' ||
   'COLLECTED' => Icons.check_circle_outline,
+  'selectedForYou' || 'auto_selected' => Icons.auto_awesome_outlined,
+  'closed' || 'locked' => Icons.event_available_outlined,
   'mixed' => Icons.layers_outlined,
-  'needs_review' => Icons.info_outline,
-  'auto_selected' => Icons.auto_awesome_outlined,
   _ => Icons.event_outlined,
 };
 
@@ -26,113 +26,82 @@ class ServiceDateCell extends StatelessWidget {
     super.key,
   });
   final DateTime date;
-  final bool service;
-  final bool selected;
+  final bool service, selected;
   final int count;
   final String? status;
   final String label;
   final VoidCallback? onTap;
+
   @override
-  Widget build(BuildContext context) => Semantics(
-    label: label,
-    selected: selected,
-    button: service,
-    enabled: service,
-    excludeSemantics: true,
-    child: Tooltip(
-      message: label,
-      child: Padding(
-        padding: const EdgeInsets.all(2),
-        child: Material(
-          color: selected
-              ? AppColors.darkGreen
-              : service
-              ? const Color(0xFFE7F1E4)
-              : const Color(0xFFF1F0EA),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
+  Widget build(BuildContext context) {
+    final action = status == 'actionNeeded';
+    final accent = action ? const Color(0xFF895C25) : AppColors.emeraldGreen;
+    return Semantics(
+      label: label,
+      selected: selected,
+      button: true,
+      enabled: onTap != null,
+      excludeSemantics: true,
+      child: Tooltip(
+        message: label,
+        child: Padding(
+          padding: const EdgeInsets.all(2),
+          child: AnimatedContainer(
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 180),
+            decoration: BoxDecoration(
               color: selected
-                  ? AppColors.darkGreen
+                  ? const Color(0xFFDFEEE0)
+                  : action
+                  ? const Color(0xFFFFF0D5)
                   : service
-                  ? const Color(0xFFB5CFB3)
-                  : Colors.transparent,
+                  ? const Color(0xFFF0F5EB)
+                  : const Color(0xFFF5F4EF),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: selected ? AppColors.emeraldGreen : Colors.transparent,
+              ),
             ),
-          ),
-          child: InkWell(
-            key: ValueKey('deliveryDate-${date.toIso8601String()}'),
-            onTap: service ? onTap : null,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    height: MediaQuery.textScalerOf(context).scale(18),
-                    width: double.infinity,
-                    key: ValueKey('dateNumber-${date.toIso8601String()}'),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        '${date.day}',
-                        maxLines: 1,
-                        softWrap: false,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: selected ? Colors.white : AppColors.darkGreen,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  if (count > 0)
-                    SizedBox(
-                      width: double.infinity,
-                      height: MediaQuery.textScalerOf(context).scale(12) + 4,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                key: ValueKey('deliveryDate-${date.toIso8601String()}'),
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(10),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: selected
-                                ? Colors.white
-                                : AppColors.darkGreen,
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          child: Text(
-                            '$count',
-                            key: ValueKey(
-                              'deliveryCount-${date.toIso8601String()}',
-                            ),
-                            style: TextStyle(
-                              fontSize: 10,
-                              height: 1.1,
-                              fontWeight: FontWeight.w800,
-                              color: selected
-                                  ? AppColors.darkGreen
-                                  : Colors.white,
-                            ),
+                        child: Text(
+                          '${date.day}',
+                          key: ValueKey('dateNumber-${date.toIso8601String()}'),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: selected
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                            color: service || selected
+                                ? AppColors.darkGreen
+                                : const Color(0xFF8A928B),
                           ),
                         ),
                       ),
                     ),
-                  const SizedBox(height: 2),
-                  Icon(
-                    service ? serviceStatusIcon(status) : Icons.remove,
-                    size: 12,
-                    color: selected ? Colors.white : const Color(0xFF52684D),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    if (service)
+                      Icon(serviceStatusIcon(status), size: 12, color: accent)
+                    else
+                      const SizedBox(height: 12),
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

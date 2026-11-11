@@ -7,6 +7,58 @@ extension CustomerCopy on BuildContext {
     final copy = lookupAppLocalizations(Localizations.localeOf(this));
     final arabic = Localizations.localeOf(this).languageCode == 'ar';
     return switch (value) {
+      'No active meal plan.' => arabic ? 'لا توجد خطة وجبات نشطة.' : value,
+      'Your Meal Calendar' => arabic ? 'تقويم وجباتك' : value,
+      'View and manage your daily meals.' =>
+        arabic ? 'اعرض وجباتك اليومية وأدرها.' : value,
+      'Action Needed' => arabic ? 'إجراء مطلوب' : value,
+      'Selected for You' => arabic ? 'مختارة لك' : value,
+      'Selection Closed' => arabic ? 'انتهى وقت الاختيار' : value,
+      'No Meals Scheduled' => arabic ? 'لا توجد وجبات مجدولة' : value,
+      'Review & Confirm' => arabic ? 'مراجعة وتأكيد' : value,
+      'Confirm your meals before' => arabic ? 'أكد وجباتك قبل' : value,
+      'Your meals are confirmed.' => arabic ? 'تم تأكيد وجباتك.' : value,
+      'Meals selected for you. The default selection will be used unless you confirm your own choices.' =>
+        arabic
+            ? 'اخترنا وجباتك لك. سيُستخدم الاختيار الافتراضي ما لم تؤكد اختياراتك.'
+            : value,
+      'Meal selection will open closer to this date.' =>
+        arabic ? 'سيتاح اختيار الوجبات عند اقتراب هذا التاريخ.' : value,
+      'Meal selection is closed for this day.' =>
+        arabic ? 'انتهى وقت اختيار الوجبات لهذا اليوم.' : value,
+      'No meals are scheduled for this day.' =>
+        arabic ? 'لا توجد وجبات مجدولة لهذا اليوم.' : value,
+      'No meals are available for this day yet.' =>
+        arabic ? 'لم تتوفر وجبات لهذا اليوم بعد.' : value,
+      'Choose your meals for tomorrow' => arabic ? 'اختر وجباتك للغد' : value,
+      'Review & Confirm Meals' => arabic ? 'مراجعة وتأكيد الوجبات' : value,
+      'Meals Confirmed' => arabic ? 'تم تأكيد الوجبات' : value,
+      'Confirm your meals by' => arabic ? 'أكد وجباتك قبل' : value,
+      "Your meals are selected. Please confirm them to complete tomorrow's order." =>
+        arabic ? 'تم اختيار وجباتك. يرجى تأكيدها لإكمال طلب الغد.' : value,
+      'Next Pickup' => arabic ? 'الاستلام القادم' : value,
+      'Next Delivery' => arabic ? 'التوصيل القادم' : value,
+      'Schedule unavailable' => arabic ? 'الجدول غير متاح' : value,
+      'No upcoming service' => arabic ? 'لا توجد خدمة قادمة' : value,
+      'Pickup time' => arabic ? 'وقت الاستلام' : value,
+      'Total amount' => arabic ? 'المبلغ الإجمالي' : value,
+      'Need help? Contact Support' =>
+        arabic ? 'تحتاج مساعدة؟ تواصل مع الدعم' : value,
+      'Nutrition per portion' => arabic ? 'القيم الغذائية لكل حصة' : value,
+      'Pause awaiting approval' =>
+        arabic ? 'الإيقاف المؤقت بانتظار الموافقة' : value,
+      'Your request has been sent to Diet Time.' =>
+        arabic ? 'تم إرسال طلبك إلى دايت تايم.' : value,
+      'Pause from' => arabic ? 'الإيقاف من' : value,
+      'Resume on' => arabic ? 'الاستئناف في' : value,
+      'Your meals will continue as scheduled until your pause is approved.' =>
+        arabic
+            ? 'ستستمر وجباتك حسب الجدول حتى تتم الموافقة على الإيقاف المؤقت.'
+            : value,
+      'Your meals will pause on the scheduled dates and resume automatically.' =>
+        arabic
+            ? 'ستتوقف وجباتك مؤقتاً في التواريخ المحددة وتُستأنف تلقائياً.'
+            : value,
       "Your order is awaiting approval. We'll update your plan here once confirmed." =>
         arabic ? 'طلبك بانتظار الموافقة. سنحدّث خطتك هنا بمجرد تأكيده.' : value,
       'Upcoming' => arabic ? 'قادمة' : value,

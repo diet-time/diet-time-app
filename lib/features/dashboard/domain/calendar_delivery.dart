@@ -15,7 +15,19 @@ Map<DateTime, List<CalendarDelivery>> deliveriesByDate(
   for (final delivery in deliveries) {
     if (delivery.order.status == 'CANCELLED' ||
         delivery.day.deliveryStatus == 'CANCELLED' ||
-        delivery.day.deliveryStatus == 'SKIPPED') {
+        const {
+          'SKIPPED',
+          'PAUSED',
+          'SUSPENDED',
+          'DISPLACED',
+        }.contains(delivery.day.deliveryStatus) ||
+        const {
+          'PAUSED',
+          'SUSPENDED',
+          'DISPLACED',
+          'CANCELLED',
+          'SKIPPED',
+        }.contains(delivery.day.status.toUpperCase())) {
       continue;
     }
     final date = delivery.day.date;

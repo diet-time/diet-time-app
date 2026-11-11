@@ -234,7 +234,7 @@ void main() {
         find.byKey(
           ValueKey('deliveryCount-${repository.date.toIso8601String()}'),
         ),
-        findsOneWidget,
+        findsNothing,
       );
       expect(find.byType(Badge), findsNothing);
       expect(find.byIcon(Icons.layers_outlined), findsWidgets);

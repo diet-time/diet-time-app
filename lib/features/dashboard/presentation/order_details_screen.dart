@@ -106,10 +106,32 @@ class _OrderDetails extends ConsumerWidget {
             const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(order.status)
         ? ref.watch(packageManagementProvider(order.id)).asData?.value
         : null;
-    final paused = const {
-      'PAUSED',
-      'PAUSE_SCHEDULED',
-    }.contains(management?.effectiveDisplayStatus);
+    final next = management?.nextDelivery;
+    final pause = management?.currentPause;
+    final today = management?.qatarNow();
+    final nextAvailable =
+        next != null &&
+        today != null &&
+        !const {
+          'COMPLETED',
+          'CANCELLED',
+          'REJECTED',
+        }.contains(management?.status) &&
+        !DateUtils.dateOnly(next).isBefore(DateUtils.dateOnly(today)) &&
+        !(pause != null &&
+            const {
+              'PAUSED',
+              'PAUSE_SCHEDULED',
+            }.contains(management?.effectiveDisplayStatus) &&
+            !next.isBefore(pause.start) &&
+            next.isBefore(pause.resume));
+    final slot = [
+      delivery.timeSlot.name.trim(),
+      [
+        delivery.timeSlot.startTime,
+        delivery.timeSlot.endTime,
+      ].where((value) => value.trim().isNotEmpty).map(_time).join(' – '),
+    ].where((value) => value.isNotEmpty).join(' · ');
     return ListView(
       key: const ValueKey('orderDetails'),
       padding: EdgeInsets.fromLTRB(
@@ -178,6 +200,51 @@ class _OrderDetails extends ConsumerWidget {
                   ? 'ACTIVE'
                   : order.status,
             ),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _ServiceTile(
+                      icon: Icons.event_available_outlined,
+                      label: context.customerCopy(
+                        order.isTakeaway ? 'Next Pickup' : 'Next Delivery',
+                      ),
+                      value: nextAvailable
+                          ? DateFormat.yMMMd(locale).format(next)
+                          : context.customerCopy(
+                              management == null &&
+                                      !const {
+                                        'COMPLETED',
+                                        'CANCELLED',
+                                        'REJECTED',
+                                      }.contains(order.status)
+                                  ? 'Schedule unavailable'
+                                  : 'No upcoming service',
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ServiceTile(
+                      icon: Icons.calendar_today_outlined,
+                      label: copy.packageRemainingDays,
+                      value: management == null
+                          ? (const {
+                                  'COMPLETED',
+                                  'CANCELLED',
+                                  'REJECTED',
+                                }.contains(order.status)
+                                ? copy.packagePauseDayCount(0)
+                                : '—')
+                          : copy.packagePauseDayCount(management.remainingDays),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Divider(height: 1),
             if (const {'CANCELLED', 'REJECTED'}.contains(order.status))
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
@@ -187,19 +254,14 @@ class _OrderDetails extends ConsumerWidget {
                 ),
               ),
             _InformationRow(
+              key: const ValueKey('orderPlanPeriod'),
               icon: Icons.calendar_month_outlined,
-              label: paused
-                  ? copy.packagePlanStarted
-                  : context.customerCopy('PLAN PERIOD'),
-              value: paused
-                  ? (delivery.startDate == null
-                        ? '—'
-                        : DateFormat.yMMMd(locale).format(delivery.startDate!))
-                  : _period(
-                      delivery.startDate,
-                      management?.endDate ?? delivery.endDate,
-                      locale,
-                    ),
+              label: context.customerCopy('PLAN PERIOD'),
+              value: _period(
+                delivery.startDate,
+                management?.endDate ?? delivery.endDate,
+                locale,
+              ),
             ),
             _InformationRow(
               icon: Icons.event_available_outlined,
@@ -236,16 +298,15 @@ class _OrderDetails extends ConsumerWidget {
                           address.zoneNo.isEmpty)
                         address.formattedAddress,
                     ].where((v) => v.trim().isNotEmpty).toSet().join('\n'),
-              last: order.isTakeaway,
+              last: slot.isEmpty,
             ),
-            if (!order.isTakeaway &&
-                (delivery.timeSlot.name.isNotEmpty ||
-                    delivery.timeSlot.startTime.isNotEmpty))
+            if (slot.isNotEmpty)
               _InformationRow(
                 icon: Icons.schedule_rounded,
-                label: context.customerCopy('DELIVERY TIME'),
-                value:
-                    '${delivery.timeSlot.name} · ${_time(delivery.timeSlot.startTime)} – ${_time(delivery.timeSlot.endTime)}',
+                label: context.customerCopy(
+                  order.isTakeaway ? 'Pickup time' : 'DELIVERY TIME',
+                ),
+                value: slot,
                 last: true,
               ),
             Row(
@@ -253,7 +314,7 @@ class _OrderDetails extends ConsumerWidget {
               children: [
                 Expanded(
                   child: _MetricTile(
-                    label: context.customerCopy('PRICING'),
+                    label: context.customerCopy('Total amount'),
                     value:
                         '${formatMealPlanPriceAmount(order.pricing.totalAmount, locale)} ${order.pricing.currencyCode}',
                   ),
@@ -437,13 +498,47 @@ class _MetricTile extends StatelessWidget {
   );
 }
 
+class _ServiceTile extends StatelessWidget {
+  const _ServiceTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+  final IconData icon;
+  final String label, value;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF0F6F2),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 14, color: AppColors.emeraldGreen),
+            const SizedBox(width: 5),
+            Expanded(child: _Label(label)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(value, style: const _ValueStyle()),
+      ],
+    ),
+  );
+}
+
 class _SupportBar extends StatelessWidget {
   const _SupportBar();
   @override
-  Widget build(BuildContext context) => OutlinedButton.icon(
+  Widget build(BuildContext context) => TextButton.icon(
     key: const ValueKey('orderContactSupport'),
     icon: const Icon(Icons.support_agent_rounded),
-    label: Text(context.customerCopy('Contact Support')),
+    label: Text(context.customerCopy('Need help? Contact Support')),
     onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -453,9 +548,9 @@ class _SupportBar extends StatelessWidget {
         ),
       ),
     ),
-    style: OutlinedButton.styleFrom(
+    style: TextButton.styleFrom(
       foregroundColor: AppColors.emeraldGreen,
-      padding: const EdgeInsets.symmetric(vertical: 13),
+      minimumSize: const Size(48, 48),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
     ),
   );

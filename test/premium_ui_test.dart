@@ -135,41 +135,47 @@ void main() {
     });
   }
   for (final count in [2, 12, 123]) {
-    testWidgets('calendar count $count never overlaps its date', (
-      tester,
-    ) async {
-      final date = DateTime(2026, 10, 31);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Center(
-            child: SizedBox(
-              width: 42,
-              height: 90,
-              child: MediaQuery(
-                data: const MediaQueryData(textScaler: TextScaler.linear(1.5)),
-                child: ServiceDateCell(
-                  date: date,
-                  service: true,
-                  selected: true,
-                  count: count,
-                  status: 'mixed',
-                  label: '$count scheduled orders',
-                  onTap: () {},
+    testWidgets(
+      'calendar keeps $count orders accessible without a numeric badge',
+      (tester) async {
+        final date = DateTime(2026, 10, 31);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Center(
+              child: SizedBox(
+                width: 42,
+                height: 90,
+                child: MediaQuery(
+                  data: const MediaQueryData(
+                    textScaler: TextScaler.linear(1.5),
+                  ),
+                  child: ServiceDateCell(
+                    date: date,
+                    service: true,
+                    selected: true,
+                    count: count,
+                    status: 'mixed',
+                    label: '$count scheduled orders',
+                    onTap: () {},
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      );
-      final day = tester.getRect(
-        find.byKey(ValueKey('dateNumber-${date.toIso8601String()}')),
-      );
-      final badge = tester.getRect(
-        find.byKey(ValueKey('deliveryCount-${date.toIso8601String()}')),
-      );
-      expect(day.overlaps(badge), isFalse);
-      expect(find.byType(Badge), findsNothing);
-      expect(tester.takeException(), isNull);
-    });
+        );
+        final day = tester.getRect(
+          find.byKey(ValueKey('dateNumber-${date.toIso8601String()}')),
+        );
+        expect(day.width, greaterThan(0));
+        expect(
+          find.byKey(ValueKey('deliveryCount-${date.toIso8601String()}')),
+          findsNothing,
+        );
+        expect(find.byTooltip('$count scheduled orders'), findsOneWidget);
+        expect(find.byIcon(Icons.layers_outlined), findsOneWidget);
+        expect(find.byType(Badge), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 }

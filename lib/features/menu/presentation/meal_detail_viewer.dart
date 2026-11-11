@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:diet_time/app/localization/customer_copy.dart';
+
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/app/theme/app_radius.dart';
 import 'package:diet_time/features/menu/data/guest_menu_repository.dart';
@@ -283,7 +285,7 @@ class _MealDetailCard extends StatefulWidget {
 
 class _MealDetailCardState extends State<_MealDetailCard> {
   bool _showAllIngredients = false;
-  bool _ingredientsExpanded = true;
+  bool? _ingredientsExpanded;
   bool _allergensExpanded = true;
   bool _descriptionExpanded = false;
 
@@ -301,7 +303,6 @@ class _MealDetailCardState extends State<_MealDetailCard> {
           ? meal.imageUrl
           : meal.thumbnailUrl,
     );
-    final compact = MediaQuery.sizeOf(context).height < 700;
     final fiber = detail?.fiberGrams ?? meal.nutrition.fiber;
     final sodium = detail?.sodiumMg;
     final ingredients =
@@ -355,24 +356,17 @@ class _MealDetailCardState extends State<_MealDetailCard> {
                 color: AppColors.emeraldGreen,
                 backgroundColor: Color(0x1A00674E),
               ),
-            _DetailMealImage(url: imageUrl, height: compact ? 220 : 290),
+            _DetailMealImage(url: imageUrl),
             Padding(
-              padding: EdgeInsets.fromLTRB(
-                compact ? 18 : 22,
-                18,
-                compact ? 18 : 22,
-                26,
-              ),
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     meal.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: AppColors.darkGreen,
-                      fontSize: 23,
+                      fontSize: 20,
                       height: 1.12,
                       fontWeight: FontWeight.w900,
                     ),
@@ -394,14 +388,16 @@ class _MealDetailCardState extends State<_MealDetailCard> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 18),
-                  _NutritionSummary(meal: meal, detail: detail),
-                  if (detail?.nutrition.servingQuantity != null)
-                    Text(
-                      l10n.nutritionServing(
-                        "${detail!.nutrition.servingQuantity} ${detail!.nutrition.servingUnit ?? ""}",
-                      ),
+                  const SizedBox(height: 10),
+                  Text(
+                    context.customerCopy('Nutrition per portion'),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF657B72),
                     ),
+                  ),
+                  const SizedBox(height: 6),
+                  _NutritionSummary(meal: meal, detail: detail),
                   if (fiber != null ||
                       sodium != null ||
                       detail?.nutrition.sugar != null ||
@@ -446,25 +442,31 @@ class _MealDetailCardState extends State<_MealDetailCard> {
                       ],
                     ),
                   ],
-                  if ((detail?.fullDescription ?? meal.description ?? '')
+                  if (((detail?.fullDescription?.trim().isNotEmpty == true
+                              ? detail?.fullDescription
+                              : meal.description) ??
+                          '')
                       .trim()
                       .isNotEmpty) ...[
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 10),
                     _ExpandableDescription(
-                      text: detail?.fullDescription ?? meal.description!,
+                      text: detail?.fullDescription?.trim().isNotEmpty == true
+                          ? detail!.fullDescription!
+                          : meal.description!,
                       expanded: _descriptionExpanded,
                       onToggle: () => setState(
                         () => _descriptionExpanded = !_descriptionExpanded,
                       ),
                     ),
                   ],
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 12),
                   _CollapsibleSection(
                     key: const ValueKey('ingredientsSection'),
                     title: l10n.mealIngredientsTitle,
-                    expanded: _ingredientsExpanded,
+                    expanded: _ingredientsExpanded ?? ingredients.length <= 8,
                     onToggle: () => setState(
-                      () => _ingredientsExpanded = !_ingredientsExpanded,
+                      () => _ingredientsExpanded =
+                          !(_ingredientsExpanded ?? ingredients.length <= 8),
                     ),
                     child: ingredients.isEmpty
                         ? _EmptyInformationState(
@@ -492,27 +494,26 @@ class _MealDetailCardState extends State<_MealDetailCard> {
                             ],
                           ),
                   ),
-                  const SizedBox(height: 12),
-                  _CollapsibleSection(
-                    key: const ValueKey('allergensSection'),
-                    title: l10n.mealAllergensTitle,
-                    expanded: _allergensExpanded,
-                    onToggle: () => setState(
-                      () => _allergensExpanded = !_allergensExpanded,
+                  if (allergens.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _CollapsibleSection(
+                      key: const ValueKey('allergensSection'),
+                      title: l10n.mealAllergensTitle,
+                      expanded: _allergensExpanded,
+                      onToggle: () => setState(
+                        () => _allergensExpanded = !_allergensExpanded,
+                      ),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: allergens
+                            .map(
+                              (allergen) => _AllergenChip(allergen: allergen),
+                            )
+                            .toList(growable: false),
+                      ),
                     ),
-                    child: allergens.isEmpty
-                        ? _EmptyInformationState(label: l10n.noAllergensListed)
-                        : Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: allergens
-                                .map(
-                                  (allergen) =>
-                                      _AllergenChip(allergen: allergen),
-                                )
-                                .toList(growable: false),
-                          ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -623,13 +624,13 @@ class _CollapsibleSection extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
-                  vertical: 13,
+                  vertical: 10,
                 ),
                 child: Row(
                   children: [
                     Expanded(
                       child: Text(
-                        title.toUpperCase(),
+                        title,
                         style: const TextStyle(
                           color: AppColors.darkGreen,
                           fontSize: 12,
@@ -714,6 +715,9 @@ class _IngredientChip extends StatelessWidget {
       child: Chip(
         key: ValueKey('ingredient-$name'),
         label: Text(name),
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
         backgroundColor: const Color(0xFFEAF4E8),
         side: BorderSide(color: AppColors.emeraldGreen.withValues(alpha: .16)),
         shape: RoundedRectangleBorder(
@@ -812,7 +816,13 @@ class _NutritionSummary extends StatelessWidget {
           Text(l10n.nutritionUnavailable, style: const TextStyle(fontSize: 12)),
         LayoutBuilder(
           builder: (context, constraints) {
-            final itemWidth = (constraints.maxWidth - 12) / 2;
+            final columns =
+                constraints.maxWidth >= 300 &&
+                    MediaQuery.textScalerOf(context).scale(1) <= 1.2
+                ? 4
+                : 2;
+            final itemWidth =
+                (constraints.maxWidth - 6 * (columns - 1)) / columns;
             return TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: 1),
               duration: const Duration(milliseconds: 240),
@@ -820,8 +830,8 @@ class _NutritionSummary extends StatelessWidget {
                   Opacity(opacity: value, child: child),
               child: Wrap(
                 key: const ValueKey('mealNutritionGrid'),
-                spacing: 12,
-                runSpacing: 10,
+                spacing: 6,
+                runSpacing: 6,
                 children: values
                     .map(
                       (item) => SizedBox(
@@ -863,47 +873,36 @@ class _MacroValue extends StatelessWidget {
       label: semantics,
       excludeSemantics: true,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: .08),
-          borderRadius: BorderRadius.circular(14),
+          color: AppColors.white,
+          border: Border.all(color: AppColors.darkGreen.withValues(alpha: .10)),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child: Row(
+        child: Column(
           children: [
-            Container(
-              width: 4,
-              height: 34,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(99),
-              ),
+            Container(width: 14, height: 2, color: color),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Color(0xFF657B72), fontSize: 9),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkGreen.withValues(alpha: .52),
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                    ),
+            const SizedBox(height: 3),
+            SizedBox(
+              height: 22,
+              width: double.infinity,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    color: AppColors.darkGreen,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    value,
-                    maxLines: 1,
-                    style: const TextStyle(
-                      color: AppColors.darkGreen,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
@@ -1024,10 +1023,9 @@ class _InformationChip extends StatelessWidget {
 }
 
 class _DetailMealImage extends StatelessWidget {
-  const _DetailMealImage({required this.url, required this.height});
+  const _DetailMealImage({required this.url});
 
   final String url;
-  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -1043,15 +1041,15 @@ class _DetailMealImage extends StatelessWidget {
       ),
     );
     if (url.isEmpty) {
-      return SizedBox(
+      return AspectRatio(
         key: const ValueKey('mealDetailHeroImage'),
-        height: height,
+        aspectRatio: 16 / 9,
         child: placeholder,
       );
     }
-    return SizedBox(
+    return AspectRatio(
       key: const ValueKey('mealDetailHeroImage'),
-      height: height,
+      aspectRatio: 16 / 9,
       child: Stack(
         fit: StackFit.expand,
         children: [

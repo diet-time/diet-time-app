@@ -34,6 +34,8 @@ TomorrowMenu delivery(
   String? serviceDayStatus,
   String? packageDisplayStatus,
   bool pendingPause = false,
+  DateTime? cutoffAt,
+  DateTime? serverNow,
 }) => TomorrowMenu(
   subscriptionId: order,
   isScheduledForDelivery: scheduledForDelivery,
@@ -58,8 +60,8 @@ TomorrowMenu delivery(
           : 'DEFAULT_PENDING'),
   locked: confirmed,
   canConfirm: !confirmed && !noDelivery,
-  cutoffAt: DateTime.utc(2026, 10, 28, 18),
-  serverNow: DateTime.utc(2026, 10, 28, 12),
+  cutoffAt: cutoffAt ?? DateTime.utc(2026, 10, 28, 18),
+  serverNow: serverNow ?? DateTime.utc(2026, 10, 28, 12),
   selected: [
     dish(order, 0),
     if (confirmed || complete) ...[
@@ -396,12 +398,12 @@ void main() {
       expect(find.byType(TomorrowDeliveryCard), findsNWidgets(4));
       expect(inCard('a', 'Daily nutrition total'), findsOneWidget);
       expect(find.text('4 scheduled orders'), findsOneWidget);
-      expect(inCard('a', 'Confirmed'), findsOneWidget);
-      expect(inCard('b', 'Ready to confirm'), findsOneWidget);
-      expect(inCard('b', 'Review & confirm'), findsOneWidget);
+      expect(inCard('a', 'Meals Confirmed'), findsOneWidget);
+      expect(inCard('b', 'Confirm your meals by 9:00 PM'), findsOneWidget);
+      expect(inCard('b', 'Review & Confirm Meals'), findsOneWidget);
       expect(inCard('b', '4 of 4 selected'), findsOneWidget);
       expect(inCard('c', 'Selection pending'), findsOneWidget);
-      expect(inCard('c', 'Choose your meals'), findsOneWidget);
+      expect(inCard('c', 'Choose Meals'), findsOneWidget);
       expect(inCard('d', 'Automatically selected'), findsOneWidget);
       expect(find.byKey(const ValueKey('deliveryProgress-b')), findsNothing);
       expect(find.byKey(const ValueKey('deliveryProgress-c')), findsOneWidget);
@@ -438,10 +440,10 @@ void main() {
       });
       await show(tester, repository);
       expect(inCard('a', '2 of 2 selected'), findsOneWidget);
-      expect(inCard('a', 'Ready to confirm'), findsOneWidget);
-      expect(inCard('a', 'Confirmed'), findsNothing);
+      expect(inCard('a', 'Confirm your meals by 9:00 PM'), findsOneWidget);
+      expect(inCard('a', 'Meals Confirmed'), findsNothing);
       expect(find.byKey(const ValueKey('deliveryProgress-a')), findsNothing);
-      await tester.tap(inCard('a', 'Review & confirm'));
+      await tester.tap(inCard('a', 'Review & Confirm Meals'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Confirm My Meals'));
       await tester.tap(find.text('Confirm My Meals'));
@@ -454,9 +456,9 @@ void main() {
       expect(repository.confirmations.single.$4, {'a-1'});
       await tester.pageBack();
       await tester.pumpAndSettle();
-      expect(inCard('a', 'Confirmed'), findsOneWidget);
+      expect(inCard('a', 'Meals Confirmed'), findsOneWidget);
       expect(inCard('a', 'View confirmed meals'), findsOneWidget);
-      expect(inCard('a', 'Review & confirm'), findsNothing);
+      expect(inCard('a', 'Review & Confirm Meals'), findsNothing);
       await tester.pumpWidget(const SizedBox());
     },
   );
@@ -469,7 +471,7 @@ void main() {
       final repository = DeliveryRepository({'a': menu});
       await show(tester, repository);
       final expected = state == 'CUSTOMER_CONFIRMED'
-          ? 'Confirmed'
+          ? 'Meals Confirmed'
           : state == 'AUTO_FINALIZED'
           ? 'Automatically selected'
           : 'Locked';
@@ -564,13 +566,13 @@ void main() {
       expect(find.text('3 scheduled orders'), findsOneWidget);
       expect(find.text('2 of 4 selected'), findsNWidgets(2));
       expect(find.text('Selection pending'), findsNWidgets(2));
-      expect(find.text('Confirmed'), findsOneWidget);
+      expect(find.text('Meals Confirmed'), findsOneWidget);
       expect(
         tester.getTopLeft(card('b')).dy,
         lessThan(tester.getTopLeft(card('a')).dy),
       );
       expect(tester.getSize(card('a')).height, lessThan(285));
-      expect(tester.getSize(card('b')).height, lessThan(340));
+      expect(tester.getSize(card('b')).height, lessThan(360));
       expect(find.text('Dish a 0'), findsNothing);
       expect(
         find.descendant(of: card('a'), matching: find.byType(FilledButton)),
@@ -607,7 +609,7 @@ void main() {
         'c': delivery('c'),
       });
       await show(tester, repository);
-      await tester.tap(inCard('b', 'Choose your meals'));
+      await tester.tap(inCard('b', 'Choose Meals'));
       await tester.pumpAndSettle();
       expect(find.text('Balance b'), findsOneWidget);
       expect(find.text('Dish c 0'), findsNothing);
@@ -628,8 +630,8 @@ void main() {
       expect(confirmation.$4, {'b-3'});
       await tester.pageBack();
       await tester.pumpAndSettle();
-      expect(inCard('b', 'Confirmed'), findsOneWidget);
-      expect(inCard('b', 'Choose your meals'), findsNothing);
+      expect(inCard('b', 'Meals Confirmed'), findsOneWidget);
+      expect(inCard('b', 'Choose Meals'), findsNothing);
       expect(inCard('c', '2 of 4 selected'), findsOneWidget);
       expect(
         tester.getTopLeft(card('c')).dy,
@@ -651,7 +653,7 @@ void main() {
       }),
     );
     expect(find.text('1 scheduled order'), findsOneWidget);
-    expect(inCard('b', 'Choose your meals'), findsNothing);
+    expect(inCard('b', 'Choose Meals'), findsNothing);
     expect(card('b'), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });

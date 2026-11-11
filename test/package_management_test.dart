@@ -1,3 +1,4 @@
+import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/checkout/data/orders_repository.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
@@ -215,6 +216,120 @@ class CapturePackageApi extends ApiClient {
 }
 
 void main() {
+  for (final scenario in ['missing', 'past', 'paused', 'cancelled']) {
+    testWidgets('upcoming service hides a $scenario schedule entry', (
+      tester,
+    ) async {
+      final data = PackageManagement.fromJson({
+        ...management(paused: scenario == 'paused'),
+        'serverNow': '2026-11-05T12:00:00Z',
+        'nextScheduledDelivery': scenario == 'missing'
+            ? null
+            : scenario == 'past'
+            ? '2026-11-04'
+            : '2026-11-06',
+        if (scenario == 'cancelled') 'status': 'CANCELLED',
+      });
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ordersRepositoryProvider.overrideWithValue(PackageOrders()),
+            orderDetailsProvider('order').overrideWith((ref) async => order()),
+            packageManagementProvider(
+              'order',
+            ).overrideWith((ref) async => data),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const OrderDetailsScreen(orderId: 'order'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final master = find.byKey(const ValueKey('orderMasterCard'));
+      expect(
+        find.descendant(of: master, matching: find.text('No upcoming service')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: master, matching: find.text('Nov 6, 2026')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
+  testWidgets(
+    'identical plan names keep schedules scoped to the internal order ID',
+    (tester) async {
+      final loaded = <String>[];
+      final first = PackageManagement.fromJson(management());
+      final second = PackageManagement.fromJson({
+        ...management(),
+        'remainingServiceDays': 3,
+        'nextScheduledDelivery': '2026-11-09',
+      });
+      final container = ProviderContainer(
+        overrides: [
+          ordersRepositoryProvider.overrideWithValue(PackageOrders()),
+          orderDetailsProvider('first').overrideWith((ref) async {
+            loaded.add('first');
+            return OrderConfirmation.fromJson({
+              'id': 'first',
+              'status': 'ACTIVE',
+              'paymentStatus': 'PAID',
+              'plan': {'name': 'Balanced'},
+              'review': {'rowVersion': 1},
+            });
+          }),
+          orderDetailsProvider('second').overrideWith((ref) async {
+            loaded.add('second');
+            return OrderConfirmation.fromJson({
+              'id': 'second',
+              'status': 'ACTIVE',
+              'paymentStatus': 'REFUNDED',
+              'plan': {'name': 'Balanced'},
+              'review': {'rowVersion': 1},
+            });
+          }),
+          packageManagementProvider('first').overrideWith((ref) async => first),
+          packageManagementProvider(
+            'second',
+          ).overrideWith((ref) async => second),
+        ],
+      );
+      addTearDown(container.dispose);
+      Widget app(String id) => UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: OrderDetailsScreen(orderId: id),
+        ),
+      );
+      await tester.pumpWidget(app('first'));
+      await tester.pumpAndSettle();
+      expect(find.text('8 days'), findsOneWidget);
+      expect(find.text('Nov 4, 2026'), findsOneWidget);
+      expect(find.text('Paid'), findsOneWidget);
+      await tester.pumpWidget(app('second'));
+      await tester.pumpAndSettle();
+      expect(find.text('Balanced'), findsOneWidget);
+      expect(find.text('3 days'), findsOneWidget);
+      expect(find.text('Nov 9, 2026'), findsOneWidget);
+      expect(find.text('8 days'), findsNothing);
+      expect(find.text('Paid'), findsNothing);
+      expect(find.text('Refunded'), findsOneWidget);
+      expect(find.text('first'), findsNothing);
+      expect(find.text('second'), findsNothing);
+      expect(loaded, ['first', 'second']);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
   for (final language in ['en', 'ar']) {
     for (final width in [320.0, 390.0]) {
       for (final phase in [
@@ -296,20 +411,33 @@ void main() {
               findsOneWidget,
             );
             expect(find.text(copy.packageCancellationBlocked), findsNothing);
+            expect(
+              find.descendant(
+                of: master,
+                matching: find.text(copy.packagePauseDayCount(8)),
+              ),
+              findsOneWidget,
+            );
+            final endLabel = DateFormat.yMMMd(language).format(data.endDate);
+            expect(
+              find.descendant(
+                of: master,
+                matching: find.textContaining(endLabel),
+              ),
+              findsOneWidget,
+            );
             await tester.scrollUntilVisible(
               find.byKey(const ValueKey('packageManagement-order')),
               160,
             );
+            expect(find.text(copy.packageRevisedEnd), findsNothing);
+            expect(find.text(copy.packageRemainingDays), findsOneWidget);
             expect(
-              find.text(copy.packageRevisedEnd),
-              approved ? findsOneWidget : findsNothing,
-            );
-            expect(
-              find.text(copy.packageRemainingDays),
-              phase == 'pending' ? findsNothing : findsOneWidget,
-            );
-            expect(
-              find.text(copy.packagePauseRequested),
+              find.text(
+                tester
+                    .element(find.byType(PackageManagementPanel).first)
+                    .customerCopy('Pause awaiting approval'),
+              ),
               phase == 'pending' ? findsOneWidget : findsNothing,
             );
             expect(
@@ -535,24 +663,21 @@ void main() {
         await tester.pumpAndSettle();
         String date(int month, int day) =>
             DateFormat.yMMMd(language).format(DateTime(2026, month, day));
-        expect(
-          find.text('${copy.packageDeliveryToday}: ${date(11, 3)}'),
-          findsOneWidget,
-        );
+        expect(find.text(date(11, 3)), findsOneWidget);
         expect(find.text(date(12, 4)), findsOneWidget);
         expect(
           find.text('${copy.packageActualRestartDate}: ${date(12, 5)}'),
           findsOneWidget,
         );
-        expect(find.text(date(12, 10)), findsOneWidget);
+        expect(find.textContaining(date(12, 10)), findsOneWidget);
         expect(find.textContaining(copy.packageNextDelivery), findsNothing);
-        expect(find.text(copy.packagePauseScheduleNote), findsOneWidget);
+        expect(find.text(copy.packagePauseScheduleNote), findsNothing);
         await tester.scrollUntilVisible(
-          find.textContaining(copy.packagePlanStarted),
+          find.byKey(const ValueKey('orderPlanPeriod')),
           200,
         );
-        expect(find.text(copy.packageRevisedEnd), findsOneWidget);
-        expect(find.text(date(12, 10)), findsOneWidget);
+        expect(find.text(copy.packageRevisedEnd), findsNothing);
+        expect(find.textContaining(date(12, 10)), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );
@@ -1005,7 +1130,14 @@ void main() {
         );
         expect(repository.commands.first, repository.commands.last);
         expect(find.byType(AlertDialog), findsNothing);
-        expect(find.text(copy.packagePauseRequested), findsOneWidget);
+        expect(
+          find.text(
+            tester
+                .element(find.byType(PackageManagementPanel).first)
+                .customerCopy('Pause awaiting approval'),
+          ),
+          findsOneWidget,
+        );
         expect(find.text(copy.packagePauseScheduled), findsNothing);
         expect(repository.paused, isFalse);
         expect(container.read(packageScheduleChangesProvider), {'order': 1});

@@ -24,11 +24,13 @@ class TomorrowMenuSection extends ConsumerStatefulWidget {
     this.orderReference,
     this.onMenuLoaded,
     this.scheduledOnly = false,
+    this.reviewOnly = false,
   });
   final String orderId;
   final String? orderReference;
   final ValueChanged<TomorrowMenu?>? onMenuLoaded;
   final bool scheduledOnly;
+  final bool reviewOnly;
 
   @override
   ConsumerState<TomorrowMenuSection> createState() =>
@@ -50,6 +52,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
   bool _showConfirmed = false;
   StateSetter? _selectionRebuild;
   bool _selectionOpening = false;
+  final Set<(String, String?)> _shownReminders = {};
 
   @override
   void initState() {
@@ -161,7 +164,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
         }
       }
       _loading = false;
-      _expired = !menu.canConfirm;
+      _expired = !menu.canConfirm || !menu.serverNow.isBefore(menu.cutoffAt);
     });
     widget.onMenuLoaded?.call(menu);
     _refreshTimer?.cancel();
@@ -366,6 +369,17 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
         if (previous != next && !_submitting) _load();
       },
     );
+    if (widget.reviewOnly) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8F6EF),
+        appBar: AppBar(title: Text(context.customerCopy('Review & Confirm'))),
+        bottomNavigationBar: _buildAction(context),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: _buildPanel(context),
+        ),
+      );
+    }
     return _buildDeliveryCard(context);
   }
 
@@ -382,17 +396,24 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
       key: ValueKey('tomorrowMenu-${widget.orderId}'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (!_loading && menu != null && _draft != null)
+        if (menu != null && _draft != null)
           TomorrowDeliveryCard(
             menu: menu,
             draft: _draft!,
             orderReference: reference,
             showDishes: _showConfirmed,
             expired: _expired,
+            animateReminder: !_shownReminders.contains((
+              menu.subscriptionId,
+              menu.dayId,
+            )),
+            onReminderShown: () =>
+                _shownReminders.add((menu.subscriptionId, menu.dayId)),
             onToggleDishes: () =>
                 _update(() => _showConfirmed = !_showConfirmed),
             onChoose:
-                !_submitting &&
+                !_loading &&
+                    !_submitting &&
                     !menu.selectionBlockedByPendingPause &&
                     menu.dayId != null &&
                     !menu.readOnly &&

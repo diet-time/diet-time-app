@@ -13,6 +13,8 @@ class UpcomingMealDay {
     this.selectionStatus,
     this.selectionLocked = false,
     this.deliveryStatus = 'PLANNED',
+    this.canEdit = false,
+    this.cutoffAt,
   });
   factory UpcomingMealDay.fromJson(Map<String, dynamic> json) =>
       UpcomingMealDay(
@@ -27,6 +29,8 @@ class UpcomingMealDay {
         selectionStatus: json['selectionStatus'] as String?,
         selectionLocked: json['selectionLocked'] == true,
         deliveryStatus: json['deliveryStatus'] as String? ?? 'PLANNED',
+        canEdit: json['canEdit'] == true,
+        cutoffAt: DateTime.tryParse(json['cutoffAt']?.toString() ?? ''),
       );
   final String id;
   final DateTime date;
@@ -39,6 +43,8 @@ class UpcomingMealDay {
   final String? selectionStatus;
   final bool selectionLocked;
   final String deliveryStatus;
+  final bool canEdit;
+  final DateTime? cutoffAt;
 }
 
 class DailyMealType {

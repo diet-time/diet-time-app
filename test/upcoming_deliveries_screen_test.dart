@@ -41,7 +41,7 @@ void main() {
       final repository = _Repository();
       await show(tester, repository);
       expect(find.text('October 2030'), findsOneWidget);
-      expect(find.text('Automatically Selected'), findsWidgets);
+      expect(find.text('Selected for You'), findsWidgets);
       expect(
         find.byKey(const ValueKey('assigned-selection-0')),
         findsOneWidget,
@@ -75,9 +75,9 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.ensureVisible(find.text('Change Meal').first);
+    await tester.ensureVisible(find.byTooltip('Change Meal').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Change Meal').first);
+    await tester.tap(find.byTooltip('Change Meal').first);
     await tester.pumpAndSettle();
     expect(find.text('Save Changes'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('alternative-option-new')));
@@ -92,7 +92,7 @@ void main() {
       'Fruit day-1',
     ]);
     expect(find.text('Salmon day-1'), findsOneWidget);
-    expect(find.text('Customized'), findsWidgets);
+    expect(find.text('Your choice'), findsWidgets);
     expect(repository.lastRevision, 1);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
@@ -116,14 +116,14 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
-  testWidgets('locked days show meals and cutoff explanation without editing', (
+  testWidgets('future service days show scheduled status without editing', (
     tester,
   ) async {
     await show(tester, _Repository()..locked = true);
     expect(find.text('Chicken day-1'), findsOneWidget);
-    expect(find.text('Change Meal'), findsNothing);
+    expect(find.byTooltip('Change Meal'), findsNothing);
     expect(
-      find.text('Your meals are locked for kitchen preparation.'),
+      find.text('Meal selection will open closer to this date.'),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
@@ -154,9 +154,9 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.ensureVisible(find.text('Change Meal').first);
+    await tester.ensureVisible(find.byTooltip('Change Meal').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Change Meal').first);
+    await tester.tap(find.byTooltip('Change Meal').first);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('alternative-option-new')));
     await tester.pumpAndSettle();
@@ -178,20 +178,29 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('Fridays inside the subscription remain nonselectable', (
-    tester,
-  ) async {
-    await show(tester, _Repository());
-    await tester.tap(find.byKey(const ValueKey('nextDeliveryMonth')));
-    await tester.pumpAndSettle();
-    final friday = tester.widget<InkWell>(
-      find.byKey(
-        ValueKey('deliveryDate-${DateTime(2030, 11, 1).toIso8601String()}'),
-      ),
-    );
-    expect(friday.onTap, isNull);
-    await tester.pumpWidget(const SizedBox());
-  });
+  testWidgets(
+    'non-service dates show an empty state without fetching a meal menu',
+    (tester) async {
+      await show(tester, _Repository());
+      await tester.tap(find.byKey(const ValueKey('nextDeliveryMonth')));
+      await tester.pumpAndSettle();
+      final friday = tester.widget<InkWell>(
+        find.byKey(
+          ValueKey('deliveryDate-${DateTime(2030, 11, 1).toIso8601String()}'),
+        ),
+      );
+      expect(friday.onTap, isNotNull);
+      await tester.tap(
+        find.byKey(
+          ValueKey('deliveryDate-${DateTime(2030, 11, 1).toIso8601String()}'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('No meals are scheduled for this day.'), findsOneWidget);
+      expect(find.byTooltip('Change Meal'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
   testWidgets('meal cards and change sheet support large accessibility text', (
     tester,
   ) async {
@@ -201,9 +210,9 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.ensureVisible(find.text('Change Meal').first);
+    await tester.ensureVisible(find.byTooltip('Change Meal').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Change Meal').first);
+    await tester.tap(find.byTooltip('Change Meal').first);
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey('saveMealChanges')).hitTestable(),

@@ -296,7 +296,6 @@ class _PackageManagementPanelState
         const {'PAUSED', 'PAUSE_SCHEDULED'}.contains(effective) &&
         data.currentPause != null;
     final paused = effective == 'PAUSED';
-    final next = data.nextDelivery;
     final pending = data.hasPendingRequest;
     final requestingPause = pending && data.latestRequest!.type == 'PAUSE';
     final color = pending
@@ -306,11 +305,11 @@ class _PackageManagementPanelState
         : AppColors.emeraldGreen;
     final background = pending
         ? const Color(0xFFFFF4E3)
-        : paused
-        ? const Color(0xFFEEF0EE)
-        : const Color(0xFFEAF3EE);
+        : approved
+        ? const Color(0xFFEDF4FA)
+        : Colors.transparent;
     final title = requestingPause
-        ? copy.packagePauseRequested
+        ? context.customerCopy('Pause awaiting approval')
         : paused
         ? copy.packagePaused
         : approved
@@ -354,24 +353,26 @@ class _PackageManagementPanelState
           if (requestingPause) ...[
             const SizedBox(height: 6),
             Text(
-              copy.packagePendingSummary,
+              context.customerCopy('Your request has been sent to Diet Time.'),
               style: TextStyle(fontSize: 12, height: 1.4, color: color),
             ),
             _dates(
-              copy.packageRequestedPauseStart,
+              context.customerCopy('Pause from'),
               data.latestRequest!.start,
-              copy.packageRequestedRestart,
+              context.customerCopy('Resume on'),
               data.latestRequest!.resume,
             ),
           ],
           if (approved) ...[
             const SizedBox(height: 6),
             Text(
-              paused ? copy.packagePausedSummary : copy.packageScheduledSummary,
+              context.customerCopy(
+                'Your meals will pause on the scheduled dates and resume automatically.',
+              ),
               style: TextStyle(fontSize: 12, height: 1.4, color: color),
             ),
             _dates(
-              copy.packagePauseStart,
+              context.customerCopy('Pause from'),
               data.currentPause!.start,
               copy.packageResumeOn,
               data.currentPause!.resume,
@@ -383,12 +384,6 @@ class _PackageManagementPanelState
                 copy.packageActualRestartDate,
                 _dateLabel(context, data.firstDeliveryAfterPause),
               ),
-            _facts(
-              copy.packageRemainingDays,
-              copy.packagePauseDayCount(data.remainingDays),
-              copy.packageRevisedEnd,
-              _dateLabel(context, data.endDate),
-            ),
           ],
           if (pending && !requestingPause) ...[
             const SizedBox(height: 8),
@@ -423,36 +418,14 @@ class _PackageManagementPanelState
                 style: const TextStyle(fontSize: 12),
               ),
           ],
-          if (!approved && !requestingPause)
-            _facts(
-              copy.packageRemainingDays,
-              copy.packagePauseDayCount(data.remainingDays),
-              copy.packageNextDelivery,
-              _dateLabel(context, data.nextDelivery),
-            )
-          else if (requestingPause)
-            _line(
-              copy.packageNextDelivery,
-              _dateLabel(context, data.nextDelivery),
+          if (requestingPause) ...[
+            const SizedBox(height: 8),
+            Text(
+              context.customerCopy(
+                'Your meals will continue as scheduled until your pause is approved.',
+              ),
+              style: TextStyle(fontSize: 12, height: 1.4, color: color),
             ),
-          if (approved && next != null) ...[
-            if (next.isBefore(data.currentPause!.resume)) ...[
-              _line(
-                packageDate(next) == packageDate(data.qatarNow())
-                    ? copy.packageDeliveryToday
-                    : next.isBefore(data.currentPause!.start)
-                    ? copy.packageDeliveryBeforePause
-                    : copy.packageCommittedDelivery,
-                _dateLabel(context, next),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                copy.packagePauseScheduleNote,
-                style: const TextStyle(fontSize: 11, height: 1.4),
-              ),
-            ] else if (data.firstDeliveryAfterPause == null &&
-                packageDate(next) != packageDate(data.currentPause!.resume))
-              _line(copy.packageActualRestartDate, _dateLabel(context, next)),
           ],
           if (!pending && !approved) ...[
             const SizedBox(height: 8),
@@ -499,19 +472,6 @@ class _PackageManagementPanelState
       ),
     ),
   );
-
-  Widget _facts(String left, String first, String right, String second) =>
-      Padding(
-        padding: const EdgeInsets.only(top: 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: _fact(left, first)),
-            const SizedBox(width: 8),
-            Expanded(child: _fact(right, second)),
-          ],
-        ),
-      );
 
   Widget _fact(String label, String value, {bool date = false}) => Container(
     padding: date ? const EdgeInsets.all(10) : EdgeInsets.zero,

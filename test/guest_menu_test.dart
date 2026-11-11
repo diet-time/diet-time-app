@@ -64,6 +64,68 @@ GuestMenuResponse _orderedBrowsingMenu(
 }
 
 void main() {
+  testWidgets('missing meal nutrients remain unavailable rather than zero', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _detailViewerApp(
+        meal: GuestMeal.fromJson({
+          'id': 'missing',
+          'name': 'Meal',
+          'mealTime': {'name': 'Snack'},
+          'nutrition': {'protein': 6.8},
+        }),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final grid = find.byKey(const ValueKey('mealNutritionGrid'));
+    expect(
+      find.descendant(of: grid, matching: find.text('—')),
+      findsNWidgets(3),
+    );
+    expect(
+      find.descendant(of: grid, matching: find.text('6.8g')),
+      findsOneWidget,
+    );
+    expect(find.text('0g'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final width in [320.0, 390.0]) {
+    testWidgets('meal image and nutrition adapt to a $width phone', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(Size(width, 568));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        _detailViewerApp(
+          meal: _detailMeal(
+            id: 'responsive',
+            name: 'Cookies',
+            mealTime: 'Snack',
+          ),
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final image = tester.getSize(
+        find.byKey(const ValueKey('mealDetailHeroImage')),
+      );
+      expect(image.width / image.height, closeTo(16 / 9, .01));
+      expect(find.text('Nutrition per portion'), findsOneWidget);
+      expect(find.textContaining('Per serving:'), findsNothing);
+      final grid = find.byKey(const ValueKey('mealNutritionGrid'));
+      final tiles = find.descendant(of: grid, matching: find.byType(FittedBox));
+      expect(tiles, findsNWidgets(4));
+      final first = tester.getTopLeft(tiles.at(0));
+      final third = tester.getTopLeft(tiles.at(2));
+      expect(third.dy, width == 390 ? first.dy : greaterThan(first.dy));
+      expect(find.byKey(const ValueKey('allergensSection')), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   for (final language in ['en', 'ar']) {
     testWidgets(
       'configured meal-type order overrides slot order and names in $language',
@@ -469,7 +531,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('meal-detail-meal-2')),
-        matching: find.text('ALLERGENS'),
+        matching: find.text('Allergens'),
       ),
       findsOneWidget,
     );
@@ -607,7 +669,7 @@ void main() {
     );
     final firstDetail = find.byKey(const ValueKey('meal-detail-meal-1'));
     expect(
-      find.descendant(of: firstDetail, matching: find.text('INGREDIENTS')),
+      find.descendant(of: firstDetail, matching: find.text('Ingredients')),
       findsOneWidget,
     );
     expect(
@@ -618,15 +680,15 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.descendant(of: firstDetail, matching: find.text('ALLERGENS')),
-      findsOneWidget,
+      find.descendant(of: firstDetail, matching: find.text('Allergens')),
+      findsNothing,
     );
     expect(
       find.descendant(
         of: firstDetail,
         matching: find.text('No allergens recorded.'),
       ),
-      findsOneWidget,
+      findsNothing,
     );
 
     await tester.binding.handlePopRoute();
@@ -748,9 +810,14 @@ void main() {
       const ValueKey('meal-detail-11111111-1111-4111-8111-111111111111'),
     );
     expect(
-      find.descendant(of: firstDetail, matching: find.text('INGREDIENTS')),
+      find.descendant(of: firstDetail, matching: find.text('Ingredients')),
       findsOneWidget,
     );
+    expect(find.text('Olive oil'), findsNothing);
+    await tester.tap(
+      find.descendant(of: firstDetail, matching: find.text('Ingredients')),
+    );
+    await tester.pumpAndSettle();
     expect(find.text('Olive oil'), findsOneWidget);
     expect(find.textContaining('10 ml'), findsNothing);
     expect(find.text('Ingredient 9'), findsNothing);
@@ -781,7 +848,7 @@ void main() {
     );
 
     await tester.tap(
-      find.descendant(of: firstDetail, matching: find.text('INGREDIENTS')),
+      find.descendant(of: firstDetail, matching: find.text('Ingredients')),
     );
     await tester.pump(const Duration(milliseconds: 220));
     expect(
@@ -789,7 +856,7 @@ void main() {
       findsNothing,
     );
     await tester.tap(
-      find.descendant(of: firstDetail, matching: find.text('INGREDIENTS')),
+      find.descendant(of: firstDetail, matching: find.text('Ingredients')),
     );
     await tester.pump(const Duration(milliseconds: 220));
     expect(find.text('Ingredient 9'), findsOneWidget);
