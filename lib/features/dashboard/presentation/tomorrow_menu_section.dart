@@ -398,6 +398,7 @@ class _TomorrowMenuSectionState extends ConsumerState<TomorrowMenuSection>
       children: [
         if (menu != null && _draft != null)
           TomorrowDeliveryCard(
+            key: ValueKey((widget.orderId, menu.subscriptionId, menu.dayId)),
             menu: menu,
             draft: _draft!,
             orderReference: reference,

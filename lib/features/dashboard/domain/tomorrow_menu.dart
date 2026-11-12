@@ -135,6 +135,24 @@ class TomorrowMenu {
   bool get readOnly => finalized || locked || status == 'LOCKED';
 
   bool get scheduledForTomorrow {
+    if (const {'CANCELLED', 'REJECTED', 'COMPLETED'}.contains(orderStatus) ||
+        const {
+          'PAUSED',
+          'SUSPENDED',
+          'DISPLACED',
+          'CANCELLED',
+          'SKIPPED',
+        }.contains(serviceDayStatus) ||
+        const {
+          'PAUSED',
+          'SUSPENDED',
+          'DISPLACED',
+          'CANCELLED',
+          'NO_DELIVERY',
+          'INACTIVE_ORDER',
+        }.contains(status)) {
+      return false;
+    }
     if (isScheduledForDelivery != null) return isScheduledForDelivery!;
     if (deliveryDate.weekday == DateTime.friday ||
         (serviceDayStatus != null &&

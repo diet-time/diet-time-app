@@ -9,6 +9,48 @@ DateTime packageRestartLimit(DateTime now) {
   return DateTime(now.year, now.month + 6, min(now.day, lastDay));
 }
 
+bool packageResumeServiceDate(DateTime date, {Set<int>? serviceWeekdays}) =>
+    date.weekday != DateTime.friday &&
+    (serviceWeekdays == null || serviceWeekdays.contains(date.weekday));
+
+bool packageResumeDateAllowed(
+  DateTime date,
+  DateTime qatarNow, {
+  Set<int>? serviceWeekdays,
+}) {
+  final day = DateTime(date.year, date.month, date.day);
+  final first = DateTime(
+    qatarNow.year,
+    qatarNow.month,
+    qatarNow.day + (qatarNow.hour >= 21 ? 2 : 1),
+  );
+  return !day.isBefore(first) &&
+      !day.isAfter(packageRestartLimit(qatarNow)) &&
+      packageResumeServiceDate(day, serviceWeekdays: serviceWeekdays);
+}
+
+DateTime? firstPackageResumeDate(
+  DateTime first,
+  DateTime last, {
+  Set<int>? serviceWeekdays,
+  DateTime? qatarNow,
+}) {
+  var date = DateTime(first.year, first.month, first.day);
+  while (!date.isAfter(last)) {
+    if (qatarNow == null
+        ? packageResumeServiceDate(date, serviceWeekdays: serviceWeekdays)
+        : packageResumeDateAllowed(
+            date,
+            qatarNow,
+            serviceWeekdays: serviceWeekdays,
+          )) {
+      return date;
+    }
+    date = date.add(const Duration(days: 1));
+  }
+  return null;
+}
+
 class PackagePause {
   PackagePause.fromJson(Map<String, dynamic> json)
     : id = json['id'] as String,

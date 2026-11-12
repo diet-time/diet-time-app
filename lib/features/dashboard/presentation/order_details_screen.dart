@@ -107,6 +107,12 @@ class _OrderDetails extends ConsumerWidget {
         ? ref.watch(packageManagementProvider(order.id)).asData?.value
         : null;
     final next = management?.nextDelivery;
+    // Dashboard and order-detail requests may complete at different revisions.
+    // A cached pause response must not replace the newer persisted plan period.
+    final planEnd =
+        management != null && management.rowVersion >= order.rowVersion
+        ? management.endDate
+        : delivery.endDate;
     final pause = management?.currentPause;
     final today = management?.qatarNow();
     final nextAvailable =
@@ -257,11 +263,7 @@ class _OrderDetails extends ConsumerWidget {
               key: const ValueKey('orderPlanPeriod'),
               icon: Icons.calendar_month_outlined,
               label: context.customerCopy('PLAN PERIOD'),
-              value: _period(
-                delivery.startDate,
-                management?.endDate ?? delivery.endDate,
-                locale,
-              ),
+              value: _period(delivery.startDate, planEnd, locale),
             ),
             _InformationRow(
               icon: Icons.event_available_outlined,
@@ -335,6 +337,9 @@ class _OrderDetails extends ConsumerWidget {
             const {'CONFIRMED', 'ACTIVE', 'PAUSED'}.contains(order.status))
           PackageManagementPanel(
             orderId: order.id,
+            serviceWeekdays: delivery.days.isEmpty
+                ? null
+                : delivery.days.toSet(),
             onChanged: () => ref.invalidate(orderDetailsProvider(order.id)),
           ),
         const SizedBox(height: 10),

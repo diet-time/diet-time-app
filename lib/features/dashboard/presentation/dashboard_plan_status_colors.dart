@@ -6,23 +6,23 @@ import 'package:flutter/material.dart';
 ) => switch (status) {
   'UPCOMING' => (
     background: const Color(0xFFDDF1ED),
-    foreground: const Color(0xFF176B62),
+    foreground: const Color(0xFF236C63),
   ),
-  'PENDING' || 'PENDING_APPROVAL' || 'PAUSE_REQUESTED' => (
-    background: const Color(0xFFFFF0D5),
-    foreground: const Color(0xFF8A601E),
+  'PENDING' || 'PENDING_APPROVAL' => (
+    background: const Color(0xFFF0EBFA),
+    foreground: const Color(0xFF66518C),
   ),
-  'PAUSE_SCHEDULED' => (
-    background: const Color(0xFFDCEAF4),
-    foreground: const Color(0xFF285A7A),
+  'PAUSE_REQUESTED' => (
+    background: const Color(0xFFFFF0E8),
+    foreground: const Color(0xFFA45F40),
   ),
-  'PAUSED' => (
-    background: const Color(0xFFE5E7EB),
-    foreground: const Color(0xFF475569),
+  'PAUSED' || 'PAUSE_SCHEDULED' => (
+    background: const Color(0xFFE8EEF4),
+    foreground: const Color(0xFF45627D),
   ),
   'CANCELLED' => (
-    background: const Color(0xFFF5E6E8),
-    foreground: const Color(0xFFA34452),
+    background: const Color(0xFFF0F0EE),
+    foreground: const Color(0xFF727775),
   ),
-  _ => (background: const Color(0xFF205B46), foreground: Colors.white),
+  _ => (background: const Color(0xFF285747), foreground: Colors.white),
 };

@@ -47,11 +47,13 @@ class PackageManagementPanel extends ConsumerStatefulWidget {
     required this.orderId,
     this.planName,
     this.onChanged,
+    this.serviceWeekdays,
     super.key,
   });
   final String orderId;
   final String? planName;
   final VoidCallback? onChanged;
+  final Set<int>? serviceWeekdays;
   @override
   ConsumerState<PackageManagementPanel> createState() =>
       _PackageManagementPanelState();
@@ -117,9 +119,14 @@ class _PackageManagementPanelState
         );
         return;
       }
-      final first = start.add(const Duration(days: 1));
       final last = data.latestRestartDate();
-      if (first.isAfter(last)) {
+      final first = firstPackageResumeDate(
+        start.add(const Duration(days: 1)),
+        last,
+        qatarNow: data.qatarNow(),
+        serviceWeekdays: widget.serviceWeekdays,
+      );
+      if (first == null) {
         _failure(
           const ApiException(
             ApiFailure.validation,
@@ -134,6 +141,11 @@ class _PackageManagementPanelState
         firstDate: first,
         lastDate: last,
         currentDate: data.qatarNow(),
+        selectableDayPredicate: (date) => packageResumeDateAllowed(
+          date,
+          data.qatarNow(),
+          serviceWeekdays: widget.serviceWeekdays,
+        ),
         helpText: lookupAppLocalizations(
           Localizations.localeOf(context),
         ).packageResumeDate,
@@ -149,6 +161,7 @@ class _PackageManagementPanelState
           remainingDays: data.remainingDays,
           repository: repository,
           qatarNow: data.qatarNow,
+          serviceWeekdays: widget.serviceWeekdays,
         ),
       );
       // A committed command can lose its network response. Refresh after dismissing an error too.
@@ -178,9 +191,14 @@ class _PackageManagementPanelState
     setState(() => _busy = true);
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
     final now = data.qatarNow();
-    final first = data.earliestRestartDate();
     final last = data.latestRestartDate();
-    if (first.isAfter(last)) {
+    final first = firstPackageResumeDate(
+      data.earliestRestartDate(),
+      last,
+      qatarNow: data.qatarNow(),
+      serviceWeekdays: widget.serviceWeekdays,
+    );
+    if (first == null) {
       setState(() => _busy = false);
       return;
     }
@@ -190,6 +208,11 @@ class _PackageManagementPanelState
       firstDate: first,
       lastDate: last,
       currentDate: now,
+      selectableDayPredicate: (date) => packageResumeDateAllowed(
+        date,
+        data.qatarNow(),
+        serviceWeekdays: widget.serviceWeekdays,
+      ),
       helpText: copy.packageResumeDate,
     );
     if (!mounted) return;
@@ -523,6 +546,7 @@ class _PauseDialog extends StatefulWidget {
     required this.remainingDays,
     required this.repository,
     required this.qatarNow,
+    this.serviceWeekdays,
   });
   final String orderId;
   final DateTime start;
@@ -530,6 +554,7 @@ class _PauseDialog extends StatefulWidget {
   final int remainingDays;
   final OrdersRepository repository;
   final DateTime Function() qatarNow;
+  final Set<int>? serviceWeekdays;
   @override
   State<_PauseDialog> createState() => _PauseDialogState();
 }
@@ -557,6 +582,19 @@ class _PauseDialogState extends State<_PauseDialog> {
   }
 
   Future<void> _previewPause() async {
+    if (!packageResumeDateAllowed(
+      _resume,
+      widget.qatarNow(),
+      serviceWeekdays: widget.serviceWeekdays,
+    )) {
+      setState(() {
+        _preview = null;
+        _error = lookupAppLocalizations(
+          Localizations.localeOf(context),
+        ).packageInvalidRestart;
+      });
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
@@ -617,6 +655,19 @@ class _PauseDialogState extends State<_PauseDialog> {
 
   Future<void> _confirm() async {
     if (_busy || _preview == null) return;
+    if (!packageResumeDateAllowed(
+      _resume,
+      widget.qatarNow(),
+      serviceWeekdays: widget.serviceWeekdays,
+    )) {
+      setState(() {
+        _preview = null;
+        _error = lookupAppLocalizations(
+          Localizations.localeOf(context),
+        ).packageInvalidRestart;
+      });
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
@@ -653,15 +704,33 @@ class _PauseDialogState extends State<_PauseDialog> {
   Future<void> _chooseResumeDate() async {
     if (_busy) return;
     final copy = lookupAppLocalizations(Localizations.localeOf(context));
+    final first = firstPackageResumeDate(
+      _start.add(const Duration(days: 1)),
+      packageRestartLimit(widget.qatarNow()),
+      qatarNow: widget.qatarNow(),
+      serviceWeekdays: widget.serviceWeekdays,
+    );
+    if (first == null) return;
     final date = await showDatePicker(
       context: context,
-      initialDate: _resume.isAfter(_start)
+      initialDate:
+          _resume.isAfter(_start) &&
+              packageResumeDateAllowed(
+                _resume,
+                widget.qatarNow(),
+                serviceWeekdays: widget.serviceWeekdays,
+              )
           ? _resume
-          : _start.add(const Duration(days: 1)),
+          : first,
       currentDate: widget.qatarNow(),
-      firstDate: _start.add(const Duration(days: 1)),
+      firstDate: first,
       lastDate: packageRestartLimit(widget.qatarNow()),
       helpText: copy.packageResumeDate,
+      selectableDayPredicate: (date) => packageResumeDateAllowed(
+        date,
+        widget.qatarNow(),
+        serviceWeekdays: widget.serviceWeekdays,
+      ),
     );
     if (!mounted || date == null || date == _resume) return;
     setState(() {

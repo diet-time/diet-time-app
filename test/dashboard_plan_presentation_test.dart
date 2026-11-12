@@ -199,13 +199,13 @@ void main() {
     }
   }
   const palette = [
-    ('ACTIVE', 0xFF205B46, 0xFFFFFFFF),
-    ('UPCOMING', 0xFFDDF1ED, 0xFF176B62),
-    ('PENDING_APPROVAL', 0xFFFFF0D5, 0xFF8A601E),
-    ('PAUSE_REQUESTED', 0xFFFFF0D5, 0xFF8A601E),
-    ('PAUSE_SCHEDULED', 0xFFDCEAF4, 0xFF285A7A),
-    ('PAUSED', 0xFFE5E7EB, 0xFF475569),
-    ('CANCELLED', 0xFFF5E6E8, 0xFFA34452),
+    ('ACTIVE', 0xFF285747, 0xFFFFFFFF),
+    ('UPCOMING', 0xFFDDF1ED, 0xFF236C63),
+    ('PENDING_APPROVAL', 0xFFF0EBFA, 0xFF66518C),
+    ('PAUSE_REQUESTED', 0xFFFFF0E8, 0xFFA45F40),
+    ('PAUSE_SCHEDULED', 0xFFE8EEF4, 0xFF45627D),
+    ('PAUSED', 0xFFE8EEF4, 0xFF45627D),
+    ('CANCELLED', 0xFFF0F0EE, 0xFF727775),
   ];
   for (final (status, background, foreground) in palette) {
     test('specified dashboard palette for $status', () {

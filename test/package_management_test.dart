@@ -216,6 +216,191 @@ class CapturePackageApi extends ApiClient {
 }
 
 void main() {
+  test(
+    'restart dates exclude Friday, configured non-service days and Qatar cutoff',
+    () {
+      final now = DateTime(2026, 11, 2, 20);
+      expect(packageResumeDateAllowed(DateTime(2026, 11, 6), now), isFalse);
+      expect(packageResumeDateAllowed(DateTime(2026, 11, 7), now), isTrue);
+      expect(
+        packageResumeDateAllowed(
+          DateTime(2026, 11, 4),
+          now,
+          serviceWeekdays: {2, 4},
+        ),
+        isFalse,
+      );
+      expect(
+        packageResumeDateAllowed(
+          DateTime(2026, 11, 5),
+          now,
+          serviceWeekdays: {2, 4},
+        ),
+        isTrue,
+      );
+      expect(
+        packageResumeDateAllowed(DateTime(2026, 11, 3), now.copyWith(hour: 21)),
+        isFalse,
+      );
+      expect(
+        firstPackageResumeDate(DateTime(2026, 11, 6), DateTime(2026, 11, 8)),
+        DateTime(2026, 11, 7),
+      );
+      expect(
+        firstPackageResumeDate(DateTime(2026, 11, 6), DateTime(2026, 11, 6)),
+        isNull,
+      );
+      expect(
+        firstPackageResumeDate(
+          DateTime(2026, 11, 3),
+          DateTime(2026, 11, 5),
+          qatarNow: now.copyWith(hour: 21),
+        ),
+        DateTime(2026, 11, 4),
+      );
+    },
+  );
+
+  for (final paused in [false, true]) {
+    testWidgets(
+      'restart picker disables Friday and configured off-days (paused: $paused)',
+      (tester) async {
+        final repository = PackageOrders()..paused = paused;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [ordersRepositoryProvider.overrideWithValue(repository)],
+            child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: SingleChildScrollView(
+                  child: PackageManagementPanel(
+                    orderId: 'order',
+                    serviceWeekdays: const {2, 4, 6},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final copy = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(
+          paused
+              ? find.text(copy.packageResumeEarly)
+              : find.byKey(const ValueKey('pausePackage-order')),
+        );
+        await tester.pumpAndSettle();
+        final picker = tester.widget<CalendarDatePicker>(
+          find.byType(CalendarDatePicker),
+        );
+        expect(picker.selectableDayPredicate!(DateTime(2026, 11, 6)), isFalse);
+        expect(picker.selectableDayPredicate!(DateTime(2026, 11, 7)), isTrue);
+        expect(picker.selectableDayPredicate!(DateTime(2026, 11, 8)), isFalse);
+        if (!paused) {
+          picker.onDateChanged(DateTime(2026, 11, 7));
+          await tester.pump();
+          await tester.tap(
+            find.text(
+              MaterialLocalizations.of(
+                tester.element(find.byType(CalendarDatePicker)),
+              ).okButtonLabel,
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const ValueKey('pauseRestartDate')));
+          await tester.pumpAndSettle();
+          final revised = tester.widget<CalendarDatePicker>(
+            find.byType(CalendarDatePicker),
+          );
+          expect(
+            revised.selectableDayPredicate!(DateTime(2026, 11, 6)),
+            isFalse,
+          );
+          expect(
+            revised.selectableDayPredicate!(DateTime(2026, 11, 7)),
+            isTrue,
+          );
+        }
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
+  for (final state in ['original', 'approved', 'stale-management']) {
+    testWidgets(
+      'plan period keeps original start and persisted completion ($state)',
+      (tester) async {
+        final current = OrderConfirmation.fromJson({
+          'id': 'order',
+          'orderNumber': 'ORD',
+          'status': 'ACTIVE',
+          'paymentStatus': 'PAID',
+          'plan': {'name': 'Balance'},
+          'review': {'rowVersion': state == 'stale-management' ? 3 : 1},
+          'delivery': {
+            'startDate': '2026-11-14',
+            'endDate': state == 'stale-management'
+                ? '2026-12-28'
+                : '2026-12-10',
+          },
+        });
+        final managementData = PackageManagement.fromJson({
+          ...management(paused: state != 'original'),
+          'rowVersion': state == 'approved' ? 2 : 1,
+          'expectedEndDate': state == 'original'
+              ? '2026-12-10'
+              : state == 'approved'
+              ? '2026-12-28'
+              : '2026-12-01',
+        });
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ordersRepositoryProvider.overrideWithValue(PackageOrders()),
+              orderDetailsProvider(
+                'order',
+              ).overrideWith((ref) async => current),
+              packageManagementProvider(
+                'order',
+              ).overrideWith((ref) async => managementData),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: const OrderDetailsScreen(orderId: 'order'),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final period = find.byKey(const ValueKey('orderPlanPeriod'));
+        expect(
+          find.descendant(of: period, matching: find.textContaining('Nov 14')),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: period,
+            matching: find.textContaining(
+              state == 'original' ? 'Dec 10, 2026' : 'Dec 28, 2026',
+            ),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: period,
+            matching: find.textContaining('Dec 1, 2026'),
+          ),
+          findsNothing,
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
   for (final scenario in ['missing', 'past', 'paused', 'cancelled']) {
     testWidgets('upcoming service hides a $scenario schedule entry', (
       tester,
@@ -1093,7 +1278,8 @@ void main() {
         expect(picker.initialDate, DateTime(2026, 11, 5));
         expect(picker.lastDate, DateTime(2027, 5, 2));
         expect(picker.lastDate.isAfter(DateTime(2026, 11, 12)), isTrue);
-        expect(picker.selectableDayPredicate, isNull);
+        expect(picker.selectableDayPredicate, isNotNull);
+        expect(picker.selectableDayPredicate!(DateTime(2026, 11, 6)), isFalse);
         final nativeCopy = MaterialLocalizations.of(
           tester.element(find.byType(CalendarDatePicker)),
         );

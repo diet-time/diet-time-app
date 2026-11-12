@@ -1,3 +1,4 @@
+import 'package:diet_time/core/widgets/meal_plan_image.dart';
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/dashboard/data/tomorrow_menu_repository.dart';
@@ -168,6 +169,129 @@ Finder inCard(String id, String text) =>
     find.descendant(of: card(id), matching: find.text(text));
 
 void main() {
+  testWidgets(
+    'identical plan names with 5, 2 and 1 meals share one keyed delivery-card layout',
+    (tester) async {
+      TomorrowMenu package(String id, int count) {
+        final items = [
+          for (var i = 0; i <= count; i++)
+            {
+              'mealItemId': '$id-$i',
+              'slotOptionId': 'option-$id-$i',
+              'mealName': 'Dish $id $i',
+              'category': i == count ? 'snack' : 'meal',
+              'nutrition': {
+                'caloriesKcal': 100,
+                'proteinGrams': 10,
+                'carbohydratesGrams': 20,
+                'fatGrams': 5,
+              },
+            },
+        ];
+        return TomorrowMenu.fromJson({
+          'subscriptionId': id,
+          'subscriptionServiceDayId': 'day-$id',
+          'deliveryDate': '2026-10-29',
+          'mealPlanName': 'Complete Balance',
+          'mealPlanImageUrl': 'https://example.com/plans/$id.jpg',
+          'mealCount': count,
+          'snackCount': 1,
+          'selectionStatus': 'DEFAULT_PENDING',
+          'canConfirm': true,
+          'cutoffAt': '2026-10-28T18:00:00Z',
+          'serverNow': '2026-10-28T12:00:00Z',
+          'selectedMeals': items,
+          'availableMeals': items.take(count).toList(),
+          'availableSnacks': [items.last],
+        });
+      }
+
+      final repository = DeliveryRepository({
+        'a': package('a', 5),
+        'b': package('b', 2),
+        'c': package('c', 1),
+      });
+      await show(tester, repository);
+      final keys = <String, Key?>{};
+      final images = <Size>[];
+      for (final (id, count) in [('a', 5), ('b', 2), ('c', 1)]) {
+        final deliveryCard = find.descendant(
+          of: card(id),
+          matching: find.byType(TomorrowDeliveryCard),
+        );
+        expect(deliveryCard, findsOneWidget);
+        keys[id] = tester.widget<TomorrowDeliveryCard>(deliveryCard).key;
+        expect((keys[id] as ValueKey).value, (id, id, 'day-$id'));
+        expect(inCard(id, 'Complete Balance'), findsOneWidget);
+        expect(inCard(id, '${(count + 1) * 100} kcal'), findsOneWidget);
+        expect(inCard(id, 'Review & Confirm Meals'), findsOneWidget);
+        images.add(
+          tester.getSize(
+            find.descendant(of: card(id), matching: find.byType(MealPlanImage)),
+          ),
+        );
+      }
+      expect(keys.values.toSet(), hasLength(3));
+      expect(images.toSet(), hasLength(1));
+      await show(
+        tester,
+        repository,
+        orders: [summary('c'), summary('b'), summary('a')],
+      );
+      for (final id in ['a', 'b', 'c']) {
+        final deliveryCard = find.descendant(
+          of: card(id),
+          matching: find.byType(TomorrowDeliveryCard),
+        );
+        expect(tester.widget<TomorrowDeliveryCard>(deliveryCard).key, keys[id]);
+      }
+      expect(repository.gets, hasLength(3));
+      await tester.ensureVisible(inCard('b', 'Review & Confirm Meals'));
+      await tester.tap(inCard('b', 'Review & Confirm Meals'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('confirmTomorrowMeals')),
+      );
+      await tester.tap(find.byKey(const ValueKey('confirmTomorrowMeals')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Confirm'));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(repository.confirmations.single.$1, 'b');
+      expect(repository.confirmations.single.$2, 'day-b');
+      expect(inCard('b', 'Meals Confirmed'), findsOneWidget);
+      expect(inCard('a', 'Review & Confirm Meals'), findsOneWidget);
+      expect(inCard('c', 'Review & Confirm Meals'), findsOneWidget);
+      expect(inCard('a', '600 kcal'), findsOneWidget);
+      expect(inCard('c', '200 kcal'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  for (final status in [
+    'PAUSED',
+    'SUSPENDED',
+    'CANCELLED',
+    'SKIPPED',
+    'DISPLACED',
+  ]) {
+    test(
+      'inactive $status service cannot override the shared card filter with a scheduled flag',
+      () {
+        expect(
+          delivery(
+            'a',
+            scheduledForDelivery: true,
+            serviceDayStatus: status,
+          ).scheduledForTomorrow,
+          isFalse,
+        );
+      },
+    );
+  }
+
   testWidgets(
     'aggregates active and pause-requested plans once while excluding approved paused deliveries',
     (tester) async {

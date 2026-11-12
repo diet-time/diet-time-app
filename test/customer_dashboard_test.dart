@@ -252,10 +252,10 @@ void main() {
         expect(
           tester.widget<Material>(card).color,
           pauseStatus == 'PAUSED'
-              ? const Color(0xFFE5E7EB)
+              ? const Color(0xFFE8EEF4)
               : pauseStatus == 'PAUSE_PENDING'
-              ? const Color(0xFFFFF0D5)
-              : const Color(0xFFDCEAF4),
+              ? const Color(0xFFFFF0E8)
+              : const Color(0xFFE8EEF4),
         );
         expect(
           find.descendant(
