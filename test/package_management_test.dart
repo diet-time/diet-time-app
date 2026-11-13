@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/core/network/api_client.dart';
 import 'package:diet_time/features/checkout/data/orders_repository.dart';
@@ -102,6 +103,8 @@ class PackageOrders extends OrdersRepository {
   bool paused = false, available = true, failOnce = false, takeaway = false;
   String? pendingType;
   ApiException? previewError;
+  Completer<void>? resumeGate;
+  ApiException? resumeError;
   int managementReads = 0;
   List<String>? changedEligibleDates;
   final previewStarts = <DateTime>[];
@@ -177,6 +180,8 @@ class PackageOrders extends OrdersRepository {
     DateTime? resumeDate,
   }) async {
     resumes++;
+    await resumeGate?.future;
+    if (resumeError case final error?) throw error;
     pendingType = 'RESUME';
     return getPackageManagement(id);
   }
@@ -216,6 +221,68 @@ class CapturePackageApi extends ApiClient {
 }
 
 void main() {
+  testWidgets('early resume hides database details and waits for persistence', (
+    tester,
+  ) async {
+    final repository = PackageOrders()
+      ..paused = true
+      ..resumeGate = Completer<void>()
+      ..resumeError = const ApiException(
+        ApiFailure.conflict,
+        statusCode: 409,
+        code: 'database_conflict',
+        message:
+            'The order or record could not be saved. correlation reference',
+      );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [ordersRepositoryProvider.overrideWithValue(repository)],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(body: PackageManagementPanel(orderId: 'order')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final copy = lookupAppLocalizations(const Locale('en'));
+    await tester.tap(find.text(copy.packageResumeEarly));
+    await tester.pumpAndSettle();
+    final picker = tester.widget<CalendarDatePicker>(
+      find.byType(CalendarDatePicker),
+    );
+    expect(picker.selectableDayPredicate!(DateTime(2026, 11, 6)), isFalse);
+    await tester.tap(
+      find.text(
+        MaterialLocalizations.of(
+          tester.element(find.byType(CalendarDatePicker)),
+        ).okButtonLabel,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.widgetWithText(FilledButton, copy.packageResumeEarly),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.resumes, 1);
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.widgetWithText(OutlinedButton, copy.packageResumeEarly),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(find.text(copy.packageResumeSuccess), findsNothing);
+    repository.resumeGate!.complete();
+    await tester.pumpAndSettle();
+    expect(find.text(copy.packageScheduleChanged), findsOneWidget);
+    expect(find.textContaining('correlation reference'), findsNothing);
+    expect(find.text(copy.packageResumeSuccess), findsNothing);
+    expect(repository.pendingType, isNull);
+    expect(repository.paused, isTrue);
+    await tester.pumpWidget(const SizedBox());
+  });
   test(
     'restart dates exclude Friday, configured non-service days and Qatar cutoff',
     () {

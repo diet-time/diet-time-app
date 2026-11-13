@@ -254,7 +254,10 @@ void main() {
       final badge = find.byKey(const ValueKey('planStatus-plan'));
       expect(
         (tester.widget<Container>(badge).decoration! as BoxDecoration).color,
-        Color(background),
+        Color.alphaBlend(
+          Colors.black.withValues(alpha: .065),
+          Color(background),
+        ),
       );
       final texts = tester.widgetList<Text>(
         find.descendant(of: badge, matching: find.byType(Text)),

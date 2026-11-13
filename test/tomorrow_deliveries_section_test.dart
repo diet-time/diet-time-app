@@ -169,6 +169,56 @@ Finder inCard(String id, String text) =>
     find.descendant(of: card(id), matching: find.text(text));
 
 void main() {
+  for (final arabic in [false, true]) {
+    for (final allPaused in [false, true]) {
+      testWidgets(
+        'compact empty state reflects all paused plans ($arabic, $allPaused)',
+        (tester) async {
+          await show(
+            tester,
+            DeliveryRepository({
+              'paused': delivery(
+                'paused',
+                noDelivery: true,
+                packageDisplayStatus: 'PAUSED',
+              ),
+              'other': delivery(
+                'other',
+                noDelivery: true,
+                packageDisplayStatus: allPaused ? 'PAUSED' : 'ACTIVE',
+              ),
+            }),
+            arabic: arabic,
+            width: 320,
+            scale: 1.3,
+          );
+          final empty = find.byKey(const ValueKey('tomorrowDeliveriesEmpty'));
+          expect(empty, findsOneWidget);
+          expect(
+            find.text(arabic ? 'لا يوجد توصيل غدًا' : 'No delivery tomorrow'),
+            findsOneWidget,
+          );
+          final copy = AppLocalizations.of(tester.element(empty));
+          expect(
+            find.text(
+              allPaused
+                  ? arabic
+                        ? 'وجباتك متوقفة مؤقتًا. استمتع بيومك!'
+                        : 'Your meals are on pause. Enjoy your day!'
+                  : copy.deliveriesStatus('NO_DELIVERY'),
+            ),
+            findsOneWidget,
+          );
+          // Large text can wrap naturally without clipping on a narrow screen.
+          expect(tester.getSize(empty).height, lessThan(200));
+          expect(find.byType(TomorrowDeliveryCard), findsNothing);
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox());
+        },
+      );
+    }
+  }
+
   testWidgets(
     'identical plan names with 5, 2 and 1 meals share one keyed delivery-card layout',
     (tester) async {

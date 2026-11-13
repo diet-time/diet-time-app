@@ -1,6 +1,7 @@
 import 'package:diet_time/app/theme/app_colors.dart';
 import 'package:diet_time/features/checkout/domain/order_models.dart';
 import 'package:diet_time/features/dashboard/domain/tomorrow_menu.dart';
+import 'package:diet_time/features/dashboard/presentation/dashboard_matte_surface.dart';
 import 'package:diet_time/features/dashboard/presentation/tomorrow_menu_section.dart';
 import 'package:diet_time/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -111,25 +112,77 @@ class _TomorrowDeliveriesSectionState extends State<TomorrowDeliveriesSection> {
             ids.every(_loaded.contains) &&
             menus.length == ids.length &&
             scheduled == 0)
-          Container(
+          Material(
             key: const ValueKey('tomorrowDeliveriesEmpty'),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.white.withValues(alpha: .8),
-              borderRadius: BorderRadius.circular(14),
+            color: Color.alphaBlend(
+              AppColors.teaGreen.withValues(alpha: .24),
+              AppColors.marshmallow,
             ),
-            child: Text(
-              menus.any(
-                    (menu) =>
-                        menu.orderStatus == 'PAUSED' ||
-                        const {
-                          'PAUSED',
-                          'PAUSE_SCHEDULED',
-                        }.contains(menu.packageDisplayStatus),
-                  )
-                  ? copy.deliveriesPauseEmpty
-                  : copy.deliveriesStatus('NO_DELIVERY'),
-              style: const TextStyle(color: AppColors.darkGreen, fontSize: 13),
+            borderRadius: BorderRadius.circular(14),
+            elevation: 2,
+            shadowColor: AppColors.darkGreen.withValues(alpha: .12),
+            surfaceTintColor: Colors.transparent,
+            clipBehavior: Clip.antiAlias,
+            child: DashboardMatteSurface(
+              color: Color.alphaBlend(
+                AppColors.teaGreen.withValues(alpha: .24),
+                AppColors.marshmallow,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_today_outlined,
+                      size: 28,
+                      color: AppColors.emeraldGreen,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            locale.languageCode == 'ar'
+                                ? 'لا يوجد توصيل غدًا'
+                                : 'No delivery tomorrow',
+                            style: const TextStyle(
+                              color: AppColors.darkGreen,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              height: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            menus.every(
+                                  (menu) =>
+                                      menu.orderStatus == 'PAUSED' ||
+                                      const {
+                                        'PAUSED',
+                                        'PAUSE_SCHEDULED',
+                                      }.contains(menu.packageDisplayStatus),
+                                )
+                                ? locale.languageCode == 'ar'
+                                      ? 'وجباتك متوقفة مؤقتًا. استمتع بيومك!'
+                                      : 'Your meals are on pause. Enjoy your day!'
+                                : copy.deliveriesStatus('NO_DELIVERY'),
+                            style: TextStyle(
+                              color: AppColors.darkGreen.withValues(alpha: .7),
+                              fontSize: 12,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         for (final (_, order) in sorted)

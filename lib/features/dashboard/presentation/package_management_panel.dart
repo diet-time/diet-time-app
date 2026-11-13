@@ -31,6 +31,7 @@ String _packageError(BuildContext context, Object? error) {
       'pause_already_scheduled' => copy.packageAlreadyPaused,
       'package_not_active' => copy.packageNotActive,
       'package_request_pending' => copy.packageRequestPending,
+      'database_conflict' => copy.packageScheduleChanged,
       _ => null,
     };
     if (message != null) return message;

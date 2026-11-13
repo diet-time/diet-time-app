@@ -1,4 +1,5 @@
 import 'package:diet_time/features/dashboard/presentation/dashboard_plan_status_colors.dart';
+import 'package:diet_time/features/dashboard/presentation/dashboard_matte_surface.dart';
 import 'package:diet_time/features/dashboard/domain/package_management.dart';
 import 'package:diet_time/app/localization/customer_copy.dart';
 import 'package:diet_time/features/language/presentation/dashboard_language_switcher.dart';
@@ -611,7 +612,9 @@ class _DashboardHome extends ConsumerWidget {
                         shape: const StadiumBorder(),
                         side: BorderSide.none,
                         minimumSize: const Size(0, 44),
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        alignment: Alignment.center,
                         textStyle: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -915,103 +918,118 @@ class _ReferencePlanCard extends ConsumerWidget {
       key: ValueKey('activePlan-${summary.id}'),
       color: colors.background,
       borderRadius: BorderRadius.circular(18),
+      elevation: 2,
+      shadowColor: colors.background.withValues(alpha: .3),
+      surfaceTintColor: Colors.transparent,
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: openDetails,
-        child: SizedBox(
-          height: _activePlanCardHeight(context),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        summary.planName,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: colors.foreground,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
+      child: DashboardMatteSurface(
+        color: colors.background,
+        child: InkWell(
+          onTap: openDetails,
+          child: SizedBox(
+            height: _activePlanCardHeight(context),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          summary.planName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: colors.foreground,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            height: 1.15,
+                            letterSpacing: -.2,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      flex: 2,
-                      child: Container(
-                        key: ValueKey('planStatus-${summary.id}'),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colors.background,
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(icon, size: 13, color: colors.foreground),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                status,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: colors.foreground,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
+                      const SizedBox(width: 8),
+                      Flexible(
+                        flex: 2,
+                        child: Container(
+                          key: ValueKey('planStatus-${summary.id}'),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Color.alphaBlend(
+                              Colors.black.withValues(alpha: .065),
+                              colors.background,
+                            ),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(icon, size: 13, color: colors.foreground),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  status,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: colors.foreground,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                line(
-                  package?.isNotEmpty == true
-                      ? package!
-                      : summary.planDurationName,
-                  size: 12,
-                ),
-                line(context.customerCopy(summary.fulfillmentLabel)),
-                const Spacer(),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today_outlined,
-                      color: colors.foreground,
-                      size: 12,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(child: line(planDates, maxLines: 3, size: 10)),
-                    TextButton(
-                      key: ValueKey('viewOrder-${summary.id}'),
-                      onPressed: openDetails,
-                      style: TextButton.styleFrom(
-                        foregroundColor: colors.foreground,
-                        minimumSize: const Size(0, 44),
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        textStyle: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  line(
+                    package?.isNotEmpty == true
+                        ? package!
+                        : summary.planDurationName,
+                    size: 12,
+                  ),
+                  line(context.customerCopy(summary.fulfillmentLabel)),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        color: colors.foreground,
+                        size: 12,
                       ),
-                      child: Text(copy.deliveriesViewDetails),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 6),
+                      Expanded(child: line(planDates, maxLines: 3, size: 10)),
+                      TextButton(
+                        key: ValueKey('viewOrder-${summary.id}'),
+                        onPressed: openDetails,
+                        style: TextButton.styleFrom(
+                          foregroundColor: colors.foreground,
+                          minimumSize: const Size(0, 44),
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          shape: const StadiumBorder(),
+                          side: BorderSide(
+                            color: colors.foreground.withValues(alpha: .35),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        child: Text(copy.deliveriesViewDetails),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
